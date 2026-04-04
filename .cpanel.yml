@@ -1,0 +1,6 @@
+cd "C:/Users/CLIPER/Desktop/dynamicworks-angola"
+echo "---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/dynamicw/public_html/
+    - /bin/cp -r . \$DEPLOYPATH" > .cpanel.yml
