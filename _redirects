@@ -1,0 +1,9 @@
+# ═══════════════════════════════════════════════
+#   DynamicWorks Angola — Netlify Redirects
+#   Coloca este ficheiro na RAIZ do projecto
+# ═══════════════════════════════════════════════
+
+# Páginas de erro personalizadas
+/404    /404.html    404
+/403    /403.html    403
+/500    /500.html    500

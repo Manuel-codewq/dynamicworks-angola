@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Academia DynamicWorks — Aprende a Operar</title>
+<meta name="description" content="Academia DynamicWorks Angola. Aprende a operar Accumulators Deriv do zero ao avançado com aulas em vídeo organizadas por níveis."/>
+<meta name="theme-color" content="#06090f"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2306090f'/><polyline points='4,22 10,14 16,18 22,8 28,12' fill='none' stroke='%2300d4ff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/><circle cx='28' cy='12' r='2' fill='%2300d4ff'/></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.383.0/dist/umd/lucide.min.js" defer></script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  const cfg = {
+    apiKey:"AIzaSyB60g18v0zOmOeWaf9l3v20XubZRDHP_Xk",
+    authDomain:"dynamicworks-angola.firebaseapp.com",
+    projectId:"dynamicworks-angola",
+    storageBucket:"dynamicworks-angola.firebasestorage.app",
+    messagingSenderId:"678170921562",
+    appId:"1:678170921562:web:2e9c0c2793afa8c96e2663"
+  };
+  const app = initializeApp(cfg);
+  const db  = getFirestore(app);
+  window.__db     = db;
+  window.__doc    = doc;
+  window.__getDoc = getDoc;
+  window.__setDoc = setDoc;
+  window.__col    = collection;
+  window.__getDocs = getDocs;
+  window.__fbReady = true;
+  window.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<style>
+:root {
+  --bg:     #06090f;
+  --card:   #0e1420;
+  --card2:  #131b28;
+  --border: rgba(255,255,255,.08);
+  --accent: #00d4ff;
+  --green:  #00e676;
+  --yellow: #ffd600;
+  --purple: #a78bfa;
+  --orange: #ff8c42;
+  --red:    #ff4444;
+  --text:   #e8edf5;
+  --text2:  #8899aa;
+  --text3:  #556677;
+  --mono:   'JetBrains Mono', monospace;
+  --sans:   'Outfit', sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overscroll-behavior: none; }
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: calc(var(--safe-top) + .7rem) 1rem .7rem;
+  background: rgba(6,9,15,.95); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: .75rem;
+}
+.topbar-back {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(255,255,255,.07); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; text-decoration: none; color: var(--text); flex-shrink: 0;
+}
+.topbar-title { font-weight: 900; font-size: 1rem; }
+.topbar-sub   { font-size: .68rem; color: var(--text2); margin-top: .05rem; }
+.topbar-xp {
+  margin-left: auto; display: flex; align-items: center; gap: .35rem;
+  background: rgba(255,214,0,.1); border: 1px solid rgba(255,214,0,.25);
+  border-radius: 20px; padding: .28rem .65rem;
+  font-size: .65rem; font-weight: 700; font-family: var(--mono); color: var(--yellow);
+}
+
+/* ── SCROLL ── */
+.scroll-wrap {
+  position: fixed; inset: 0; overflow-y: auto;
+  padding: calc(var(--safe-top) + 72px) 1rem calc(var(--safe-bot) + 80px);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── HERO ── */
+.hero {
+  background: linear-gradient(135deg, rgba(0,212,255,.07), rgba(167,139,250,.05));
+  border: 1px solid rgba(0,212,255,.15); border-radius: 20px;
+  padding: 1.25rem 1rem; margin-bottom: 1.25rem; text-align: center;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0,212,255,.1) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hero-icon { margin-bottom: .5rem; display: flex; align-items: center; justify-content: center; }
+.hero-title { font-size: 1.2rem; font-weight: 900; margin-bottom: .3rem; }
+.hero-sub { font-size: .76rem; color: var(--text2); line-height: 1.55; max-width: 280px; margin: 0 auto .85rem; }
+.hero-stats { display: flex; justify-content: center; gap: 1.5rem; }
+.hstat-val { font-size: .95rem; font-weight: 900; font-family: var(--mono); color: var(--accent); }
+.hstat-lbl { font-size: .58rem; color: var(--text3); font-family: var(--mono); margin-top: .08rem; }
+
+/* ── PROGRESSO GLOBAL ── */
+.progress-global {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: .9rem 1rem; margin-bottom: 1rem;
+}
+.pg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
+.pg-title { font-size: .75rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: .4rem; }
+.pg-pct { font-size: .75rem; font-weight: 900; font-family: var(--mono); color: var(--accent); }
+.pg-bar { height: 8px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+.pg-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .6s; }
+.pg-levels { display: flex; justify-content: space-between; margin-top: .5rem; }
+.pg-level { font-size: .6rem; color: var(--text3); font-family: var(--mono); }
+.pg-level.done { color: var(--green); }
+.pg-level.active { color: var(--accent); font-weight: 700; }
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size: .65rem; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono);
+  margin-bottom: .65rem; margin-top: .3rem;
+  display: flex; align-items: center; gap: .45rem;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── LEVEL CARD ── */
+.level-card {
+  border-radius: 18px; margin-bottom: 1rem; overflow: hidden;
+  border: 1px solid var(--border); background: var(--card);
+  transition: border-color .2s;
+}
+.level-card.locked { opacity: .5; pointer-events: none; }
+.level-card.unlocked { border-color: rgba(0,212,255,.2); }
+.level-card.completed { border-color: rgba(0,230,118,.25); }
+
+.level-header {
+  padding: .9rem 1rem; display: flex; align-items: center; gap: .75rem;
+  cursor: pointer; user-select: none;
+}
+.level-icon-wrap {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.level-info { flex: 1; min-width: 0; }
+.level-name { font-size: .95rem; font-weight: 900; margin-bottom: .15rem; }
+.level-desc { font-size: .7rem; color: var(--text2); }
+.level-badge {
+  flex-shrink: 0; padding: .22rem .55rem; border-radius: 20px;
+  font-size: .6rem; font-weight: 700; font-family: var(--mono);
+}
+.badge-locked   { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: var(--text3); }
+.badge-unlocked { background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.25); color: var(--accent); }
+.badge-done     { background: rgba(0,230,118,.1); border: 1px solid rgba(0,230,118,.25); color: var(--green); }
+
+.level-progress-row {
+  padding: 0 1rem .75rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+.lp-bar { flex: 1; height: 4px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+.lp-fill { height: 100%; border-radius: 99px; transition: width .5s; }
+.lp-txt { font-size: .62rem; font-family: var(--mono); color: var(--text3); white-space: nowrap; }
+
+.level-lessons { border-top: 1px solid var(--border); }
+
+/* ── LESSON ROW ── */
+.lesson-row {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .75rem 1rem; cursor: pointer;
+  border-bottom: 1px solid var(--border); transition: background .15s;
+  text-decoration: none; color: inherit;
+}
+.lesson-row:last-child { border-bottom: none; }
+.lesson-row:active { background: rgba(255,255,255,.03); }
+.lesson-row.locked { opacity: .4; pointer-events: none; }
+
+.lesson-num {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 900; font-family: var(--mono);
+}
+.ln-todo { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: var(--text3); }
+.ln-done { background: rgba(0,230,118,.15); border: 1px solid rgba(0,230,118,.3); color: var(--green); }
+.ln-active { background: rgba(0,212,255,.15); border: 1px solid rgba(0,212,255,.3); color: var(--accent); }
+
+.lesson-info { flex: 1; min-width: 0; }
+.lesson-title { font-size: .82rem; font-weight: 700; margin-bottom: .1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lesson-meta  { font-size: .62rem; color: var(--text3); font-family: var(--mono); display: flex; gap: .5rem; }
+.lesson-duration { display: flex; align-items: center; gap: .2rem; }
+
+.lesson-status { flex-shrink: 0; }
+
+/* ── PLAYER MODAL ── */
+.player-modal {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.88); backdrop-filter: blur(8px);
+  display: flex; flex-direction: column;
+  transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1);
+}
+.player-modal.open { transform: translateY(0); }
+
+.player-topbar {
+  display: flex; align-items: center; gap: .75rem;
+  padding: calc(var(--safe-top) + .7rem) 1rem .7rem;
+  background: rgba(6,9,15,.95); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.player-close {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(255,255,255,.07); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+.player-title { font-weight: 900; font-size: .9rem; flex: 1; line-height: 1.3; }
+.player-level-badge {
+  flex-shrink: 0; padding: .22rem .55rem; border-radius: 20px;
+  font-size: .6rem; font-weight: 700; font-family: var(--mono);
+}
+
+.player-video-wrap {
+  width: 100%; aspect-ratio: 16/9; background: #000; flex-shrink: 0;
+  position: relative;
+}
+.player-video-wrap iframe { width: 100%; height: 100%; border: none; display: block; }
+.player-video-placeholder {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: .75rem;
+  background: linear-gradient(135deg, #0a0e18, #0d1220);
+}
+
+.player-body { flex: 1; overflow-y: auto; padding: 1rem; }
+.player-lesson-title { font-size: 1rem; font-weight: 900; margin-bottom: .4rem; }
+.player-lesson-desc  { font-size: .76rem; color: var(--text2); line-height: 1.6; margin-bottom: 1rem; }
+
+.player-meta-row {
+  display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.pmeta-tag {
+  display: flex; align-items: center; gap: .3rem;
+  padding: .25rem .6rem; border-radius: 8px;
+  font-size: .62rem; font-weight: 700; font-family: var(--mono);
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: var(--text3);
+}
+
+.player-actions { display: flex; gap: .6rem; margin-bottom: 1rem; }
+.btn-mark-done {
+  flex: 1; padding: .75rem; border-radius: 12px; border: none;
+  font-size: .88rem; font-weight: 900; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: .4rem;
+  background: linear-gradient(135deg, #00e676, #00b248); color: #000;
+  transition: opacity .15s;
+}
+.btn-mark-done:hover { opacity: .88; }
+.btn-mark-done.done {
+  background: rgba(0,230,118,.1); border: 1px solid rgba(0,230,118,.25); color: var(--green);
+}
+.btn-next-lesson {
+  flex: 1; padding: .75rem; border-radius: 12px; border: none;
+  font-size: .88rem; font-weight: 900; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: .4rem;
+  background: rgba(0,212,255,.12); border: 1px solid rgba(0,212,255,.25); color: var(--accent);
+  transition: opacity .15s;
+}
+.btn-next-lesson:disabled { opacity: .35; pointer-events: none; }
+
+.player-nav-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;
+}
+.nav-lesson-btn {
+  padding: .6rem .75rem; border-radius: 12px; border: none; cursor: pointer;
+  background: var(--card2); border: 1px solid var(--border); color: var(--text2);
+  font-size: .72rem; font-weight: 700; text-align: left;
+  display: flex; align-items: center; gap: .4rem;
+  transition: border-color .15s;
+}
+.nav-lesson-btn:hover { border-color: rgba(0,212,255,.25); }
+.nav-lesson-btn:disabled { opacity: .3; pointer-events: none; }
+.nav-lesson-btn.next { text-align: right; justify-content: flex-end; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: calc(var(--safe-bot) + 80px); left: 1rem; right: 1rem;
+  z-index: 999; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 14px; padding: .8rem 1rem;
+  transform: translateY(120%); transition: transform .3s; pointer-events: none;
+}
+.toast.show { transform: translateY(0); }
+.toast-title { font-weight: 700; font-size: .85rem; margin-bottom: .1rem; }
+.toast-body  { font-size: .72rem; color: var(--text2); }
+
+/* ── CERTIFICADO ── */
+.cert-card {
+  background: linear-gradient(135deg, rgba(255,214,0,.08), rgba(255,140,66,.05));
+  border: 1px solid rgba(255,214,0,.25); border-radius: 18px;
+  padding: 1.1rem; margin-bottom: 1rem; text-align: center; display: none;
+}
+.cert-card.visible { display: block; }
+.cert-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+.cert-title { font-size: 1rem; font-weight: 900; color: var(--yellow); margin-bottom: .3rem; }
+.cert-desc  { font-size: .74rem; color: var(--text2); line-height: 1.5; }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.level-card { animation: fadeUp .35s ease both; }
+.level-card:nth-child(1) { animation-delay: .05s; }
+.level-card:nth-child(2) { animation-delay: .12s; }
+.level-card:nth-child(3) { animation-delay: .19s; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a class="topbar-back" href="javascript:history.back()">
+    <svg data-lucide="arrow-left" width="18" height="18"></svg>
+  </a>
+  <div>
+    <div class="topbar-title" style="display:flex;align-items:center;gap:.4rem">
+      <svg data-lucide="graduation-cap" width="16" height="16" style="color:var(--accent)"></svg>
+      Academia DynamicWorks
+    </div>
+    <div class="topbar-sub">Aprende · Pratica · Lucra</div>
+  </div>
+  <div class="topbar-xp">
+    <svg data-lucide="star" width="11" height="11"></svg>
+    <span id="xpTotal">0 XP</span>
+  </div>
+</div>
+
+<!-- SCROLL -->
+<div class="scroll-wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-icon">
+      <svg data-lucide="graduation-cap" width="40" height="40" style="color:var(--accent)"></svg>
+    </div>
+    <div class="hero-title">Sala de Aulas</div>
+    <div class="hero-sub">Aulas em vídeo do zero ao avançado. Completa cada nível para desbloquear o próximo.</div>
+    <div class="hero-stats">
+      <div><div class="hstat-val" id="statTotal">0</div><div class="hstat-lbl">Aulas Total</div></div>
+      <div><div class="hstat-val" id="statDone">0</div><div class="hstat-lbl">Concluídas</div></div>
+      <div><div class="hstat-val" id="statXP">0</div><div class="hstat-lbl">XP Ganho</div></div>
+    </div>
+  </div>
+
+  <!-- PROGRESSO GLOBAL -->
+  <div class="progress-global">
+    <div class="pg-header">
+      <div class="pg-title">
+        <svg data-lucide="bar-chart-2" width="14" height="14" style="color:var(--accent)"></svg>
+        Progresso Geral
+      </div>
+      <div class="pg-pct" id="pgPct">0%</div>
+    </div>
+    <div class="pg-bar"><div class="pg-fill" id="pgFill" style="width:0%"></div></div>
+    <div class="pg-levels">
+      <span class="pg-level" id="lvlLabel0">Iniciante</span>
+      <span class="pg-level" id="lvlLabel1">Intermédio</span>
+      <span class="pg-level" id="lvlLabel2">Avançado</span>
+    </div>
+  </div>
+
+  <!-- CERTIFICADO (aparece quando conclui tudo) -->
+  <div class="cert-card" id="certCard">
+    <div class="cert-icon">🏆</div>
+    <div class="cert-title">Academia Concluída!</div>
+    <div class="cert-desc">Parabéns! Completaste todas as aulas da Academia DynamicWorks. Estás pronto para operar com confiança.</div>
+  </div>
+
+  <div class="section-label">Níveis de Aprendizagem</div>
+
+  <!-- NÍVEIS GERADOS DINAMICAMENTE -->
+  <div id="levelsContainer"></div>
+
+</div>
+
+<!-- PLAYER MODAL -->
+<div class="player-modal" id="playerModal">
+  <div class="player-topbar">
+    <button class="player-close" onclick="closePlayer()">
+      <svg data-lucide="x" width="18" height="18"></svg>
+    </button>
+    <div class="player-title" id="playerTitle">—</div>
+    <div class="player-level-badge" id="playerLevelBadge"></div>
+  </div>
+  <div class="player-video-wrap" id="playerVideoWrap">
+    <div class="player-video-placeholder" id="playerPlaceholder">
+      <svg data-lucide="play-circle" width="48" height="48" style="color:var(--accent);opacity:.6"></svg>
+      <span style="font-size:.75rem;color:var(--text3)">A carregar vídeo...</span>
+    </div>
+  </div>
+  <div class="player-body">
+    <div class="player-lesson-title" id="playerLessonTitle">—</div>
+    <div class="player-meta-row" id="playerMeta"></div>
+    <div class="player-lesson-desc" id="playerLessonDesc">—</div>
+    <div class="player-actions">
+      <button class="btn-mark-done" id="btnMarkDone" onclick="markDone()">
+        <svg data-lucide="check-circle" width="16" height="16"></svg>
+        <span id="btnMarkDoneLabel">Marcar como concluída</span>
+      </button>
+      <button class="btn-next-lesson" id="btnNextLesson" onclick="goNextLesson()">
+        Próxima <svg data-lucide="arrow-right" width="15" height="15"></svg>
+      </button>
+    </div>
+    <div class="player-nav-row">
+      <button class="nav-lesson-btn" id="btnPrevLesson" onclick="goPrevLesson()">
+        <svg data-lucide="chevron-left" width="14" height="14"></svg> Anterior
+      </button>
+      <button class="nav-lesson-btn next" id="btnNextLesson2" onclick="goNextLesson()">
+        Seguinte <svg data-lucide="chevron-right" width="14" height="14"></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="toast-title" id="toastT"></div>
+  <div class="toast-body"  id="toastB"></div>
+</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════
+   CURRÍCULO DA ACADEMIA
+   Carregado dinamicamente do Firebase.
+   Fallback estático usado se Firebase falhar.
+   Para editar aulas: usar o Painel Admin → Academia
+══════════════════════════════════════════ */
+
+/* Fallback estático (usado se Firebase falhar) */
+const CURRICULUM_DEFAULT = [
+  {
+    id: 'iniciante', name: 'Iniciante',
+    desc: 'Começa do zero — o que são Accumulators e como funciona a plataforma',
+    color: '#00e676', colorBg: 'rgba(0,230,118,.1)', colorBorder: 'rgba(0,230,118,.2)',
+    icon: 'sprout', xpPerLesson: 10,
+    lessons: [
+      { id:'i1', title:'O que são Accumulators Deriv?', desc:'Aprende o conceito básico dos Accumulators — como funcionam as barreiras, os ticks e o crescimento do teu capital.', youtubeId:'', duration:'5 min', tags:['Conceitos','Básico'] },
+      { id:'i2', title:'Como fazer login na DynamicWorks', desc:'Passo a passo para entrar na plataforma com a tua conta Deriv.', youtubeId:'', duration:'3 min', tags:['Plataforma','Login'] },
+      { id:'i3', title:'Conta Demo vs Conta Real', desc:'Diferenças entre conta demo ($10.000 virtuais) e a conta real.', youtubeId:'', duration:'4 min', tags:['Demo','Real'] },
+      { id:'i4', title:'O teu primeiro trade — passo a passo', desc:'Abre o teu primeiro Accumulator na conta demo.', youtubeId:'', duration:'6 min', tags:['Prática','Primeiro Trade'] },
+      { id:'i5', title:'Como depositar via Multicaixa Express', desc:'Processo completo de depósito em USD usando Multicaixa Express.', youtubeId:'', duration:'5 min', tags:['Depósito','Multicaixa'] }
+    ]
+  },
+  {
+    id: 'intermedio', name: 'Intermédio',
+    desc: 'Aprofunda o conhecimento — taxas, barreiras e gestão de risco',
+    color: '#00d4ff', colorBg: 'rgba(0,212,255,.1)', colorBorder: 'rgba(0,212,255,.2)',
+    icon: 'trending-up', xpPerLesson: 20,
+    lessons: [
+      { id:'m1', title:'Taxas de crescimento: 1% vs 5%', desc:'A diferença real entre operar a 1% e a 5%.', youtubeId:'', duration:'7 min', tags:['Taxas','Risco'] },
+      { id:'m2', title:'Barreiras: como funcionam e como ler', desc:'O que são barreiras superiores e inferiores.', youtubeId:'', duration:'6 min', tags:['Barreiras','KO'] },
+      { id:'m3', title:'Gestão de stake — quanto arriscar?', desc:'A regra dos 5-10% do saldo por trade.', youtubeId:'', duration:'5 min', tags:['Gestão','Stake'] },
+      { id:'m4', title:'Take Profit: quando fechar a posição', desc:'Como definir um Take Profit realista.', youtubeId:'', duration:'6 min', tags:['Take Profit','Estratégia'] },
+      { id:'m5', title:'Como usar os bots automáticos', desc:'Introdução ao Bot Conservador e Bot Scalper.', youtubeId:'', duration:'8 min', tags:['Bots','Automação'] }
+    ]
+  },
+  {
+    id: 'avancado', name: 'Avançado',
+    desc: 'Para traders experientes — estratégias, análise e disciplina',
+    color: '#a78bfa', colorBg: 'rgba(167,139,250,.1)', colorBorder: 'rgba(167,139,250,.2)',
+    icon: 'zap', xpPerLesson: 30,
+    lessons: [
+      { id:'a1', title:'Análise de volatilidade em tempo real', desc:'Como usar o painel de análise da DynamicWorks.', youtubeId:'', duration:'9 min', tags:['Análise','Volatilidade'] },
+      { id:'a2', title:'Detecção de spikes — como proteger-te', desc:'O que são spikes de preço e como o sistema de alertas funciona.', youtubeId:'', duration:'7 min', tags:['Spikes','Alertas'] },
+      { id:'a3', title:'Estratégia de sessão diária', desc:'Define um objectivo diário e stop loss.', youtubeId:'', duration:'8 min', tags:['Estratégia','Disciplina'] },
+      { id:'a4', title:'Como subir no ranking semanal', desc:'As estratégias dos traders no topo do ranking.', youtubeId:'', duration:'6 min', tags:['Ranking','Competição'] },
+      { id:'a5', title:'Programa de referidos — ganhar passivamente', desc:'Como convidar amigos e ganhar 10% de comissão.', youtubeId:'', duration:'5 min', tags:['Referidos','Comissão'] }
+    ]
+  }
+];
+
+/* Metadados dos níveis (cores/icons — não vêm do Firebase) */
+const LEVEL_META = {
+  iniciante:  { color:'#00e676', colorBg:'rgba(0,230,118,.1)', colorBorder:'rgba(0,230,118,.2)', icon:'sprout',      xpPerLesson:10 },
+  intermedio: { color:'#00d4ff', colorBg:'rgba(0,212,255,.1)', colorBorder:'rgba(0,212,255,.2)', icon:'trending-up', xpPerLesson:20 },
+  avancado:   { color:'#a78bfa', colorBg:'rgba(167,139,250,.1)',colorBorder:'rgba(167,139,250,.2)',icon:'zap',        xpPerLesson:30 }
+};
+
+let CURRICULUM = CURRICULUM_DEFAULT; /* será substituído quando Firebase carregar */
+let _curriculumLoaded = false;
+
+/* Carrega o currículo do Firebase e faz merge com metadados */
+async function loadCurriculumFromFirebase() {
+  if (!window.__db) return;
+  try {
+    const levelIds = ['iniciante', 'intermedio', 'avancado'];
+    const results  = await Promise.all(
+      levelIds.map(id => window.__getDoc(window.__doc(window.__db, 'academia_curriculum', id)))
+    );
+    const merged = [];
+    results.forEach((snap, i) => {
+      const id   = levelIds[i];
+      const meta = LEVEL_META[id] || {};
+      /* Se existir no Firebase, usa as aulas do Firebase; senão, usa o fallback */
+      const base = CURRICULUM_DEFAULT.find(c => c.id === id) || {};
+      const lessons = (snap.exists() && snap.data().lessons && snap.data().lessons.length)
+        ? snap.data().lessons
+        : (base.lessons || []);
+      merged.push({
+        id,
+        name:        base.name || id,
+        desc:        base.desc || '',
+        color:       meta.color,
+        colorBg:     meta.colorBg,
+        colorBorder: meta.colorBorder,
+        icon:        meta.icon,
+        xpPerLesson: meta.xpPerLesson,
+        lessons
+      });
+    });
+    CURRICULUM = merged;
+    _curriculumLoaded = true;
+  } catch(e) {
+    /* Mantém o CURRICULUM_DEFAULT em caso de erro */
+    console.warn('Academia: usando currículo estático (Firebase erro):', e);
+  }
+}
+
+/* ══════ ESTADO ══════ */
+const TOTAL_LESSONS = CURRICULUM.reduce((s, l) => s + l.lessons.length, 0);
+let _progress = {}; /* { lessonId: true } */
+let _userId = null;
+let _currentLesson = null;
+let _currentLevelIdx = 0;
+let _currentLessonIdx = 0;
+
+/* ══════ UTILS ══════ */
+function $(id) { return document.getElementById(id); }
+function txt(id, v) { const e=$(id); if(e) e.textContent = v; }
+
+function toast(title, body, type) {
+  const t=$('toast'); if(!t) return;
+  txt('toastT', title); txt('toastB', body||'');
+  t.className = 'toast show' + (type ? ' toast-'+type : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ══════ PROGRESSO ══════ */
+function _progressKey() { return _userId ? 'dw_academia_'+_userId : 'dw_academia_guest'; }
+
+function loadProgress() {
+  try { _progress = JSON.parse(localStorage.getItem(_progressKey()) || '{}'); } catch(e) { _progress = {}; }
+}
+
+function saveProgress() {
+  try { localStorage.setItem(_progressKey(), JSON.stringify(_progress)); } catch(e) {}
+  /* Guardar no Firebase se autenticado */
+  if (_userId && window.__db) {
+    window.__setDoc(
+      window.__doc(window.__db, 'academia_progress', _userId),
+      { progress: _progress, updatedAt: Date.now() },
+      { merge: true }
+    ).catch(() => {});
+  }
+}
+
+async function loadProgressFromFirebase() {
+  if (!_userId || !window.__db) return;
+  try {
+    const snap = await window.__getDoc(window.__doc(window.__db, 'academia_progress', _userId));
+    if (snap.exists() && snap.data().progress) {
+      _progress = { ..._progress, ...snap.data().progress };
+      localStorage.setItem(_progressKey(), JSON.stringify(_progress));
+    }
+  } catch(e) {}
+}
+
+/* ══════ CALCULAR STATS ══════ */
+function getStats() {
+  const done = Object.keys(_progress).filter(k => _progress[k]).length;
+  const pct  = TOTAL_LESSONS > 0 ? Math.round((done / TOTAL_LESSONS) * 100) : 0;
+  let xp = 0;
+  CURRICULUM.forEach(lvl => {
+    lvl.lessons.forEach(l => { if (_progress[l.id]) xp += lvl.xpPerLesson; });
+  });
+  return { done, pct, xp };
+}
+
+function getLevelProgress(lvl) {
+  const done = lvl.lessons.filter(l => _progress[l.id]).length;
+  return { done, total: lvl.lessons.length, pct: Math.round((done / lvl.lessons.length) * 100) };
+}
+
+function isLevelUnlocked(idx) {
+  if (idx === 0) return true;
+  const prev = CURRICULUM[idx - 1];
+  return prev.lessons.every(l => _progress[l.id]);
+}
+
+/* ══════ RENDER ══════ */
+function render() {
+  const stats = getStats();
+  txt('statTotal', TOTAL_LESSONS);
+  txt('statDone', stats.done);
+  txt('statXP', stats.xp);
+  txt('xpTotal', stats.xp + ' XP');
+  txt('pgPct', stats.pct + '%');
+  $('pgFill').style.width = stats.pct + '%';
+
+  /* Labels de nível */
+  CURRICULUM.forEach((lvl, i) => {
+    const el = $('lvlLabel' + i);
+    if (!el) return;
+    el.className = 'pg-level';
+    if (isLevelUnlocked(i)) {
+      const lp = getLevelProgress(lvl);
+      if (lp.done === lp.total) el.classList.add('done');
+      else el.classList.add('active');
+    }
+  });
+
+  /* Certificado */
+  if (stats.done === TOTAL_LESSONS && TOTAL_LESSONS > 0) {
+    $('certCard').classList.add('visible');
+  }
+
+  renderLevels();
+}
+
+function renderLevels() {
+  const container = $('levelsContainer');
+  container.innerHTML = '';
+
+  CURRICULUM.forEach((lvl, lvlIdx) => {
+    const unlocked = isLevelUnlocked(lvlIdx);
+    const lp = getLevelProgress(lvl);
+    const completed = lp.done === lp.total;
+
+    const card = document.createElement('div');
+    card.className = 'level-card ' + (unlocked ? (completed ? 'completed' : 'unlocked') : 'locked');
+
+    /* Badge */
+    const badgeClass = !unlocked ? 'badge-locked' : completed ? 'badge-done' : 'badge-unlocked';
+    const badgeText  = !unlocked ? '🔒 Bloqueado' : completed ? '✅ Concluído' : '● Em curso';
+
+    /* Cor do nível */
+    const c = lvl.color;
+    const cbg = lvl.colorBg;
+
+    card.innerHTML = `
+      <div class="level-header" onclick="toggleLevel('lvlLessons${lvlIdx}', this)">
+        <div class="level-icon-wrap" style="background:${cbg};border:1px solid ${lvl.colorBorder}">
+          <svg data-lucide="${lvl.icon}" width="22" height="22" style="color:${c}"></svg>
+        </div>
+        <div class="level-info">
+          <div class="level-name" style="color:${unlocked ? c : 'var(--text3)'}">${lvl.name}</div>
+          <div class="level-desc">${lvl.desc}</div>
+        </div>
+        <div class="level-badge ${badgeClass}">${badgeText}</div>
+      </div>
+      <div class="level-progress-row">
+        <div class="lp-bar">
+          <div class="lp-fill" style="width:${lp.pct}%;background:linear-gradient(90deg,${c},${c}aa)"></div>
+        </div>
+        <div class="lp-txt">${lp.done}/${lp.total} aulas</div>
+      </div>
+      <div class="level-lessons" id="lvlLessons${lvlIdx}" style="${lvlIdx === 0 ? '' : 'display:none'}">
+        ${lvl.lessons.map((l, lIdx) => renderLesson(l, lIdx, lvlIdx, lvl, unlocked)).join('')}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderLesson(l, lIdx, lvlIdx, lvl, unlocked) {
+  const done = !!_progress[l.id];
+  const numClass = done ? 'ln-done' : (unlocked ? 'ln-active' : 'ln-todo');
+  const numContent = done
+    ? '<svg data-lucide="check" width="12" height="12"></svg>'
+    : (lIdx + 1);
+  const lockedClass = !unlocked ? ' locked' : '';
+
+  return `
+    <div class="lesson-row${lockedClass}" onclick="openLesson(${lvlIdx}, ${lIdx})">
+      <div class="lesson-num ${numClass}">${numContent}</div>
+      <div class="lesson-info">
+        <div class="lesson-title">${l.title}</div>
+        <div class="lesson-meta">
+          <span class="lesson-duration">
+            <svg data-lucide="clock" width="10" height="10"></svg>
+            ${l.duration}
+          </span>
+          ${l.tags.map(t => `<span>${t}</span>`).join(' · ')}
+        </div>
+      </div>
+      <div class="lesson-status">
+        ${done
+          ? `<svg data-lucide="check-circle" width="18" height="18" style="color:var(--green)"></svg>`
+          : unlocked
+            ? `<svg data-lucide="play-circle" width="18" height="18" style="color:var(--text3)"></svg>`
+            : `<svg data-lucide="lock" width="16" height="16" style="color:var(--text3)"></svg>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function toggleLevel(id, header) {
+  const el = $(id);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : '';
+}
+
+/* ══════ PLAYER ══════ */
+function openLesson(lvlIdx, lIdx) {
+  const lvl = CURRICULUM[lvlIdx];
+  const l   = lvl.lessons[lIdx];
+  if (!l) return;
+
+  _currentLevelIdx  = lvlIdx;
+  _currentLessonIdx = lIdx;
+  _currentLesson    = l;
+
+  /* Topbar do player */
+  txt('playerTitle', lvl.name + ' · Aula ' + (lIdx + 1));
+  const badge = $('playerLevelBadge');
+  badge.textContent = lvl.name;
+  badge.style.background = lvl.colorBg;
+  badge.style.border = '1px solid ' + lvl.colorBorder;
+  badge.style.color  = lvl.color;
+
+  /* Conteúdo */
+  txt('playerLessonTitle', l.title);
+  txt('playerLessonDesc',  l.desc);
+
+  /* Meta tags */
+  $('playerMeta').innerHTML = [
+    `<div class="pmeta-tag"><svg data-lucide="clock" width="11" height="11"></svg>${l.duration}</div>`,
+    ...l.tags.map(t => `<div class="pmeta-tag"><svg data-lucide="tag" width="11" height="11"></svg>${t}</div>`)
+  ].join('');
+
+  /* Vídeo YouTube */
+  const vw = $('playerVideoWrap');
+  const ph = $('playerPlaceholder');
+  if (l.youtubeId) {
+    ph.style.display = 'none';
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://www.youtube.com/embed/' + l.youtubeId + '?rel=0&modestbranding=1&playsinline=1';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    iframe.allowFullscreen = true;
+    /* Remover iframe anterior se existir */
+    const old = vw.querySelector('iframe');
+    if (old) vw.removeChild(old);
+    vw.appendChild(iframe);
+    ph.style.display = 'none';
+  } else {
+    const old = vw.querySelector('iframe');
+    if (old) vw.removeChild(old);
+    ph.style.display = 'flex';
+  }
+
+  /* Botão marcar concluída */
+  const done = !!_progress[l.id];
+  const btnDone = $('btnMarkDone');
+  const btnLabel = $('btnMarkDoneLabel');
+  btnDone.className = 'btn-mark-done' + (done ? ' done' : '');
+  btnLabel.textContent = done ? 'Aula concluída ✓' : 'Marcar como concluída';
+
+  /* Botões nav */
+  const hasPrev = lIdx > 0 || lvlIdx > 0;
+  const hasNext = lIdx < lvl.lessons.length - 1 || lvlIdx < CURRICULUM.length - 1;
+  $('btnPrevLesson').disabled  = !hasPrev;
+  $('btnNextLesson').disabled  = !hasNext;
+  $('btnNextLesson2').disabled = !hasNext;
+
+  $('playerModal').classList.add('open');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closePlayer() {
+  $('playerModal').classList.remove('open');
+  /* Parar vídeo */
+  const iframe = $('playerVideoWrap').querySelector('iframe');
+  if (iframe) iframe.src = iframe.src;
+}
+
+function markDone() {
+  if (!_currentLesson) return;
+  const id = _currentLesson.id;
+  const wasDone = !!_progress[id];
+  _progress[id] = true;
+  saveProgress();
+
+  const btnDone  = $('btnMarkDone');
+  const btnLabel = $('btnMarkDoneLabel');
+  btnDone.className = 'btn-mark-done done';
+  btnLabel.textContent = 'Aula concluída ✓';
+
+  if (!wasDone) {
+    const xp = CURRICULUM[_currentLevelIdx].xpPerLesson;
+    toast('🎉 Aula concluída!', '+' + xp + ' XP ganhos', 'success');
+  }
+
+  render();
+}
+
+function goNextLesson() {
+  const lvl = CURRICULUM[_currentLevelIdx];
+  if (_currentLessonIdx < lvl.lessons.length - 1) {
+    openLesson(_currentLevelIdx, _currentLessonIdx + 1);
+  } else if (_currentLevelIdx < CURRICULUM.length - 1) {
+    /* Próximo nível — verificar se está desbloqueado */
+    if (isLevelUnlocked(_currentLevelIdx + 1)) {
+      openLesson(_currentLevelIdx + 1, 0);
+    } else {
+      toast('Nível bloqueado', 'Conclui todas as aulas deste nível primeiro', 'warn');
+    }
+  }
+}
+
+function goPrevLesson() {
+  if (_currentLessonIdx > 0) {
+    openLesson(_currentLevelIdx, _currentLessonIdx - 1);
+  } else if (_currentLevelIdx > 0) {
+    const prevLvl = CURRICULUM[_currentLevelIdx - 1];
+    openLesson(_currentLevelIdx - 1, prevLvl.lessons.length - 1);
+  }
+}
+
+/* ══════ SESSION ══════ */
+function loadSession() {
+  const tk = localStorage.getItem('dw_token') || sessionStorage.getItem('dw_oauth_token');
+  const ac = localStorage.getItem('dw_acct')  || sessionStorage.getItem('dw_oauth_acct');
+  if (tk && ac) { _userId = ac; return true; }
+  return false;
+}
+
+/* ══════ INIT ══════ */
+loadSession();
+loadProgress();
+
+async function init() {
+  if (_userId) await loadProgressFromFirebase();
+  await loadCurriculumFromFirebase();
+  render();
+}
+
+if (window.__fbReady) {
+  init();
+} else {
+  window.addEventListener('fb-ready', init, { once: true });
+  /* Iniciar mesmo sem Firebase após 2s */
+  setTimeout(() => { if (!window.__fbReady) { render(); } }, 2000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+});
+window.addEventListener('load', () => {
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+
+<!-- ══ BOTTOM NAV DW ══ -->
+<style>
+/* ══ BOTTOM NAV ══ */
+.dw-bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: rgba(6,9,15,.98);
+  border-top: 1px solid rgba(0,212,255,.1);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: space-around;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.dw-bnav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: .18rem;
+  padding: .5rem .3rem .35rem; border: none; background: transparent;
+  color: #556677; font-size: .56rem; font-weight: 700;
+  cursor: pointer; min-width: 52px; max-width: 64px; flex: 1;
+  border-radius: 12px; transition: color .15s, transform .12s;
+  -webkit-tap-highlight-color: transparent; letter-spacing: .01em;
+  text-transform: uppercase; text-decoration: none; font-family: inherit;
+}
+.dw-bnav-btn.active { color: #00d4ff; }
+.dw-bnav-btn:active { transform: scale(.9); }
+.dw-bnav-btn svg { width: 22px; height: 22px; stroke: currentColor; transition: stroke .15s; display: block; }
+.dw-bnav-btn.trade-fab {
+  color: #000;
+  background: linear-gradient(135deg, #00d4ff, #0099bb);
+  border-radius: 14px; padding: .5rem .6rem .35rem;
+  margin: -4px 4px 0; box-shadow: 0 4px 20px rgba(0,212,255,.3);
+  min-width: 58px;
+}
+.dw-bnav-btn.trade-fab svg { stroke: #000; }
+.dw-bnav-ico { line-height: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+.dw-bnav-new {
+  position: absolute; top: -4px; right: -7px;
+  background: #00e676; color: #000;
+  font-size: 7px; font-weight: 900; border-radius: 5px;
+  padding: 1px 3px; line-height: 1.4;
+}
+</style>
+<nav class="dw-bottom-nav">
+  <a class="dw-bnav-btn" href="index.html">
+    <div class="dw-bnav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>Gráfico
+  </a>
+  <a class="dw-bnav-btn" href="index.html">
+    <div class="dw-bnav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg></div>Posições
+  </a>
+  <a class="dw-bnav-btn trade-fab" href="index.html">
+    <div class="dw-bnav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>Trade
+  </a>
+  <a class="dw-bnav-btn active" href="academia.html">
+    <div class="dw-bnav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>Aprender
+  </a>
+  <a class="dw-bnav-btn" href="sobre.html">
+    <div class="dw-bnav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>Sobre
+  </a>
+  <a class="dw-bnav-btn" href="bots.html">
+    <div class="dw-bnav-ico" style="position:relative"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg><span class="dw-bnav-new">NEW</span></div>Bot
+  </a>
+</nav>
+
+</body>
+</html>
