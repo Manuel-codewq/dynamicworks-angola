@@ -368,18 +368,26 @@ function regMapError(code, msg){
     'EmailNotFound':'Email não encontrado. Verifica o endereço.',
     'DuplicateEmail':'Este email já está registado. Usa outro email ou faz login.',
     'DuplicateAccount':'Já existe uma conta com este email. Faz login.',
+    'AlreadyExistsAccount':'Já existe uma conta com este email. Faz login.',
     'InvalidPassword':'Password inválida. Verifica os requisitos.',
     'PasswordTooShort':'A password é demasiado curta. Mínimo 8 caracteres.',
-    'InvalidVerificationToken':'Código de verificação inválido ou expirado. Solicita um novo.',
-    'TokenExpired':'O código expirou. Volta atrás e solicita um novo.',
-    'WrongResponse':'Código incorrecto. Verifica e tenta novamente.',
+    'InvalidVerificationToken':'Token inválido ou expirado. Clica no link do email novamente.',
+    'TokenExpired':'O link de verificação expirou. Volta atrás e pede um novo.',
+    'WrongResponse':'Token incorrecto. Copia o token directamente do link do email.',
     'ResidenceNotFound':'País de residência não disponível.',
     'InputValidationFailed':'Dados inválidos. Verifica os campos preenchidos.',
   };
+  /* Deriv às vezes usa InvalidRequest com mensagem a dizer duplicado */
+  if(!map[code] && msg){
+    var msgLow=(msg||'').toLowerCase();
+    if(msgLow.includes('already')||msgLow.includes('duplicate')||msgLow.includes('exist')){
+      return '__DUPLICATE__';
+    }
+  }
   return map[code]||(msg||'Ocorreu um erro. Tenta novamente.');
 }
 
-/* ── PASSO 1: Enviar código de verificação ── */
+/* ── PASSO 1: Enviar link de verificação ── */
 window.regSendCode=function(){
   regHideError(1);
   var email=(document.getElementById('regEmail')||{}).value||'';
@@ -396,7 +404,7 @@ window.regSendCode=function(){
   _regEmail=email;
   _regPassword=pwd;
 
-  regSetBtnLoading('regStep1Btn',true,'A enviar código...');
+  regSetBtnLoading('regStep1Btn',true,'A enviar link...');
 
   /* Abrir WebSocket Deriv */
   if(_regWs){ try{_regWs.close();}catch(e){} }
@@ -414,20 +422,21 @@ window.regSendCode=function(){
     regSetBtnLoading('regStep1Btn',false,'');
     if(d.error){
       var errCode=d.error.code||'';
-      if(errCode==='DuplicateEmail'||errCode==='DuplicateAccount'){
-        /* Email ja existe — navegar para step 4 dedicado */
+      var mapped=regMapError(errCode, d.error.message);
+      /* Email duplicado — directo para step 4 */
+      if(errCode==='DuplicateEmail'||errCode==='DuplicateAccount'||errCode==='AlreadyExistsAccount'||mapped==='__DUPLICATE__'){
         var dupEl=document.getElementById('regDupEmail');
         if(dupEl) dupEl.textContent=_regEmail;
         regShowStep(4);
       } else {
-        regShowError(1, regMapError(d.error.code, d.error.message));
+        regShowError(1, mapped==='__DUPLICATE__'?'Este email já está registado. Faz login.':mapped);
       }
       return;
     }
     if(d.msg_type==='verify_email' && d.verify_email===1){
-      /* Sucesso — ir para step 2 */
+      /* Sucesso — ir para step 2 com instruções claras sobre o LINK */
       var sub=document.getElementById('regStep2Sub');
-      if(sub) sub.textContent='Enviámos um código para '+_regEmail+'. Verifica a caixa de entrada (e spam).';
+      if(sub) sub.textContent='Enviámos um email para '+_regEmail+'.';
       regShowStep(2);
       if(window.lucide) lucide.createIcons();
     }
@@ -439,13 +448,13 @@ window.regSendCode=function(){
   };
 };
 
-/* ── PASSO 2: Criar conta ── */
+/* ── PASSO 2: Criar conta com token do link ── */
 window.regCreateAccount=function(){
   regHideError(2);
   var code=(document.getElementById('regCode')||{}).value||'';
   code=code.trim();
   if(!code||code.length<4){
-    regShowError(2,'Introduz o código de verificação recebido no email.');
+    regShowError(2,'Cola aqui o token copiado do link no email. Ex: AbCdEfGh123...');
     return;
   }
 
@@ -480,7 +489,17 @@ window.regCreateAccount=function(){
     if(d.msg_type!=='new_account_virtual') return;
     regSetBtnLoading('regStep2Btn',false,'');
     if(d.error){
-      regShowError(2, regMapError(d.error.code, d.error.message));
+      var errCode=d.error.code||'';
+      /* Token inválido — dar instruções específicas sobre onde copiar */
+      if(errCode==='InvalidVerificationToken'||errCode==='TokenExpired'||errCode==='WrongResponse'){
+        regShowError(2,
+          '⚠️ Token inválido ou expirado.\n\n'
+          +'Abre o email da Deriv → clica no link → copia o valor do parâmetro "token=" no URL e cola aqui.\n\n'
+          +'Se o link já expirou, volta atrás e pede um novo.'
+        );
+      } else {
+        regShowError(2, regMapError(errCode, d.error.message));
+      }
       return;
     }
     if(d.new_account_virtual){
