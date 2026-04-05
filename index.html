@@ -1891,7 +1891,7 @@ window.addEventListener('app-ready', function() {
       </div>
     </div>
 
-    <!-- STEP 2: Token do link de verificação -->
+    <!-- STEP 2: Verificação automática pelo link -->
     <div id="regStep2" style="display:none">
       <div class="modal-title" style="display:flex;align-items:center;gap:.5rem">
         <svg data-lucide="mail-check" width="18" height="18" style="stroke:var(--accent)"></svg>
@@ -1899,67 +1899,61 @@ window.addEventListener('app-ready', function() {
       </div>
       <div class="modal-sub" id="regStep2Sub">Enviámos um email para o teu endereço.</div>
 
-      <!-- Instrução principal — explicar que é um LINK -->
+      <!-- Instrução principal — simples e directa -->
       <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:14px;padding:1rem;margin-bottom:1rem">
         <div style="font-size:2rem;text-align:center;margin-bottom:.5rem">📧</div>
-        <div style="font-size:.8rem;font-weight:800;color:var(--text);margin-bottom:.65rem;text-align:center">Segue estes 3 passos simples:</div>
+        <div style="font-size:.8rem;font-weight:800;color:var(--text);margin-bottom:.75rem;text-align:center">Apenas 2 passos:</div>
 
-        <!-- Passo A -->
-        <div style="display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.6rem">
-          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:.7rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem">1</div>
-          <div style="font-size:.72rem;color:var(--text2);line-height:1.55">
-            Abre o teu email e procura a mensagem da <strong style="color:#fff">Deriv</strong> (verifica também a pasta <strong style="color:#fff">spam</strong>)
+        <!-- Passo 1 -->
+        <div style="display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.7rem">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:#000;font-size:.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+          <div style="font-size:.75rem;color:var(--text2);line-height:1.6">
+            Abre o teu email e clica no botão <strong style="color:#fff;background:rgba(0,212,255,.15);padding:.1rem .4rem;border-radius:4px">Verify my email</strong> da Deriv
+            <div style="font-size:.65rem;color:var(--text3);margin-top:.2rem">Verifica também a pasta <strong style="color:var(--text2)">spam</strong> se não aparecer</div>
           </div>
         </div>
 
-        <!-- Passo B -->
-        <div style="display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.6rem">
-          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:.7rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem">2</div>
-          <div style="font-size:.72rem;color:var(--text2);line-height:1.55">
-            Clica no botão <strong style="color:#fff">"Verify my email"</strong> ou no link no email — irás para uma página da Deriv
-          </div>
-        </div>
-
-        <!-- Passo C -->
+        <!-- Passo 2 -->
         <div style="display:flex;align-items:flex-start;gap:.6rem">
-          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:.7rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem">3</div>
-          <div style="font-size:.72rem;color:var(--text2);line-height:1.55">
-            Nessa página da Deriv, o URL contém <code style="background:rgba(0,212,255,.12);color:var(--accent);padding:.1rem .35rem;border-radius:4px;font-size:.68rem">?token=XXXXXXXX</code>. Copia esse token e cola no campo abaixo
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:#000;font-size:.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+          <div style="font-size:.75rem;color:var(--text2);line-height:1.6">
+            Serás redirecionado de volta para a DynamicWorks — o código é <strong style="color:#00e676">preenchido automaticamente</strong> ✅
+            <div style="font-size:.65rem;color:var(--text3);margin-top:.2rem">Ou copia o código do URL e cola manualmente abaixo</div>
           </div>
         </div>
       </div>
 
-      <!-- Exemplo visual do URL -->
-      <div style="background:rgba(0,0,0,.3);border:1px dashed var(--border2);border-radius:10px;padding:.65rem .85rem;margin-bottom:.85rem">
-        <div style="font-size:.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem">Exemplo do URL que vais ver:</div>
-        <div style="font-size:.65rem;font-family:var(--mono);color:var(--text2);word-break:break-all;line-height:1.6">
-          deriv.com/redirect/?action=signup&<strong style="color:var(--accent)">token=AbCdEfGh1234567</strong>&...
+      <!-- Exemplo do URL real -->
+      <div style="background:rgba(0,0,0,.3);border:1px dashed rgba(0,230,118,.25);border-radius:10px;padding:.65rem .85rem;margin-bottom:.85rem">
+        <div style="font-size:.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem">URL que vais ver após clicar no email:</div>
+        <div style="font-size:.65rem;font-family:var(--mono);color:var(--text2);word-break:break-all;line-height:1.7">
+          dynamicworks.ao?action=signup&<strong style="color:#00e676;font-size:.7rem">code=7CJLkQaz</strong>&lang=EN
         </div>
-        <div style="font-size:.62rem;color:var(--text3);margin-top:.35rem">👆 Copia apenas o valor depois de <code style="color:var(--accent)">token=</code></div>
+        <div style="font-size:.62rem;color:var(--text3);margin-top:.3rem">👆 O valor do <code style="color:#00e676">code=</code> é o teu código — é copiado automaticamente</div>
       </div>
 
       <div class="form-grp" style="margin-bottom:.75rem">
         <div class="form-lbl">
           <svg data-lucide="key" width="11" height="11" style="stroke:var(--yellow)"></svg>
-          Token de Verificação
-          <span style="color:var(--red);font-size:.68rem;margin-left:auto">* do link no email</span>
+          Código de Verificação
+          <span style="font-size:.65rem;color:var(--green);margin-left:auto" id="regCodeAutoLabel" style="display:none">✅ Preenchido automaticamente</span>
         </div>
         <input class="form-inp" id="regCode" type="text" inputmode="text"
-               placeholder="Cola aqui o token... Ex: AbCdEfGh1234"
+               placeholder="Cola aqui o código... Ex: 7CJLkQaz"
                maxlength="100"
                autocomplete="off" autocorrect="off" autocapitalize="off"
-               style="font-family:var(--mono);font-size:.9rem"/>
+               style="font-family:var(--mono);font-size:1rem;font-weight:700;letter-spacing:.08em;text-align:center"/>
 
         <!-- Countdown + Reenviar -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.45rem">
-          <div style="font-size:.62rem;font-family:var(--mono)" id="regLinkTimer">
-            ⏱️ O link expira em <strong id="regCountdown" style="color:var(--yellow)">10:00</strong>
+          <div style="font-size:.62rem;font-family:var(--mono);color:var(--text3)" id="regLinkTimer">
+            ⏱️ Expira em <strong id="regCountdown" style="color:var(--yellow)">10:00</strong>
           </div>
           <button id="regResendBtn" onclick="regResendLink()"
                   style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:7px;
                          padding:.22rem .65rem;font-size:.65rem;font-weight:700;color:var(--accent);
                          cursor:pointer;display:none;font-family:var(--font)">
-            🔄 Reenviar link
+            🔄 Reenviar email
           </button>
         </div>
       </div>
@@ -1973,7 +1967,7 @@ window.addEventListener('app-ready', function() {
         </button>
         <button class="btn btn-ghost" onclick="regBackToStep1()" style="margin-top:.4rem">
           <svg data-lucide="arrow-left" width="14" height="14"></svg>
-          Voltar / Pedir novo link
+          Voltar / Reenviar email
         </button>
       </div>
     </div>
@@ -2051,6 +2045,44 @@ document.addEventListener('app-ready', function() {
     if(!str) return;
     var params = {};
     str.split('&').forEach(function(p){ var kv=p.split('='); if(kv.length>=2) params[decodeURIComponent(kv[0])]=decodeURIComponent(kv[1]); });
+
+    /* ── Callback de verificação de email (action=signup&code=XXXX) ── */
+    if(params['action']==='signup' && params['code']){
+      var verifCode = params['code'];
+      /* Limpar o URL imediatamente para não ficar o code exposto */
+      try{ history.replaceState(null,'',window.location.pathname); }catch(e){}
+      /* Abrir o modal no step 2 com o código já preenchido automaticamente */
+      window.addEventListener('DOMContentLoaded', function(){
+        setTimeout(function(){
+          /* Abrir o modal */
+          var m = document.getElementById('registerModal');
+          if(m) m.classList.add('open');
+          /* Ir directo para o step 2 */
+          if(typeof regShowStep==='function') regShowStep(2);
+          /* Preencher o campo com o código */
+          var codeInp = document.getElementById('regCode');
+          if(codeInp){
+            codeInp.value = verifCode;
+            /* Destacar o campo para o utilizador ver que foi preenchido */
+            codeInp.style.borderColor = 'var(--green)';
+            codeInp.style.background  = 'rgba(0,230,118,.06)';
+            setTimeout(function(){
+              codeInp.style.borderColor = '';
+              codeInp.style.background  = '';
+            }, 3000);
+          }
+          /* Mostrar mensagem de sucesso */
+          var sub = document.getElementById('regStep2Sub');
+          if(sub) sub.textContent = '✅ Código detectado! Clica em "Criar Conta Demo" para continuar.';
+          /* Iniciar countdown */
+          if(typeof regStartCountdown==='function') regStartCountdown();
+          if(window.lucide) lucide.createIcons();
+        }, 600);
+      });
+      return; /* não processar como OAuth */
+    }
+
+    /* ── Callback OAuth normal (acct1=...&token1=...) ── */
     var accounts=[];
     for(var i=1;i<=10;i++){
       var a=params['acct'+i],t=params['token'+i],c=params['cur'+i];

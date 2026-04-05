@@ -348,7 +348,7 @@ window.regResendLink=function(){
     if(d.msg_type==='verify_email'&&d.verify_email===1){
       regHideError(2);
       regStartCountdown();
-      if(typeof toast==='function') toast('📧 Novo link enviado!','Verifica o email de '+_regEmail,'success');
+      if(typeof toast==='function') toast('📧 Novo email enviado!','Verifica a caixa de '+_regEmail,'success');
     }
   };
   _regWs.onerror=function(){ regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.'); };
@@ -526,7 +526,7 @@ window.regCreateAccount=function(){
   var code=(document.getElementById('regCode')||{}).value||'';
   code=code.trim();
   if(!code||code.length<4){
-    regShowError(2,'Cola aqui o token copiado do link no email. Ex: AbCdEfGh123...');
+    regShowError(2,'Introduz o código de verificação. Clica no link no email e serás redirecionado — o código é preenchido automaticamente.');
     return;
   }
 
@@ -558,11 +558,10 @@ window.regCreateAccount=function(){
       var errCode=d.error.code||'';
       if(errCode==='InvalidVerificationToken'||errCode==='TokenExpired'||errCode==='WrongResponse'){
         regShowError(2,
-          '⚠️ Token inválido ou expirado.\n\n'
-          +'Abre o email da Deriv → clica no link → copia o valor após "token=" no URL.\n\n'
-          +'Se o link expirou, clica em "Reenviar link" abaixo.'
+          '⚠️ Código inválido ou expirado.\n\n'
+          +'Volta ao email da Deriv, clica novamente no botão "Verify my email" e espera ser redirecionado.\n\n'
+          +'O código é preenchido automaticamente — se não aconteceu, copia o valor do "code=" no URL.'
         );
-        /* Mostrar botão reenviar automaticamente */
         var rsBtn=document.getElementById('regResendBtn');
         if(rsBtn) rsBtn.style.display='block';
       } else {
