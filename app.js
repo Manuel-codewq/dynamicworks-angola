@@ -276,7 +276,7 @@ var _regEmail='';
 var _regPassword='';
 
 function regShowStep(n){
-  [1,2,3].forEach(function(i){
+  [1,2,3,4].forEach(function(i){
     var el=document.getElementById('regStep'+i);
     if(el) el.style.display=(i===n)?'block':'none';
   });
@@ -415,16 +415,10 @@ window.regSendCode=function(){
     if(d.error){
       var errCode=d.error.code||'';
       if(errCode==='DuplicateEmail'||errCode==='DuplicateAccount'){
-        /* Email ja existe — mostrar botao de login em vez de erro simples */
-        var errEl=document.getElementById('regStep1Error');
-        if(errEl){
-          errEl.innerHTML='Este email ja tem conta na Deriv.<br><br>'
-            +'<button onclick="closeRegisterModal();loginWithDeriv();" '
-            +'style="background:var(--accent);color:#000;border:none;border-radius:10px;'
-            +'padding:.6rem 1rem;font-size:.82rem;font-weight:800;cursor:pointer;width:100%;margin-top:.25rem">'
-            +'Entrar com esta conta</button>';
-          errEl.style.display='block';
-        }
+        /* Email ja existe — navegar para step 4 dedicado */
+        var dupEl=document.getElementById('regDupEmail');
+        if(dupEl) dupEl.textContent=_regEmail;
+        regShowStep(4);
       } else {
         regShowError(1, regMapError(d.error.code, d.error.message));
       }
@@ -504,6 +498,15 @@ window.regBackToStep1=function(){
   regHideError(1);
   regHideError(2);
   regShowStep(1);
+};
+
+window.regUseDifferentEmail=function(){
+  /* Limpar email e voltar ao step 1 */
+  var emailEl=document.getElementById('regEmail');
+  if(emailEl){ emailEl.value=''; }
+  regHideError(1);
+  regShowStep(1);
+  if(emailEl) setTimeout(function(){ emailEl.focus(); }, 100);
 };
 window.openModal=function(){ var m=$('modal'); if(m) m.classList.add('open'); };
 window.closeModal=function(){ var m=$('modal'); if(m) m.classList.remove('open'); };
