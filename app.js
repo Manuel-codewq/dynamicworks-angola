@@ -263,15 +263,234 @@ window.loginWithDeriv=function(){
   location.href=url;
 };
 window.openRegister=function(){
-  /* Link de registo com affiliate_token + ref do parceiro IB em utm_content */
-  var partnerRef=(function(){ try{ return localStorage.getItem('dw_pending_ref')||new URLSearchParams(location.search).get('ref')||''; }catch(e){ return ''; } })();
-  var url='https://hub.deriv.com/tradershub/signup'
-    +'?t=B479A9FF-7DC5-4C81-9632-335E7571345B'
-    +'&utm_campaign=dynamicworks'
-    +'&utm_medium=affiliate'
-    +'&utm_source=CU301183'
-    +(partnerRef ? '&utm_content='+encodeURIComponent(partnerRef) : '');
-  window.open(url,'_blank');
+  var m=document.getElementById('registerModal');
+  if(m) m.classList.add('open');
+  regShowStep(1);
+  if(window.lucide) lucide.createIcons();
+};
+
+/* ══════════════════════════════════════════
+   MODAL DE REGISTO — DynamicWorks Angola
+══════════════════════════════════════════ */
+var _regWs=null;
+var _regEmail='';
+var _regPassword='';
+
+function regShowStep(n){
+  [1,2,3].forEach(function(i){
+    var el=document.getElementById('regStep'+i);
+    if(el) el.style.display=(i===n)?'block':'none';
+  });
+  if(window.lucide) lucide.createIcons();
+}
+
+window.closeRegisterModal=function(){
+  var m=document.getElementById('registerModal');
+  if(m) m.classList.remove('open');
+  if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
+};
+
+/* ── Verificar força da password ── */
+window.checkRegPassword=function(val){
+  var s=document.getElementById('regPwdStrength');
+  var lbl=document.getElementById('regPwdLabel');
+  if(!s||!val){if(s)s.style.display='none';return;}
+  s.style.display='block';
+  var has={
+    len:val.length>=8,
+    upper:/[A-Z]/.test(val),
+    lower:/[a-z]/.test(val),
+    num:/[0-9]/.test(val),
+    sym:/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(val)
+  };
+  var score=Object.values(has).filter(Boolean).length;
+  var bars=['pwdBar1','pwdBar2','pwdBar3','pwdBar4'];
+  var colors=['#ff3d5a','#ff6b35','#ffc107','#00e676'];
+  var labels=['Muito fraca','Fraca','Boa','Forte'];
+  bars.forEach(function(id,i){
+    var el=document.getElementById(id);
+    if(el) el.style.background=i<(score-1)?colors[Math.min(score-2,3)]:('rgba(255,255,255,.08)');
+  });
+  if(lbl){
+    lbl.textContent=labels[Math.min(score-1,3)]||'';
+    lbl.style.color=colors[Math.min(score-2,3)]||'var(--text3)';
+  }
+};
+
+/* ── Toggle ver/esconder password ── */
+window.toggleRegPwd=function(){
+  var inp=document.getElementById('regPassword');
+  var ico=document.getElementById('regPwdEye');
+  if(!inp) return;
+  var show=inp.type==='password';
+  inp.type=show?'text':'password';
+  if(ico){ ico.setAttribute('data-lucide',show?'eye-off':'eye'); if(window.lucide) lucide.createIcons(); }
+};
+
+/* ── Validar password ── */
+function validatePassword(pwd){
+  if(pwd.length<8) return 'A password deve ter pelo menos 8 caracteres';
+  if(!/[A-Z]/.test(pwd)) return 'A password deve ter pelo menos uma letra maiúscula';
+  if(!/[a-z]/.test(pwd)) return 'A password deve ter pelo menos uma letra minúscula';
+  if(!/[0-9]/.test(pwd)) return 'A password deve ter pelo menos um número';
+  if(!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) return 'A password deve ter pelo menos um símbolo (!@#$...)';
+  return null;
+}
+
+/* ── Mostrar erro no step ── */
+function regShowError(step, msg){
+  var el=document.getElementById('regStep'+step+'Error');
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+}
+function regHideError(step){
+  var el=document.getElementById('regStep'+step+'Error');
+  if(el) el.style.display='none';
+}
+
+/* ── Botão loading ── */
+function regSetBtnLoading(id, loading, text){
+  var btn=document.getElementById(id);
+  if(!btn) return;
+  btn.disabled=loading;
+  if(loading){
+    btn.dataset.orig=btn.innerHTML;
+    btn.innerHTML='<svg style="animation:spin .8s linear infinite;width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> '+text;
+  } else {
+    btn.innerHTML=btn.dataset.orig||btn.innerHTML;
+  }
+}
+
+/* ── Mapear erros da API Deriv ── */
+function regMapError(code, msg){
+  var map={
+    'InvalidEmailAddress':'Endereço de email inválido. Verifica e tenta novamente.',
+    'EmailNotFound':'Email não encontrado. Verifica o endereço.',
+    'DuplicateEmail':'Este email já está registado. Usa outro email ou faz login.',
+    'DuplicateAccount':'Já existe uma conta com este email. Faz login.',
+    'InvalidPassword':'Password inválida. Verifica os requisitos.',
+    'PasswordTooShort':'A password é demasiado curta. Mínimo 8 caracteres.',
+    'InvalidVerificationToken':'Código de verificação inválido ou expirado. Solicita um novo.',
+    'TokenExpired':'O código expirou. Volta atrás e solicita um novo.',
+    'WrongResponse':'Código incorrecto. Verifica e tenta novamente.',
+    'ResidenceNotFound':'País de residência não disponível.',
+    'InputValidationFailed':'Dados inválidos. Verifica os campos preenchidos.',
+  };
+  return map[code]||(msg||'Ocorreu um erro. Tenta novamente.');
+}
+
+/* ── PASSO 1: Enviar código de verificação ── */
+window.regSendCode=function(){
+  regHideError(1);
+  var email=(document.getElementById('regEmail')||{}).value||'';
+  var pwd=(document.getElementById('regPassword')||{}).value||'';
+
+  email=email.trim().toLowerCase();
+  if(!email||!email.includes('@')){
+    regShowError(1,'Introduz um email válido.');
+    return;
+  }
+  var pwdErr=validatePassword(pwd);
+  if(pwdErr){ regShowError(1,pwdErr); return; }
+
+  _regEmail=email;
+  _regPassword=pwd;
+
+  regSetBtnLoading('regStep1Btn',true,'A enviar código...');
+
+  /* Abrir WebSocket Deriv */
+  if(_regWs){ try{_regWs.close();}catch(e){} }
+  _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
+
+  _regWs.onopen=function(){
+    _regWs.send(JSON.stringify({
+      verify_email: _regEmail,
+      type: 'account_opening'
+    }));
+  };
+
+  _regWs.onmessage=function(e){
+    var d=JSON.parse(e.data);
+    regSetBtnLoading('regStep1Btn',false,'');
+    if(d.error){
+      regShowError(1, regMapError(d.error.code, d.error.message));
+      return;
+    }
+    if(d.msg_type==='verify_email' && d.verify_email===1){
+      /* Sucesso — ir para step 2 */
+      var sub=document.getElementById('regStep2Sub');
+      if(sub) sub.textContent='Enviámos um código para '+_regEmail+'. Verifica a caixa de entrada (e spam).';
+      regShowStep(2);
+      if(window.lucide) lucide.createIcons();
+    }
+  };
+
+  _regWs.onerror=function(){
+    regSetBtnLoading('regStep1Btn',false,'');
+    regShowError(1,'Erro de ligação. Verifica a internet e tenta novamente.');
+  };
+};
+
+/* ── PASSO 2: Criar conta ── */
+window.regCreateAccount=function(){
+  regHideError(2);
+  var code=(document.getElementById('regCode')||{}).value||'';
+  code=code.trim();
+  if(!code||code.length<4){
+    regShowError(2,'Introduz o código de verificação recebido no email.');
+    return;
+  }
+
+  regSetBtnLoading('regStep2Btn',true,'A criar conta...');
+
+  /* Garantir que o WS ainda está aberto */
+  if(!_regWs||_regWs.readyState!==1){
+    _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
+    _regWs.onopen=function(){ sendNewAccount(); };
+    _regWs.onmessage=handleNewAccount;
+    _regWs.onerror=function(){
+      regSetBtnLoading('regStep2Btn',false,'');
+      regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.');
+    };
+  } else {
+    _regWs.onmessage=handleNewAccount;
+    sendNewAccount();
+  }
+
+  function sendNewAccount(){
+    _regWs.send(JSON.stringify({
+      new_account_virtual: 1,
+      client_password: _regPassword,
+      verification_code: code,
+      residence: 'ao',
+      type: 'trading'
+    }));
+  }
+
+  function handleNewAccount(e){
+    var d=JSON.parse(e.data);
+    if(d.msg_type!=='new_account_virtual') return;
+    regSetBtnLoading('regStep2Btn',false,'');
+    if(d.error){
+      regShowError(2, regMapError(d.error.code, d.error.message));
+      return;
+    }
+    if(d.new_account_virtual){
+      /* Sucesso! */
+      regShowStep(3);
+      if(window.lucide) lucide.createIcons();
+      if(typeof toast==='function') toast('🎉 Conta criada!','Bem-vindo à DynamicWorks Angola!','success');
+      try{_regWs.close();}catch(err){} _regWs=null;
+    }
+  }
+};
+
+/* ── Voltar ao step 1 ── */
+window.regBackToStep1=function(){
+  regHideError(1);
+  regHideError(2);
+  regShowStep(1);
 };
 window.openModal=function(){ var m=$('modal'); if(m) m.classList.add('open'); };
 window.closeModal=function(){ var m=$('modal'); if(m) m.classList.remove('open'); };
