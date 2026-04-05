@@ -264,7 +264,19 @@ window.loginWithDeriv=function(){
 window.openRegister=function(){
   var m=document.getElementById('registerModal');
   if(m) m.classList.add('open');
-  regShowStep(1);
+  /* Se há código pendente do URL, ir directo para step 2 */
+  if(window._pendingRegCode){
+    regShowStep(2);
+    setTimeout(function(){
+      var inp=document.getElementById('regCode');
+      if(inp){ inp.value=window._pendingRegCode; }
+      var hint=document.getElementById('regCodeHint');
+      if(hint) hint.style.display='flex';
+      window._pendingRegCode=null;
+    },100);
+  } else {
+    regShowStep(1);
+  }
   if(window.lucide) lucide.createIcons();
 };
 
@@ -274,90 +286,18 @@ window.openRegister=function(){
 var _regWs=null;
 var _regEmail='';
 var _regPassword='';
-var _regCountdownTimer=null;
-var _regCountdownSecs=600;
-var _regResendSecsLeft=0;
 
 function regShowStep(n){
   [1,2,3,4].forEach(function(i){
     var el=document.getElementById('regStep'+i);
     if(el) el.style.display=(i===n)?'block':'none';
   });
-  if(n===2){ regStartCountdown(); }
-  else      { regStopCountdown(); }
   if(window.lucide) lucide.createIcons();
 }
-
-/* ── Countdown de 10 minutos ── */
-function regStartCountdown(){
-  regStopCountdown();
-  _regCountdownSecs=600;
-  var cdEl=document.getElementById('regCountdown');
-  var rsBtn=document.getElementById('regResendBtn');
-  if(cdEl){ cdEl.textContent='10:00'; cdEl.style.color='var(--yellow)'; }
-  if(rsBtn) rsBtn.style.display='none';
-
-  _regCountdownTimer=setInterval(function(){
-    _regCountdownSecs--;
-    var m=Math.floor(_regCountdownSecs/60);
-    var s=_regCountdownSecs%60;
-    if(cdEl) cdEl.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
-
-    if(_regCountdownSecs<=0){
-      regStopCountdown();
-      if(cdEl){ cdEl.textContent='Expirou!'; cdEl.style.color='var(--red)'; }
-      if(rsBtn) rsBtn.style.display='block';
-      regShowError(2,'⏰ O link expirou. Clica em "Reenviar link" para receber um novo.');
-    }
-    /* Mostrar "Reenviar" a partir dos 2 minutos restantes */
-    if(_regCountdownSecs===120 && rsBtn) rsBtn.style.display='block';
-  },1000);
-}
-
-function regStopCountdown(){
-  if(_regCountdownTimer){ clearInterval(_regCountdownTimer); _regCountdownTimer=null; }
-}
-
-/* ── Reenviar link (com cooldown de 60s) ── */
-window.regResendLink=function(){
-  var rsBtn=document.getElementById('regResendBtn');
-  if(!_regEmail){ regBackToStep1(); return; }
-  if(_regResendSecsLeft>0) return;
-
-  _regResendSecsLeft=60;
-  if(rsBtn){ rsBtn.disabled=true; rsBtn.textContent='⏳ '+_regResendSecsLeft+'s...'; }
-
-  var tick=setInterval(function(){
-    _regResendSecsLeft--;
-    if(_regResendSecsLeft>0){
-      if(rsBtn) rsBtn.textContent='⏳ '+_regResendSecsLeft+'s...';
-    } else {
-      clearInterval(tick);
-      if(rsBtn){ rsBtn.disabled=false; rsBtn.textContent='🔄 Reenviar link'; }
-    }
-  },1000);
-
-  if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
-  _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
-  _regWs.onopen=function(){
-    _regWs.send(JSON.stringify({ verify_email:_regEmail, type:'account_opening' }));
-  };
-  _regWs.onmessage=function(e){
-    var d=JSON.parse(e.data);
-    if(d.error){ regShowError(2,'Erro ao reenviar: '+regMapError(d.error.code,d.error.message)); return; }
-    if(d.msg_type==='verify_email'&&d.verify_email===1){
-      regHideError(2);
-      regStartCountdown();
-      if(typeof toast==='function') toast('📧 Novo email enviado!','Verifica a caixa de '+_regEmail,'success');
-    }
-  };
-  _regWs.onerror=function(){ regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.'); };
-};
 
 window.closeRegisterModal=function(){
   var m=document.getElementById('registerModal');
   if(m) m.classList.remove('open');
-  regStopCountdown();
   if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
 };
 
@@ -440,26 +380,18 @@ function regMapError(code, msg){
     'EmailNotFound':'Email não encontrado. Verifica o endereço.',
     'DuplicateEmail':'Este email já está registado. Usa outro email ou faz login.',
     'DuplicateAccount':'Já existe uma conta com este email. Faz login.',
-    'AlreadyExistsAccount':'Já existe uma conta com este email. Faz login.',
     'InvalidPassword':'Password inválida. Verifica os requisitos.',
     'PasswordTooShort':'A password é demasiado curta. Mínimo 8 caracteres.',
-    'InvalidVerificationToken':'Token inválido ou expirado. Clica no link do email novamente.',
-    'TokenExpired':'O link de verificação expirou. Volta atrás e pede um novo.',
-    'WrongResponse':'Token incorrecto. Copia o token directamente do link do email.',
+    'InvalidVerificationToken':'Código de verificação inválido ou expirado. Solicita um novo.',
+    'TokenExpired':'O código expirou. Volta atrás e solicita um novo.',
+    'WrongResponse':'Código incorrecto. Verifica e tenta novamente.',
     'ResidenceNotFound':'País de residência não disponível.',
     'InputValidationFailed':'Dados inválidos. Verifica os campos preenchidos.',
   };
-  /* Deriv às vezes usa InvalidRequest com mensagem a dizer duplicado */
-  if(!map[code] && msg){
-    var msgLow=(msg||'').toLowerCase();
-    if(msgLow.includes('already')||msgLow.includes('duplicate')||msgLow.includes('exist')){
-      return '__DUPLICATE__';
-    }
-  }
   return map[code]||(msg||'Ocorreu um erro. Tenta novamente.');
 }
 
-/* ── PASSO 1: Enviar link de verificação ── */
+/* ── PASSO 1: Enviar código de verificação ── */
 window.regSendCode=function(){
   regHideError(1);
   var email=(document.getElementById('regEmail')||{}).value||'';
@@ -476,7 +408,7 @@ window.regSendCode=function(){
   _regEmail=email;
   _regPassword=pwd;
 
-  regSetBtnLoading('regStep1Btn',true,'A enviar link...');
+  regSetBtnLoading('regStep1Btn',true,'A enviar código...');
 
   /* Abrir WebSocket Deriv */
   if(_regWs){ try{_regWs.close();}catch(e){} }
@@ -494,22 +426,23 @@ window.regSendCode=function(){
     regSetBtnLoading('regStep1Btn',false,'');
     if(d.error){
       var errCode=d.error.code||'';
-      var mapped=regMapError(errCode, d.error.message);
-      /* Email duplicado — directo para step 4 */
-      if(errCode==='DuplicateEmail'||errCode==='DuplicateAccount'||errCode==='AlreadyExistsAccount'||mapped==='__DUPLICATE__'){
+      if(errCode==='DuplicateEmail'||errCode==='DuplicateAccount'){
+        /* Email ja existe — navegar para step 4 dedicado */
         var dupEl=document.getElementById('regDupEmail');
         if(dupEl) dupEl.textContent=_regEmail;
         regShowStep(4);
       } else {
-        regShowError(1, mapped==='__DUPLICATE__'?'Este email já está registado. Faz login.':mapped);
+        regShowError(1, regMapError(d.error.code, d.error.message));
       }
       return;
     }
     if(d.msg_type==='verify_email' && d.verify_email===1){
-      /* Sucesso — ir para step 2 com instruções claras sobre o LINK */
+      /* Sucesso — ir para step 2 */
       var sub=document.getElementById('regStep2Sub');
       if(sub) sub.textContent='Enviámos um email para '+_regEmail+'.';
       regShowStep(2);
+      /* Tentar extrair código do URL caso o utilizador já tenha clicado no link */
+      regTryAutoFillCode();
       if(window.lucide) lucide.createIcons();
     }
   };
@@ -520,24 +453,31 @@ window.regSendCode=function(){
   };
 };
 
-/* ── PASSO 2: Criar conta com token do link ── */
+/* ── PASSO 2: Criar conta ── */
 window.regCreateAccount=function(){
   regHideError(2);
   var code=(document.getElementById('regCode')||{}).value||'';
   code=code.trim();
   if(!code||code.length<4){
-    regShowError(2,'Introduz o código de verificação. Clica no link no email e serás redirecionado — o código é preenchido automaticamente.');
+    regShowError(2,'Introduz o código de verificação recebido no email.');
     return;
   }
 
   regSetBtnLoading('regStep2Btn',true,'A criar conta...');
 
-  /* Timeout de segurança — se o WS não responder em 15s */
-  var _createTimeout=setTimeout(function(){
-    regSetBtnLoading('regStep2Btn',false,'');
-    regShowError(2,'A ligação demorou demasiado. Verifica a internet e tenta novamente.');
-    if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
-  },15000);
+  /* Garantir que o WS ainda está aberto */
+  if(!_regWs||_regWs.readyState!==1){
+    _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
+    _regWs.onopen=function(){ sendNewAccount(); };
+    _regWs.onmessage=handleNewAccount;
+    _regWs.onerror=function(){
+      regSetBtnLoading('regStep2Btn',false,'');
+      regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.');
+    };
+  } else {
+    _regWs.onmessage=handleNewAccount;
+    sendNewAccount();
+  }
 
   function sendNewAccount(){
     _regWs.send(JSON.stringify({
@@ -552,45 +492,54 @@ window.regCreateAccount=function(){
   function handleNewAccount(e){
     var d=JSON.parse(e.data);
     if(d.msg_type!=='new_account_virtual') return;
-    clearTimeout(_createTimeout);
     regSetBtnLoading('regStep2Btn',false,'');
     if(d.error){
-      var errCode=d.error.code||'';
-      if(errCode==='InvalidVerificationToken'||errCode==='TokenExpired'||errCode==='WrongResponse'){
-        regShowError(2,
-          '⚠️ Código inválido ou expirado.\n\n'
-          +'Volta ao email da Deriv, clica novamente no botão "Verify my email" e espera ser redirecionado.\n\n'
-          +'O código é preenchido automaticamente — se não aconteceu, copia o valor do "code=" no URL.'
-        );
-        var rsBtn=document.getElementById('regResendBtn');
-        if(rsBtn) rsBtn.style.display='block';
-      } else {
-        regShowError(2, regMapError(errCode, d.error.message));
-      }
+      regShowError(2, regMapError(d.error.code, d.error.message));
       return;
     }
     if(d.new_account_virtual){
-      regStopCountdown();
+      /* Sucesso! */
       regShowStep(3);
       if(window.lucide) lucide.createIcons();
       if(typeof toast==='function') toast('🎉 Conta criada!','Bem-vindo à DynamicWorks Angola!','success');
       try{_regWs.close();}catch(err){} _regWs=null;
     }
   }
-
-  /* Criar novo WS — sempre fresco para evitar estado stale */
-  if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
-  _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
-  _regWs.onopen=function(){ sendNewAccount(); };
-  _regWs.onmessage=handleNewAccount;
-  _regWs.onerror=function(){
-    clearTimeout(_createTimeout);
-    regSetBtnLoading('regStep2Btn',false,'');
-    regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.');
-  };
 };
 
 /* ── Voltar ao step 1 ── */
+/* Extrair código do URL — a Deriv redireciona com ?action=signup&code=XXXX */
+function regTryAutoFillCode(){
+  try{
+    var params=new URLSearchParams(location.search);
+    var code=params.get('code');
+    if(code && code.length>=6){
+      var inp=document.getElementById('regCode');
+      if(inp){ inp.value=code; }
+      var hint=document.getElementById('regCodeHint');
+      if(hint){ hint.style.display='flex'; }
+      /* Limpar o code do URL sem recarregar a página */
+      var clean=location.pathname+(location.hash||'');
+      history.replaceState(null,'',clean);
+    }
+  }catch(e){}
+}
+
+/* Verificar URL ao carregar a página — utilizador pode ter clicado no link e voltado */
+window.addEventListener('DOMContentLoaded',function(){
+  try{
+    var params=new URLSearchParams(location.search);
+    var action=params.get('action');
+    var code=params.get('code');
+    if(action==='signup' && code){
+      /* Guardar código para usar quando o modal abrir */
+      window._pendingRegCode=code;
+      /* Limpar URL */
+      history.replaceState(null,'',location.pathname);
+    }
+  }catch(e){}
+});
+
 window.regBackToStep1=function(){
   regHideError(1);
   regHideError(2);
