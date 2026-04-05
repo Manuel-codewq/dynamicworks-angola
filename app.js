@@ -9,7 +9,7 @@ var APP_ID    = 127916;
 var WS_URL    = 'wss://ws.binaryws.com/websockets/v3?app_id=' + APP_ID + '&l=PT';
 var AFFILIATE = 'https://deriv.partners/rx?sidc=B479A9FF-7DC5-4C81-9632-335E7571345B&utm_campaign=dynamicworks&utm_medium=affiliate&utm_source=CU301183';
 var TAXA_AOA  = 950;
-var MARKUP    = 2; /* Markup em % — máximo 5. Cada trade gera MARKUP% do payout como comissão tua */
+var MARKUP    = 2; /* Markup configurado no dashboard api.deriv.com — não se passa na API */
 
 var ASSETS = [
   { sym:'R_10',    name:'Volatility 10',     short:'V10',    pip:4 },
@@ -1111,7 +1111,7 @@ window.onTpInput=function(){
 function requestProposal(){
   if(T.stake<1||!S.loggedIn) return;
   if(T._inCooldown) return; /* bloqueio real após KO — não pede proposta durante cooldown */
-  wsSend({proposal:1,amount:T.stake,basis:'stake',contract_type:'ACCU',currency:S.currency,growth_rate:T.rate/100,symbol:S.asset.sym,app_markup_percentage:MARKUP});
+  wsSend({proposal:1,amount:T.stake,basis:'stake',contract_type:'ACCU',currency:S.currency,growth_rate:T.rate/100,symbol:S.asset.sym});
 }
 
 function onProposal(d){
@@ -1149,7 +1149,7 @@ window.placeTrade=function(){
   _tradePending=true;
   var btn=$('execBtn'); if(btn){ btn.disabled=true; btn.textContent='A abrir...'; }
   window._pendingTP=(T.tpEnabled&&T.tpValue>0)?T.tpValue:0;
-  wsSend({buy:T.proposal.id,price:T.stake,parameters:{amount:T.stake,basis:'stake',contract_type:'ACCU',currency:S.currency,growth_rate:T.rate/100,symbol:S.asset.sym,app_markup_percentage:MARKUP}});
+  wsSend({buy:T.proposal.id,price:T.stake,parameters:{amount:T.stake,basis:'stake',contract_type:'ACCU',currency:S.currency,growth_rate:T.rate/100,symbol:S.asset.sym}});
 };
 
 function onBuy(d){
