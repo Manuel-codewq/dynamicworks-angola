@@ -4096,3 +4096,10 @@ input, select, textarea, .pnc-input, .form-inp, .stakeAmt {
 }
 .land-wa-t { font-size:.85rem;font-weight:800;color:#fff;margin-bottom:.08rem; }
 .land-wa-d { font-size:.67rem;color:var(--text2); }
+/* ══════ REGISTER MODAL ══════ */
+#registerModal input:focus {
+  border-color: var(--accent);
+  background: rgba(0,212,255,.06);
+}
+#registerModal input::placeholder { color: rgba(255,255,255,.25); }
+#reg-code { text-transform: uppercase; }
