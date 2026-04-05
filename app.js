@@ -413,7 +413,21 @@ window.regSendCode=function(){
     var d=JSON.parse(e.data);
     regSetBtnLoading('regStep1Btn',false,'');
     if(d.error){
-      regShowError(1, regMapError(d.error.code, d.error.message));
+      var errCode=d.error.code||'';
+      if(errCode==='DuplicateEmail'||errCode==='DuplicateAccount'){
+        /* Email ja existe — mostrar botao de login em vez de erro simples */
+        var errEl=document.getElementById('regStep1Error');
+        if(errEl){
+          errEl.innerHTML='Este email ja tem conta na Deriv.<br><br>'
+            +'<button onclick="closeRegisterModal();loginWithDeriv();" '
+            +'style="background:var(--accent);color:#000;border:none;border-radius:10px;'
+            +'padding:.6rem 1rem;font-size:.82rem;font-weight:800;cursor:pointer;width:100%;margin-top:.25rem">'
+            +'Entrar com esta conta</button>';
+          errEl.style.display='block';
+        }
+      } else {
+        regShowError(1, regMapError(d.error.code, d.error.message));
+      }
       return;
     }
     if(d.msg_type==='verify_email' && d.verify_email===1){
