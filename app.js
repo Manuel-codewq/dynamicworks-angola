@@ -274,18 +274,90 @@ window.openRegister=function(){
 var _regWs=null;
 var _regEmail='';
 var _regPassword='';
+var _regCountdownTimer=null;
+var _regCountdownSecs=600;
+var _regResendSecsLeft=0;
 
 function regShowStep(n){
   [1,2,3,4].forEach(function(i){
     var el=document.getElementById('regStep'+i);
     if(el) el.style.display=(i===n)?'block':'none';
   });
+  if(n===2){ regStartCountdown(); }
+  else      { regStopCountdown(); }
   if(window.lucide) lucide.createIcons();
 }
+
+/* ── Countdown de 10 minutos ── */
+function regStartCountdown(){
+  regStopCountdown();
+  _regCountdownSecs=600;
+  var cdEl=document.getElementById('regCountdown');
+  var rsBtn=document.getElementById('regResendBtn');
+  if(cdEl){ cdEl.textContent='10:00'; cdEl.style.color='var(--yellow)'; }
+  if(rsBtn) rsBtn.style.display='none';
+
+  _regCountdownTimer=setInterval(function(){
+    _regCountdownSecs--;
+    var m=Math.floor(_regCountdownSecs/60);
+    var s=_regCountdownSecs%60;
+    if(cdEl) cdEl.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+
+    if(_regCountdownSecs<=0){
+      regStopCountdown();
+      if(cdEl){ cdEl.textContent='Expirou!'; cdEl.style.color='var(--red)'; }
+      if(rsBtn) rsBtn.style.display='block';
+      regShowError(2,'⏰ O link expirou. Clica em "Reenviar link" para receber um novo.');
+    }
+    /* Mostrar "Reenviar" a partir dos 2 minutos restantes */
+    if(_regCountdownSecs===120 && rsBtn) rsBtn.style.display='block';
+  },1000);
+}
+
+function regStopCountdown(){
+  if(_regCountdownTimer){ clearInterval(_regCountdownTimer); _regCountdownTimer=null; }
+}
+
+/* ── Reenviar link (com cooldown de 60s) ── */
+window.regResendLink=function(){
+  var rsBtn=document.getElementById('regResendBtn');
+  if(!_regEmail){ regBackToStep1(); return; }
+  if(_regResendSecsLeft>0) return;
+
+  _regResendSecsLeft=60;
+  if(rsBtn){ rsBtn.disabled=true; rsBtn.textContent='⏳ '+_regResendSecsLeft+'s...'; }
+
+  var tick=setInterval(function(){
+    _regResendSecsLeft--;
+    if(_regResendSecsLeft>0){
+      if(rsBtn) rsBtn.textContent='⏳ '+_regResendSecsLeft+'s...';
+    } else {
+      clearInterval(tick);
+      if(rsBtn){ rsBtn.disabled=false; rsBtn.textContent='🔄 Reenviar link'; }
+    }
+  },1000);
+
+  if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
+  _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
+  _regWs.onopen=function(){
+    _regWs.send(JSON.stringify({ verify_email:_regEmail, type:'account_opening' }));
+  };
+  _regWs.onmessage=function(e){
+    var d=JSON.parse(e.data);
+    if(d.error){ regShowError(2,'Erro ao reenviar: '+regMapError(d.error.code,d.error.message)); return; }
+    if(d.msg_type==='verify_email'&&d.verify_email===1){
+      regHideError(2);
+      regStartCountdown();
+      if(typeof toast==='function') toast('📧 Novo link enviado!','Verifica o email de '+_regEmail,'success');
+    }
+  };
+  _regWs.onerror=function(){ regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.'); };
+};
 
 window.closeRegisterModal=function(){
   var m=document.getElementById('registerModal');
   if(m) m.classList.remove('open');
+  regStopCountdown();
   if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
 };
 
@@ -460,19 +532,12 @@ window.regCreateAccount=function(){
 
   regSetBtnLoading('regStep2Btn',true,'A criar conta...');
 
-  /* Garantir que o WS ainda está aberto */
-  if(!_regWs||_regWs.readyState!==1){
-    _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
-    _regWs.onopen=function(){ sendNewAccount(); };
-    _regWs.onmessage=handleNewAccount;
-    _regWs.onerror=function(){
-      regSetBtnLoading('regStep2Btn',false,'');
-      regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.');
-    };
-  } else {
-    _regWs.onmessage=handleNewAccount;
-    sendNewAccount();
-  }
+  /* Timeout de segurança — se o WS não responder em 15s */
+  var _createTimeout=setTimeout(function(){
+    regSetBtnLoading('regStep2Btn',false,'');
+    regShowError(2,'A ligação demorou demasiado. Verifica a internet e tenta novamente.');
+    if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
+  },15000);
 
   function sendNewAccount(){
     _regWs.send(JSON.stringify({
@@ -487,29 +552,43 @@ window.regCreateAccount=function(){
   function handleNewAccount(e){
     var d=JSON.parse(e.data);
     if(d.msg_type!=='new_account_virtual') return;
+    clearTimeout(_createTimeout);
     regSetBtnLoading('regStep2Btn',false,'');
     if(d.error){
       var errCode=d.error.code||'';
-      /* Token inválido — dar instruções específicas sobre onde copiar */
       if(errCode==='InvalidVerificationToken'||errCode==='TokenExpired'||errCode==='WrongResponse'){
         regShowError(2,
           '⚠️ Token inválido ou expirado.\n\n'
-          +'Abre o email da Deriv → clica no link → copia o valor do parâmetro "token=" no URL e cola aqui.\n\n'
-          +'Se o link já expirou, volta atrás e pede um novo.'
+          +'Abre o email da Deriv → clica no link → copia o valor após "token=" no URL.\n\n'
+          +'Se o link expirou, clica em "Reenviar link" abaixo.'
         );
+        /* Mostrar botão reenviar automaticamente */
+        var rsBtn=document.getElementById('regResendBtn');
+        if(rsBtn) rsBtn.style.display='block';
       } else {
         regShowError(2, regMapError(errCode, d.error.message));
       }
       return;
     }
     if(d.new_account_virtual){
-      /* Sucesso! */
+      regStopCountdown();
       regShowStep(3);
       if(window.lucide) lucide.createIcons();
       if(typeof toast==='function') toast('🎉 Conta criada!','Bem-vindo à DynamicWorks Angola!','success');
       try{_regWs.close();}catch(err){} _regWs=null;
     }
   }
+
+  /* Criar novo WS — sempre fresco para evitar estado stale */
+  if(_regWs){ try{_regWs.close();}catch(e){} _regWs=null; }
+  _regWs=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
+  _regWs.onopen=function(){ sendNewAccount(); };
+  _regWs.onmessage=handleNewAccount;
+  _regWs.onerror=function(){
+    clearTimeout(_createTimeout);
+    regSetBtnLoading('regStep2Btn',false,'');
+    regShowError(2,'Erro de ligação. Verifica a internet e tenta novamente.');
+  };
 };
 
 /* ── Voltar ao step 1 ── */

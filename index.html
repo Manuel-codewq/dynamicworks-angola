@@ -1949,8 +1949,18 @@ window.addEventListener('app-ready', function() {
                maxlength="100"
                autocomplete="off" autocorrect="off" autocapitalize="off"
                style="font-family:var(--mono);font-size:.9rem"/>
-        <div style="font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.3rem">
-          ⏱️ O link expira em 10 minutos — faz depressa!
+
+        <!-- Countdown + Reenviar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.45rem">
+          <div style="font-size:.62rem;font-family:var(--mono)" id="regLinkTimer">
+            ⏱️ O link expira em <strong id="regCountdown" style="color:var(--yellow)">10:00</strong>
+          </div>
+          <button id="regResendBtn" onclick="regResendLink()"
+                  style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:7px;
+                         padding:.22rem .65rem;font-size:.65rem;font-weight:700;color:var(--accent);
+                         cursor:pointer;display:none;font-family:var(--font)">
+            🔄 Reenviar link
+          </button>
         </div>
       </div>
 

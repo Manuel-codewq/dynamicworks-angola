@@ -733,13 +733,17 @@ input,select,textarea,button{font-family:var(--font);font-size:16px}
     <div class="fg">
       <label class="fl">Valor a sacar (USD)</label>
       <input class="fi" id="saqueAmount" type="number" placeholder="Ex: 10.00" inputmode="decimal" min="5" step="0.01"/>
+      <div style="font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.25rem">Mínimo $5.00 · Máximo: o teu saldo disponível</div>
     </div>
     <div class="fg">
       <label class="fl">Telemóvel Multicaixa Express</label>
-      <input class="fi" id="saquePhone" type="tel" placeholder="9XX XXX XXX" inputmode="tel"/>
+      <input class="fi" id="saquePhone" type="tel" placeholder="Ex: 923 456 789" inputmode="tel"
+             oninput="this.value=this.value.replace(/[^0-9+\s]/g,'')"/>
+      <div style="font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.25rem">Número angolano (9XX XXX XXX) — para pagamento via Multicaixa Express</div>
     </div>
     <div class="info-box" style="margin-bottom:1rem">
-      <div style="display:flex;align-items:flex-start;gap:.4rem"><svg data-lucide="zap" width="13" height="13" style="stroke:var(--yellow);flex-shrink:0;margin-top:.1rem"></svg><span>Valor mínimo: <strong>$5.00</strong>. Processado pelo administrador em até <strong>48h úteis</strong>.</span></div>
+      <div style="display:flex;align-items:flex-start;gap:.4rem"><svg data-lucide="zap" width="13" height="13" style="stroke:var(--yellow);flex-shrink:0;margin-top:.1rem"></svg>
+      <span>Processado pelo administrador em até <strong>48h úteis</strong>. Só podes ter <strong>1 saque pendente</strong> de cada vez.</span></div>
     </div>
     <div style="display:flex;gap:.65rem">
       <button class="btn btn-rd" style="flex:1" onclick="closeSaque()">Cancelar</button>
@@ -1404,6 +1408,28 @@ window.submitSaque = async function() {
   }
   if (!phone) { toast('Introduz o número Multicaixa', 'err'); return; }
 
+  /* Validar formato do telemóvel — mínimo 9 dígitos */
+  var phoneDigits = phone.replace(/\D/g,'');
+  if (phoneDigits.length < 9) {
+    toast('Número de telemóvel inválido. Ex: 923 456 789', 'err');
+    return;
+  }
+
+  /* Verificar se já tem um saque pendente */
+  try {
+    var qPend = window._q(
+      window._col(window._db, 'saques'),
+      window._wh('acct',   '==', _partner.id),
+      window._wh('status', '==', 'pendente'),
+      window._lim(1)
+    );
+    var snapPend = await window._getDocs(qPend);
+    if (!snapPend.empty) {
+      toast('⚠️ Já tens um saque pendente. Aguarda o processamento antes de pedir outro.', 'warn');
+      return;
+    }
+  } catch(e2) { /* Se falhar a verificação, continua mesmo assim */ }
+
   btn.disabled = true;
   btn.textContent = 'A enviar...';
 
@@ -1414,11 +1440,12 @@ window.submitSaque = async function() {
       amount   : amount,
       phone    : phone,
       status   : 'pendente',
+      type     : 'comissao_parceiro',
       createdAt: Date.now()
     });
 
     closeSaque();
-    toast('✅ Pedido de saque enviado! O administrador irá processar em breve.');
+    toast('✅ Pedido de saque de $' + amount.toFixed(2) + ' enviado! Processado em 24–48h.');
     loadSaqueHist();
   } catch(e) {
     toast('Erro: ' + e.message, 'err');
