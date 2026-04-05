@@ -7,7 +7,6 @@
 
 var APP_ID    = 127916;
 var WS_URL    = 'wss://ws.binaryws.com/websockets/v3?app_id=' + APP_ID + '&l=PT';
-var AFFILIATE = 'https://deriv.partners/rx?sidc=B479A9FF-7DC5-4C81-9632-335E7571345B&utm_campaign=dynamicworks&utm_medium=affiliate&utm_source=CU301183';
 var TAXA_AOA  = 950;
 var MARKUP    = 2; /* Markup configurado no dashboard api.deriv.com — não se passa na API */
 
