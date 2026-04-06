@@ -107,7 +107,7 @@ html,body{background:#06090f!important;color:#dde8f8;margin:0;padding:0;min-heig
         if (d.taxa_usd_aoa) {
           window._taxaUsdAoa = d.taxa_usd_aoa;
           try { localStorage.setItem('dw_taxa_aoa', d.taxa_usd_aoa); } catch(e) {}
-          if (typeof syncBalance === 'function') syncBalance();
+          if (typeof syncBalance === 'function' && typeof S !== 'undefined' && S.loggedIn) syncBalance();
         }
       }
     } catch(e) { console.warn('taxa_cambio:', e); }
