@@ -15,7 +15,7 @@
             min-height: 100vh;
         }
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
             background: #131c2e;
             border-radius: 16px;
@@ -23,17 +23,18 @@
             border: 1px solid #243452;
         }
         h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #00d4ff; }
-        p { color: #7a9cc0; margin-bottom: 1.5rem; font-size: 0.9rem; }
-        .form-group {
-            margin-bottom: 1rem;
+        .url-box {
+            background: #06090f;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+            font-family: monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            border: 1px solid #00d4ff30;
         }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #7a9cc0;
-        }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 600; color: #7a9cc0; }
         input, select {
             width: 100%;
             padding: 12px;
@@ -42,11 +43,6 @@
             border-radius: 8px;
             color: #dde8f8;
             font-size: 1rem;
-            font-family: monospace;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #00d4ff;
         }
         button {
             width: 100%;
@@ -56,233 +52,172 @@
             border-radius: 10px;
             color: #000;
             font-weight: 700;
-            font-size: 1rem;
             cursor: pointer;
             margin-top: 0.5rem;
         }
-        button:active { transform: scale(0.98); }
-        button.secondary {
-            background: linear-gradient(135deg, #6c3fff, #4a1dcc);
-            color: #fff;
-        }
+        button.secondary { background: linear-gradient(135deg, #6c3fff, #4a1dcc); color: #fff; }
         .log-box {
             background: #06090f;
             border-radius: 12px;
             padding: 16px;
             margin-top: 20px;
             font-family: monospace;
-            font-size: 0.75rem;
-            max-height: 400px;
+            font-size: 0.7rem;
+            max-height: 300px;
             overflow-y: auto;
             border: 1px solid #243452;
         }
-        .log-entry {
-            padding: 6px 0;
-            border-bottom: 1px solid #1c2a40;
-            color: #7a9cc0;
-        }
+        .log-entry { padding: 4px 0; border-bottom: 1px solid #1c2a40; }
         .log-entry.error { color: #ff3d5a; }
         .log-entry.success { color: #00e676; }
-        .log-entry.info { color: #00d4ff; }
-        .step-indicator {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .step {
-            flex: 1;
-            text-align: center;
-            padding: 8px;
-            background: #0f1521;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            color: #7a9cc0;
-        }
-        .step.active {
-            background: #00d4ff20;
-            border: 1px solid #00d4ff;
-            color: #00d4ff;
-        }
-        .step.completed {
-            background: #00e67620;
-            border-color: #00e676;
-            color: #00e676;
-        }
-        hr { border-color: #243452; margin: 16px 0; }
-        .code-hint {
-            background: #00e67610;
-            border: 1px solid #00e67630;
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 0.8rem;
-            margin-bottom: 16px;
-        }
+        .step-indicator { display: flex; gap: 10px; margin-bottom: 20px; }
+        .step { flex: 1; text-align: center; padding: 8px; background: #0f1521; border-radius: 8px; font-size: 0.7rem; }
+        .step.active { background: #00d4ff20; border: 1px solid #00d4ff; color: #00d4ff; }
+        .step.completed { background: #00e67620; border-color: #00e676; color: #00e676; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🧪 Teste de Registo Deriv</h1>
-        <p>Esta página testa directamente a API da Deriv para diagnosticar o erro "Dados inválidos".</p>
-
+        
+        <div class="url-box">
+            <strong>📍 URL ATUAL:</strong><br>
+            <span id="currentUrl"></span>
+        </div>
+        
         <div class="step-indicator">
             <div class="step" id="step1">1. Enviar Email</div>
             <div class="step" id="step2">2. Verificar Código</div>
             <div class="step" id="step3">3. Criar Conta</div>
         </div>
 
-        <!-- STEP 1: Enviar email -->
         <div id="panel1">
             <div class="form-group">
-                <label>📧 Email (usa um email REAL e nunca usado na Deriv)</label>
-                <input type="email" id="testEmail" placeholder="exemplo@email.com" autocomplete="off">
+                <label>📧 Email (NOVO, nunca usado na Deriv)</label>
+                <input type="email" id="testEmail" placeholder="exemplo@email.com">
             </div>
             <div class="form-group">
-                <label>🔒 Password (mín 8 chars, maiúscula, minúscula, número, símbolo)</label>
-                <input type="password" id="testPassword" placeholder="Ex: Teste@1234">
-                <small style="color:#7a9cc0; font-size:0.7rem;">Deve conter: Maiúscula, minúscula, número, símbolo (!@#$)</small>
+                <label>🔒 Password (ex: Teste@1234)</label>
+                <input type="password" id="testPassword" placeholder="Maiúscula, minúscula, número, símbolo">
             </div>
-            <button id="btnSendCode">📨 Enviar Código de Verificação</button>
+            <button id="btnSendCode">📨 Enviar Código</button>
         </div>
 
-        <!-- STEP 2: Inserir código -->
         <div id="panel2" style="display:none;">
-            <div class="code-hint" id="codeHint">
-                🔍 Aguardando código...
-            </div>
             <div class="form-group">
-                <label>🔑 Código de Verificação (do email)</label>
-                <input type="text" id="verificationCode" placeholder="Ex: 7CJLkQaz" autocomplete="off" style="font-family: monospace; font-size: 1rem; text-transform: uppercase;">
+                <label>🔑 Código de Verificação</label>
+                <input type="text" id="verificationCode" placeholder="Código do email" style="font-family: monospace;">
+                <small style="color:#7a9cc0; display:block; margin-top:5px;">💡 O código deve aparecer automaticamente se clicares no link do email</small>
             </div>
-            <button id="btnCreateAccount" class="secondary">✅ Criar Conta Demo</button>
-            <button id="btnBack" style="background:transparent; border:1px solid #243452; margin-top:8px;">← Voltar</button>
+            <button id="btnCreateAccount" class="secondary">✅ Criar Conta</button>
+            <button id="btnBack" style="background:transparent; border:1px solid #243452;">← Voltar</button>
         </div>
 
-        <!-- STEP 3: Sucesso -->
-        <div id="panel3" style="display:none;">
-            <div style="text-align:center; padding:20px;">
-                <div style="font-size:3rem;">🎉</div>
-                <h3>Conta criada com sucesso!</h3>
-                <p>A conta demo foi criada na Deriv.</p>
-                <button id="btnReset">🔄 Testar Outra Conta</button>
-            </div>
+        <div id="panel3" style="display:none; text-align:center; padding:20px;">
+            <div style="font-size:3rem;">🎉</div>
+            <h3>Conta criada com sucesso!</h3>
+            <button id="btnReset">🔄 Testar Outra</button>
         </div>
 
-        <!-- LOG DE DEBUG -->
         <div class="log-box">
-            <div style="margin-bottom:8px; font-weight:bold;">📋 Log de Debug:</div>
+            <div style="margin-bottom:8px; font-weight:bold;">📋 Log:</div>
             <div id="logContainer"></div>
         </div>
     </div>
 
     <script>
-        // Elementos
-        const panel1 = document.getElementById('panel1');
-        const panel2 = document.getElementById('panel2');
-        const panel3 = document.getElementById('panel3');
-        const step1El = document.getElementById('step1');
-        const step2El = document.getElementById('step2');
-        const step3El = document.getElementById('step3');
-        const logContainer = document.getElementById('logContainer');
+        // Mostrar URL atual
+        document.getElementById('currentUrl').textContent = window.location.href;
         
-        // Variáveis de estado
         let currentWs = null;
-        let currentEmail = '';
-        let currentPassword = '';
-        let currentCode = '';
+        let currentEmail = '', currentPassword = '';
         
-        // Função de log
-        function addLog(message, type = 'info') {
+        function addLog(msg, type = 'info') {
+            const log = document.getElementById('logContainer');
             const entry = document.createElement('div');
             entry.className = `log-entry ${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logContainer.appendChild(entry);
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            log.appendChild(entry);
             entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            console.log(`[${type.toUpperCase()}] ${message}`);
+            console.log(msg);
         }
         
-        function clearLogs() {
-            logContainer.innerHTML = '';
-        }
-        
-        function updateSteps(step) {
-            step1El.classList.remove('active', 'completed');
-            step2El.classList.remove('active', 'completed');
-            step3El.classList.remove('active', 'completed');
+        // EXTRAIR CÓDIGO DO URL - VERSÃO COMPLETA
+        function extractCodeFromURL() {
+            const fullUrl = window.location.href;
+            addLog(`🔍 A analisar URL: ${fullUrl}`, 'info');
             
-            if (step === 1) step1El.classList.add('active');
-            if (step === 2) step2El.classList.add('active');
-            if (step === 3) step3El.classList.add('active');
-            
-            if (step > 1) step1El.classList.add('completed');
-            if (step > 2) step2El.classList.add('completed');
-        }
-        
-        function showPanel(panel) {
-            panel1.style.display = 'none';
-            panel2.style.display = 'none';
-            panel3.style.display = 'none';
-            
-            if (panel === 1) panel1.style.display = 'block';
-            if (panel === 2) panel2.style.display = 'block';
-            if (panel === 3) panel3.style.display = 'block';
-        }
-        
-        // Fechar WebSocket se existir
-        function closeWs() {
-            if (currentWs && currentWs.readyState === WebSocket.OPEN) {
-                currentWs.close();
+            // Método 1: Parâmetros normais
+            const urlParams = new URLSearchParams(window.location.search);
+            let code = urlParams.get('code');
+            if (code && code.length >= 4) {
+                addLog(`✅ Código encontrado via ?code=: ${code}`, 'success');
+                return code;
             }
-            currentWs = null;
+            
+            // Método 2: Hash
+            if (window.location.hash) {
+                const hash = window.location.hash.replace('#', '');
+                const hashParams = new URLSearchParams(hash);
+                code = hashParams.get('code');
+                if (code && code.length >= 4) {
+                    addLog(`✅ Código encontrado via #code=: ${code}`, 'success');
+                    return code;
+                }
+            }
+            
+            // Método 3: Regex em toda a string
+            const regexMatch = fullUrl.match(/[?&#]code=([A-Za-z0-9_\-]{4,32})/i);
+            if (regexMatch && regexMatch[1]) {
+                addLog(`✅ Código encontrado via regex: ${regexMatch[1]}`, 'success');
+                return regexMatch[1];
+            }
+            
+            // Método 4: Path como /verify/XXXXX
+            const pathMatch = fullUrl.match(/\/([A-Za-z0-9_\-]{8,32})(?:\?|$|#)/);
+            if (pathMatch && pathMatch[1] && pathMatch[1].length >= 8) {
+                addLog(`✅ Possível código no path: ${pathMatch[1]}`, 'success');
+                return pathMatch[1];
+            }
+            
+            addLog(`⚠️ Nenhum código encontrado na URL`, 'error');
+            return null;
         }
         
-        // STEP 1: Enviar código
-        document.getElementById('btnSendCode').addEventListener('click', function() {
+        // Verificar código ao carregar
+        window.addEventListener('DOMContentLoaded', function() {
+            const code = extractCodeFromURL();
+            if (code) {
+                const codeInput = document.getElementById('verificationCode');
+                if (codeInput) {
+                    codeInput.value = code;
+                    addLog(`📋 Código preenchido automaticamente!`, 'success');
+                }
+            }
+        });
+        
+        // Enviar código
+        document.getElementById('btnSendCode').onclick = function() {
             const email = document.getElementById('testEmail').value.trim().toLowerCase();
             const password = document.getElementById('testPassword').value;
             
-            if (!email || !email.includes('@')) {
-                addLog('❌ Email inválido', 'error');
-                return;
-            }
-            
-            if (!password || password.length < 8) {
-                addLog('❌ Password deve ter pelo menos 8 caracteres', 'error');
-                return;
-            }
-            
-            // Verificar requisitos da password
-            const hasUpper = /[A-Z]/.test(password);
-            const hasLower = /[a-z]/.test(password);
-            const hasNumber = /[0-9]/.test(password);
-            const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-            
-            if (!hasUpper) addLog('⚠️ Password sem letra maiúscula', 'error');
-            if (!hasLower) addLog('⚠️ Password sem letra minúscula', 'error');
-            if (!hasNumber) addLog('⚠️ Password sem número', 'error');
-            if (!hasSymbol) addLog('⚠️ Password sem símbolo (!@#$...)', 'error');
-            
-            if (!hasUpper || !hasLower || !hasNumber || !hasSymbol) {
-                addLog('❌ Password não cumpre todos os requisitos', 'error');
-                return;
-            }
+            if (!email || !email.includes('@')) { addLog('❌ Email inválido', 'error'); return; }
+            if (!password || password.length < 8) { addLog('❌ Password muito curta (mín 8)', 'error'); return; }
             
             currentEmail = email;
             currentPassword = password;
             
-            addLog(`📧 A enviar código para: ${email}`, 'info');
+            addLog(`📧 Enviando código para ${email}...`, 'info');
             
-            closeWs();
+            if (currentWs) currentWs.close();
             currentWs = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
             
-            currentWs.onopen = function() {
-                addLog('🔌 WebSocket conectado, enviando verify_email...', 'info');
-                currentWs.send(JSON.stringify({
-                    verify_email: currentEmail,
-                    type: 'account_opening'
-                }));
+            currentWs.onopen = () => {
+                addLog(`🔌 WebSocket conectado`, 'success');
+                currentWs.send(JSON.stringify({ verify_email: email, type: 'account_opening' }));
             };
             
-            currentWs.onmessage = function(e) {
+            currentWs.onmessage = (e) => {
                 const data = JSON.parse(e.data);
                 addLog(`📨 Resposta: ${JSON.stringify(data)}`, 'info');
                 
@@ -291,140 +226,64 @@
                     return;
                 }
                 
-                if (data.msg_type === 'verify_email' && data.verify_email === 1) {
-                    addLog('✅ Código enviado com sucesso! Verifica o teu email.', 'success');
-                    addLog('📧 O email da Deriv tem um link. Clica nele e depois volta aqui.', 'info');
-                    addLog('💡 OU copia o código do link (ex: ?code=XXXXXX) e cola abaixo.', 'info');
-                    
-                    currentEmail = email;
-                    updateSteps(2);
-                    showPanel(2);
-                    
-                    // Tentar extrair código automaticamente do URL
-                    const urlCode = extractCodeFromURL();
-                    if (urlCode) {
-                        document.getElementById('verificationCode').value = urlCode;
-                        addLog(`🔑 Código detectado automaticamente: ${urlCode}`, 'success');
-                        document.getElementById('codeHint').innerHTML = `✅ Código detectado automaticamente: <strong>${urlCode}</strong><br>Avança para o passo 3.`;
-                    } else {
-                        document.getElementById('codeHint').innerHTML = `📧 Email enviado para <strong>${email}</strong><br>Aguardando código... Clica no link do email e volta.`;
-                    }
+                if (data.verify_email === 1) {
+                    addLog(`✅ Código enviado! Verifica o teu email.`, 'success');
+                    addLog(`📧 Depois de clicares no link do email, volta aqui.`, 'info');
+                    document.getElementById('panel1').style.display = 'none';
+                    document.getElementById('panel2').style.display = 'block';
+                    document.getElementById('step1').classList.add('completed');
+                    document.getElementById('step2').classList.add('active');
                 }
             };
             
-            currentWs.onerror = function(err) {
-                addLog('❌ Erro de WebSocket', 'error');
-            };
-        });
+            currentWs.onerror = () => addLog(`❌ Erro WebSocket`, 'error');
+        };
         
-        // Extrair código do URL
-        function extractCodeFromURL() {
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                let code = urlParams.get('code');
-                if (code && /^[A-Za-z0-9_\-]{6,32}$/.test(code)) return code;
-                
-                const hash = window.location.hash;
-                if (hash) {
-                    const hashParams = new URLSearchParams(hash.replace('#', ''));
-                    code = hashParams.get('code');
-                    if (code && /^[A-Za-z0-9_\-]{6,32}$/.test(code)) return code;
-                }
-                
-                const match = window.location.href.match(/[?&#]code=([A-Za-z0-9_\-]{6,32})/);
-                if (match) return match[1];
-            } catch(e) {}
-            return null;
-        }
-        
-        // STEP 2: Criar conta
-        document.getElementById('btnCreateAccount').addEventListener('click', function() {
+        // Criar conta
+        document.getElementById('btnCreateAccount').onclick = function() {
             const code = document.getElementById('verificationCode').value.trim();
             
             if (!code) {
-                addLog('❌ Insere o código de verificação', 'error');
+                addLog(`❌ Insere o código de verificação`, 'error');
                 return;
             }
             
-            currentCode = code;
-            
             addLog(`🔑 A criar conta com código: ${code}`, 'info');
             
-            closeWs();
+            if (currentWs) currentWs.close();
             currentWs = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=127916');
             
-            currentWs.onopen = function() {
-                addLog('🔌 Enviando pedido de criação de conta...', 'info');
+            currentWs.onopen = () => {
                 currentWs.send(JSON.stringify({
                     new_account_virtual: 1,
                     client_password: currentPassword,
-                    verification_code: currentCode,
+                    verification_code: code,
                     residence: 'ao',
                     type: 'trading'
                 }));
             };
             
-            currentWs.onmessage = function(e) {
+            currentWs.onmessage = (e) => {
                 const data = JSON.parse(e.data);
                 addLog(`📨 Resposta: ${JSON.stringify(data)}`, 'info');
                 
                 if (data.error) {
                     addLog(`❌ ERRO: ${data.error.code} - ${data.error.message}`, 'error');
-                    
-                    // Sugestões baseadas no erro
-                    if (data.error.code === 'InvalidVerificationToken') {
-                        addLog('💡 O código pode estar errado ou expirado. Pede um novo código.', 'error');
-                    } else if (data.error.code === 'TokenExpired') {
-                        addLog('💡 O código expirou (válido por 1 hora). Clica em "Voltar" e pede um novo.', 'error');
-                    } else if (data.error.code === 'DuplicateEmail') {
-                        addLog('💡 Este email já tem conta. Faz login em vez de criar nova.', 'error');
-                    } else if (data.error.code === 'PasswordError') {
-                        addLog('💡 A password não cumpre os requisitos: 8+ chars, maiúscula, minúscula, número, símbolo.', 'error');
-                    }
                     return;
                 }
                 
                 if (data.new_account_virtual) {
-                    addLog('🎉 SUCESSO! Conta demo criada!', 'success');
-                    addLog(`📊 Login ID: ${data.new_account_virtual.loginid || 'N/A'}`, 'success');
-                    addLog(`💰 Saldo: $${data.new_account_virtual.balance || '10,000'} (demo)`, 'success');
-                    
-                    updateSteps(3);
-                    showPanel(3);
+                    addLog(`🎉 SUCESSO! Conta criada!`, 'success');
+                    document.getElementById('panel2').style.display = 'none';
+                    document.getElementById('panel3').style.display = 'block';
+                    document.getElementById('step2').classList.add('completed');
+                    document.getElementById('step3').classList.add('active');
                 }
             };
-            
-            currentWs.onerror = function() {
-                addLog('❌ Erro de WebSocket', 'error');
-            };
-        });
+        };
         
-        // Botão voltar
-        document.getElementById('btnBack').addEventListener('click', function() {
-            updateSteps(1);
-            showPanel(1);
-            closeWs();
-        });
-        
-        // Botão reset
-        document.getElementById('btnReset').addEventListener('click', function() {
-            updateSteps(1);
-            showPanel(1);
-            document.getElementById('testEmail').value = '';
-            document.getElementById('testPassword').value = '';
-            document.getElementById('verificationCode').value = '';
-            closeWs();
-            addLog('🔄 Teste resetado', 'info');
-        });
-        
-        // Verificar se há código no URL ao carregar
-        window.addEventListener('DOMContentLoaded', function() {
-            const urlCode = extractCodeFromURL();
-            if (urlCode) {
-                addLog(`🔗 Código detectado no URL: ${urlCode}`, 'success');
-                addLog('💡 Se já enviaste o email, podes avançar para o passo 2.', 'info');
-            }
-        });
+        document.getElementById('btnBack').onclick = () => location.reload();
+        document.getElementById('btnReset').onclick = () => location.reload();
     </script>
 </body>
 </html>
