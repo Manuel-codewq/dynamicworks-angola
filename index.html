@@ -1917,11 +1917,15 @@ window.addEventListener('app-ready', function() {
           </div>
           <div style="display:flex;align-items:flex-start;gap:.5rem;font-size:.72rem;color:var(--text2);line-height:1.5">
             <span style="background:var(--accent);color:#000;font-weight:800;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.6rem">2</span>
-            Serás redirecionado de volta — o código é <strong style="color:#00e676">preenchido automaticamente</strong>
+            Serás redirecionado de volta para esta página — o código é <strong style="color:#00e676">preenchido automaticamente</strong> ✅
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:.5rem;font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.5;background:rgba(255,193,7,.06);border:1px solid rgba(255,193,7,.15);border-radius:8px;padding:.5rem .6rem">
+            <svg data-lucide="alert-triangle" width="13" height="13" style="stroke:#ffc107;flex-shrink:0;margin-top:1px"></svg>
+            <span>Se não fores redirecionado automaticamente: copia o link do email, abre-o no <strong style="color:#fff">mesmo browser</strong> onde iniciaste o registo, e volta aqui.</span>
           </div>
           <div style="display:flex;align-items:flex-start;gap:.5rem;font-size:.72rem;color:rgba(255,255,255,.4);line-height:1.5">
             <span style="border:1px solid rgba(255,255,255,.2);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.6rem">ou</span>
-            Copia o código do URL após o <strong style="color:rgba(255,255,255,.6)">?code=</strong> e cola abaixo
+            Copia o código do URL após o <strong style="color:rgba(255,255,255,.6)">?code=</strong> e cola abaixo manualmente
           </div>
         </div>
       </div>
@@ -1933,9 +1937,12 @@ window.addEventListener('app-ready', function() {
           <span style="color:var(--red);font-size:.68rem;margin-left:auto">* obrigatório</span>
         </div>
         <input class="form-inp" id="regCode" type="text" inputmode="text"
-               placeholder="Ex: 7CJLkQaz" maxlength="20"
-               autocomplete="off" autocorrect="off"
-               style="font-family:var(--mono);letter-spacing:.12em;text-align:center;font-size:1.1rem;font-weight:700"/>
+               placeholder="Ex: 7CJLkQaz" maxlength="32"
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+               style="font-family:var(--mono);letter-spacing:.08em;text-align:center;font-size:1rem;font-weight:700"/>
+        <div style="margin-top:.35rem;font-size:.62rem;color:var(--text3);text-align:center">
+          O código tem entre 6 e 32 caracteres — letras e números
+        </div>
       </div>
 
       <div id="regStep2Error" style="display:none;background:rgba(255,61,90,.1);border:1px solid rgba(255,61,90,.25);border-radius:10px;padding:.6rem .85rem;font-size:.75rem;color:var(--red);margin-bottom:.75rem"></div>
