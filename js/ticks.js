@@ -48,7 +48,7 @@ window.selectAsset=function(sym){
   S.asset=a; renderAssetList();
   txt('chAsset',a.name); txt('tradeAssetName',a.name);
 
-  /* barreiras reais do contrato aberto neste ativo, se existir */
+  /* barreiras reais: contrato aberto ou cache da proposal silenciosa */
   var realBarriers=_getRealBarriers(sym);
   var pr=S.prices[sym];
   if(pr){
@@ -56,15 +56,20 @@ window.selectAsset=function(sym){
     txt('tradeAssetPrice',pr.p.toFixed(a.pip));
     txt('spotNow',pr.p.toFixed(a.pip));
     if(realBarriers){
+      txt('barrierLow',realBarriers.lo.toFixed(a.pip));
+      txt('barrierHigh',realBarriers.hi.toFixed(a.pip));
       updateMeter(pr.p,realBarriers.lo,realBarriers.hi);
       updateAccuAnalysis(pr.p,realBarriers.lo,realBarriers.hi,sym);
     } else {
-      /* sem contrato: mostrar estimativa apenas no formulário */
-      var bpct=(BARRIERS_EST[T.rate]||0.003);
-      updateMeter(pr.p,pr.p*(1-bpct),pr.p*(1+bpct));
+      /* ainda não temos cache — pedir já e mostrar "..." até chegar */
+      txt('barrierLow','...'); txt('barrierHigh','...');
+      updateMeter(pr.p,0,0);
       updateAccuAnalysis(pr.p,0,0,sym);
     }
   }
+
+  /* disparar proposal silenciosa para obter barreiras reais da Deriv */
+  _fetchSilentProposal(sym, T.rate||1);
 
   /* reset chart */
   _chart.prices=[]; _chart.tickCount=0; _chart.lastTs=0;
@@ -80,24 +85,68 @@ window.selectAsset=function(sym){
   if(T.stake>0) requestProposal();
 };
 
-/* Estimativas LOCAIS — usadas APENAS para pré-visualização no form */
+/* Estimativas LOCAIS — fallback de último recurso, nunca mostradas ao utilizador */
 var BARRIERS_EST = { 1:0.0041, 2:0.0029, 3:0.0021, 4:0.0017, 5:0.0013 };
 
-/* ── Obter barreiras REAIS do contrato aberto para um símbolo ── */
+/* ── PROPOSAL SILENCIOSA — obtém barreiras reais da Deriv sem abrir contrato ── */
+var _silentProposalTimer = null;
+
+function _fetchSilentProposal(sym, rate) {
+  if(!S.loggedIn || !S.ws || S.ws.readyState !== 1) return;
+  rate = rate || T.rate || 1;
+  wsSend({
+    proposal: 1,
+    amount: 1,
+    basis: 'stake',
+    contract_type: 'ACCU',
+    currency: S.currency || 'USD',
+    growth_rate: rate / 100,
+    symbol: sym,
+    _silent: true   /* marcador interno — ignorado pela Deriv, usado em onProposal */
+  });
+  /* agendar renovação a cada 25s (proposals expiram ao fim de ~30s) */
+  clearTimeout(_silentProposalTimer);
+  _silentProposalTimer = setTimeout(function(){
+    /* só renovar se não houver contrato aberto neste ativo */
+    var hasContract = S.contracts.some(function(c){ return c.underlying === sym; });
+    if(!hasContract && S.asset && S.asset.sym === sym) {
+      _fetchSilentProposal(sym, T.rate || 1);
+    }
+  }, 25000);
+}
+
+/* chamada no arranque e sempre que muda o ativo ou a taxa */
+function _refreshSilentProposal() {
+  if(!S.asset) return;
+  var sym = S.asset.sym;
+  var hasContract = S.contracts.some(function(c){ return c.underlying === sym; });
+  if(!hasContract) _fetchSilentProposal(sym, T.rate || 1);
+}
+
+/* ── Obter barreiras REAIS — prioridade: contrato aberto > cache > null ── */
 function _getRealBarriers(sym) {
+  /* 1. contrato aberto tem precedência (barreiras dinâmicas) */
   for(var i=0;i<S.contracts.length;i++){
     var c=S.contracts[i];
     if(c.underlying!==sym) continue;
     var lo=null, hi=null;
-    /* proposal_open_contract devolve barrier (high) e low_barrier */
     if(c.barrier && c.low_barrier){
       hi=parseFloat(c.barrier);
       lo=parseFloat(c.low_barrier);
     } else if(c.high_barrier && c.low_barrier){
       hi=parseFloat(c.high_barrier);
       lo=parseFloat(c.low_barrier);
+    } else if(S.barriers[String(c.contract_id)]){
+      var b=S.barriers[String(c.contract_id)];
+      lo=b.lo; hi=b.hi;
     }
     if(lo && hi && lo>0 && hi>0) return {lo:lo, hi:hi};
+  }
+  /* 2. cache da proposal silenciosa (barreiras reais mesmo sem contrato) */
+  var cached = S.barrierCache[sym];
+  if(cached && cached.lo && cached.hi && cached.lo>0 && cached.hi>0){
+    /* cache válido por 35s — as proposals expiram ao fim de ~30s */
+    if((Date.now() - cached.ts) < 35000) return {lo:cached.lo, hi:cached.hi};
   }
   return null;
 }
@@ -156,9 +205,13 @@ function onTick(d) {
       else if(nearestPct<12) _vibrate('tick_warn');
     }
   } else {
-    txt('barrierLow','—');
-    txt('barrierHigh','—');
+    /* sem barreiras ainda — mostrar "..." e pedir proposal silenciosa se necessário */
+    txt('barrierLow','...');
+    txt('barrierHigh','...');
     updateMeter(p,0,0);
+    /* se não há proposal a caminho, pedir uma */
+    var cacheAge = S.barrierCache[sym] ? (Date.now()-S.barrierCache[sym].ts) : Infinity;
+    if(cacheAge > 30000) _fetchSilentProposal(sym, T.rate||1);
   }
 
   /* push ao gráfico com barreiras reais */

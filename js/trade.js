@@ -14,25 +14,8 @@ window.selectGrowthRate=function(rate,el){
   document.querySelectorAll('.growth-btn').forEach(function(b){ b.classList.remove('active'); });
   if(el) el.classList.add('active');
   txt('activeRate',rate+'%');
-  /* mostrar estimativa local apenas se sem contrato aberto */
-  var sym=S.asset.sym;
-  var rb=_getRealBarriers(sym);
-  var pr=S.prices[sym];
-  if(pr){
-    if(rb){
-      txt('barrierLow',rb.lo.toFixed(S.asset.pip||4));
-      txt('barrierHigh',rb.hi.toFixed(S.asset.pip||4));
-      updateMeter(pr.p,rb.lo,rb.hi);
-      updateAccuAnalysis(pr.p,rb.lo,rb.hi,sym);
-    } else {
-      var bpct=BARRIERS_EST[rate]||0.003, pip=S.asset.pip||4;
-      var lo=(pr.p*(1-bpct)).toFixed(pip), hi=(pr.p*(1+bpct)).toFixed(pip);
-      txt('barrierLow',lo); txt('barrierHigh',hi);
-      updateMeter(pr.p,parseFloat(lo),parseFloat(hi));
-      updateAccuAnalysis(pr.p,0,0,sym);
-    }
-  }
-  if(T.stake>0) requestProposal();
+  /* pedir barreiras reais da Deriv para esta taxa */
+  if(S.asset) _fetchSilentProposal(S.asset.sym, rate);
 };
 
 window.setStake=function(val){
@@ -90,26 +73,57 @@ function requestProposal(){
 function onProposal(d){
   var pBox=$('proposalBox');
   if(d.error){
-    if(pBox){ pBox.className='proposal-box'; pBox.innerHTML='<span style="color:var(--red);font-size:.7rem">'+d.error.message+'</span>'; }
+    /* erros de proposals silenciosas não poluem o UI */
+    if(T.stake >= 1 && pBox){
+      pBox.className='proposal-box';
+      pBox.innerHTML='<span style="color:var(--red);font-size:.7rem">'+d.error.message+'</span>';
+    }
     T.proposal=null; return;
   }
-  T.proposal=d.proposal;
   var p=d.proposal;
+
+  /* ── GUARDAR BARREIRAS NO CACHE — sempre, independente de ter contrato ou stake ── */
+  if(p.barrier && p.low_barrier){
+    var sym = (p.contract_parameters && p.contract_parameters.symbol)
+              || (S.asset && S.asset.sym);
+    if(sym){
+      var pip = S.asset && S.asset.pip ? S.asset.pip : 4;
+      var newLo = parseFloat(p.low_barrier);
+      var newHi = parseFloat(p.barrier);
+      if(newLo > 0 && newHi > 0){
+        S.barrierCache[sym] = { lo: newLo, hi: newHi, ts: Date.now() };
+        /* se não há contrato aberto neste ativo, atualizar display já */
+        var hasContract = S.contracts.some(function(c){ return c.underlying === sym; });
+        if(!hasContract && S.asset && S.asset.sym === sym){
+          txt('barrierLow',  newLo.toFixed(pip));
+          txt('barrierHigh', newHi.toFixed(pip));
+          var pr = S.prices[sym];
+          if(pr){
+            updateMeter(pr.p, newLo, newHi);
+            updateAccuAnalysis(pr.p, newLo, newHi, sym);
+          }
+        }
+      }
+    }
+  }
+
+  /* proposal silenciosa (sem stake real do utilizador) — não alterar UI do form */
+  if(T.stake < 1){ return; }
+
+  T.proposal=p;
   if(pBox){
     pBox.className='proposal-box has-data';
-    /* Mostrar barreiras reais da proposta — vindas da Deriv */
     var barrierInfo='';
     if(p.barrier&&p.low_barrier){
-      var pip=S.asset?S.asset.pip||4:4;
-      barrierInfo='<span>KO ▼ <b style="color:var(--red)">'+parseFloat(p.low_barrier).toFixed(pip)+'</b></span>'
-                 +'<span>KO ▲ <b style="color:var(--red)">'+parseFloat(p.barrier).toFixed(pip)+'</b></span>';
-      /* atualizar display imediatamente com valores reais da proposta */
-      txt('barrierLow', parseFloat(p.low_barrier).toFixed(pip));
-      txt('barrierHigh',parseFloat(p.barrier).toFixed(pip));
-      var pr=S.prices[S.asset.sym];
-      if(pr){
-        updateMeter(pr.p,parseFloat(p.low_barrier),parseFloat(p.barrier));
-        updateAccuAnalysis(pr.p,parseFloat(p.low_barrier),parseFloat(p.barrier),S.asset.sym);
+      var pip2=S.asset?S.asset.pip||4:4;
+      barrierInfo='<span>KO ▼ <b style="color:var(--red)">'+parseFloat(p.low_barrier).toFixed(pip2)+'</b></span>'
+                 +'<span>KO ▲ <b style="color:var(--red)">'+parseFloat(p.barrier).toFixed(pip2)+'</b></span>';
+      txt('barrierLow', parseFloat(p.low_barrier).toFixed(pip2));
+      txt('barrierHigh',parseFloat(p.barrier).toFixed(pip2));
+      var pr2=S.prices[S.asset.sym];
+      if(pr2){
+        updateMeter(pr2.p,parseFloat(p.low_barrier),parseFloat(p.barrier));
+        updateAccuAnalysis(pr2.p,parseFloat(p.low_barrier),parseFloat(p.barrier),S.asset.sym);
       }
     }
     pBox.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:.75rem;font-size:.72rem">'
