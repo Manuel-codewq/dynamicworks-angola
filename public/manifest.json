@@ -1,0 +1,29 @@
+{
+  "name": "DynamicWorks Angola",
+  "short_name": "DynamicWorks",
+  "description": "A plataforma de trading #1 em Angola. Ativos sintéticos 24/7. Powered by DIGIKAP.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06090f",
+  "theme_color": "#00D4FF",
+  "orientation": "portrait-primary",
+  "lang": "pt-AO",
+  "categories": ["finance", "business"],
+  "icons": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard de Trading DynamicWorks"
+    }
+  ]
+}
