@@ -12,6 +12,11 @@ const firebaseConfig = {
   appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Debug para produção: Verifica se as variáveis estão presentes
+if (typeof window !== 'undefined' && !firebaseConfig.apiKey) {
+  console.warn('[Firebase] Configuração ausente! Verifica as variáveis de ambiente na Netlify.');
+}
+
 // Singleton pattern para o Firebase no Next.js (Client Side Only)
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
