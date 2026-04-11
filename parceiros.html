@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/><meta name="google-site-verification" content="1frD-5CSI74OUUeLfAug4yD7hI7AeHT-IEDKLY6-znY" />
+
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Parceiros — DynamicWorks Angola</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2306090f'/><polyline points='4,22 10,14 16,18 22,8 28,12' fill='none' stroke='%2300d4ff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/><circle cx='28' cy='12' r='2' fill='%2300d4ff'/></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.383.0/dist/umd/lucide.min.js" defer></script>
+
+<style>
+:root{
+  --bg:#04070d;--bg2:#080d18;--bg3:#0b1020;--card:#0c1220;
+  --border:#162035;--border2:#1e2e48;
+  --accent:#00d4ff;--accent2:#6c3fff;
+  --green:#00e676;--green-dim:rgba(0,230,118,.1);
+  --red:#ff3d5a;--red-dim:rgba(255,61,90,.1);
+  --yellow:#ffc107;--yellow-dim:rgba(255,193,7,.1);
+  --purple:#a78bfa;--orange:#ff6b35;
+  --text:#dde8f8;--text2:#6a8aaa;--text3:#2d4560;
+  --mono:'JetBrains Mono',monospace;--font:'Outfit',sans-serif;
+  --nav-h:60px;--top-h:52px;
+  --bottom-safe:env(safe-area-inset-bottom,0px);
+  --r:12px;--r-sm:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
+input,select,textarea,button{font-family:var(--font);font-size:16px}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ══ LOGIN ══ */
+#loginScreen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+  background-image:radial-gradient(ellipse at 20% 20%,rgba(0,212,255,.07) 0%,transparent 55%),
+                   radial-gradient(ellipse at 80% 80%,rgba(108,63,255,.05) 0%,transparent 55%);
+  z-index:9999;padding:1.5rem;
+}
+.login-box{
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:22px;padding:2rem 1.5rem;width:100%;max-width:380px;
+  box-shadow:0 32px 80px rgba(0,0,0,.7);
+}
+.login-logo{font-size:1.5rem;font-weight:900;color:#fff;text-align:center;margin-bottom:.2rem;letter-spacing:-.02em}
+.login-logo span{color:var(--accent)}
+.login-badge{
+  display:inline-flex;align-items:center;gap:.35rem;
+  background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);
+  color:var(--purple);border-radius:99px;padding:.25rem .75rem;
+  font-size:.62rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em;
+  margin:0 auto .25rem;display:flex;justify-content:center;width:fit-content;margin:0 auto 1.5rem;
+}
+.login-label{font-size:.72rem;font-family:var(--mono);color:var(--text2);display:block;margin-bottom:.4rem}
+.login-inp-wrap{position:relative;margin-bottom:1.2rem}
+.login-inp{
+  width:100%;padding:.85rem 3rem .85rem 1rem;background:var(--bg2);
+  border:1px solid var(--border2);border-radius:12px;color:var(--text);
+  font-family:var(--mono);font-size:1rem;outline:none;transition:border-color .15s;
+  -webkit-appearance:none;
+}
+.login-inp:focus{border-color:var(--accent)}
+.login-eye{
+  position:absolute;right:.85rem;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--text2);padding:.2rem;
+  display:flex;align-items:center;
+}
+.login-btn{
+  width:100%;padding:.9rem;background:linear-gradient(135deg,var(--purple),#8b5cf6);
+  border:none;border-radius:12px;color:#fff;font-weight:900;font-size:1rem;
+  cursor:pointer;letter-spacing:.01em;
+}
+.login-btn:active{opacity:.88}
+.login-err{font-size:.75rem;color:var(--red);font-family:var(--mono);margin-top:.65rem;text-align:center;display:none}
+.login-note{font-size:.65rem;color:var(--text3);font-family:var(--mono);text-align:center;margin-top:.75rem;line-height:1.6}
+.login-note a{color:var(--accent);text-decoration:none}
+
+/* ══ APP SHELL ══ */
+#partnerApp{display:none;height:100%;flex-direction:column}
+#partnerApp.visible{display:flex}
+
+/* ── TOP BAR ── */
+.top-bar{
+  height:var(--top-h);display:flex;align-items:center;justify-content:space-between;
+  padding:0 1rem;background:rgba(4,7,13,.95);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px);flex-shrink:0;position:relative;z-index:50;
+}
+.top-logo{font-size:.95rem;font-weight:900;color:#fff;letter-spacing:-.02em}
+.top-logo span{color:var(--accent)}
+.top-logo em{
+  font-style:normal;font-size:.55rem;
+  background:linear-gradient(135deg,var(--purple),#8b5cf6);
+  color:#fff;padding:.1rem .38rem;border-radius:4px;margin-left:.35rem;
+  font-weight:700;vertical-align:middle;
+}
+.top-right{display:flex;align-items:center;gap:.5rem}
+.top-nick{
+  font-size:.62rem;font-family:var(--mono);color:var(--text2);
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  padding:.2rem .5rem;
+}
+.logout-btn{
+  display:flex;align-items:center;gap:.3rem;background:rgba(255,61,90,.1);
+  border:1px solid rgba(255,61,90,.2);border-radius:8px;padding:.3rem .65rem;
+  font-size:.7rem;color:var(--red);cursor:pointer;font-weight:700;
+}
+
+/* ── CONTENT AREA ── */
+.content-area{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:1rem 1rem calc(var(--nav-h) + var(--bottom-safe) + 1rem);
+}
+
+/* ── BOTTOM NAV ── */
+.bnav{
+  position:fixed;bottom:0;left:0;right:0;
+  height:calc(var(--nav-h) + var(--bottom-safe));
+  padding-bottom:var(--bottom-safe);
+  background:rgba(4,7,13,.96);border-top:1px solid var(--border);
+  display:flex;align-items:stretch;z-index:50;backdrop-filter:blur(20px);
+}
+.bnav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.22rem;background:none;border:none;cursor:pointer;
+  color:var(--text2);font-size:.58rem;font-weight:700;font-family:var(--font);
+  transition:color .15s;padding:.4rem 0;position:relative;
+}
+.bnav-btn.active{color:var(--purple)}
+.bnav-btn.active::before{
+  content:'';position:absolute;top:0;left:25%;right:25%;height:2px;
+  background:var(--purple);border-radius:0 0 2px 2px;
+}
+.bnav-btn svg{width:20px;height:20px;stroke-width:1.8}
+.bnav-badge{
+  position:absolute;top:6px;right:calc(50% - 18px);
+  background:var(--red);color:#fff;font-size:.5rem;font-weight:900;
+  min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;
+  justify-content:center;padding:0 4px;font-family:var(--mono);
+}
+.bnav-badge.show{display:flex}
+
+/* ── TAB PANELS ── */
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── STAT CARDS ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:1rem}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:.85rem;position:relative;overflow:hidden;
+}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--clr,var(--accent))}
+.sc-label{font-size:.58rem;font-family:var(--mono);color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem}
+.sc-val{font-size:1.7rem;font-weight:900;font-family:var(--mono);line-height:1}
+.sc-sub{font-size:.6rem;color:var(--text2);font-family:var(--mono);margin-top:.25rem}
+
+/* ── SECTION ── */
+.section{margin-bottom:1.25rem}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem}
+.section-title{
+  font-size:.65rem;font-weight:700;font-family:var(--mono);color:var(--text2);
+  text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:.4rem;
+}
+.section-title::before{content:'';width:3px;height:13px;background:var(--purple);border-radius:2px;flex-shrink:0}
+
+/* ── CARDS ── */
+.m-card{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:.9rem;margin-bottom:.55rem;
+}
+.m-card-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem}
+.m-card-row:last-child{margin-bottom:0}
+.m-card-label{font-size:.62rem;font-family:var(--mono);color:var(--text2)}
+.m-card-val{font-size:.82rem;font-weight:700}
+.m-card-actions{display:flex;gap:.5rem;margin-top:.65rem;padding-top:.65rem;border-top:1px solid var(--border)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:.15rem .5rem;border-radius:5px;font-size:.62rem;font-family:var(--mono);font-weight:700;white-space:nowrap}
+.bg{background:rgba(0,230,118,.12);color:var(--green)}
+.br{background:rgba(255,61,90,.12);color:var(--red)}
+.by{background:rgba(255,193,7,.12);color:var(--yellow)}
+.bb{background:rgba(0,212,255,.12);color:var(--accent)}
+.bp{background:rgba(167,139,250,.12);color:var(--purple)}
+.bo{background:rgba(255,107,53,.12);color:var(--orange)}
+
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.35rem;
+  padding:.55rem 1rem;border-radius:10px;font-size:.82rem;font-weight:700;
+  cursor:pointer;border:none;transition:all .15s;min-height:40px;
+}
+.btn-full{width:100%}
+.btn-sm{padding:.35rem .7rem;font-size:.72rem;min-height:32px}
+.btn-ac{background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);color:var(--accent)}
+.btn-ac:active{background:rgba(0,212,255,.25)}
+.btn-gr{background:rgba(0,230,118,.12);border:1px solid rgba(0,230,118,.25);color:var(--green)}
+.btn-gr:active{background:rgba(0,230,118,.25)}
+.btn-rd{background:rgba(255,61,90,.12);border:1px solid rgba(255,61,90,.25);color:var(--red)}
+.btn-rd:active{background:rgba(255,61,90,.25)}
+.btn-pp{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:var(--purple)}
+.btn-pp:active{background:rgba(167,139,250,.25)}
+.btn-primary{background:linear-gradient(135deg,var(--purple),#8b5cf6);color:#fff;border:none}
+.btn-primary:active{opacity:.88}
+.btn-primary-ac{background:linear-gradient(135deg,var(--accent),#0099bb);color:#000;border:none}
+.btn-primary-ac:active{opacity:.88}
+.btn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* ── FORM ── */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem}
+.fg{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.85rem}
+.fl{font-size:.65rem;font-family:var(--mono);color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.fi,.fs,.ft{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
+  color:var(--text);font-size:1rem;padding:.7rem .9rem;outline:none;
+  width:100%;transition:border-color .15s;-webkit-appearance:none;
+}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--purple)}
+.ft{resize:vertical;min-height:80px}
+.fs option{background:var(--card)}
+
+/* ── LOADING / EMPTY ── */
+.load-wrap{padding:2.5rem 1rem;text-align:center;color:var(--text2);font-size:.75rem;font-family:var(--mono)}
+.spin{display:inline-block;width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:.4rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-msg{padding:2rem 1rem;text-align:center;color:var(--text3);font-size:.75rem;font-family:var(--mono)}
+
+/* ── TOAST ── */
+.pk-toast{
+  position:fixed;bottom:calc(var(--nav-h) + var(--bottom-safe) + .75rem);
+  left:1rem;right:1rem;
+  background:var(--card);border:1px solid var(--border2);border-radius:12px;
+  padding:.75rem 1rem;font-size:.8rem;font-family:var(--mono);
+  box-shadow:0 8px 32px rgba(0,0,0,.6);opacity:0;
+  transform:translateY(8px);transition:all .22s;pointer-events:none;z-index:9999;
+  text-align:center;
+}
+.pk-toast.show{opacity:1;transform:translateY(0)}
+.pk-toast.ok{border-color:rgba(0,230,118,.35);color:var(--green)}
+.pk-toast.err{border-color:rgba(255,61,90,.35);color:var(--red)}
+.pk-toast.warn{border-color:rgba(255,193,7,.35);color:var(--yellow)}
+
+/* ── LINK BOX ── */
+.link-box{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
+  padding:.75rem 1rem;font-family:var(--mono);font-size:.75rem;color:var(--accent);
+  word-break:break-all;line-height:1.5;margin-bottom:.65rem;
+}
+
+/* ── LEVEL CARD ── */
+.level-card{
+  background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(108,63,255,.05));
+  border:1px solid rgba(167,139,250,.2);border-radius:16px;
+  padding:1.25rem;margin-bottom:1rem;position:relative;overflow:hidden;
+}
+.level-card::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(167,139,250,.15),transparent 70%);
+}
+.level-icon{font-size:2rem;margin-bottom:.35rem}
+.level-name{font-size:1.1rem;font-weight:900;color:var(--purple)}
+.level-sub{font-size:.68rem;color:var(--text2);font-family:var(--mono);margin-top:.2rem}
+.level-progress-wrap{margin-top:.85rem}
+.level-progress-label{display:flex;justify-content:space-between;font-size:.6rem;font-family:var(--mono);color:var(--text2);margin-bottom:.35rem}
+.level-progress-bar{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.level-progress-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ── REFERRAL ITEM ── */
+.ref-item{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:.75rem .9rem;margin-bottom:.45rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ref-acct{font-size:.75rem;font-family:var(--mono);font-weight:700}
+.ref-meta{font-size:.6rem;color:var(--text3);font-family:var(--mono);margin-top:.15rem}
+.ref-comm{font-size:.82rem;font-weight:900;color:var(--green);font-family:var(--mono)}
+
+/* ── SAQUE MODAL ── */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);
+  z-index:500;display:none;align-items:flex-end;
+  padding-bottom:var(--bottom-safe);
+}
+.modal-bg.open{display:flex}
+.modal-box{
+  background:var(--card);border:1px solid var(--border2);border-radius:20px 20px 0 0;
+  padding:1.75rem 1.5rem calc(1.75rem + var(--bottom-safe));
+  width:100%;animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.modal-handle{width:32px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto 1.25rem}
+.modal-title{font-size:1.1rem;font-weight:800;margin-bottom:.3rem}
+.modal-sub{font-size:.78rem;color:var(--text2);margin-bottom:1.25rem;line-height:1.5}
+
+/* ── HISTORY ITEM ── */
+.hist-item{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:.75rem .9rem;margin-bottom:.45rem;
+}
+.hist-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.2rem}
+.hist-row:last-child{margin-bottom:0}
+
+/* ── INFO BOX ── */
+.info-box{
+  background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);
+  border-radius:10px;padding:.65rem .85rem;font-size:.7rem;color:var(--text2);
+  font-family:var(--mono);line-height:1.65;margin-bottom:.85rem;
+}
+.info-box strong{color:var(--accent)}
+
+/* ── COMMISSION TABLE ── */
+.comm-table{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1rem}
+.comm-row{display:flex;align-items:center;padding:.65rem .9rem;border-bottom:1px solid var(--border)}
+.comm-row:last-child{border-bottom:none}
+.comm-row.header{background:rgba(255,255,255,.02)}
+.comm-col{flex:1;font-size:.68rem;font-family:var(--mono)}
+.comm-col.header{color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.comm-col.val{font-weight:700}
+
+/* ── WELCOME BANNER ── */
+.welcome-banner{
+  background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(108,63,255,.08));
+  border:1px solid rgba(167,139,250,.2);border-radius:16px;
+  padding:1.1rem;margin-bottom:1rem;
+  display:flex;align-items:center;gap:.85rem;
+}
+.wb-icon{font-size:1.8rem;flex-shrink:0}
+.wb-title{font-size:.92rem;font-weight:800}
+.wb-sub{font-size:.7rem;color:var(--text2);font-family:var(--mono);margin-top:.15rem;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Dynamic<span>Works</span></div>
+    <div class="login-badge">
+      <svg data-lucide="handshake" width="11" height="11"></svg>
+      Painel de Parceiros
+    </div>
+    <label class="login-label">Código de Parceiro</label>
+    <div class="login-inp-wrap">
+      <input class="login-inp" id="loginCode" type="text" placeholder="Ex: CR1234567"
+             autocomplete="username" autocorrect="off" autocapitalize="characters"/>
+    </div>
+    <label class="login-label">Password</label>
+    <div class="login-inp-wrap">
+      <input class="login-inp" id="loginPwd" type="password" placeholder="••••••••"
+             autocomplete="current-password" inputmode="text"
+             onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="login-eye" id="eyeBtn" onclick="toggleEye()" type="button">
+        <svg data-lucide="eye" width="18" height="18"></svg>
+      </button>
+    </div>
+    <button class="login-btn" onclick="doLogin()" id="loginBtn">Entrar no Painel</button>
+    <div class="login-err" id="loginErr">Código ou password incorrectos</div>
+    <div class="login-note">
+      Sem acesso? Contacta o administrador.<br>
+      <a href="index.html">← Voltar à plataforma</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="partnerApp">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-logo">Dynamic<span>Works</span><em>PARTNER</em></div>
+    <div class="top-right">
+      <div class="top-nick" id="topNick">—</div>
+      <button class="logout-btn" onclick="doLogout()">
+        <svg data-lucide="log-out" width="13" height="13"></svg> Sair
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content-area" id="contentArea">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="tab-panel active" id="tab-dash">
+
+      <!-- Welcome -->
+      <div class="welcome-banner" id="welcomeBanner">
+        <div class="wb-icon" style="width:44px;height:44px;border-radius:12px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg data-lucide="handshake" width="22" height="22" style="stroke:var(--purple)"></svg>
+        </div>
+        <div style="flex:1">
+          <div class="wb-title" id="wbTitle">Bem-vindo, Parceiro!</div>
+          <div class="wb-sub" id="wbSub">A carregar os teus dados...</div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="stats-grid">
+        <div class="stat-card" style="--clr:var(--purple)">
+          <div class="sc-label">Referidos</div>
+          <div class="sc-val" id="kpi-refs">—</div>
+          <div class="sc-sub">clientes activos</div>
+        </div>
+        <div class="stat-card" style="--clr:var(--green)">
+          <div class="sc-label">Total Ganho</div>
+          <div class="sc-val" id="kpi-earned">—</div>
+          <div class="sc-sub">comissões acumuladas</div>
+        </div>
+        <div class="stat-card" style="--clr:var(--yellow)">
+          <div class="sc-label">Pendente</div>
+          <div class="sc-val" id="kpi-pending">—</div>
+          <div class="sc-sub">a receber</div>
+        </div>
+        <div class="stat-card" style="--clr:var(--accent)">
+          <div class="sc-label">Já Pago</div>
+          <div class="sc-val" id="kpi-paid">—</div>
+          <div class="sc-sub">recebido</div>
+        </div>
+      </div>
+
+      <!-- Nível -->
+      <div class="level-card" id="levelCard">
+        <div class="level-icon" id="lvlIcon">⭐</div>
+        <div class="level-name" id="lvlName">A carregar...</div>
+        <div class="level-sub" id="lvlSub">Nível de parceiro</div>
+        <div class="level-progress-wrap" id="lvlProgressWrap" style="display:none">
+          <div class="level-progress-label">
+            <span id="lvlProgressLabel">Progresso para o próximo nível</span>
+            <span id="lvlProgressPct">—%</span>
+          </div>
+          <div class="level-progress-bar">
+            <div class="level-progress-fill" id="lvlProgressFill" style="width:0%"></div>
+          </div>
+          <div style="font-size:.6rem;color:var(--text3);font-family:var(--mono);margin-top:.35rem" id="lvlProgressNext"></div>
+        </div>
+      </div>
+
+      <!-- Link de afiliado -->
+      <div class="section">
+        <div class="section-hdr">
+          <div class="section-title">O Teu Link de Afiliado</div>
+        </div>
+        <div class="link-box" id="affiliateLink">A carregar...</div>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn btn-pp btn-full" onclick="copyLink()">
+            <svg data-lucide="copy" width="14" height="14"></svg> Copiar Link
+          </button>
+          <button class="btn btn-ac" onclick="shareLink()">
+            <svg data-lucide="share-2" width="14" height="14"></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Últimos referidos -->
+      <div class="section">
+        <div class="section-hdr">
+          <div class="section-title">Últimos Referidos</div>
+          <button class="btn btn-pp btn-sm" onclick="switchTab('refs',this)">Ver todos</button>
+        </div>
+        <div id="dashRefsCards"><div class="load-wrap"><span class="spin"></span>A carregar...</div></div>
+      </div>
+
+    </div><!-- /tab-dash -->
+
+    <!-- ══ REFERIDOS ══ -->
+    <div class="tab-panel" id="tab-refs">
+      <div class="section">
+        <div class="section-hdr">
+          <div class="section-title">Os Meus Referidos</div>
+          <button class="btn btn-pp btn-sm" onclick="loadRefs()">
+            <svg data-lucide="refresh-cw" width="12" height="12"></svg>
+          </button>
+        </div>
+        <div id="refsCards"><div class="load-wrap"><span class="spin"></span>A carregar...</div></div>
+      </div>
+    </div>
+
+    <!-- ══ COMISSÕES ══ -->
+    <div class="tab-panel" id="tab-comms">
+      <div class="section">
+        <div class="section-hdr">
+          <div class="section-title">Resumo de Comissões</div>
+        </div>
+
+        <!-- Summary -->
+        <div class="stats-grid" style="margin-bottom:.85rem">
+          <div class="stat-card" style="--clr:var(--green)">
+            <div class="sc-label">Total</div>
+            <div class="sc-val" id="comm-earned">—</div>
+            <div class="sc-sub">ganho total</div>
+          </div>
+          <div class="stat-card" style="--clr:var(--yellow)">
+            <div class="sc-label">Disponível</div>
+            <div class="sc-val" id="comm-pending">—</div>
+            <div class="sc-sub">para sacar</div>
+          </div>
+        </div>
+
+        <!-- Rate table -->
+        <div class="section-hdr" style="margin-top:.25rem">
+          <div class="section-title">Tabela de Comissões por Nível</div>
+        </div>
+
+        <div class="comm-table">
+          <div class="comm-row header">
+            <div class="comm-col header">Nível</div>
+            <div class="comm-col header">Refs ativos</div>
+            <div class="comm-col header">Taxa/volume</div>
+          </div>
+          <div class="comm-row" id="cr-bronze">
+            <div class="comm-col val" style="display:flex;align-items:center;gap:.35rem"><svg data-lucide="award" width="13" height="13" style="stroke:var(--orange)"></svg> Bronze</div>
+            <div class="comm-col">0 – 14</div>
+            <div class="comm-col val" style="color:var(--orange)">0.50%</div>
+          </div>
+          <div class="comm-row" id="cr-silver">
+            <div class="comm-col val" style="display:flex;align-items:center;gap:.35rem"><svg data-lucide="award" width="13" height="13" style="stroke:#94a3b8"></svg> Prata</div>
+            <div class="comm-col">15 – 39</div>
+            <div class="comm-col val" style="color:var(--text2)">0.80%</div>
+          </div>
+          <div class="comm-row" id="cr-gold">
+            <div class="comm-col val" style="display:flex;align-items:center;gap:.35rem"><svg data-lucide="award" width="13" height="13" style="stroke:var(--yellow)"></svg> Ouro</div>
+            <div class="comm-col">40 – 99</div>
+            <div class="comm-col val" style="color:var(--yellow)">1.10%</div>
+          </div>
+          <div class="comm-row" id="cr-diamond">
+            <div class="comm-col val" style="display:flex;align-items:center;gap:.35rem"><svg data-lucide="gem" width="13" height="13" style="stroke:var(--accent)"></svg> Diamante</div>
+            <div class="comm-col">100+</div>
+            <div class="comm-col val" style="color:var(--accent)">1.40%</div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <div style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.35rem"><svg data-lucide="bar-chart-2" width="13" height="13" style="stroke:var(--accent);flex-shrink:0;margin-top:.1rem"></svg><span>Comissão calculada sobre o <strong>volume total operado</strong> pelos teus referidos.</span></div>
+          <div style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.35rem"><svg data-lucide="users" width="13" height="13" style="stroke:var(--green);flex-shrink:0;margin-top:.1rem"></svg><span><strong>Todos os referidos contam</strong> — qualquer volume é considerado.</span></div>
+          <div style="display:flex;align-items:flex-start;gap:.4rem"><svg data-lucide="calendar" width="13" height="13" style="stroke:var(--purple);flex-shrink:0;margin-top:.1rem"></svg><span>Pagamentos processados até ao <strong>dia 5 de cada mês</strong> via Multicaixa Express.</span></div>
+        </div>
+
+        <!-- Saque -->
+        <button class="btn btn-primary btn-full" id="saqueBtn" onclick="openSaque()">
+          <svg data-lucide="banknote" width="16" height="16"></svg> Pedir Saque de Comissão
+        </button>
+      </div>
+
+      <!-- Histórico de saques -->
+      <div class="section">
+        <div class="section-hdr">
+          <div class="section-title">Histórico de Saques</div>
+          <button class="btn btn-pp btn-sm" onclick="loadSaqueHist()">
+            <svg data-lucide="refresh-cw" width="12" height="12"></svg>
+          </button>
+        </div>
+        <div id="saqueHistCards"><div class="load-wrap"><span class="spin"></span>A carregar...</div></div>
+      </div>
+    </div>
+
+    <!-- ══ LINK / PARTILHAR ══ -->
+    <div class="tab-panel" id="tab-link">
+      <div class="section">
+        <div class="section-hdr"><div class="section-title">O Teu Link de Afiliado</div></div>
+
+        <div class="form-card" style="margin-bottom:1rem">
+          <div class="fl" style="margin-bottom:.5rem">Link de Registo (partilha este link)</div>
+          <div class="link-box" id="linkBoxFull">A carregar...</div>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-pp btn-full" onclick="copyLink()">
+              <svg data-lucide="copy" width="14" height="14"></svg> Copiar
+            </button>
+            <button class="btn btn-ac btn-full" onclick="shareLink()">
+              <svg data-lucide="share-2" width="14" height="14"></svg> Partilhar
+            </button>
+          </div>
+        </div>
+
+        <div class="form-card" style="margin-bottom:1rem">
+          <div class="fl" style="margin-bottom:.5rem">O Teu Código de Referral</div>
+          <div class="link-box" style="font-size:1.1rem;font-weight:900;text-align:center;letter-spacing:.1em" id="refCodeBox">—</div>
+          <button class="btn btn-pp btn-full" onclick="copyCode()">
+            <svg data-lucide="copy" width="14" height="14"></svg> Copiar Código
+          </button>
+        </div>
+
+        <div class="info-box">
+          <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem;font-weight:800;color:var(--accent)">
+            <svg data-lucide="info" width="13" height="13" style="stroke:var(--accent);flex-shrink:0"></svg>
+            Como funciona o rastreio
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.5rem"><svg data-lucide="link" width="13" height="13" style="stroke:var(--accent);flex-shrink:0;margin-top:.1rem"></svg><span>Cada pessoa que clica no teu link e faz login com conta <strong>real</strong> é automaticamente associada a ti.</span></div>
+          <div style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.3rem">
+            <svg data-lucide="check-circle" width="12" height="12" style="stroke:var(--green);flex-shrink:0;margin-top:.1rem"></svg>
+            <span>Partilha no <strong>WhatsApp</strong>, grupos e redes sociais</span>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.3rem">
+            <svg data-lucide="check-circle" width="12" height="12" style="stroke:var(--green);flex-shrink:0;margin-top:.1rem"></svg>
+            <span>Só conta quando o referido entrar com conta <strong>real</strong> (não demo)</span>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:.4rem">
+            <svg data-lucide="check-circle" width="12" height="12" style="stroke:var(--green);flex-shrink:0;margin-top:.1rem"></svg>
+            <span>A comissão é calculada sobre o <strong>volume operado</strong> pelos teus referidos</span>
+          </div>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="section-hdr" style="margin-top:.25rem">
+          <div class="section-title">Estatísticas</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card" style="--clr:var(--purple)">
+            <div class="sc-label">Referidos</div>
+            <div class="sc-val" id="stat-refs2">—</div>
+            <div class="sc-sub">registados</div>
+          </div>
+          <div class="stat-card" style="--clr:var(--green)">
+            <div class="sc-label">Conversão</div>
+            <div class="sc-val" id="stat-conv">—%</div>
+            <div class="sc-sub">com depósito</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PERFIL ══ -->
+    <div class="tab-panel" id="tab-perfil">
+      <div class="section">
+        <div class="section-hdr"><div class="section-title">Dados do Parceiro</div></div>
+        <div class="form-card" style="margin-bottom:1rem">
+          <div class="m-card-row" style="margin-bottom:.55rem">
+            <span class="m-card-label">ID / Código</span>
+            <span class="m-card-val" style="font-family:var(--mono)" id="prf-code">—</span>
+          </div>
+          <div class="m-card-row" style="margin-bottom:.55rem">
+            <span class="m-card-label">Nome</span>
+            <span class="m-card-val" id="prf-name">—</span>
+          </div>
+          <div class="m-card-row" style="margin-bottom:.55rem">
+            <span class="m-card-label">Nível</span>
+            <span id="prf-level">—</span>
+          </div>
+          <div class="m-card-row" style="margin-bottom:.55rem">
+            <span class="m-card-label">Telemóvel</span>
+            <span class="m-card-val" style="font-family:var(--mono)" id="prf-phone">—</span>
+          </div>
+          <div class="m-card-row">
+            <span class="m-card-label">Membro desde</span>
+            <span class="m-card-val" style="font-size:.72rem" id="prf-since">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-hdr"><div class="section-title">Alterar Password</div></div>
+        <div class="form-card">
+          <div class="fg">
+            <label class="fl">Password Actual</label>
+            <input class="fi" id="oldPwd" type="password" placeholder="Password actual"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Nova Password</label>
+            <input class="fi" id="newPwd" type="password" placeholder="Mínimo 8 caracteres"/>
+          </div>
+          <div class="fg" style="margin-bottom:.25rem">
+            <label class="fl">Confirmar</label>
+            <input class="fi" id="confPwd" type="password" placeholder="Repetir nova password"/>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="changePwd()" style="margin-top:.5rem">
+            <svg data-lucide="lock" width="14" height="14"></svg> Alterar Password
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-hdr"><div class="section-title">Telemóvel para Pagamento</div></div>
+        <div class="form-card">
+          <div class="fg">
+            <label class="fl">Número Multicaixa Express</label>
+            <input class="fi" id="phoneInp" type="tel" placeholder="9XX XXX XXX" inputmode="tel"/>
+          </div>
+          <div class="info-box" style="margin-bottom:.85rem">
+            <div style="display:flex;align-items:center;gap:.4rem"><svg data-lucide="smartphone" width="13" height="13" style="stroke:var(--accent);flex-shrink:0"></svg><span>Este número será usado para te enviar as comissões via <strong>Multicaixa Express</strong>.</span></div>
+          </div>
+          <button class="btn btn-gr btn-full" onclick="savePhone()">
+            <svg data-lucide="save" width="14" height="14"></svg> Guardar Telemóvel
+          </button>
+        </div>
+      </div>
+
+      <div style="padding-bottom:.5rem">
+        <button class="btn btn-rd btn-full" onclick="doLogout()">
+          <svg data-lucide="log-out" width="14" height="14"></svg> Sair do Painel
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bnav">
+    <button class="bnav-btn active" id="bn-dash" onclick="switchTab('dash',this)">
+      <svg data-lucide="layout-dashboard"></svg>
+      <span>Início</span>
+    </button>
+    <button class="bnav-btn" id="bn-refs" onclick="switchTab('refs',this)">
+      <svg data-lucide="users"></svg>
+      <span>Referidos</span>
+    </button>
+    <button class="bnav-btn" id="bn-comms" onclick="switchTab('comms',this)">
+      <svg data-lucide="dollar-sign"></svg>
+      <div class="bnav-badge" id="commBadge"></div>
+      <span>Comissões</span>
+    </button>
+    <button class="bnav-btn" id="bn-link" onclick="switchTab('link',this)">
+      <svg data-lucide="link-2"></svg>
+      <span>Link</span>
+    </button>
+    <button class="bnav-btn" id="bn-perfil" onclick="switchTab('perfil',this)">
+      <svg data-lucide="user"></svg>
+      <span>Perfil</span>
+    </button>
+  </nav>
+
+</div><!-- /partnerApp -->
+
+<!-- ══ SAQUE MODAL ══ -->
+<div class="modal-bg" id="saqueModal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem"><svg data-lucide="banknote" width="20" height="20" style="stroke:var(--accent)"></svg> Pedir Saque</div>
+    <div class="modal-sub" id="saqueModalSub">Saldo disponível: <strong id="saqueAvail" style="color:var(--yellow)">—</strong></div>
+    <div class="fg">
+      <label class="fl">Valor a sacar (USD)</label>
+      <input class="fi" id="saqueAmount" type="number" placeholder="Ex: 10.00" inputmode="decimal" min="5" step="0.01"/>
+      <div style="font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.25rem">Mínimo $5.00 · Máximo: o teu saldo disponível</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Telemóvel Multicaixa Express</label>
+      <input class="fi" id="saquePhone" type="tel" placeholder="Ex: 923 456 789" inputmode="tel"
+             oninput="this.value=this.value.replace(/[^0-9+\s]/g,'')"/>
+      <div style="font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.25rem">Número angolano (9XX XXX XXX) — para pagamento via Multicaixa Express</div>
+    </div>
+    <div class="info-box" style="margin-bottom:1rem">
+      <div style="display:flex;align-items:flex-start;gap:.4rem"><svg data-lucide="zap" width="13" height="13" style="stroke:var(--yellow);flex-shrink:0;margin-top:.1rem"></svg>
+      <span>Processado pelo administrador em até <strong>48h úteis</strong>. Só podes ter <strong>1 saque pendente</strong> de cada vez.</span></div>
+    </div>
+    <div style="display:flex;gap:.65rem">
+      <button class="btn btn-rd" style="flex:1" onclick="closeSaque()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="submitSaque()" id="saqueSubmitBtn">
+        <svg data-lucide="send" width="14" height="14"></svg> Enviar Pedido
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="pk-toast" id="pkToast"></div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, addDoc,
+         query, orderBy, limit, where, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const cfg = {
+  apiKey:"AIzaSyB60g18v0zOmOeWaf9l3v20XubZRDHP_Xk",
+  authDomain:"dynamicworks-angola.firebaseapp.com",
+  projectId:"dynamicworks-angola",
+  storageBucket:"dynamicworks-angola.firebasestorage.app",
+  messagingSenderId:"678170921562",
+  appId:"1:678170921562:web:2e9c0c2793afa8c96e2663"
+};
+const app = initializeApp(cfg);
+const db  = getFirestore(app);
+
+window._db=db;
+window._col=collection; window._getDocs=getDocs;
+window._doc=doc; window._getDoc=getDoc;
+window._setDoc=setDoc; window._updateDoc=updateDoc;
+window._addDoc=addDoc;
+window._q=query; window._ob=orderBy; window._lim=limit;
+window._wh=where; window._onSnapshot=onSnapshot;
+window._fbReady=true;
+window.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<script>
+'use strict';
+
+var _partner = null;
+var _refs    = [];
+
+/* ─── NÍVEIS ─── */
+var LEVELS = [
+  { id:'bronze',  name:'Bronze',   icon:'<svg data-lucide="award" width="22" height="22" style="stroke:var(--orange)"></svg>',  min:0,   max:14,       rate:0.50, color:'var(--orange)' },
+  { id:'silver',  name:'Prata',    icon:'<svg data-lucide="award" width="22" height="22" style="stroke:#94a3b8"></svg>',         min:15,  max:39,       rate:0.80, color:'var(--text2)'  },
+  { id:'gold',    name:'Ouro',     icon:'<svg data-lucide="award" width="22" height="22" style="stroke:var(--yellow)"></svg>',   min:40,  max:99,       rate:1.10, color:'var(--yellow)' },
+  { id:'diamond', name:'Diamante', icon:'<svg data-lucide="gem"   width="22" height="22" style="stroke:var(--accent)"></svg>',   min:100, max:Infinity, rate:1.40, color:'var(--accent)' }
+];
+
+function getLevel(refCount) {
+  for (var i = LEVELS.length - 1; i >= 0; i--) {
+    if (refCount >= LEVELS[i].min) return LEVELS[i];
+  }
+  return LEVELS[0];
+}
+
+/* ─── UTILS ─── */
+function toast(msg, type) {
+  var t = document.getElementById('pkToast');
+  t.textContent = msg;
+  t.className = 'pk-toast show ' + (type || 'ok');
+  clearTimeout(t._t);
+  t._t = setTimeout(function() { t.classList.remove('show'); }, 3400);
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  return d.getDate().toString().padStart(2,'0') + '/' +
+         (d.getMonth()+1).toString().padStart(2,'0') + '/' +
+         d.getFullYear() + ' ' +
+         d.getHours().toString().padStart(2,'0') + ':' +
+         d.getMinutes().toString().padStart(2,'0');
+}
+
+function fmtDateShort(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  return d.getDate().toString().padStart(2,'0') + '/' +
+         (d.getMonth()+1).toString().padStart(2,'0') + '/' +
+         d.getFullYear();
+}
+
+async function sha256(str) {
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+
+/* ─── LINK DE AFILIADO ─── */
+function buildAffiliateLink(acctId) {
+  /* Sempre gera o link a partir da raiz do domínio — evita bugs com pathname */
+  return window.location.origin + '/index.html?ref=' + encodeURIComponent(acctId);
+}
+
+/* ─── TOGGLE PASSWORD EYE ─── */
+window.toggleEye = function() {
+  var inp = document.getElementById('loginPwd');
+  var btn = document.getElementById('eyeBtn');
+  var isPass = inp.type === 'password';
+  inp.type = isPass ? 'text' : 'password';
+  btn.innerHTML = isPass
+    ? '<svg data-lucide="eye-off" width="18" height="18"></svg>'
+    : '<svg data-lucide="eye" width="18" height="18"></svg>';
+  if (window.lucide) lucide.createIcons();
+};
+
+/* ─── SWITCH TAB ─── */
+window.switchTab = function(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.bnav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-' + id).classList.add('active');
+  var navBtn = btn || document.getElementById('bn-' + id);
+  if (navBtn) navBtn.classList.add('active');
+
+  if (id === 'refs')   loadRefs();
+  if (id === 'comms')  { loadSaqueHist(); refreshKPIs(); }
+  if (id === 'link')   refreshLinkTab();
+  if (id === 'perfil') loadPerfil();
+};
+
+/* ─── LOGIN ─── */
+window.doLogin = async function() {
+  var code = document.getElementById('loginCode').value.trim().toUpperCase();
+  var pwd  = document.getElementById('loginPwd').value;
+  var btn  = document.getElementById('loginBtn');
+
+  if (!code || !pwd) { showErr('Preenche todos os campos'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'A verificar...';
+
+  if (!window._fbReady) {
+    await new Promise(function(r){ window.addEventListener('fb-ready', r, {once:true}); });
+  }
+
+  try {
+    var snap = await window._getDoc(window._doc(window._db, 'partners', code));
+    if (!snap.exists()) { showErr('Parceiro não encontrado'); resetBtn(); return; }
+
+    var data = snap.data();
+    if (!data.active) { showErr('Conta inactiva. Contacta o administrador.'); resetBtn(); return; }
+
+    var hash = await sha256(pwd);
+    if (hash !== data.pwdHash) { showErr('Password incorrecta'); resetBtn(); return; }
+
+    _partner = Object.assign({ id: code }, data);
+    try { sessionStorage.setItem('dw_partner_id', code); } catch(e){}
+
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('partnerApp').classList.add('visible');
+    document.getElementById('topNick').textContent = data.name || code;
+
+    if (window.lucide) lucide.createIcons();
+    initPartnerApp();
+  } catch(e) {
+    showErr('Erro: ' + e.message);
+    resetBtn();
+  }
+};
+
+function showErr(msg) {
+  var el = document.getElementById('loginErr');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function resetBtn() {
+  var btn = document.getElementById('loginBtn');
+  btn.disabled = false;
+  btn.textContent = 'Entrar no Painel';
+}
+
+/* ─── LOGOUT ─── */
+window.doLogout = function() {
+  try { sessionStorage.removeItem('dw_partner_id'); } catch(e){}
+  _partner = null;
+  _refs = [];
+  document.getElementById('partnerApp').classList.remove('visible');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginCode').value = '';
+  document.getElementById('loginPwd').value  = '';
+  document.getElementById('loginErr').style.display = 'none';
+};
+
+/* ─── INIT APP ─── */
+async function initPartnerApp() {
+  await loadReferralData();
+  await loadDashboardRefs();
+  renderLevelCard();
+  renderAffiliateLink();
+
+  var lvl = getLevel(_partner._refCount || 0);
+  document.querySelectorAll('.comm-row[id^="cr-"]').forEach(function(r){
+    r.style.background = '';
+    r.style.borderLeft = '';
+  });
+  var activeRow = document.getElementById('cr-' + lvl.id);
+  if (activeRow) {
+    activeRow.style.background = 'rgba(167,139,250,.07)';
+    activeRow.style.borderLeft = '3px solid var(--purple)';
+  }
+}
+
+/* ─── CARREGAR DADOS DE REFERRALS ─── */
+async function loadReferralData() {
+  if (!_partner) return;
+  try {
+    /* Dados financeiros do parceiro (earned, pending, paid) */
+    var snap = await window._getDoc(window._doc(window._db, 'referrals', _partner.id));
+    var d = snap.exists() ? snap.data() : {};
+    _partner._earned  = parseFloat(d.earned  || 0);
+    _partner._pending = parseFloat(d.pending || 0);
+    _partner._paid    = parseFloat(d.paid    || 0);
+    _partner._refCount= parseInt(d.count   || 0);
+    _refs = d.refs || [];
+
+    /* Contagem real a partir da referral_users (fonte da verdade) */
+    try {
+      var qCount = window._q(
+        window._col(window._db, 'referral_users'),
+        window._wh('referredBy', '==', _partner.id)
+      );
+      var snapCount = await window._getDocs(qCount);
+      if (snapCount.size > 0) {
+        _partner._refCount = snapCount.size;
+
+        /* Calcular volume total e comissão esperada */
+        var lvl  = getLevel(_partner._refCount);
+        var taxa = lvl.rate;
+        var totalVol = 0;
+        snapCount.docs.forEach(function(doc) {
+          totalVol += parseFloat(doc.data().totalVolume || 0);
+        });
+        _partner._totalVolume = totalVol;
+        _partner._commCalc    = parseFloat((totalVol * taxa / 100).toFixed(6));
+      }
+    } catch(e2) {
+      /* Sem permissão em referral_users — usa contagem do referrals doc */
+    }
+  } catch(e) {
+    _partner._earned  = 0;
+    _partner._pending = 0;
+    _partner._paid    = 0;
+    _partner._refCount= 0;
+    _refs = [];
+  }
+  refreshKPIs();
+}
+
+/* ─── REFRESH KPIs ─── */
+function refreshKPIs() {
+  if (!_partner) return;
+  var fmt = function(v){ return '$' + parseFloat(v||0).toFixed(2); };
+
+  document.getElementById('kpi-refs').textContent    = _partner._refCount || 0;
+  document.getElementById('kpi-earned').textContent  = fmt(_partner._earned);
+  document.getElementById('kpi-pending').textContent = fmt(_partner._pending);
+  document.getElementById('kpi-paid').textContent    = fmt(_partner._paid);
+  document.getElementById('comm-earned').textContent = fmt(_partner._earned);
+  document.getElementById('comm-pending').textContent= fmt(_partner._pending);
+  document.getElementById('stat-refs2').textContent  = _partner._refCount || 0;
+
+  var lvl = getLevel(_partner._refCount || 0);
+  document.getElementById('wbTitle').textContent = 'Olá, ' + (_partner.name || _partner.id) + '!';
+  document.getElementById('wbSub').textContent   = lvl.name + ' · ' +
+    (_partner._refCount || 0) + ' referidos · ' + fmt(_partner._pending) + ' disponível';
+
+  var badge = document.getElementById('commBadge');
+  if (_partner._pending > 0) {
+    badge.textContent = '$';
+    badge.classList.add('show');
+  } else {
+    badge.classList.remove('show');
+  }
+
+  var conv = _partner._refCount > 0
+    ? Math.round((_refs.filter(function(r){ return (r.commission||0) > 0; }).length / _partner._refCount) * 100)
+    : 0;
+  document.getElementById('stat-conv').textContent = conv + '%';
+}
+
+/* ─── LEVEL CARD ─── */
+function renderLevelCard() {
+  if (!_partner) return;
+  var count = _partner._refCount || 0;
+  var lvl   = getLevel(count);
+  var next  = LEVELS[LEVELS.indexOf(lvl) + 1];
+
+  document.getElementById('lvlIcon').innerHTML = lvl.icon; if(window.lucide) lucide.createIcons();
+  document.getElementById('lvlName').textContent = lvl.name;
+  document.getElementById('lvlSub').textContent  = lvl.rate + '% sobre volume dos referidos ativos';
+
+  if (next) {
+    var progress  = Math.min(100, Math.round(((count - lvl.min) / (next.min - lvl.min)) * 100));
+    var remaining = next.min - count;
+    document.getElementById('lvlProgressWrap').style.display = '';
+    document.getElementById('lvlProgressLabel').textContent  = 'Progresso para ' + next.name + ' (' + next.rate + '%)';
+    document.getElementById('lvlProgressPct').textContent    = progress + '%';
+    document.getElementById('lvlProgressFill').style.width   = progress + '%';
+    document.getElementById('lvlProgressNext').textContent   = 'Faltam ' + remaining + ' ref(s) ativo(s) · próxima taxa: ' + next.rate + '%';
+  } else {
+    document.getElementById('lvlProgressWrap').style.display = 'none';
+    document.getElementById('lvlSub').textContent = lvl.rate + '% sobre volume · Nível Máximo!';
+  }
+}
+
+/* ─── AFFILIATE LINK ─── */
+function renderAffiliateLink() {
+  if (!_partner) return;
+  var link = buildAffiliateLink(_partner.id);
+  document.getElementById('affiliateLink').textContent = link;
+  document.getElementById('linkBoxFull').textContent   = link;
+  document.getElementById('refCodeBox').textContent    = _partner.id;
+}
+
+window.copyLink = function() {
+  var link = buildAffiliateLink(_partner.id);
+  navigator.clipboard.writeText(link).then(function(){
+    toast('✅ Link copiado!');
+  }).catch(function(){
+    var el = document.createElement('textarea');
+    el.value = link; document.body.appendChild(el);
+    el.select(); document.execCommand('copy');
+    document.body.removeChild(el);
+    toast('✅ Link copiado!');
+  });
+};
+
+window.copyCode = function() {
+  navigator.clipboard.writeText(_partner.id).then(function(){
+    toast('✅ Código copiado: ' + _partner.id);
+  }).catch(function(){
+    toast('Código: ' + _partner.id, 'warn');
+  });
+};
+
+window.shareLink = function() {
+  var link = buildAffiliateLink(_partner.id);
+  var text = '🚀 Já estou a ganhar dinheiro com Accumulators Deriv na DynamicWorks Angola!\n\n💰 Regista-te GRÁTIS pelo meu link e começa a investir:\n' + link + '\n\n✅ Depósito via Multicaixa Express\n📈 Ganha até 5% por tick';
+  if (navigator.share) {
+    navigator.share({ title: 'DynamicWorks Angola', text: text, url: link });
+  } else {
+    navigator.clipboard.writeText(text).then(function(){ toast('✅ Texto copiado para partilhar!'); });
+  }
+};
+
+/* ─── DASH REFS (últimos 5 com volume real) ─── */
+async function loadDashboardRefs() {
+  var container = document.getElementById('dashRefsCards');
+  if (!_partner) { container.innerHTML = '<div class="empty-msg">Sessão não iniciada.</div>'; return; }
+
+  container.innerHTML = '<div class="load-wrap"><span class="spin"></span>A carregar...</div>';
+
+  try {
+    /* Fonte real: referral_users */
+    var q = window._q(
+      window._col(window._db, 'referral_users'),
+      window._wh('referredBy', '==', _partner.id),
+      window._ob('joinedAt', 'desc'),
+      window._lim(5)
+    );
+    var snap = await window._getDocs(q);
+    var items = snap.docs.map(function(d){ return Object.assign({ _id: d.id }, d.data()); });
+    if (items.length > 0) {
+      var lvl  = getLevel(_partner._refCount || 0);
+      var taxa = lvl.rate;
+      if (!items.length) {
+        container.innerHTML = '<div class="empty-msg">Sem referidos ainda.</div>';
+        return;
+      }
+      container.innerHTML = items.map(function(r) {
+        var vol    = parseFloat(r.totalVolume || 0);
+        var trades = parseInt(r.totalTrades  || 0);
+        var comm   = parseFloat((vol * taxa / 100).toFixed(4));
+        var date   = fmtDateShort(r.joinedAt || r.createdAt);
+        var acct   = esc(r.acct || r._id || '—');
+        return '<div class="ref-item" style="flex-direction:column;align-items:stretch">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">'
+          +   '<div><div class="ref-acct">' + acct + '</div><div class="ref-meta">' + date + '</div></div>'
+          +   '<span class="badge ' + (vol > 0 ? 'bg' : 'bb') + '" style="font-size:.52rem">' + (vol > 0 ? '✅ Activo' : '⏳ Sem ops') + '</span>'
+          + '</div>'
+          + '<div style="display:flex;gap:.5rem;font-size:.62rem;font-family:var(--mono)">'
+          +   '<span style="color:var(--text2)">Vol: <strong style="color:var(--accent)">' + (vol > 0 ? '$' + vol.toFixed(2) : '—') + '</strong></span>'
+          +   '<span style="color:var(--text3)">|</span>'
+          +   '<span style="color:var(--text2)">Trades: <strong>' + (trades || '—') + '</strong></span>'
+          +   '<span style="color:var(--text3)">|</span>'
+          +   '<span style="color:var(--text2)">Comm: <strong style="color:var(--green)">' + (comm > 0 ? '+$' + comm.toFixed(4) : '—') + '</strong></span>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+      return;
+    }
+    /* Fallback */
+    renderRefFromArray(container, _refs.slice(-5).reverse(), true);
+  } catch(e) {
+    renderRefFromArray(container, _refs.slice(-5).reverse(), true);
+  }
+}
+
+/* ─── TODOS OS REFS (com volume real da referral_users) ─── */
+window.loadRefs = async function() {
+  var container = document.getElementById('refsCards');
+  if (!_partner) { container.innerHTML = '<div class="empty-msg">Sessão não iniciada.</div>'; return; }
+
+  container.innerHTML = '<div class="load-wrap"><span class="spin"></span>A carregar referidos...</div>';
+
+  try {
+    /* Fonte principal: referral_users — dados reais de volume por utilizador */
+    var q = window._q(
+      window._col(window._db, 'referral_users'),
+      window._wh('referredBy', '==', _partner.id),
+      window._ob('joinedAt', 'desc'),
+      window._lim(200)
+    );
+    var snap = await window._getDocs(q);
+    var items = snap.docs.map(function(d){ return Object.assign({ _id: d.id }, d.data()); });
+
+    if (items.length > 0) {
+      renderRefItemsReal(container, items, false);
+      /* Actualizar contagem real */
+      var lvl = getLevel(items.length);
+      _partner._refCount = items.length;
+      refreshKPIs();
+      return;
+    }
+    /* Fallback: referrals_detail ou array guardado */
+    try {
+      var q2 = window._q(
+        window._col(window._db, 'referrals_detail'),
+        window._wh('partnerId', '==', _partner.id),
+        window._ob('createdAt', 'desc'),
+        window._lim(100)
+      );
+      var snap2 = await window._getDocs(q2);
+      renderRefItems(container, snap2.docs.map(function(d){ return Object.assign({_id:d.id}, d.data()); }), false);
+    } catch(e2) {
+      renderRefFromArray(container, _refs.slice().reverse(), false);
+    }
+  } catch(e) {
+    /* Fallback se não tiver permissão na referral_users */
+    try {
+      var q3 = window._q(
+        window._col(window._db, 'referrals_detail'),
+        window._wh('partnerId', '==', _partner.id),
+        window._ob('createdAt', 'desc'),
+        window._lim(100)
+      );
+      var snap3 = await window._getDocs(q3);
+      renderRefItems(container, snap3.docs.map(function(d){ return Object.assign({_id:d.id}, d.data()); }), false);
+    } catch(e3) {
+      renderRefFromArray(container, _refs.slice().reverse(), false);
+    }
+  }
+};
+
+/* ── Renderização REAL com dados de referral_users (volume, trades, etc.) ── */
+function renderRefItemsReal(container, items, mini) {
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-msg">Sem referidos ainda.<br>Partilha o teu link para começar!</div>';
+    return;
+  }
+
+  /* Calcular totais para o sumário */
+  var totalVol    = items.reduce(function(s,r){ return s + (parseFloat(r.totalVolume)||0); }, 0);
+  var totalTrades = items.reduce(function(s,r){ return s + (parseInt(r.totalTrades)||0); }, 0);
+  var ativos      = items.filter(function(r){ return (parseFloat(r.totalVolume)||0) > 0; }).length;
+  var lvl         = getLevel(items.length);
+  var taxa        = lvl.rate;
+  var commCalc    = parseFloat((totalVol * taxa / 100).toFixed(4));
+
+  /* Sumário de volume */
+  var summary = '<div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:12px;padding:.85rem;margin-bottom:.85rem">'
+    + '<div style="font-size:.6rem;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem">Resumo de volume dos referidos</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">'
+    +   '<div><div style="font-size:.58rem;color:var(--text2);font-family:var(--mono)">Total referidos</div><div style="font-size:1.2rem;font-weight:900;color:var(--purple)">' + items.length + '</div></div>'
+    +   '<div><div style="font-size:.58rem;color:var(--text2);font-family:var(--mono)">Com operações</div><div style="font-size:1.2rem;font-weight:900;color:var(--green)">' + ativos + '</div></div>'
+    +   '<div><div style="font-size:.58rem;color:var(--text2);font-family:var(--mono)">Volume total</div><div style="font-size:1rem;font-weight:900;color:var(--accent);font-family:var(--mono)">$' + totalVol.toFixed(2) + '</div></div>'
+    +   '<div><div style="font-size:.58rem;color:var(--text2);font-family:var(--mono)">Operações totais</div><div style="font-size:1rem;font-weight:900;font-family:var(--mono)">' + totalTrades + '</div></div>'
+    + '</div>'
+    + '<div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(0,212,255,.1);font-size:.65rem;font-family:var(--mono);color:var(--text2)">'
+    +   'Comissão calculada: <strong style="color:var(--green)">$' + commCalc.toFixed(4) + '</strong>'
+    +   ' <span style="color:var(--text3)">(taxa ' + taxa + '% · nível ' + lvl.name + ')</span>'
+    + '</div>'
+    + '</div>';
+
+  /* Ordenar: primeiro com volume, depois sem */
+  items.sort(function(a,b){
+    var va = parseFloat(a.totalVolume)||0;
+    var vb = parseFloat(b.totalVolume)||0;
+    if (vb !== va) return vb - va;
+    return (b.joinedAt||0) - (a.joinedAt||0);
+  });
+
+  var cards = items.map(function(r, idx) {
+    var vol    = parseFloat(r.totalVolume || 0);
+    var trades = parseInt(r.totalTrades  || 0);
+    var comm   = parseFloat((vol * taxa / 100).toFixed(4));
+    var date   = fmtDateShort(r.joinedAt || r.createdAt);
+    var lastTr = r.lastTradeAt ? fmtDateShort(r.lastTradeAt) : null;
+    var acct   = esc(r.acct || r._id || '—');
+    var isAct  = vol > 0;
+
+    return '<div class="ref-item" style="flex-direction:column;align-items:stretch;gap:0">'
+      /* Linha 1: conta + estado */
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">'
+      +   '<div>'
+      +     '<div class="ref-acct">' + acct + '</div>'
+      +     '<div class="ref-meta">Entrou: ' + date + '</div>'
+      +   '</div>'
+      +   '<span class="badge ' + (isAct ? 'bg' : 'bb') + '" style="font-size:.55rem">'
+      +     (isAct ? '✅ Activo' : '⏳ Sem ops') + '</span>'
+      + '</div>'
+      /* Linha 2: volume + trades + comissão */
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.35rem;padding:.5rem;background:rgba(255,255,255,.03);border-radius:8px">'
+      +   '<div style="text-align:center"><div style="font-size:.52rem;color:var(--text3);font-family:var(--mono)">Volume</div>'
+      +     '<div style="font-size:.78rem;font-weight:900;font-family:var(--mono);color:var(--accent)">'
+      +       (vol > 0 ? '$' + vol.toFixed(2) : '—') + '</div></div>'
+      +   '<div style="text-align:center"><div style="font-size:.52rem;color:var(--text3);font-family:var(--mono)">Operações</div>'
+      +     '<div style="font-size:.78rem;font-weight:900;font-family:var(--mono)">' + (trades > 0 ? trades : '—') + '</div></div>'
+      +   '<div style="text-align:center"><div style="font-size:.52rem;color:var(--text3);font-family:var(--mono)">Comissão</div>'
+      +     '<div style="font-size:.78rem;font-weight:900;font-family:var(--mono);color:var(--green)">'
+      +       (comm > 0 ? '+$' + comm.toFixed(4) : '—') + '</div></div>'
+      + '</div>'
+      /* Última trade */
+      + (lastTr ? '<div style="font-size:.55rem;color:var(--text3);font-family:var(--mono);margin-top:.35rem">Última op: ' + lastTr + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  container.innerHTML = summary + cards;
+}
+
+function renderRefItems(container, items, mini) {
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-msg">Sem referidos ainda.<br>Partilha o teu link para começar!</div>';
+    return;
+  }
+  container.innerHTML = items.map(function(r) {
+    var comm = parseFloat(r.commission || r.comm || 0);
+    var date = fmtDateShort(r.createdAt || r.ts);
+    var acct = esc(r.acct || r._id || '—');
+    return '<div class="ref-item">'
+      + '<div>'
+      + '<div class="ref-acct">' + acct + '</div>'
+      + '<div class="ref-meta">' + date + (r.deposited ? ' · <span style="color:var(--green)">Depositou</span>' : ' · <span style="color:var(--text3)">Sem depósito</span>') + '</div>'
+      + '</div>'
+      + '<div class="ref-comm">' + (comm > 0 ? '+$' + comm.toFixed(2) : '—') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function renderRefFromArray(container, arr, mini) {
+  if (!arr.length) {
+    container.innerHTML = '<div class="empty-msg">Sem referidos ainda.<br>Partilha o teu link para começar!</div>';
+    return;
+  }
+  renderRefItems(container, arr.map(function(r){
+    if (typeof r === 'string') return { acct: r, commission: 0 };
+    return r;
+  }), mini);
+}
+
+/* ─── LINK TAB ─── */
+function refreshLinkTab() {
+  renderAffiliateLink();
+  refreshKPIs();
+}
+
+/* ─── PERFIL ─── */
+function loadPerfil() {
+  if (!_partner) return;
+  document.getElementById('prf-code').textContent  = _partner.id;
+  document.getElementById('prf-name').textContent  = _partner.name || '—';
+  document.getElementById('prf-phone').textContent = _partner.phone || 'Não configurado';
+  document.getElementById('prf-since').textContent = fmtDateShort(_partner.createdAt);
+  document.getElementById('phoneInp').value = _partner.phone || '';
+
+  var lvl = getLevel(_partner._refCount || 0);
+  document.getElementById('prf-level').innerHTML = '<span class="badge bp" style="display:inline-flex;align-items:center;gap:.3rem">' + lvl.icon + ' ' + lvl.name + '</span>'; if(window.lucide) lucide.createIcons();
+}
+
+window.savePhone = async function() {
+  if (!_partner) return;
+  var phone = document.getElementById('phoneInp').value.trim();
+  if (!phone) { toast('Introduz o número de telemóvel', 'err'); return; }
+
+  try {
+    await window._setDoc(window._doc(window._db, 'partners', _partner.id),
+      { phone: phone }, { merge: true });
+    _partner.phone = phone;
+    toast('✅ Telemóvel guardado!');
+    loadPerfil();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+};
+
+window.changePwd = async function() {
+  var oldP = document.getElementById('oldPwd').value;
+  var newP = document.getElementById('newPwd').value;
+  var conf = document.getElementById('confPwd').value;
+
+  if (!oldP || !newP || !conf) { toast('Preenche todos os campos', 'err'); return; }
+  if (newP !== conf) { toast('As passwords não coincidem', 'err'); return; }
+  if (newP.length < 8) { toast('Mínimo 8 caracteres', 'err'); return; }
+
+  var oldHash = await sha256(oldP);
+  if (oldHash !== _partner.pwdHash) { toast('Password actual incorrecta', 'err'); return; }
+
+  var newHash = await sha256(newP);
+  try {
+    await window._setDoc(window._doc(window._db, 'partners', _partner.id),
+      { pwdHash: newHash }, { merge: true });
+    _partner.pwdHash = newHash;
+    document.getElementById('oldPwd').value = '';
+    document.getElementById('newPwd').value = '';
+    document.getElementById('confPwd').value = '';
+    toast('✅ Password alterada com sucesso!');
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+};
+
+/* ─── SAQUE ─── */
+window.openSaque = function() {
+  if (!_partner) return;
+  var pending = _partner._pending || 0;
+  if (pending < 5) {
+    toast('Saldo mínimo para saque: $5.00 (tens $' + pending.toFixed(2) + ')', 'err');
+    return;
+  }
+  document.getElementById('saqueAvail').textContent = '$' + pending.toFixed(2);
+  document.getElementById('saqueAmount').value = pending.toFixed(2);
+  document.getElementById('saquePhone').value  = _partner.phone || '';
+  document.getElementById('saqueModal').classList.add('open');
+  if (window.lucide) lucide.createIcons();
+};
+
+window.closeSaque = function() {
+  document.getElementById('saqueModal').classList.remove('open');
+};
+
+window.submitSaque = async function() {
+  var amount = parseFloat(document.getElementById('saqueAmount').value);
+  var phone  = document.getElementById('saquePhone').value.trim();
+  var btn    = document.getElementById('saqueSubmitBtn');
+
+  if (!amount || amount < 5) { toast('Valor mínimo: $5.00', 'err'); return; }
+  if (amount > (_partner._pending || 0)) {
+    toast('Saldo insuficiente. Tens $' + (_partner._pending||0).toFixed(2), 'err'); return;
+  }
+  if (!phone) { toast('Introduz o número Multicaixa', 'err'); return; }
+
+  /* Validar formato do telemóvel — mínimo 9 dígitos */
+  var phoneDigits = phone.replace(/\D/g,'');
+  if (phoneDigits.length < 9) {
+    toast('Número de telemóvel inválido. Ex: 923 456 789', 'err');
+    return;
+  }
+
+  /* Verificar se já tem um saque pendente */
+  try {
+    var qPend = window._q(
+      window._col(window._db, 'saques'),
+      window._wh('acct',   '==', _partner.id),
+      window._wh('status', '==', 'pendente'),
+      window._lim(1)
+    );
+    var snapPend = await window._getDocs(qPend);
+    if (!snapPend.empty) {
+      toast('⚠️ Já tens um saque pendente. Aguarda o processamento antes de pedir outro.', 'warn');
+      return;
+    }
+  } catch(e2) { /* Se falhar a verificação, continua mesmo assim */ }
+
+  btn.disabled = true;
+  btn.textContent = 'A enviar...';
+
+  try {
+    await window._addDoc(window._col(window._db, 'saques'), {
+      acct     : _partner.id,
+      nickname : _partner.name || _partner.id,
+      amount   : amount,
+      phone    : phone,
+      status   : 'pendente',
+      type     : 'comissao_parceiro',
+      createdAt: Date.now()
+    });
+
+    closeSaque();
+    toast('✅ Pedido de saque de $' + amount.toFixed(2) + ' enviado! Processado em 24–48h.');
+    loadSaqueHist();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg data-lucide="send" width="14" height="14"></svg> Enviar Pedido';
+  if (window.lucide) lucide.createIcons();
+};
+
+/* ─── HISTÓRICO DE SAQUES ─── */
+window.loadSaqueHist = async function() {
+  var container = document.getElementById('saqueHistCards');
+  if (!_partner) { container.innerHTML = '<div class="empty-msg">Sessão não iniciada.</div>'; return; }
+
+  container.innerHTML = '<div class="load-wrap"><span class="spin"></span>A carregar...</div>';
+
+  try {
+    var q = window._q(
+      window._col(window._db, 'saques'),
+      window._wh('acct', '==', _partner.id),
+      window._ob('createdAt', 'desc'),
+      window._lim(30)
+    );
+    var snap = await window._getDocs(q);
+    var items = snap.docs.map(function(d){ return Object.assign({ _docId: d.id }, d.data()); });
+
+    if (!items.length) {
+      container.innerHTML = '<div class="empty-msg">Sem saques registados ainda.</div>';
+      return;
+    }
+
+    var statusMap = {
+      pendente : { label:'Pendente',  cls:'by' },
+      pago     : { label:'Pago',      cls:'bg' },
+      recusado : { label:'Recusado',  cls:'br' }
+    };
+
+    container.innerHTML = items.map(function(s) {
+      var st  = statusMap[s.status] || { label: s.status, cls:'bb' };
+      var amt = parseFloat(s.amount || 0);
+      return '<div class="hist-item">'
+        + '<div class="hist-row">'
+        +   '<span style="font-size:.82rem;font-weight:700;font-family:var(--mono)">$' + amt.toFixed(2) + '</span>'
+        +   '<span class="badge ' + st.cls + '">' + st.label + '</span>'
+        + '</div>'
+        + '<div class="hist-row">'
+        +   '<span style="font-size:.62rem;color:var(--text2);font-family:var(--mono)">' + fmtDate(s.createdAt) + '</span>'
+        +   '<span style="font-size:.62rem;color:var(--text3);font-family:var(--mono)">' + esc(s.phone||'—') + '</span>'
+        + '</div>'
+        + (s.paidAt ? '<div class="hist-row"><span style="font-size:.6rem;color:var(--green);font-family:var(--mono)">Pago em ' + fmtDate(s.paidAt) + '</span></div>' : '')
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<div class="empty-msg">Erro: ' + esc(e.message) + '</div>';
+  }
+};
+
+/* ─── INIT ─── */
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.lucide) lucide.createIcons();
+  setTimeout(function() { if (window.lucide) lucide.createIcons(); }, 500);
+
+  document.getElementById('saqueModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSaque();
+  });
+});
+</script>
+</body>
+</html>

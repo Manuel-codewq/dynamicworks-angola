@@ -1,0 +1,14 @@
+# ═══════════════════════════════════════════════
+#   DynamicWorks Angola — Netlify Redirects
+# ═══════════════════════════════════════════════
+
+# Headers para manifest e service worker
+/manifest.json    /manifest.json    200
+/sw.js            /sw.js            200
+/icon-192.png     /icons/icon-192.png  200
+/icon-512.png     /icons/icon-512.png  200
+
+# Páginas de erro personalizadas
+/404    /404.html    404
+/403    /403.html    403
+/500    /500.html    500
