@@ -1,6 +1,7 @@
 # netlify.toml — DynamicWorks Angola
 
 [build]
+  base      = "next-app"
   command   = "npm run build"
   publish   = ".next"
 
