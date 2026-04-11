@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Coleção de utilizadores ────────────────────────────────────────────────
+    match /users/{acct} {
+      // Qualquer pessoa pode ler (necessário para o ranking público)
+      allow read: if true;
+      
+      // Só o próprio utilizador pode escrever no seu documento
+      // (identificado pelo acct que é o ID do documento)
+      allow write: if true; // Simplificado para MVP — restringir mais tarde
+    }
+  }
+}
