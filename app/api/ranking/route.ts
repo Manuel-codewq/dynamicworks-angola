@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  // Only include trades from users currently on real account (isDemo: false)
+  // This avoids false positives from old trades that defaulted to isDemo=false
   const trades = await prisma.trade.findMany({
-    where:   { status: "closed", isDemo: false },
+    where:   { status: "closed", isDemo: false, user: { isDemo: false } },
     select:  { userId: true, result: true, profit: true, amount: true, user: { select: { name: true } } },
   });
 
