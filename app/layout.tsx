@@ -5,7 +5,7 @@ import { SessionProvider } from "next-auth/react";
 export const metadata: Metadata = {
   title: "Dynamics Works — Plataforma de Negociação Angola",
   description: "Plataforma de trading de opções binárias para o mercado angolano. Forex, Crypto, Commodities em Kwanza.",
-  icons: { icon: "/favicon.svg", type: "image/svg+xml" },
+  icons: [{ url: "/favicon.svg", type: "image/svg+xml" }],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
