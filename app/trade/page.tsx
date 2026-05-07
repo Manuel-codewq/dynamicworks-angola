@@ -940,7 +940,12 @@ export default function TradePage() {
         </div>
 
         {/* ── Chart ── */}
-        <div ref={chartRef} style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }} />
+        <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
+          <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <span style={{ fontSize: 32, fontWeight: 900, color: "rgba(255,255,255,0.05)", letterSpacing: 2, userSelect: "none" }}>{selectedPair?.label}</span>
+          </div>
+        </div>
 
         {/* ── Bottom nav ── */}
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 110, background: "#111827", borderTop: "1px solid #1e2d50", display: "flex", alignItems: "center" }}>
@@ -1103,7 +1108,12 @@ export default function TradePage() {
               </span>
             )}
           </div>
-          <div ref={chartRef} style={{ flex: 1, minHeight: 0 }} />
+          <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+            <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              <span style={{ fontSize: 48, fontWeight: 900, color: "rgba(255,255,255,0.05)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
+            </div>
+          </div>
         </div>
 
         {/* Right panel 30% */}
