@@ -1,10 +1,20 @@
 import { prisma } from "./prisma";
 
 const ALL_PAIRS = [
+  // Forex live
   "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD",
   "USD/CAD", "EUR/GBP", "USD/CHF", "NZD/USD",
+  "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY", "GBP/AUD", "EUR/CHF",
+  // Forex OTC
   "EUR/USD (OTC)", "GBP/USD (OTC)", "USD/JPY (OTC)",
   "AUD/USD (OTC)", "USD/CAD (OTC)", "EUR/GBP (OTC)",
+  "EUR/JPY (OTC)", "GBP/JPY (OTC)", "EUR/CAD (OTC)",
+  "AUD/JPY (OTC)", "GBP/AUD (OTC)", "EUR/CHF (OTC)",
+  // Crypto
+  "BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD",
+  // Commodities
+  "XAU/USD", "XAG/USD",
+  // Synthetic
   "Volatility 10", "Volatility 25", "Volatility 50",
   "Volatility 75", "Volatility 100",
   "Boom 300", "Crash 300",

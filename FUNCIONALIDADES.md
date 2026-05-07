@@ -13,10 +13,14 @@ Stack: Next.js 16 · Prisma 7 · Neon DB · NextAuth v5 · lightweight-charts v5
 4. [Gráfico](#4-gráfico)
 5. [Carteira](#5-carteira)
 6. [Dashboard do Trader](#6-dashboard-do-trader)
-7. [Painel de Administração](#7-painel-de-administração)
-8. [Design e UX](#8-design-e-ux)
-9. [Segurança](#9-segurança)
-10. [Infraestrutura](#10-infraestrutura)
+7. [Ranking](#7-ranking)
+8. [Painel de Administração](#8-painel-de-administração)
+9. [Sistema de Gravação de Preços](#9-sistema-de-gravação-de-preços)
+10. [Notificações](#10-notificações)
+11. [PWA — Aplicação Instalável](#11-pwa--aplicação-instalável)
+12. [Design e UX](#12-design-e-ux)
+13. [Segurança](#13-segurança)
+14. [Infraestrutura](#14-infraestrutura)
 
 ---
 
@@ -26,14 +30,14 @@ Stack: Next.js 16 · Prisma 7 · Neon DB · NextAuth v5 · lightweight-charts v5
 - Formulário com nome, email, senha e confirmação de senha
 - Validação de senha (mínimo 6 caracteres)
 - Verificação de email duplicado
-- Conta criada com **10 000 Kz de saldo demo** automaticamente
+- Conta criada com **10 000 Kz de saldo demo** e **0 Kz de saldo real** — saldo real só aumenta com depósito aprovado
 - Redirecionamento automático para `/trade` após registo
 
 ### Login
 - Autenticação por email + senha (NextAuth v5 com CredentialsProvider)
 - Sessão JWT com id, nome, email, role e saldo
 - Redirecionamento para `/trade` após login
-- Proteção de rotas via `proxy.ts` (middleware Next.js)
+- Proteção de rotas via `middleware.ts` (Edge Runtime, `getToken`)
 
 ### Proteção de Rotas
 | Rota | Acesso |
@@ -41,6 +45,7 @@ Stack: Next.js 16 · Prisma 7 · Neon DB · NextAuth v5 · lightweight-charts v5
 | `/trade` | Utilizadores autenticados |
 | `/dashboard` | Utilizadores autenticados |
 | `/wallet` | Utilizadores autenticados |
+| `/ranking` | Utilizadores autenticados |
 | `/admin/*` | Apenas admins |
 | `/login`, `/register` | Apenas não autenticados |
 
@@ -51,16 +56,22 @@ Stack: Next.js 16 · Prisma 7 · Neon DB · NextAuth v5 · lightweight-charts v5
 ### Abertura de Operações
 - Direção: **ALTA** (call) ou **BAIXA** (put)
 - Valor mínimo: **1 000 Kz** · Máximo: **500 000 Kz**
+- **Input de valor livre** — digita livremente, valor mínimo aplicado no `onBlur`
 - Atalhos de valor rápido: 1k · 5k · 10k · 25k
-- Tempos de expiração: **1 min · 5 min · 15 min · 1 hora**
+- **Expiração flexível** — botões de atalho (1m · 5m · 15m · 1h) mais input personalizado de 1–59 minutos
 - Payout base: **85%** (configurável pelo admin por par)
 - Preço de entrada registado no momento da abertura
 
 ### Resolução de Operações
-- Worker automático via polling a cada 3 segundos
+- Worker automático via polling a cada 3 segundos (`/api/worker`)
 - Operações fechadas quando o tempo de expiração termina
-- Resultado determinado por probabilidade configurável (padrão 47% win)
+- Resultado determinado por probabilidade configurável pelo admin (padrão 47% win)
 - Lucro/perda refletido imediatamente no saldo
+
+### Operações Activas no Gráfico
+- **Price lines** — linha horizontal no preço de entrada de cada operação aberta
+- Cor **verde** se o preço atual é favorável (a ganhar), **vermelho** se desfavorável (a perder)
+- Atualiza cor a cada tick de preço em tempo real
 
 ### Conta Demo / Real
 - Toggle instantâneo entre conta **Demo** e **Real** na topbar
@@ -69,13 +80,18 @@ Stack: Next.js 16 · Prisma 7 · Neon DB · NextAuth v5 · lightweight-charts v5
 - Operações demo não afetam o saldo real
 
 ### Feed de Vitórias Recentes
-- Simulação de vitórias de outros traders (nomes angolanos reais)
-- Atualizado a cada 4 segundos
-- Cria prova social na interface de trading
+- **Dados reais** das últimas 20 operações vencedoras (`/api/recent-wins`)
+- Mostra nome do trader, lucro, par e tempo
+- Atualizado a cada 15 segundos
 
 ### Indicador de Sentimento
 - Barra visual ALTA/BAIXA com percentagem dinâmica
 - Atualizado a cada tick de preço
+
+### Temporizador de Vela
+- Countdown em tempo real do tempo até ao fecho da vela atual
+- Visível na barra de timeframes (desktop e mobile)
+- Calculado com base no timeframe ativo e tempo UTC atual
 
 ---
 
@@ -118,12 +134,13 @@ Activados automaticamente ao fim de semana e fora do horário de mercado:
 | USD/CAD (OTC) | 1.3620 |
 | EUR/GBP (OTC) | 0.8580 |
 
-**Simulação OTC:** movimento Browniano com decaimento de momentum (`momentum × 0.92`) — preços suaves e realistas sem fonte externa.
+**Simulação OTC:** usa dados reais gravados durante o dia se disponíveis (≥ 50 velas); caso contrário, movimento Browniano com decaimento de momentum (`momentum × 0.92`).
 
 ### Seleção Automática de Modo
 - Detecção automática de horário (UTC) e dia da semana
 - Forex ao vivo → fora de horas → OTC transparente para o trader
 - Admin pode forçar modo: **Automático / Sempre Live / Sempre OTC**
+- **Trade page polling** a cada 15 segundos a `/api/market-mode` — os pares mudam automaticamente quando o admin altera o modo, sem precisar de reload
 
 ---
 
@@ -132,11 +149,11 @@ Activados automaticamente ao fim de semana e fora do horário de mercado:
 ### Motor
 - **lightweight-charts v5** (biblioteca open-source da TradingView)
 - Gráfico de velas japonesas (candlestick)
-- Tema escuro com cores da plataforma (#0a0f1e fundo, verde/vermelho para velas)
+- Tema escuro com cores da plataforma (`#0a0f1e` fundo, verde/vermelho para velas)
 
 ### Dados
 - **Pares live:** preços em tempo real via Deriv WebSocket (`wss://ws.binaryws.com`)
-- **Pares OTC:** simulação local com histórico de 150 velas gerado na inicialização
+- **Pares OTC:** dados históricos reais da DB se disponíveis; simulação Browniana como fallback
 - Vela atual atualizada tick a tick (sem piscar/saltar)
 
 ### Timeframes
@@ -149,6 +166,8 @@ Activados automaticamente ao fim de semana e fora do horário de mercado:
 - Escala de tempo com hora visível
 - Auto-fit do conteúdo ao carregar
 - ResizeObserver: adapta ao redimensionamento da janela
+- **Watermark** — nome do par em overlay semi-transparente no centro do gráfico (`opacity: 0.08`)
+- **Price lines** das operações activas (verde = a ganhar, vermelho = a perder)
 
 ### Ticker Bar
 - Barra superior com todos os pares e preços em tempo real
@@ -164,18 +183,15 @@ Activados automaticamente ao fim de semana e fora do horário de mercado:
 - Histórico de transações (depósitos, levantamentos, lucros, perdas)
 
 ### Depósito
-- Formulário com valor em Kz
-- Métodos de pagamento angolanos:
-  - Multicaixa Express
-  - Transferência Bancária (BFA, BAI, BIC, Millennium Atlântico)
-  - TPA (Terminal de Pagamento)
+- Método: **Multicaixa Express** (único método disponível)
+- Formulário com valor em Kz e número de telemóvel Multicaixa
 - Referência de pagamento gerada automaticamente
 - Depósito pendente → aprovação manual pelo admin
 
 ### Levantamento
-- Formulário com valor, banco e IBAN/conta
+- Formulário com valor e número de telemóvel Multicaixa Express
 - Levantamento mínimo configurável
-- Estado: pendente → processado
+- Estado: pendente → processado pelo admin
 
 ---
 
@@ -189,7 +205,30 @@ Activados automaticamente ao fim de semana e fora do horário de mercado:
 
 ---
 
-## 7. Painel de Administração
+## 7. Ranking
+
+Página `/ranking` — visível através do ícone de troféu na bottom navigation mobile e na topbar desktop.
+
+### Top 3 Pódio
+- Visual em pódio com troféu/medalhas
+- 1º lugar destacado com cor dourada e tamanho maior
+- Mostra primeiro nome e lucro total
+
+### Leaderboard Completo
+- Top 20 traders por lucro total acumulado
+- Colunas: posição, avatar (inicial do nome), nome, vitórias/total, taxa de vitória, lucro
+- Barra de progresso visual de win rate (verde ≥ 50%, vermelho < 50%)
+- Apenas operações reais (não demo) contam
+
+### API (`/api/ranking`)
+- Agrega todas as operações `closed` por utilizador
+- Calcula: lucro total, total de trades, vitórias, win rate
+- Filtra utilizadores com ≥ 1 operação
+- Ordena por lucro descendente, limite 20
+
+---
+
+## 8. Painel de Administração
 
 Acesso exclusivo para utilizadores com `role: "admin"`.  
 URL: `/admin`
@@ -229,7 +268,8 @@ Estatísticas gerais da plataforma em tempo real:
 - **Probabilidade de vitória por par** — slider 30% a 60% (padrão 47%) por cada par
 - **Modo manutenção** — toggle que bloqueia toda a plataforma para traders
 - **Modo OTC** — selector: Automático / Sempre Live / Sempre OTC
-- Configurações em memória no servidor (sem necessidade de base de dados)
+- **Configurações persistidas na base de dados** (model `Settings`, singleton) — sobrevivem a cold starts serverless
+- Mudança de modo OTC reflecte-se automaticamente nos clientes em até 15 segundos
 - Guardadas instantaneamente com feedback visual
 
 ### Gestão de Transações (`/admin/transactions`)
@@ -243,25 +283,24 @@ Estatísticas gerais da plataforma em tempo real:
 - Badge de pendentes no sidebar atualizado a cada 30 segundos
 - Email automático ao utilizador em cada acção (aprovado/rejeitado)
 
-### Seed de Admin (`/api/admin/seed`)
-- Disponível apenas em desenvolvimento (`NODE_ENV !== "production"`)
-- Cria ou atualiza (`upsert`) o utilizador `seusburros91@gmail.com` com role admin
-- Password: `Jedilson*2005`
+### Seed de Admin
+- Endpoint `/api/admin/seed` disponível apenas em desenvolvimento
+- Cria ou atualiza o utilizador `seusburros91@gmail.com` com `role: "admin"`
 
 ---
 
-## 8. Sistema de Gravação de Preços Reais
+## 9. Sistema de Gravação de Preços
 
 ### Arquitectura
 - Cron job (`/api/price-recorder`) chamado a cada minuto pelo Vercel Cron
 - Grava velas reais da Deriv REST API no model `PriceCandle` (PostgreSQL)
-- Utilizado para alimentar os pares OTC com dados históricos reais em vez de simulação pura
+- Alimenta os pares OTC com dados históricos reais em vez de simulação pura
 
 ### Gravação (`/api/price-recorder`)
 - Verifica horário de mercado aberto (dias úteis, 06:00–17:00 UTC)
 - Se fora de horas: retorna `{ skipped: true }` sem fazer requests
 - Para cada par forex (8 pares) e cada timeframe (1m, 5m, 15m):
-  - Faz fetch à Deriv REST API (`ticks_history`) para obter as últimas 5 velas
+  - Fetch à Deriv REST API (`ticks_history`) para obter as últimas 5 velas
   - `upsert` por `(asset, timeframe, timestamp)` — nunca duplica
   - Delay de 200ms entre pares para respeitar rate limits
   - `Promise.allSettled` — falha de um par não afecta os restantes
@@ -271,28 +310,57 @@ Estatísticas gerais da plataforma em tempo real:
 - Mapeia nome OTC → par live (ex: "EUR/USD (OTC)" → "EUR/USD")
 - Busca as últimas `count` velas da DB, ordenadas ASC
 - Se tiver ≥ 50 velas: retorna dados reais
-- Se insuficiente: retorna `{ fallback: true }` para o frontend usar simulação
+- Se insuficiente: retorna `{ fallback: true }` → frontend usa simulação Browniana
 
-### Integração no Gráfico OTC (`app/trade/page.tsx`)
+### Integração no Gráfico OTC
 - Ao mudar para par OTC: mostra simulação Browniana imediatamente (zero latência)
-- Em paralelo, faz fetch a `/api/otc-candles`
+- Em paralelo, fetch a `/api/otc-candles`
 - Se dados reais disponíveis: substitui o gráfico com histórico real, sem piscar
 - Simulação tick-a-tick continua a partir do último preço real (continuidade suave)
-- Se sem dados (primeiros minutos de uso): simulação pura como fallback
 
 ### Model `PriceCandle`
 ```
-asset     String  — ex: "EUR/USD"
-timeframe String  — "1m" | "5m" | "15m"
-open/high/low/close Float
-timestamp DateTime
+asset      String  — ex: "EUR/USD"
+timeframe  String  — "1m" | "5m" | "15m"
+open/high/low/close  Float
+timestamp  DateTime
 @@unique([asset, timeframe, timestamp])
 @@index([asset, timeframe, timestamp])
 ```
 
 ---
 
-## 9. Design e UX
+## 10. Notificações
+
+### Sistema (`/api/notifications`)
+- Notificações por utilizador armazenadas na DB
+- Tipos: `deposit_completed`, `deposit_rejected`, `withdrawal_completed`, `withdrawal_rejected`, `kyc_approved`, `kyc_rejected`
+- Marcação individual ou em bloco como lida (PATCH)
+
+### Bell Component (`NotificationBell`)
+- Badge vermelho com contagem de não lidas
+- Polling a cada 30 segundos
+- **Desktop:** dropdown 320px ancorado à bell
+- **Mobile:** bottom sheet animado (slide-up, 80vh, `cubic-bezier(0.32,0.72,0,1)`) com backdrop semi-transparente
+- Scroll do body bloqueado quando o sheet está aberto
+- Botão "Ler todas" / "Marcar todas como lidas"
+- Ícone por tipo de notificação (💰 depósito, ✅ KYC aprovado, etc.)
+
+---
+
+## 11. PWA — Aplicação Instalável
+
+- **`public/manifest.json`** — nome "Dynamics Works", `start_url: "/trade"`, `theme_color: "#f5a623"`
+- **`public/sw.js`** — service worker com cache básico (permite prompt de instalação no Chrome/Android)
+- **`ServiceWorker` component** — regista o SW em `useEffect` no lado cliente
+- **Ícones** gerados dinamicamente via `next/og` (edge runtime) em `/icon-192` e `/icon-512`
+- **Meta tags PWA** no `layout.tsx`: `apple-mobile-web-app-capable`, `mobile-web-app-capable`, viewport
+- **Google Search Console** — verification tag incluída no `layout.tsx`
+- Quando o utilizador abre `dynamicworks.ao` no Chrome Android ou Safari iOS, aparece banner "Adicionar ao ecrã inicial"
+
+---
+
+## 12. Design e UX
 
 ### Tema Visual
 - Fundo principal: `#0a0f1e` (azul muito escuro)
@@ -302,21 +370,21 @@ timestamp DateTime
 - Zero dependências CSS externas — 100% inline styles
 
 ### Layout Desktop
-- Topbar fixa com logo, seletor de par, preço ao vivo, toggle demo/real, saldo, relógio, menu utilizador
+- Topbar fixa com logo, seletor de par, preço ao vivo, toggle demo/real, saldo, relógio, sino de notificações, menu utilizador
 - Ticker bar com scroll automático de todos os pares
 - Gráfico 70% da largura
 - Painel de trading 30% à direita
-- Timeframes clicáveis acima do gráfico
+- Timeframes clicáveis + temporizador de vela acima do gráfico
 
 ### Layout Mobile (Quotex-style)
-- Topbar compacta com logo, seletor de par, preço e saldo
+- Topbar compacta com logo, seletor de par, preço e saldo (avatar não cortado)
 - Gráfico a ocupar todo o ecrã disponível
-- Bottom navigation: Gráfico · Negociar · Carteira · Conta
+- Bottom navigation: Gráfico · Negociar · Carteira · Ranking
 - Drawer de trading deslizante de baixo (75vh, animação cubic-bezier)
 - Backdrop semi-transparente ao abrir o drawer
-- Notificações de resultado posicionadas abaixo da topbar
+- **Input de valor não perde foco** nos ticks de preço (padrão `renderTradePanel()` — função em vez de componente JSX)
 
-### Notificações
+### Notificações de Resultado
 - Toast animado no topo ao abrir operação, ganhar ou perder
 - 4 segundos de duração, cor contextual (verde/vermelho/dourado)
 
@@ -327,24 +395,31 @@ timestamp DateTime
 
 ---
 
-## 10. Segurança
+## 13. Segurança
 
 - Senhas encriptadas com **bcryptjs** (salt rounds: 12)
-- Sessões JWT assinadas com `NEXTAUTH_SECRET`
+- Sessões JWT assinadas com `AUTH_SECRET`
 - Todas as API routes de admin verificam `session.user.role === "admin"`
+- **Audit IDOR** — todas as rotas de utilizador usam `session.user.id` da sessão, nunca parâmetros da URL como fonte de autorização
 - Utilizadores bloqueados (`status: "blocked"`) não conseguem autenticar
-- Proteção de rotas no middleware (`proxy.ts`) antes de atingir os componentes
+- Proteção de rotas no `middleware.ts` (Edge Runtime) antes de atingir os componentes
 - Seed de admin bloqueado em produção
 - Valores de payout e probabilidade validados no servidor (ranges fixos)
+- Novos utilizadores criados com **0 Kz real** — saldo real só existe após depósito aprovado pelo admin
 
 ---
 
-## 11. Infraestrutura
+## 14. Infraestrutura
 
 ### Base de Dados
 - **Neon** (PostgreSQL serverless)
-- **Prisma 7** com `@prisma/adapter-neon` (driver HTTP/WebSocket)
-- Schema: `User`, `Trade`, `Transaction`, `PriceCandle`
+- **Prisma 7** com `@prisma/adapter-neon` (driver HTTP/WebSocket) — obrigatório `PrismaNeon`, não `new PrismaClient()` direto
+- Schema: `User`, `Trade`, `Transaction`, `PriceCandle`, `Settings`, `Notification`
+
+### Settings (Singleton DB)
+- Model `Settings` com `id = "singleton"` — uma única linha guarda toda a config
+- Campos: `otcMode`, `maintenanceMode`, `winProbability` (JSON por par), `payout` (JSON por par)
+- Cache em memória com TTL implícito — acesso rápido em requests subsequentes na mesma instância
 
 ### Deploy
 | Comando | Descrição |
@@ -352,14 +427,15 @@ timestamp DateTime
 | `npm run dev` | Servidor de desenvolvimento (Turbopack) em `localhost:3000` |
 | `npm run build` | Build de produção otimizado |
 | `npm run start` | Servidor de produção |
+| `npx prisma generate` | Regenerar cliente Prisma após schema changes |
+| `npx prisma db push` | Aplicar schema à DB sem migration |
 
 ### Variáveis de Ambiente
 | Variável | Descrição |
 |----------|-----------|
 | `DATABASE_URL` | Connection string Neon PostgreSQL |
-| `NEXTAUTH_SECRET` | Chave de assinatura JWT |
+| `AUTH_SECRET` | Chave de assinatura JWT (NextAuth v5) |
 | `NEXTAUTH_URL` | URL base da aplicação |
-| `JWT_SECRET` | Chave JWT adicional |
 | `RESEND_API_KEY` | API de email transacional (Resend) |
 | `BNA_USD_RATE` | Taxa de câmbio USD/Kz (Banco Nacional de Angola) |
 
@@ -367,6 +443,7 @@ timestamp DateTime
 | Serviço | Uso |
 |---------|-----|
 | Deriv WebSocket (`wss://ws.binaryws.com`) | Preços forex e índices sintéticos em tempo real |
+| Deriv REST API | Histórico de velas para gravação OTC |
 | Neon Database | Persistência de dados |
 | Resend | Emails transacionais |
 

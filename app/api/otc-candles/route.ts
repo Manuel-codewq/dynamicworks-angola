@@ -8,6 +8,12 @@ const OTC_TO_LIVE: Record<string, string> = {
   "AUD/USD (OTC)": "AUD/USD",
   "USD/CAD (OTC)": "USD/CAD",
   "EUR/GBP (OTC)": "EUR/GBP",
+  "EUR/JPY (OTC)": "EUR/JPY",
+  "GBP/JPY (OTC)": "GBP/JPY",
+  "EUR/CAD (OTC)": "EUR/CAD",
+  "AUD/JPY (OTC)": "AUD/JPY",
+  "GBP/AUD (OTC)": "GBP/AUD",
+  "EUR/CHF (OTC)": "EUR/CHF",
 };
 
 const VALID_TIMEFRAMES = ["1m", "5m", "15m", "1h"];

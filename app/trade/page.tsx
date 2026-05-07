@@ -11,7 +11,7 @@ import {
 } from "lightweight-charts";
 import {
   derivWS, getAvailablePairs, GRANULARITY, OTC_BASE_PRICES,
-  FOREX_PAIRS, OTC_PAIRS,
+  FOREX_PAIRS, OTC_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -57,9 +57,17 @@ const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
 
 // Approximate initial prices for placeholder candles while WS connects
 const SEED_PRICES: Record<string, number> = {
-  frxEURUSD: 1.085, frxGBPUSD: 1.265, frxUSDJPY: 149.5,
-  frxAUDUSD: 0.652, frxUSDCAD: 1.362, frxEURGBP: 0.858,
-  frxUSDCHF: 0.897, frxNZDUSD: 0.607,
+  // Forex
+  frxEURUSD: 1.085,  frxGBPUSD: 1.265,  frxUSDJPY: 149.5,
+  frxAUDUSD: 0.652,  frxUSDCAD: 1.362,  frxEURGBP: 0.858,
+  frxUSDCHF: 0.897,  frxNZDUSD: 0.607,
+  frxEURJPY: 162.5,  frxGBPJPY: 188.7,  frxEURCAD: 1.475,
+  frxAUDJPY: 97.5,   frxGBPAUD: 1.965,  frxEURCHF: 0.968,
+  // Crypto
+  cryBTCUSD: 60000,  cryETHUSD: 3200,   cryXRPUSD: 0.52,   cryLTCUSD: 85,
+  // Commodities
+  frxXAUUSD: 2350,   frxXAGUSD: 27.5,
+  // Synthetic indices
   R_10: 6300, R_25: 5800, R_50: 4500, R_75: 3700, R_100: 9800,
   BOOM300: 7800, CRASH300: 7800,
 };
@@ -167,9 +175,22 @@ export default function TradePage() {
       const mode = d?.mode ?? "live";
       if (mode === currentModeRef.current) return; // no change, skip re-render
       currentModeRef.current = mode;
-      const list = mode === "otc" ? OTC_PAIRS : FOREX_PAIRS;
+      const always = [...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+      const list = mode === "otc"
+        ? [...OTC_PAIRS, ...always]
+        : [...FOREX_PAIRS, ...always];
       setPairs(list);
-      setSelectedPair(list[0] ?? null);
+      // Try to keep the current pair or its live↔OTC equivalent
+      setSelectedPair(prev => {
+        if (!prev) return list[0] ?? null;
+        // Same symbol still available (crypto/commodities don't change)
+        const same = list.find(p => p.symbol === prev.symbol);
+        if (same) return same;
+        // Try to match by base label: "EUR/USD" ↔ "EUR/USD (OTC)"
+        const baseLabel = prev.label.replace(" (OTC)", "");
+        const equiv = list.find(p => p.label === baseLabel || p.label === baseLabel + " (OTC)");
+        return equiv ?? list[0] ?? null;
+      });
     }
 
     function poll() {
@@ -785,27 +806,43 @@ export default function TradePage() {
     </div>
   ); }
 
-  // ── Asset dropdown (shared) ──────────────────────────────────────────────
-  const AssetDropdown = ({ mobile = false }: { mobile?: boolean }) => (
-    <div style={{ position: "relative" }}>
-      <button onClick={() => setAssetDropdown(!assetDropdown)}
-        style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: mobile ? "5px 10px" : "6px 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: mobile ? 4 : 6, fontSize: mobile ? 13 : 14, fontWeight: 700 }}>
-        {selectedPair?.label ?? "…"} <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" />
-      </button>
-      {assetDropdown && (
-        <div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, minWidth: mobile ? 180 : 220, zIndex: 300, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-          {pairs.map(p => (
-            <button key={p.symbol}
-              onClick={() => { setSelectedPair(p); setAssetDropdown(false); }}
-              style={{ width: "100%", background: selectedPair?.symbol === p.symbol ? "#1e2d50" : "transparent", border: "none", padding: mobile ? "12px 14px" : "10px 14px", color: "#fff", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, minHeight: 48 }}>
-              <span style={{ fontWeight: 600 }}>{p.label}</span>
-              <span style={{ color: "#94a3b8", fontSize: 11 }}>{p.category}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  // ── Asset dropdown (shared) — render function, NOT a JSX component, so it
+  //    never unmounts on re-render (avoids scroll-position reset on price ticks)
+  function renderAssetDropdown(mobile = false) {
+    const groups: Record<string, DerivPair[]> = {};
+    pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
+    const catOrder  = ["Forex", "OTC", "Cripto", "Metal"];
+    const catColors: Record<string, string> = { Forex: "#f5a623", OTC: "#94a3b8", Cripto: "#a78bfa", Metal: "#fcd34d" };
+    return (
+      <div style={{ position: "relative" }}>
+        <button onClick={() => setAssetDropdown(!assetDropdown)}
+          style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: mobile ? "5px 10px" : "6px 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: mobile ? 4 : 6, fontSize: mobile ? 13 : 14, fontWeight: 700 }}>
+          {selectedPair?.label ?? "…"} <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" />
+        </button>
+        {assetDropdown && (
+          <div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, minWidth: mobile ? 200 : 240, zIndex: 300, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: mobile ? "70vh" : "420px", overflowY: "auto" }}>
+            {catOrder.filter(cat => groups[cat]).map(cat => (
+              <div key={cat}>
+                <div style={{ padding: "6px 14px 4px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1, textTransform: "uppercase", borderTop: "1px solid #1e2d50" }}>
+                  {cat}
+                </div>
+                {groups[cat].map(p => (
+                  <button key={p.symbol}
+                    onClick={() => { setSelectedPair(p); setAssetDropdown(false); }}
+                    style={{ width: "100%", background: selectedPair?.symbol === p.symbol ? "#1e2d50" : "transparent", border: "none", padding: mobile ? "10px 14px" : "8px 14px", color: "#fff", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, minHeight: 40 }}>
+                    <span style={{ fontWeight: 600 }}>{p.label}</span>
+                    {tickerPrices[p.symbol] ? (
+                      <span style={{ color: "#94a3b8", fontSize: 11 }}>{tickerPrices[p.symbol].toFixed(p.decimals)}</span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (status === "loading" || !selectedPair) {
     return (
@@ -846,7 +883,7 @@ export default function TradePage() {
           </div>
 
           {/* Asset selector */}
-          <AssetDropdown mobile />
+          {renderAssetDropdown(true)}
 
           <div style={{ flex: 1 }} />
 
@@ -1013,7 +1050,7 @@ export default function TradePage() {
           <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Dynamics Works</span>
         </div>
 
-        <AssetDropdown />
+        {renderAssetDropdown()}
 
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 18, fontWeight: 800, color: priceUp ? "#22c55e" : "#ef4444" }}>{priceStr}</span>
