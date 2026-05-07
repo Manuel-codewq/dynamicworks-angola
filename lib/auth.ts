@@ -17,37 +17,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("LOGIN ATTEMPT:", credentials?.email);
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) return null;
 
-        const normalizedEmail = (credentials.email as string).toLowerCase().trim();
+          const normalizedEmail = (credentials.email as string).toLowerCase().trim();
 
-        const user = await prisma.user.findUnique({
-          where: { email: normalizedEmail },
-        });
+          const user = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+          });
 
-        console.log("USER FOUND:", user?.email, "verified:", user?.emailVerified, "role:", user?.role);
+          if (!user) return null;
+          if (user.status === "blocked") return null;
+          if (!user.emailVerified) return null;
 
-        if (!user) return null;
-        if (user.status === "blocked") return null;
-        if (!user.emailVerified) return null;
+          const valid = await bcrypt.compare(
+            credentials.password as string,
+            user.password
+          );
+          if (!valid) return null;
 
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-        console.log("PASSWORD MATCH:", valid);
-        if (!valid) return null;
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          balance: user.balance,
-          demoBalance: user.demoBalance,
-          isDemo: user.isDemo,
-        };
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            balance: user.balance,
+            demoBalance: user.demoBalance,
+            isDemo: user.isDemo,
+          };
+        } catch (err) {
+          console.error("[auth] authorize error:", err);
+          return null;
+        }
       },
     }),
   ],
