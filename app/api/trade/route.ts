@@ -73,12 +73,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Expiração entre 1 e 60 minutos" }, { status: 400 });
   }
 
-  const cfg = await getSettings();
-  if (cfg.maintenanceMode) {
-    return NextResponse.json({ error: "Plataforma em manutenção. Tente novamente em breve." }, { status: 503 });
+  let cfg;
+  let user;
+  try {
+    cfg = await getSettings();
+    if (cfg.maintenanceMode) {
+      return NextResponse.json({ error: "Plataforma em manutenção. Tente novamente em breve." }, { status: 503 });
+    }
+    user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  } catch {
+    return NextResponse.json({ error: "Erro interno. Tente novamente." }, { status: 500 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   if (user.status === "blocked") return NextResponse.json({ error: "Conta bloqueada" }, { status: 403 });
 
@@ -89,18 +95,24 @@ export async function POST(req: NextRequest) {
 
   // Entry price comes from the client's live Deriv WS tick
   const entryPrice = sanitizeEntryPrice(rawEntryPrice);
-  const payout = 0.85;
+  const payout = cfg.payout?.[asset] ?? 0.85;
 
-  // Deduct immediately
-  if (user.isDemo) {
-    await prisma.user.update({ where: { id: user.id }, data: { demoBalance: { decrement: amount } } });
-  } else {
-    await prisma.user.update({ where: { id: user.id }, data: { balance: { decrement: amount } } });
+  let trade;
+  try {
+    // Deduct immediately
+    if (user.isDemo) {
+      await prisma.user.update({ where: { id: user.id }, data: { demoBalance: { decrement: amount } } });
+    } else {
+      await prisma.user.update({ where: { id: user.id }, data: { balance: { decrement: amount } } });
+    }
+
+    trade = await prisma.trade.create({
+      data: { userId: user.id, asset, direction, amount, entryPrice, payout, expirySecs, status: "active", isDemo: user.isDemo },
+    });
+  } catch (err) {
+    console.error("[trade/open]", err);
+    return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
-
-  const trade = await prisma.trade.create({
-    data: { userId: user.id, asset, direction, amount, entryPrice, payout, expirySecs, status: "active", isDemo: user.isDemo },
-  });
 
   // Schedule resolution — outcome determined server-side with house edge
   setTimeout(async () => {
