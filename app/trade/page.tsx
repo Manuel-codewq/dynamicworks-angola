@@ -50,15 +50,15 @@ function formatKz(n: number) {
 }
 
 // Placeholder candles — shown while WS data loads (correct OHLC invariants)
-function generatePlaceholder(basePrice: number, count = 100): CandlestickData[] {
+function generatePlaceholder(basePrice: number, count = 100, gran = 60): CandlestickData[] {
   const map = new Map<number, CandlestickData>();
-  const now  = Math.floor(Date.now() / 60000) * 60;
+  const now  = Math.floor(Date.now() / gran) * gran;
   const maxSpread = basePrice * 0.012;
   let price    = basePrice;
   let momentum = 0;
 
   for (let i = count; i >= 0; i--) {
-    const t = now - i * 60;
+    const t = now - i * gran;
     momentum = momentum * 0.75 + (Math.random() - 0.5) * maxSpread * 0.7;
     const open  = price;
     const close = price + momentum;
@@ -293,13 +293,23 @@ export default function TradePage() {
   // ── Subscribe to ticks + request candles when pair or timeframe changes ──
   useEffect(() => {
     if (!selectedPair) return;
-    // Reset live-candle state so incoming ticks don't get merged into a stale
-    // candle from the previous timeframe before the new history arrives
-    currentCandleRef.current = null;
+    const gran = GRANULARITY[timeframe] ?? 60;
+
+    // Show placeholder with correct candle width while real history loads
+    if (candleSeriesRef.current) {
+      const base = lastPriceRef.current > 0 ? lastPriceRef.current : (SEED_PRICES[selectedPair.symbol] ?? 1);
+      const seed = generatePlaceholder(base, 100, gran);
+      candleSeriesRef.current.setData(seed);
+      currentCandleRef.current = seed[seed.length - 1];
+      chartApiRef.current?.timeScale().fitContent();
+    } else {
+      currentCandleRef.current = null;
+    }
+
     lastPriceRef.current = 0;
     derivWS.subscribeToTicks(pairs.map(p => p.symbol));
-    derivWS.getCandles(selectedPair.symbol, GRANULARITY[timeframe], 150);
-  }, [selectedPair, timeframe, pairs]);
+    derivWS.getCandles(selectedPair.symbol, gran, 150);
+  }, [selectedPair, timeframe, pairs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Real wins feed (polls every 15s) ─────────────────────────────────────
   useEffect(() => {
@@ -354,9 +364,10 @@ export default function TradePage() {
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
 
-      // Placeholder while WS loads real candles
+      // Placeholder while WS loads real candles — use correct granularity so
+      // candle widths match the selected timeframe from the start
       const sym  = selectedPair!.symbol;
-      const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1);
+      const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1, 100, GRANULARITY[timeframe] ?? 60);
       series.setData(seed);
       currentCandleRef.current = seed[seed.length - 1];
       chart.timeScale().fitContent();
