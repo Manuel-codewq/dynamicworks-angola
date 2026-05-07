@@ -9,18 +9,12 @@ const ALLOWED_ASSETS = [
   "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD",
   "USD/CAD", "EUR/GBP", "USD/CHF", "NZD/USD",
   "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY", "GBP/AUD", "EUR/CHF",
-  // OTC after-hours
-  "EUR/USD (OTC)", "GBP/USD (OTC)", "USD/JPY (OTC)",
-  "AUD/USD (OTC)", "USD/CAD (OTC)", "EUR/GBP (OTC)",
-  "EUR/JPY (OTC)", "GBP/JPY (OTC)", "EUR/CAD (OTC)",
-  "AUD/JPY (OTC)", "GBP/AUD (OTC)", "EUR/CHF (OTC)",
   // Crypto (24/7)
   "BTC/USD", "ETH/USD",
-  // Commodities (24/7)
+  // Commodities
   "XAU/USD", "XAG/USD",
-  // Synthetic / Volatility (weekends)
-  "Vol. 10", "Vol. 25", "Vol. 50", "Vol. 75", "Vol. 100",
-  "Boom 300", "Crash 300",
+  // DW Index — synthetic 24/7 (Deriv Volatility rebrandizados)
+  "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
 ];
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -118,21 +112,11 @@ export async function POST(req: NextRequest) {
   // Schedule resolution — outcome determined by real close price from Deriv
   setTimeout(async () => {
     try {
-      const isOTC = asset.includes("(OTC)");
-
-      // Fetch real close price; OTC pairs are simulated since market is closed
+      // Fetch real close price from Deriv; fall back to small random walk if unavailable
       let closePrice: number = entryPrice * (1 + (Math.random() - 0.5) * 0.004);
-      let fetchedReal = false;
 
-      if (!isOTC) {
-        const realPrice = await getDerivPrice(asset);
-        if (realPrice !== null) {
-          closePrice = realPrice;
-          fetchedReal = true;
-        }
-      }
-
-      // closePrice already defaulted to simulated value above; no extra assignment needed
+      const realPrice = await getDerivPrice(asset);
+      if (realPrice !== null) closePrice = realPrice;
 
       // Determine result by comparing close vs entry price
       let result: "win" | "loss";

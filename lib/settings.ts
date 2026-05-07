@@ -22,11 +22,13 @@ export interface PlatformSettings {
   maintenanceMode: boolean;
 }
 
-// In-memory cache to avoid hitting DB on every request within same instance
+// In-memory cache with 15s TTL — keeps DB load low while reflecting admin changes quickly
 let cache: PlatformSettings | null = null;
+let cacheAt = 0;
+const CACHE_TTL = 15_000;
 
 export async function getSettings(): Promise<PlatformSettings> {
-  if (cache) return cache;
+  if (cache && Date.now() - cacheAt < CACHE_TTL) return cache;
   try {
     const row = await prisma.settings.upsert({
       where:  { id: "singleton" },
@@ -38,6 +40,7 @@ export async function getSettings(): Promise<PlatformSettings> {
       payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
     };
+    cacheAt = Date.now();
     return cache;
   } catch {
     return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY };
@@ -68,6 +71,7 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
   });
 
   cache = current;
+  cacheAt = Date.now();
   return current;
 }
 

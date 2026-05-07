@@ -148,6 +148,7 @@ export default function TradePage() {
   const [demoReloading,  setDemoReloading]  = useState(false);
   const [bnaRate,        setBnaRate]        = useState<number | null>(null);
   const [candleTimer,    setCandleTimer]    = useState("");
+  const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const chartRef           = useRef<HTMLDivElement>(null);
@@ -196,6 +197,19 @@ export default function TradePage() {
       }).catch(() => {});
     fetchRate();
     const id = setInterval(fetchRate, 3_600_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── Payout map (polls every 30s so admin changes appear quickly) ─────────
+  useEffect(() => {
+    function fetchPayout() {
+      fetch("/api/payout")
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.payout) setPayoutMap(d.payout); })
+        .catch(() => {});
+    }
+    fetchPayout();
+    const id = setInterval(fetchPayout, 30_000);
     return () => clearInterval(id);
   }, []);
 
@@ -500,7 +514,8 @@ export default function TradePage() {
   }
 
   const displayBalance = isDemo ? demoBalance : balance;
-  const profit         = amount * 0.85;
+  const currentPayout  = selectedPair ? (payoutMap[selectedPair.label] ?? 0.85) : 0.85;
+  const profit         = amount * currentPayout;
   const decimals       = selectedPair?.decimals ?? 5;
   const priceStr       = currentPrice > 0 ? currentPrice.toFixed(decimals) : "—";
 
@@ -584,7 +599,7 @@ export default function TradePage() {
       {/* Payout */}
       <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, padding: "9px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ color: "#94a3b8", fontSize: 12 }}>Retorno potencial</span>
-        <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 14 }}>+{formatKz(profit)} (85%)</span>
+        <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 14 }}>+{formatKz(Math.round(profit))} ({Math.round(currentPayout * 100)}%)</span>
       </div>
       {bnaRate && (
         <div style={{ textAlign: "center", color: "#4b5563", fontSize: 11 }}>
