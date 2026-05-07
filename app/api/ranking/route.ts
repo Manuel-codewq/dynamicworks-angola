@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const trades = await prisma.trade.findMany({
-    where:   { status: "closed" },
+    where:   { status: "closed", isDemo: false },
     select:  { userId: true, result: true, profit: true, amount: true, user: { select: { name: true } } },
   });
 
