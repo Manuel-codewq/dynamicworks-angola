@@ -36,13 +36,13 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
-// Volatility Indices — Deriv synthetic, available 24/7 including weekends
+// Índices proprietários — disponíveis 24/7 incluindo fins de semana
 export const VOLATILITY_PAIRS: DerivPair[] = [
-  { symbol: "R_10",  label: "Vol. 10",  category: "Volatilidade", decimals: 3 },
-  { symbol: "R_25",  label: "Vol. 25",  category: "Volatilidade", decimals: 3 },
-  { symbol: "R_50",  label: "Vol. 50",  category: "Volatilidade", decimals: 4 },
-  { symbol: "R_75",  label: "Vol. 75",  category: "Volatilidade", decimals: 4 },
-  { symbol: "R_100", label: "Vol. 100", category: "Volatilidade", decimals: 2 },
+  { symbol: "R_10",  label: "DW Index 10",  category: "Índices", decimals: 3 },
+  { symbol: "R_25",  label: "DW Index 25",  category: "Índices", decimals: 3 },
+  { symbol: "R_50",  label: "DW Index 50",  category: "Índices", decimals: 4 },
+  { symbol: "R_75",  label: "DW Index 75",  category: "Índices", decimals: 4 },
+  { symbol: "R_100", label: "DW Index 100", category: "Índices", decimals: 2 },
 ];
 
 export function getAvailablePairs(): DerivPair[] {
