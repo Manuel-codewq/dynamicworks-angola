@@ -942,8 +942,8 @@ export default function TradePage() {
         {/* ── Chart ── */}
         <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
           <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "rgba(255,255,255,0.05)", letterSpacing: 2, userSelect: "none" }}>{selectedPair?.label}</span>
+          <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
           </div>
         </div>
 
@@ -1110,8 +1110,8 @@ export default function TradePage() {
           </div>
           <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
             <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-              <span style={{ fontSize: 48, fontWeight: 900, color: "rgba(255,255,255,0.05)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
+            <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              <span style={{ fontSize: 52, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 4, userSelect: "none" }}>{selectedPair?.label}</span>
             </div>
           </div>
         </div>
