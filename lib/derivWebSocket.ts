@@ -1,4 +1,4 @@
-const DERIV_WS_URL = "wss://ws.binaryws.com/websockets/v3?app_id=1089";
+const DERIV_WS_URL = "wss://ws.binaryws.com/websockets/v3?app_id=127916";
 
 export interface DerivPair {
   symbol:   string;

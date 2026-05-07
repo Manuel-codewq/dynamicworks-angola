@@ -602,11 +602,6 @@ export default function TradePage() {
 
   async function openTrade(direction: "call" | "put") {
     if (loading || !selectedPair) return;
-    if (currentPrice === 0) {
-      setNotification({ msg: "Aguardando preço do ativo. Tente novamente.", type: "info" });
-      setTimeout(() => setNotification(null), 3000);
-      return;
-    }
     setLoading(true);
     const started = Date.now();
     try {
@@ -618,7 +613,7 @@ export default function TradePage() {
           direction,
           amount,
           expirySecs: expiry.secs,
-          entryPrice: currentPrice,
+          entryPrice: currentPrice || SEED_PRICES[selectedPair.symbol] || 1,
         }),
       });
       const data = await res.json();
