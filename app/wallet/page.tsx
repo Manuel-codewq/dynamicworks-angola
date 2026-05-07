@@ -9,10 +9,6 @@ import {
 
 const DEPOSIT_METHODS = [
   { id: "multicaixa", name: "Multicaixa Express", icon: "💳", color: "#e74c3c" },
-  { id: "bai", name: "BAI Directo", icon: "🏦", color: "#2980b9" },
-  { id: "bfa", name: "BFA Mobile", icon: "📱", color: "#27ae60" },
-  { id: "bpc", name: "BPC Net", icon: "🏛️", color: "#8e44ad" },
-  { id: "bci", name: "BCI Online", icon: "💰", color: "#f39c12" },
 ];
 
 function formatKz(n: number) {
@@ -171,20 +167,13 @@ export default function WalletPage() {
         {/* Deposit tab */}
         {tab === "deposit" && (
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
-            <h3 style={{ color: "#fff", margin: "0 0 16px", fontSize: 16 }}>Método de pagamento</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
-              {DEPOSIT_METHODS.map(m => (
-                <button key={m.id} onClick={() => setMethod(m.id)}
-                  style={{
-                    background: method === m.id ? "rgba(245,166,35,0.12)" : "#0a0f1e",
-                    border: `1px solid ${method === m.id ? "#f5a623" : "#1e2d50"}`,
-                    borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left",
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}>
-                  <span style={{ fontSize: 20 }}>{m.icon}</span>
-                  <span style={{ color: method === m.id ? "#f5a623" : "#fff", fontSize: 12, fontWeight: 600 }}>{m.name}</span>
-                </button>
-              ))}
+            {/* Multicaixa Express badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
+              <span style={{ fontSize: 26 }}>💳</span>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Multicaixa Express</div>
+                <div style={{ color: "#94a3b8", fontSize: 12 }}>Pagamento instantâneo</div>
+              </div>
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -204,7 +193,7 @@ export default function WalletPage() {
             </div>
 
             <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-              <strong style={{ color: "#f5a623" }}>Instruções:</strong> Após clicar em &quot;Enviar pedido&quot;, um agente entrará em contacto via WhatsApp para confirmar o depósito via {DEPOSIT_METHODS.find(m2 => m2.id === method)?.name}.
+              <strong style={{ color: "#f5a623" }}>Instruções:</strong> Após clicar em &quot;Enviar pedido&quot;, um agente entrará em contacto via WhatsApp para confirmar o depósito via Multicaixa Express.
             </div>
 
             <button onClick={() => submit("deposit")} disabled={loading}
@@ -220,28 +209,35 @@ export default function WalletPage() {
         {/* Withdraw tab */}
         {tab === "withdraw" && (
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
-            <h3 style={{ color: "#fff", margin: "0 0 16px", fontSize: 16 }}>Levantamento</h3>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Banco</label>
-              <select value={bankName} onChange={e => setBankName(e.target.value)} style={inputStyle}>
-                <option value="">Selecionar banco</option>
-                {["BAI","BFA","BPC","BCI","BNI","Sol","Keve","Atlântico","Standard Bank Angola"].map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
+            {/* Multicaixa Express badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
+              <span style={{ fontSize: 26 }}>💳</span>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Multicaixa Express</div>
+                <div style={{ color: "#94a3b8", fontSize: 12 }}>Levantamento para o teu número</div>
+              </div>
             </div>
+
             <div style={{ marginBottom: 14 }}>
-              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>IBAN / Nº de conta</label>
-              <input type="text" value={bankAccount} onChange={e => setBankAccount(e.target.value)}
-                placeholder="AO06 0000 0000 0000 0000 0000 0" style={inputStyle} />
+              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Número de telefone (Multicaixa Express)</label>
+              <input type="tel" value={bankAccount} onChange={e => setBankAccount(e.target.value)}
+                placeholder="9XX XXX XXX" style={inputStyle} />
             </div>
             <div style={{ marginBottom: 20 }}>
               <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
               <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
                 placeholder="5000" style={inputStyle} />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                {[5000, 10000, 25000, 50000].map(v => (
+                  <button key={v} onClick={() => setAmount(v)}
+                    style={{ flex: 1, background: amount === v ? "#ef4444" : "#1e2d50", color: amount === v ? "#fff" : "#94a3b8", border: "none", borderRadius: 6, padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {(v / 1000)}k
+                  </button>
+                ))}
+              </div>
             </div>
             <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-              Tempo de processamento: 1-3 dias úteis. Valor mínimo: 5.000 Kz.
+              Processamento em 1-3 dias úteis. Valor mínimo: 5.000 Kz.
             </div>
             <button onClick={() => submit("withdrawal")} disabled={loading}
               style={{
