@@ -36,9 +36,24 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
+// Volatility Indices — Deriv synthetic, available 24/7 including weekends
+export const VOLATILITY_PAIRS: DerivPair[] = [
+  { symbol: "R_10",  label: "Vol. 10",  category: "Volatilidade", decimals: 3 },
+  { symbol: "R_25",  label: "Vol. 25",  category: "Volatilidade", decimals: 3 },
+  { symbol: "R_50",  label: "Vol. 50",  category: "Volatilidade", decimals: 4 },
+  { symbol: "R_75",  label: "Vol. 75",  category: "Volatilidade", decimals: 4 },
+  { symbol: "R_100", label: "Vol. 100", category: "Volatilidade", decimals: 2 },
+];
 
 export function getAvailablePairs(): DerivPair[] {
-  return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+  if (typeof window === "undefined") {
+    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS, ...VOLATILITY_PAIRS];
+  }
+  const day = new Date().getUTCDay(); // 0=Dom, 6=Sab
+  const isWeekend = day === 0 || day === 6;
+  // Ao fim de semana só cripto e volatilidade têm dados reais
+  if (isWeekend) return [...CRYPTO_PAIRS, ...VOLATILITY_PAIRS];
+  return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS, ...VOLATILITY_PAIRS];
 }
 
 export const GRANULARITY: Record<string, number> = {

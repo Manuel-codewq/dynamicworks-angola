@@ -6,7 +6,6 @@ interface Settings {
   payout:          Record<string, number>;   // 0.50 – 0.95
   winProbability:  Record<string, number>;   // 0.30 – 0.60
   maintenanceMode: boolean;
-  otcMode:         string;
 }
 
 // UI works in whole-number percentages; API uses fractions
@@ -93,18 +92,6 @@ export default function AdminSettingsPage() {
             </button>
           </div>
 
-          {/* OTC mode */}
-          <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 18px", flex: 1, minWidth: 220 }}>
-            <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Modo OTC</div>
-            <div style={{ display: "flex", gap: 6 }}>
-              {([["auto","Automático"],["force_live","Sempre Live"],["force_otc","Sempre OTC"]] as const).map(([val, label]) => (
-                <button key={val} onClick={() => setDraft(d => d ? { ...d, otcMode: val } : d)}
-                  style={{ background: draft.otcMode === val ? "rgba(245,166,35,0.2)" : "transparent", border: `1px solid ${draft.otcMode === val ? "rgba(245,166,35,0.5)" : "#1e2d50"}`, borderRadius: 7, padding: "5px 10px", color: draft.otcMode === val ? "#f5a623" : "#94a3b8", fontSize: 12, cursor: "pointer", fontWeight: draft.otcMode === val ? 700 : 400 }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 

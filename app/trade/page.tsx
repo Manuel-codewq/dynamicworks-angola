@@ -10,8 +10,7 @@ import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries,
 } from "lightweight-charts";
 import {
-  derivWS, GRANULARITY,
-  FOREX_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS,
+  derivWS, GRANULARITY, getAvailablePairs,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -120,7 +119,7 @@ export default function TradePage() {
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
 
   useEffect(() => {
-    const list = [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+    const list = getAvailablePairs();
     setPairs(list);
     setSelectedPair(list[0]);
   }, []); // eslint-disable-line
