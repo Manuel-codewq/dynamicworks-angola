@@ -1,23 +1,16 @@
 import { prisma } from "./prisma";
 
 const ALL_PAIRS = [
-  // Forex live
+  // Forex
   "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD",
   "USD/CAD", "EUR/GBP", "USD/CHF", "NZD/USD",
   "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY", "GBP/AUD", "EUR/CHF",
-  // Forex OTC
-  "EUR/USD (OTC)", "GBP/USD (OTC)", "USD/JPY (OTC)",
-  "AUD/USD (OTC)", "USD/CAD (OTC)", "EUR/GBP (OTC)",
-  "EUR/JPY (OTC)", "GBP/JPY (OTC)", "EUR/CAD (OTC)",
-  "AUD/JPY (OTC)", "GBP/AUD (OTC)", "EUR/CHF (OTC)",
-  // Crypto
+  // Cripto
   "BTC/USD", "ETH/USD",
   // Commodities
   "XAU/USD", "XAG/USD",
-  // Synthetic
-  "Volatility 10", "Volatility 25", "Volatility 50",
-  "Volatility 75", "Volatility 100",
-  "Boom 300", "Crash 300",
+  // Índices DW (24/7)
+  "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
 ] as const;
 
 export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));
@@ -27,7 +20,6 @@ export interface PlatformSettings {
   payout:          Record<string, number>;
   winProbability:  Record<string, number>;
   maintenanceMode: boolean;
-  otcMode:         "auto" | "force_live" | "force_otc";
 }
 
 // In-memory cache to avoid hitting DB on every request within same instance
@@ -38,19 +30,17 @@ export async function getSettings(): Promise<PlatformSettings> {
   try {
     const row = await prisma.settings.upsert({
       where:  { id: "singleton" },
-      create: { id: "singleton", otcMode: "auto", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY },
+      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY },
       update: {},
     });
     cache = {
-      otcMode:         (row.otcMode as PlatformSettings["otcMode"]) ?? "auto",
       maintenanceMode: row.maintenanceMode,
       payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
     };
     return cache;
   } catch {
-    // Fallback if DB unreachable
-    return { otcMode: "auto", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY };
+    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY };
   }
 }
 
@@ -70,14 +60,11 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
     });
   }
   if (typeof patch.maintenanceMode === "boolean") current.maintenanceMode = patch.maintenanceMode;
-  if (patch.otcMode && ["auto", "force_live", "force_otc"].includes(patch.otcMode)) {
-    current.otcMode = patch.otcMode;
-  }
 
   await prisma.settings.upsert({
     where:  { id: "singleton" },
     create: { id: "singleton", ...current },
-    update: { otcMode: current.otcMode, maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability },
+    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability },
   });
 
   cache = current;
@@ -85,5 +72,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { otcMode: "auto", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY };
+export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY };
 export async function loadSettings() { settings = await getSettings(); return settings; }
