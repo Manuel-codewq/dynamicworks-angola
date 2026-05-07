@@ -221,6 +221,37 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
   }
 }
 
+export async function sendTransactionOtpEmail(to: string, name: string, code: string, type: "deposit" | "withdrawal", amount: number) {
+  const client = getClient();
+  if (!client) return;
+
+  const label  = type === "deposit" ? "Depósito" : "Levantamento";
+  const color  = type === "deposit" ? "#22c55e" : "#ef4444";
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p(`Recebemos um pedido de <strong style="color:${color};">${label}</strong> de <strong style="color:#fff;">${formatKz(Math.floor(amount))}</strong>.`)}
+    ${p("Para confirmar esta operação, introduz o código abaixo na plataforma:")}
+    <div style="background:#0a0f1e;border:2px solid #f5a623;border-radius:14px;padding:28px;margin:20px 0;text-align:center;">
+      <p style="color:#64748b;font-size:12px;font-weight:600;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Código OTP</p>
+      <p style="color:#f5a623;font-size:42px;font-weight:900;margin:0;letter-spacing:12px;font-variant-numeric:tabular-nums;">${code}</p>
+    </div>
+    ${p("Este código é válido durante <strong style=\"color:#fff;\">10 minutos</strong>. Não o partilhes com ninguém.")}
+    ${p("Se não iniciaste esta operação, ignora este email. A tua conta está segura.", "#64748b")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: `Código OTP — ${label} de ${formatKz(Math.floor(amount))}`,
+      html:    baseTemplate(`Confirmar ${label}`, body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar OTP email:", err);
+  }
+}
+
 export async function sendWithdrawalRejectedEmail(to: string, name: string, amount: number) {
   const client = getClient();
   if (!client) return;

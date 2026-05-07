@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const { type, amount, method, reference } = await req.json();
+  const { type, amount, method, reference, otp } = await req.json();
 
   if (!["deposit", "withdrawal"].includes(type)) {
     return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
@@ -27,6 +27,27 @@ export async function POST(req: NextRequest) {
   if (!amount || amount < 1000) {
     return NextResponse.json({ error: "Valor mínimo: 1.000 Kz" }, { status: 400 });
   }
+  if (!otp) {
+    return NextResponse.json({ error: "Código OTP obrigatório" }, { status: 400 });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
+
+  if (
+    !user.verifyCode ||
+    user.verifyCode !== String(otp) ||
+    !user.verifyExpires ||
+    user.verifyExpires < new Date()
+  ) {
+    return NextResponse.json({ error: "Código OTP inválido ou expirado" }, { status: 400 });
+  }
+
+  // Invalidar o OTP após uso
+  await prisma.user.update({
+    where: { id: user.id },
+    data:  { verifyCode: null, verifyExpires: null },
+  });
 
   const tx = await prisma.transaction.create({
     data: {
