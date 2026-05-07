@@ -4,7 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 export async function middleware(req: NextRequest) {
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
   if (!secret) return NextResponse.next();
-  const token = await getToken({ req, secret });
+
+  const isSecure = req.nextUrl.protocol === "https:";
+  const cookieName = isSecure ? "__Secure-authjs.session-token" : "authjs.session-token";
+
+  const token = await getToken({ req, secret, cookieName });
   const { pathname } = req.nextUrl;
 
   const protectedRoutes = ["/trade", "/dashboard", "/wallet", "/ao/admin", "/profile"];
