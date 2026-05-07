@@ -43,6 +43,7 @@ model Trade {
   profit     Float?
   expirySecs Int
   status     String    @default("active")
+  isDemo     Boolean   @default(false)
   createdAt  DateTime  @default(now())
   closedAt   DateTime?
 }

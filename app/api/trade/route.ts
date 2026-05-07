@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   const trade = await prisma.trade.create({
-    data: { userId: user.id, asset, direction, amount, entryPrice, payout, expirySecs, status: "active" },
+    data: { userId: user.id, asset, direction, amount, entryPrice, payout, expirySecs, status: "active", isDemo: user.isDemo },
   });
 
   // Schedule resolution — outcome determined server-side with house edge
