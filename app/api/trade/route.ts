@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
+import { getDerivPrice } from "@/lib/derivPrice";
 
 const ALLOWED_ASSETS = [
   // Live forex
@@ -114,15 +115,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
 
-  // Schedule resolution — outcome determined server-side with house edge
+  // Schedule resolution — outcome determined by real close price from Deriv
   setTimeout(async () => {
     try {
-      const winProb = cfg.winProbability[asset] ?? 0.47;
-      const result: "win" | "loss" = Math.random() < winProb ? "win" : "loss";
+      const isOTC = asset.includes("(OTC)");
+
+      // Fetch real close price; OTC pairs are simulated since market is closed
+      let closePrice: number;
+      let fetchedReal = false;
+
+      if (!isOTC) {
+        const realPrice = await getDerivPrice(asset);
+        if (realPrice !== null) {
+          closePrice = realPrice;
+          fetchedReal = true;
+        }
+      }
+
+      if (!fetchedReal) {
+        // OTC or fetch failed: simulate a small random movement from entry price
+        closePrice = entryPrice * (1 + (Math.random() - 0.5) * 0.004);
+      }
+
+      // Determine result by comparing close vs entry price
+      let result: "win" | "loss";
+      if (closePrice === entryPrice) {
+        result = "loss"; // exact tie → house wins
+      } else if (direction === "call") {
+        result = closePrice > entryPrice ? "win" : "loss";
+      } else {
+        result = closePrice < entryPrice ? "win" : "loss";
+      }
+
       const profit = result === "win" ? amount * payout : -amount;
       const returnAmount = result === "win" ? amount + amount * payout : 0;
-      // Use entry price as close price placeholder (real price unavailable without WS on server)
-      const closePrice = entryPrice * (1 + (Math.random() - 0.5) * 0.002);
 
       await prisma.trade.update({
         where: { id: trade.id },
