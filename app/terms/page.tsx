@@ -3,7 +3,7 @@ import { TrendingUp } from "lucide-react";
 const SECTIONS = [
   {
     title: "1. Sobre a Plataforma",
-    body: `A Dynamics Works é uma plataforma de trading de opções binárias desenvolvida e licenciada para operar no mercado angolano. O acesso à plataforma está disponível a maiores de 18 anos residentes em Angola. A utilização dos serviços implica a aceitação integral dos presentes termos.`,
+    body: `A Dynamics Works é uma plataforma de trading de opções binárias desenvolvida e licenciada para operar no mercado angolano, criada pela Digikap — empresa angolana de tecnologia e inovação digital. O acesso à plataforma está disponível a maiores de 18 anos residentes em Angola. A utilização dos serviços implica a aceitação integral dos presentes termos.`,
   },
   {
     title: "2. Conta Demo",
@@ -76,8 +76,13 @@ export default function TermsPage() {
         </div>
 
         <div style={{ marginTop: 56, paddingTop: 24, borderTop: "1px solid #1e2d50", textAlign: "center" }}>
-          <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>
-            Dynamics Works © 2025 — Plataforma licenciada para o mercado angolano
+          <p style={{ color: "#475569", fontSize: 13, margin: "0 0 6px" }}>
+            Dynamics Works © {new Date().getFullYear()} — Plataforma licenciada para o mercado angolano
+          </p>
+          <p style={{ color: "#374151", fontSize: 12, margin: 0 }}>
+            Desenvolvida pela{" "}
+            <span style={{ color: "#f5a623", fontWeight: 700 }}>Digikap</span>
+            {" "}— Tecnologia & Inovação Digital · Angola
           </p>
         </div>
       </div>
