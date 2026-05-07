@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { settings } from "@/lib/settings";
 
 export default auth(async (req) => {
   const { nextUrl, auth: session } = req as any;
@@ -22,20 +23,8 @@ export default auth(async (req) => {
   // Maintenance check for non-admin protected routes
   if (isProtected && !pathname.startsWith("/ao/admin")) {
     const role = session?.user ? (session.user as any).role : null;
-    if (role !== "admin") {
-      try {
-        const res = await fetch(new URL("/api/maintenance-check", nextUrl), {
-          signal: AbortSignal.timeout(2000),
-        });
-        if (res.ok) {
-          const { maintenance } = await res.json();
-          if (maintenance) {
-            return NextResponse.redirect(new URL("/maintenance", nextUrl));
-          }
-        }
-      } catch {
-        // If maintenance check fails, allow through to avoid blocking users
-      }
+    if (role !== "admin" && settings.maintenanceMode) {
+      return NextResponse.redirect(new URL("/maintenance", nextUrl));
     }
   }
 
