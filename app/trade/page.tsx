@@ -10,8 +10,8 @@ import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries,
 } from "lightweight-charts";
 import {
-  derivWS, getAvailablePairs, GRANULARITY,
-  FOREX_PAIRS, OTC_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS,
+  derivWS, GRANULARITY,
+  FOREX_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -118,47 +118,11 @@ export default function TradePage() {
   // ── Available pairs — polls /api/market-mode every 15s (reacts to admin changes) ─
   const [pairs,        setPairs]        = useState<DerivPair[]>([]);
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
-  const currentModeRef = useRef<string>("");
 
   useEffect(() => {
-    function applyMode(d: any) {
-      const mode = d?.mode ?? "live";
-      if (mode === currentModeRef.current) return; // no change, skip re-render
-      currentModeRef.current = mode;
-      const always = [...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
-      const list = mode === "otc"
-        ? [...OTC_PAIRS, ...always]
-        : [...FOREX_PAIRS, ...always];
-      setPairs(list);
-      // Try to keep the current pair or its live↔OTC equivalent
-      setSelectedPair(prev => {
-        if (!prev) return list[0] ?? null;
-        // Same symbol still available (crypto/commodities don't change)
-        const same = list.find(p => p.symbol === prev.symbol);
-        if (same) return same;
-        // Try to match by base label: "EUR/USD" ↔ "EUR/USD (OTC)"
-        const baseLabel = prev.label.replace(" (OTC)", "");
-        const equiv = list.find(p => p.label === baseLabel || p.label === baseLabel + " (OTC)");
-        return equiv ?? list[0] ?? null;
-      });
-    }
-
-    function poll() {
-      fetch("/api/market-mode")
-        .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d) applyMode(d); })
-        .catch(() => {
-          if (!currentModeRef.current) {
-            const fallback = getAvailablePairs();
-            setPairs(fallback);
-            setSelectedPair(fallback[0] ?? null);
-          }
-        });
-    }
-
-    poll(); // immediate on mount
-    const id = setInterval(poll, 15_000); // re-check every 15 seconds
-    return () => clearInterval(id);
+    const list = [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+    setPairs(list);
+    setSelectedPair(list[0]);
   }, []); // eslint-disable-line
 
   // ── UI state ─────────────────────────────────────────────────────────────
@@ -198,8 +162,6 @@ export default function TradePage() {
   // Stable refs for use inside WS callbacks (avoid stale closures)
   const selectedPairRef  = useRef<DerivPair | null>(null);
   const timeframeRef     = useRef<string>("1m");
-  // OTC simulation state — seeded from real DB data
-  const otcSimRef        = useRef<{ price: number; momentum: number; vol: number } | null>(null);
 
   useEffect(() => { selectedPairRef.current = selectedPair; }, [selectedPair]);
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
@@ -315,61 +277,13 @@ export default function TradePage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isOTC = selectedPair?.category === "OTC";
-
   // ── Subscribe to ticks + request candles when pair or timeframe changes ──
   useEffect(() => {
     if (!selectedPair) return;
-
-    if (selectedPair.category === "OTC") {
-      // Forex market is closed — only subscribe live 24/7 pairs for the ticker
-      const alwaysOn = pairs.filter(p => p.category !== "OTC").map(p => p.symbol);
-      derivWS.subscribeToTicks(alwaysOn);
-      // Chart data comes from /api/market-candles (triggered in chart init)
-      otcSimRef.current = null; // reset until DB data arrives
-    } else {
-      derivWS.subscribeToTicks(pairs.map(p => p.symbol));
-      derivWS.getCandles(selectedPair.symbol, GRANULARITY[timeframe], 150);
-      lastPriceRef.current = 0;
-    }
-  }, [selectedPair, timeframe, pairs]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── OTC live tick simulation — seeded from real DB last close + ATR vol ──
-  useEffect(() => {
-    if (!isOTC || !selectedPair) return;
-
-    const id = setInterval(() => {
-      const state = otcSimRef.current;
-      if (!state) return; // waiting for DB seed
-
-      state.momentum  = state.momentum * 0.88 + (Math.random() - 0.5) * state.vol;
-      state.price     = Math.max(state.price * 0.5, state.price + state.momentum);
-      const q = state.price;
-
-      setPriceUp(q >= lastPriceRef.current);
-      lastPriceRef.current = q;
-      setCurrentPrice(q);
-      setSentiment(Math.floor(45 + Math.random() * 30));
-
-      if (!candleSeriesRef.current) return;
-      const gran       = GRANULARITY[timeframeRef.current] ?? 60;
-      const now        = Math.floor(Date.now() / 1000);
-      const candleTime = (Math.floor(now / gran) * gran) as Time;
-      const c          = currentCandleRef.current;
-
-      if (!c || (c.time as number) < (candleTime as number)) {
-        const newC: CandlestickData = { time: candleTime, open: q, high: q, low: q, close: q };
-        currentCandleRef.current = newC;
-        candleSeriesRef.current.update(newC);
-      } else {
-        const updated: CandlestickData = { ...c, high: Math.max(c.high, q), low: Math.min(c.low, q), close: q };
-        currentCandleRef.current = updated;
-        candleSeriesRef.current.update(updated);
-      }
-    }, 1000);
-
-    return () => clearInterval(id);
-  }, [isOTC, selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps
+    derivWS.subscribeToTicks(pairs.map(p => p.symbol));
+    derivWS.getCandles(selectedPair.symbol, GRANULARITY[timeframe], 150);
+    lastPriceRef.current = 0;
+  }, [selectedPair, timeframe, pairs]);
 
   // ── Real wins feed (polls every 15s) ─────────────────────────────────────
   useEffect(() => {
@@ -424,37 +338,12 @@ export default function TradePage() {
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
 
-      const sym = selectedPair!.symbol;
-
-      if (selectedPair!.category === "OTC") {
-        // Show placeholder while DB data loads
-        const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1);
-        series.setData(seed);
-        currentCandleRef.current = seed[seed.length - 1];
-        chart.timeScale().fitContent();
-
-        // Fetch real recorded candles and seed OTC simulation
-        const label = encodeURIComponent(selectedPair!.label);
-        fetch(`/api/market-candles?asset=${label}&timeframe=${timeframeRef.current}&count=150`)
-          .then(r => r.ok ? r.json() : null)
-          .then((data: { hasData: boolean; candles: CandlestickData[]; lastClose: number; avgATR: number } | null) => {
-            if (!data?.hasData || !candleSeriesRef.current || !chartApiRef.current) return;
-            candleSeriesRef.current.setData(data.candles);
-            currentCandleRef.current = data.candles[data.candles.length - 1];
-            chartApiRef.current.timeScale().fitContent();
-            // Seed live simulation from real last close + ATR-based volatility
-            const vol = Math.max(data.avgATR * 0.08, data.lastClose * 0.0002);
-            otcSimRef.current = { price: data.lastClose, momentum: 0, vol };
-            lastPriceRef.current = data.lastClose;
-            setCurrentPrice(data.lastClose);
-          });
-      } else {
-        // Live pair — placeholder while WS loads real candles
-        const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1);
-        series.setData(seed);
-        currentCandleRef.current = seed[seed.length - 1];
-        chart.timeScale().fitContent();
-      }
+      // Placeholder while WS loads real candles
+      const sym  = selectedPair!.symbol;
+      const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1);
+      series.setData(seed);
+      currentCandleRef.current = seed[seed.length - 1];
+      chart.timeScale().fitContent();
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) chartApiRef.current.applyOptions({ width: el.clientWidth });

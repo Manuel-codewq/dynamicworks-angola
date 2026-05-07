@@ -36,42 +36,9 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
-// OTC pairs — same Deriv symbols as live, shown after-hours and weekends
-export const OTC_PAIRS: DerivPair[] = [
-  { symbol: "frxEURUSD", label: "EUR/USD", category: "OTC", decimals: 5 },
-  { symbol: "frxGBPUSD", label: "GBP/USD", category: "OTC", decimals: 5 },
-  { symbol: "frxUSDJPY", label: "USD/JPY", category: "OTC", decimals: 3 },
-  { symbol: "frxAUDUSD", label: "AUD/USD", category: "OTC", decimals: 5 },
-  { symbol: "frxUSDCAD", label: "USD/CAD", category: "OTC", decimals: 5 },
-  { symbol: "frxEURGBP", label: "EUR/GBP", category: "OTC", decimals: 5 },
-  { symbol: "frxEURJPY", label: "EUR/JPY", category: "OTC", decimals: 3 },
-  { symbol: "frxGBPJPY", label: "GBP/JPY", category: "OTC", decimals: 3 },
-  { symbol: "frxEURCAD", label: "EUR/CAD", category: "OTC", decimals: 5 },
-  { symbol: "frxAUDJPY", label: "AUD/JPY", category: "OTC", decimals: 3 },
-  { symbol: "frxGBPAUD", label: "GBP/AUD", category: "OTC", decimals: 5 },
-  { symbol: "frxEURCHF", label: "EUR/CHF", category: "OTC", decimals: 5 },
-];
-
-export const WEEKEND_PAIRS: DerivPair[] = [
-  { symbol: "R_10",     label: "Vol. 10",   category: "Sintético", decimals: 3 },
-  { symbol: "R_25",     label: "Vol. 25",   category: "Sintético", decimals: 3 },
-  { symbol: "R_50",     label: "Vol. 50",   category: "Sintético", decimals: 4 },
-  { symbol: "R_75",     label: "Vol. 75",   category: "Sintético", decimals: 4 },
-  { symbol: "R_100",    label: "Vol. 100",  category: "Sintético", decimals: 2 },
-  { symbol: "BOOM300",  label: "Boom 300",  category: "Spike",     decimals: 4 },
-  { symbol: "CRASH300", label: "Crash 300", category: "Spike",     decimals: 4 },
-];
 
 export function getAvailablePairs(): DerivPair[] {
-  const always = [...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
-  if (typeof window === "undefined") return [...FOREX_PAIRS, ...always];
-  const now     = new Date();
-  const utcHour = now.getUTCHours();
-  const day     = now.getUTCDay();
-  const isWeekend    = day === 0 || day === 6;
-  const isAfterHours = utcHour >= 17 || utcHour < 6; // 18h–07h Angola (UTC+1)
-  const forexList = isWeekend || isAfterHours ? OTC_PAIRS : FOREX_PAIRS;
-  return [...forexList, ...always];
+  return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
 }
 
 export const GRANULARITY: Record<string, number> = {
