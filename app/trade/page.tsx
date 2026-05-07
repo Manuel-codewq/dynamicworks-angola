@@ -217,6 +217,7 @@ export default function TradePage() {
   const [priceUp,       setPriceUp]       = useState(true);
   const [amount,        setAmount]        = useState(1000);
   const [expiry,        setExpiry]        = useState(EXPIRY_OPTIONS[0]);
+  const [customMins,   setCustomMins]    = useState("1");
   const [isDemo,        setIsDemo]        = useState(true);
   const [balance,       setBalance]       = useState(10000);
   const [demoBalance,   setDemoBalance]   = useState(10000);
@@ -709,7 +710,7 @@ export default function TradePage() {
         <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 6 }}>Tempo de expiração</div>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           {EXPIRY_OPTIONS.map(opt => (
-            <button key={opt.secs} onClick={() => setExpiry(opt)}
+            <button key={opt.secs} onClick={() => { setExpiry(opt); setCustomMins(String(opt.secs / 60)); }}
               style={{ flex: 1, height: 34, background: expiry.secs === opt.secs ? "#f5a623" : "#1e2d50", color: expiry.secs === opt.secs ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {opt.label}
             </button>
@@ -719,10 +720,20 @@ export default function TradePage() {
           <span style={{ color: "#94a3b8", fontSize: 11, whiteSpace: "nowrap" }}>Personalizado:</span>
           <div style={{ position: "relative", flex: 1 }}>
             <input type="number" min={1} max={59}
-              value={Math.round(expiry.secs / 60) || ""}
-              onChange={e => {
+              value={customMins}
+              onChange={e => setCustomMins(e.target.value)}
+              onBlur={e => {
                 const mins = Math.max(1, Math.min(59, parseInt(e.target.value) || 1));
+                setCustomMins(String(mins));
                 setExpiry({ label: `${mins} min`, secs: mins * 60 });
+              }}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  const mins = Math.max(1, Math.min(59, parseInt((e.target as HTMLInputElement).value) || 1));
+                  setCustomMins(String(mins));
+                  setExpiry({ label: `${mins} min`, secs: mins * 60 });
+                  (e.target as HTMLInputElement).blur();
+                }
               }}
               style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 6, padding: "6px 36px 6px 10px", color: "#fff", fontSize: 13, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
             <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 11 }}>min</span>
