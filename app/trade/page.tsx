@@ -733,13 +733,13 @@ export default function TradePage() {
         )}
 
         {/* ── Topbar ── */}
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 8px", gap: 5 }}>
           {/* Logo + brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            <div style={{ width: 28, height: 28, background: "#f5a623", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <TrendingUp size={16} color="#0a0f1e" strokeWidth={2.5} />
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <div style={{ width: 26, height: 26, background: "#f5a623", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <TrendingUp size={14} color="#0a0f1e" strokeWidth={2.5} />
             </div>
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Dynamics Works</span>
+            <span style={{ color: "#fff", fontWeight: 800, fontSize: 13, whiteSpace: "nowrap" }}>Dynamics</span>
           </div>
 
           {/* Asset selector */}
