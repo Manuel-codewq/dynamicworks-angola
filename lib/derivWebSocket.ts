@@ -36,36 +36,21 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
-// OTC pairs — simulated client-side, shown after-hours and weekends
+// OTC pairs — same Deriv symbols as live, shown after-hours and weekends
 export const OTC_PAIRS: DerivPair[] = [
-  { symbol: "OTC_EURUSD", label: "EUR/USD (OTC)", category: "OTC", decimals: 5 },
-  { symbol: "OTC_GBPUSD", label: "GBP/USD (OTC)", category: "OTC", decimals: 5 },
-  { symbol: "OTC_USDJPY", label: "USD/JPY (OTC)", category: "OTC", decimals: 3 },
-  { symbol: "OTC_AUDUSD", label: "AUD/USD (OTC)", category: "OTC", decimals: 5 },
-  { symbol: "OTC_USDCAD", label: "USD/CAD (OTC)", category: "OTC", decimals: 5 },
-  { symbol: "OTC_EURGBP", label: "EUR/GBP (OTC)", category: "OTC", decimals: 5 },
-  { symbol: "OTC_EURJPY", label: "EUR/JPY (OTC)", category: "OTC", decimals: 3 },
-  { symbol: "OTC_GBPJPY", label: "GBP/JPY (OTC)", category: "OTC", decimals: 3 },
-  { symbol: "OTC_EURCAD", label: "EUR/CAD (OTC)", category: "OTC", decimals: 5 },
-  { symbol: "OTC_AUDJPY", label: "AUD/JPY (OTC)", category: "OTC", decimals: 3 },
-  { symbol: "OTC_GBPAUD", label: "GBP/AUD (OTC)", category: "OTC", decimals: 5 },
-  { symbol: "OTC_EURCHF", label: "EUR/CHF (OTC)", category: "OTC", decimals: 5 },
+  { symbol: "frxEURUSD", label: "EUR/USD", category: "OTC", decimals: 5 },
+  { symbol: "frxGBPUSD", label: "GBP/USD", category: "OTC", decimals: 5 },
+  { symbol: "frxUSDJPY", label: "USD/JPY", category: "OTC", decimals: 3 },
+  { symbol: "frxAUDUSD", label: "AUD/USD", category: "OTC", decimals: 5 },
+  { symbol: "frxUSDCAD", label: "USD/CAD", category: "OTC", decimals: 5 },
+  { symbol: "frxEURGBP", label: "EUR/GBP", category: "OTC", decimals: 5 },
+  { symbol: "frxEURJPY", label: "EUR/JPY", category: "OTC", decimals: 3 },
+  { symbol: "frxGBPJPY", label: "GBP/JPY", category: "OTC", decimals: 3 },
+  { symbol: "frxEURCAD", label: "EUR/CAD", category: "OTC", decimals: 5 },
+  { symbol: "frxAUDJPY", label: "AUD/JPY", category: "OTC", decimals: 3 },
+  { symbol: "frxGBPAUD", label: "GBP/AUD", category: "OTC", decimals: 5 },
+  { symbol: "frxEURCHF", label: "EUR/CHF", category: "OTC", decimals: 5 },
 ];
-
-export const OTC_BASE_PRICES: Record<string, number> = {
-  OTC_EURUSD: 1.0850,
-  OTC_GBPUSD: 1.2650,
-  OTC_USDJPY: 149.50,
-  OTC_AUDUSD: 0.6520,
-  OTC_USDCAD: 1.3620,
-  OTC_EURGBP: 0.8580,
-  OTC_EURJPY: 162.50,
-  OTC_GBPJPY: 188.70,
-  OTC_EURCAD: 1.4750,
-  OTC_AUDJPY: 97.50,
-  OTC_GBPAUD: 1.9650,
-  OTC_EURCHF: 0.9680,
-};
 
 export const WEEKEND_PAIRS: DerivPair[] = [
   { symbol: "R_10",     label: "Vol. 10",   category: "Sintético", decimals: 3 },

@@ -10,39 +10,11 @@ import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries,
 } from "lightweight-charts";
 import {
-  derivWS, getAvailablePairs, GRANULARITY, OTC_BASE_PRICES,
+  derivWS, getAvailablePairs, GRANULARITY,
   FOREX_PAIRS, OTC_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
-
-// ── OTC simulation state (module-level — persists across re-renders) ─────────
-const OTC_STATE: Record<string, { price: number; momentum: number }> = {};
-
-// Fetch real recorded OTC candles from the DB; returns null when fallback needed
-async function fetchOtcCandles(
-  asset: string,
-  timeframe: string,
-  count: number,
-): Promise<CandlestickData[] | null> {
-  try {
-    const params = new URLSearchParams({ asset, timeframe, count: String(count) });
-    const res = await fetch(`/api/otc-candles?${params}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.fallback) return null;
-    return (data as Array<{ open: number; high: number; low: number; close: number; timestamp: string }>)
-      .map(c => ({
-        time:  Math.floor(new Date(c.timestamp).getTime() / 1000) as Time,
-        open:  c.open,
-        high:  c.high,
-        low:   c.low,
-        close: c.close,
-      }));
-  } catch {
-    return null;
-  }
-}
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -82,48 +54,26 @@ function formatKz(n: number) {
 function generatePlaceholder(basePrice: number, count = 100): CandlestickData[] {
   const map = new Map<number, CandlestickData>();
   const now  = Math.floor(Date.now() / 60000) * 60;
-  const maxSpread = basePrice * 0.005;
-  let price = basePrice;
+  const maxSpread = basePrice * 0.012;
+  let price    = basePrice;
+  let momentum = 0;
 
   for (let i = count; i >= 0; i--) {
     const t = now - i * 60;
-    const change  = (Math.random() - 0.49) * maxSpread * 0.4;
-    const open    = price;
-    const close   = price + change;
+    momentum = momentum * 0.75 + (Math.random() - 0.5) * maxSpread * 0.7;
+    const open  = price;
+    const close = price + momentum;
     if (!isFinite(open) || !isFinite(close) || open === 0) continue;
 
     const bodyHigh = Math.max(open, close);
     const bodyLow  = Math.min(open, close);
-    const safeHigh = Math.max(bodyHigh + Math.random() * maxSpread * 0.5, bodyHigh);
-    const safeLow  = Math.min(bodyLow  - Math.random() * maxSpread * 0.5, bodyLow);
+    const wick     = maxSpread * (0.3 + Math.random() * 0.5);
+    const safeHigh = bodyHigh + Math.random() * wick;
+    const safeLow  = bodyLow  - Math.random() * wick;
 
     if (!isFinite(safeHigh) || !isFinite(safeLow) || safeHigh < safeLow) continue;
     map.set(t, { time: t as Time, open, high: safeHigh, low: safeLow, close });
     price = close;
-  }
-  return Array.from(map.values()).sort((a, b) => (a.time as number) - (b.time as number));
-}
-
-// OTC historical candles — smooth Brownian motion seeded from base price
-function generateOtcCandles(symbol: string, count = 150): CandlestickData[] {
-  const base = OTC_BASE_PRICES[symbol] ?? 1;
-  if (!OTC_STATE[symbol]) OTC_STATE[symbol] = { price: base, momentum: 0 };
-  const state = OTC_STATE[symbol];
-  state.price = base; state.momentum = 0;
-
-  const map = new Map<number, CandlestickData>();
-  const now  = Math.floor(Date.now() / 60000) * 60;
-  for (let i = count; i >= 0; i--) {
-    const t = now - i * 60;
-    const vol = state.price * 0.0003;
-    state.momentum = state.momentum * 0.92 + (Math.random() - 0.5) * vol;
-    const open  = state.price;
-    const close = Math.max(state.price * 0.5, state.price + state.momentum);
-    state.price  = close;
-    const high   = Math.max(open, close) + Math.random() * vol * 0.5;
-    const low    = Math.min(open, close) - Math.random() * vol * 0.5;
-    if (!isFinite(open) || !isFinite(close) || high < low) continue;
-    map.set(t, { time: t as Time, open, high, low, close });
   }
   return Array.from(map.values()).sort((a, b) => (a.time as number) - (b.time as number));
 }
@@ -363,66 +313,20 @@ export default function TradePage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isOTC = selectedPair?.symbol.startsWith("OTC_") ?? false;
-
   // ── Subscribe to ticks + request candles when pair or timeframe changes ──
   useEffect(() => {
-    if (!selectedPair || isOTC) return;
+    if (!selectedPair) return;
 
-    // Subscribe to all live pairs for the ticker
-    const liveSymbols = pairs.filter(p => !p.symbol.startsWith("OTC_")).map(p => p.symbol);
-    derivWS.subscribeToTicks(liveSymbols);
+    // Subscribe to all pairs for the ticker
+    const allSymbols = pairs.map(p => p.symbol);
+    derivWS.subscribeToTicks(allSymbols);
 
     // Request candle history for selected pair + timeframe
     derivWS.getCandles(selectedPair.symbol, GRANULARITY[timeframe], 150);
 
     // Reset price so we wait for real tick
     lastPriceRef.current = 0;
-  }, [selectedPair, timeframe, isOTC, pairs]);
-
-  // ── OTC price simulation ─────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isOTC || !selectedPair) return;
-    const sym = selectedPair.symbol;
-    if (!OTC_STATE[sym]) {
-      OTC_STATE[sym] = { price: OTC_BASE_PRICES[sym] ?? 1, momentum: 0 };
-    }
-    // Seed price display immediately
-    const initPrice = OTC_STATE[sym].price;
-    lastPriceRef.current = initPrice;
-    setCurrentPrice(initPrice);
-
-    const id = setInterval(() => {
-      const state = OTC_STATE[sym];
-      if (!state) return;
-      const vol   = state.price * 0.0003;
-      state.momentum = state.momentum * 0.92 + (Math.random() - 0.5) * vol;
-      state.price    = Math.max(state.price * 0.5, state.price + state.momentum);
-      const q = state.price;
-
-      setPriceUp(q >= lastPriceRef.current);
-      lastPriceRef.current = q;
-      setCurrentPrice(q);
-      setSentiment(Math.floor(45 + Math.random() * 30));
-
-      if (!candleSeriesRef.current) return;
-      const gran = GRANULARITY[timeframeRef.current] ?? 60;
-      const now  = Math.floor(Date.now() / 1000);
-      const candleTime = (Math.floor(now / gran) * gran) as Time;
-      const c = currentCandleRef.current;
-
-      if (!c || (c.time as number) < (candleTime as number)) {
-        const newC: CandlestickData = { time: candleTime, open: q, high: q, low: q, close: q };
-        currentCandleRef.current = newC;
-        candleSeriesRef.current.update(newC);
-      } else {
-        const updated: CandlestickData = { ...c, high: Math.max(c.high, q), low: Math.min(c.low, q), close: q };
-        currentCandleRef.current = updated;
-        candleSeriesRef.current.update(updated);
-      }
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isOTC, selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPair, timeframe, pairs]);
 
   // ── Real wins feed (polls every 15s) ─────────────────────────────────────
   useEffect(() => {
@@ -477,36 +381,12 @@ export default function TradePage() {
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
 
-      // Live pairs: placeholder while WS loads.
-      // OTC pairs: simulation shown immediately, then replaced by real DB data if available.
-      const sym = selectedPair!.symbol;
-      if (sym.startsWith("OTC_")) {
-        const simCandles = generateOtcCandles(sym);
-        series.setData(simCandles);
-        currentCandleRef.current = simCandles[simCandles.length - 1];
-        chart.timeScale().fitContent();
-
-        // Asynchronously try to replace with real recorded candles
-        fetchOtcCandles(selectedPair!.label, timeframeRef.current, 150).then(real => {
-          if (!real || !candleSeriesRef.current || !chartApiRef.current) return;
-          candleSeriesRef.current.setData(real);
-          const last = real[real.length - 1];
-          currentCandleRef.current = last;
-          chartApiRef.current.timeScale().fitContent();
-          // Seed OTC simulation from last real close so ticks continue smoothly
-          if (OTC_STATE[sym]) {
-            OTC_STATE[sym].price    = last.close;
-            OTC_STATE[sym].momentum = 0;
-          }
-          lastPriceRef.current = last.close;
-          setCurrentPrice(last.close);
-        });
-      } else {
-        const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1);
-        series.setData(seed);
-        currentCandleRef.current = seed[seed.length - 1];
-        chart.timeScale().fitContent();
-      }
+      // Placeholder while WS loads real candles
+      const sym  = selectedPair!.symbol;
+      const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1);
+      series.setData(seed);
+      currentCandleRef.current = seed[seed.length - 1];
+      chart.timeScale().fitContent();
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) chartApiRef.current.applyOptions({ width: el.clientWidth });
