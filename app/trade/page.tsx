@@ -163,23 +163,37 @@ export default function TradePage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ── Available pairs — loaded from /api/market-mode (respects admin setting) ─
+  // ── Available pairs — polls /api/market-mode every 15s (reacts to admin changes) ─
   const [pairs,        setPairs]        = useState<DerivPair[]>([]);
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
+  const currentModeRef = useRef<string>("");
 
   useEffect(() => {
-    fetch("/api/market-mode")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        const list = d?.mode === "otc" ? OTC_PAIRS : d?.mode === "live" ? FOREX_PAIRS : getAvailablePairs();
-        setPairs(list);
-        setSelectedPair(p => p ?? list[0] ?? null);
-      })
-      .catch(() => {
-        const fallback = getAvailablePairs();
-        setPairs(fallback);
-        setSelectedPair(p => p ?? fallback[0] ?? null);
-      });
+    function applyMode(d: any) {
+      const mode = d?.mode ?? "live";
+      if (mode === currentModeRef.current) return; // no change, skip re-render
+      currentModeRef.current = mode;
+      const list = mode === "otc" ? OTC_PAIRS : FOREX_PAIRS;
+      setPairs(list);
+      setSelectedPair(list[0] ?? null);
+    }
+
+    function poll() {
+      fetch("/api/market-mode")
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) applyMode(d); })
+        .catch(() => {
+          if (!currentModeRef.current) {
+            const fallback = getAvailablePairs();
+            setPairs(fallback);
+            setSelectedPair(fallback[0] ?? null);
+          }
+        });
+    }
+
+    poll(); // immediate on mount
+    const id = setInterval(poll, 15_000); // re-check every 15 seconds
+    return () => clearInterval(id);
   }, []); // eslint-disable-line
 
   // ── UI state ─────────────────────────────────────────────────────────────
