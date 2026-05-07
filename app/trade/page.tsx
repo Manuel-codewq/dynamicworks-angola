@@ -194,11 +194,13 @@ export default function TradePage() {
   const [bnaRate,        setBnaRate]        = useState<number | null>(null);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
-  const chartRef         = useRef<HTMLDivElement>(null);
-  const chartApiRef      = useRef<IChartApi | null>(null);
-  const candleSeriesRef  = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const currentCandleRef = useRef<CandlestickData | null>(null);
-  const lastPriceRef     = useRef<number>(0);
+  const chartRef           = useRef<HTMLDivElement>(null);
+  const chartApiRef        = useRef<IChartApi | null>(null);
+  const candleSeriesRef    = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const currentCandleRef   = useRef<CandlestickData | null>(null);
+  const lastPriceRef       = useRef<number>(0);
+  const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
+  const activeTradesRef    = useRef<ActiveTrade[]>([]);
   // Stable refs for use inside WS callbacks (avoid stale closures)
   const selectedPairRef  = useRef<DerivPair | null>(null);
   const timeframeRef     = useRef<string>("1m");
@@ -412,6 +414,7 @@ export default function TradePage() {
       });
       candleSeriesRef.current  = series;
       currentCandleRef.current = null;
+      tradePriceLinesRef.current.clear();
 
       // Live pairs: placeholder while WS loads.
       // OTC pairs: simulation shown immediately, then replaced by real DB data if available.
@@ -490,7 +493,48 @@ export default function TradePage() {
     return () => clearInterval(id);
   }, [fetchBalance]);
 
+  // ── Price lines — create/remove when active trades change ────────────────
+  useEffect(() => {
+    activeTradesRef.current = activeTrades;
+    if (!candleSeriesRef.current) return;
+    const activeIds = new Set(activeTrades.map(t => t.id));
+    // Remove lines for closed trades
+    tradePriceLinesRef.current.forEach((line, id) => {
+      if (!activeIds.has(id)) {
+        try { candleSeriesRef.current?.removePriceLine(line); } catch {}
+        tradePriceLinesRef.current.delete(id);
+      }
+    });
+    // Add lines for new trades on the current asset
+    activeTrades.filter(t => t.asset === selectedPair?.label).forEach(t => {
+      const win   = t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice;
+      const color = win ? "#22c55e" : "#ef4444";
+      const title = `${t.direction === "call" ? "▲" : "▼"} ${formatKz(t.amount)}`;
+      if (tradePriceLinesRef.current.has(t.id)) {
+        tradePriceLinesRef.current.get(t.id).applyOptions({ color, title });
+      } else if (candleSeriesRef.current) {
+        const line = candleSeriesRef.current.createPriceLine({ price: t.entryPrice, color, lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title });
+        tradePriceLinesRef.current.set(t.id, line);
+      }
+    });
+  }, [activeTrades, selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Price lines — update colour on every tick ─────────────────────────────
+  useEffect(() => {
+    tradePriceLinesRef.current.forEach((line, id) => {
+      const trade = activeTradesRef.current.find(t => t.id === id);
+      if (!trade) return;
+      const win = trade.direction === "call" ? currentPrice > trade.entryPrice : currentPrice < trade.entryPrice;
+      line.applyOptions({ color: win ? "#22c55e" : "#ef4444" });
+    });
+  }, [currentPrice]);
+
   // ── Helpers ───────────────────────────────────────────────────────────────
+  function isTradeWinning(direction: string, entryPrice: number): boolean {
+    if (currentPrice === 0 || entryPrice === 0) return false;
+    return direction === "call" ? currentPrice > entryPrice : currentPrice < entryPrice;
+  }
+
   function getCountdown(trade: ActiveTrade) {
     const elapsed = (Date.now() - new Date(trade.createdAt).getTime()) / 1000;
     const rem = Math.max(0, trade.expirySecs - elapsed);
@@ -650,20 +694,26 @@ export default function TradePage() {
       {activeTrades.length > 0 && (
         <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12 }}>
           <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 8 }}>Operações ativas ({activeTrades.length})</div>
-          {activeTrades.map(t => (
-            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#111827", borderRadius: 8, padding: "8px 10px", marginBottom: 6 }}>
-              <div>
-                <div style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{t.asset}</div>
-                <div style={{ color: t.direction === "call" ? "#22c55e" : "#ef4444", fontSize: 11 }}>
-                  {t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"} · {formatKz(t.amount)}
+          {activeTrades.map(t => {
+            const winning = isTradeWinning(t.direction, t.entryPrice);
+            return (
+              <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: winning ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${winning ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"}`, borderRadius: 8, padding: "8px 10px", marginBottom: 6, transition: "border-color 0.4s, background 0.4s" }}>
+                <div>
+                  <div style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{t.asset}</div>
+                  <div style={{ color: t.direction === "call" ? "#22c55e" : "#ef4444", fontSize: 11 }}>
+                    {t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"} · {formatKz(t.amount)}
+                  </div>
+                  <div style={{ color: winning ? "#22c55e" : "#ef4444", fontSize: 10, fontWeight: 800, marginTop: 2 }}>
+                    {currentPrice === 0 ? "—" : winning ? "● GANHO" : "● PERDA"}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 13 }}>{getCountdown(t)}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 10 }}>restante</div>
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 13 }}>{getCountdown(t)}</div>
-                <div style={{ color: "#94a3b8", fontSize: 10 }}>restante</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
