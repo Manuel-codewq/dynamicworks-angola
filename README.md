@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dynamics Works — Plataforma de Trading de Opções Binárias
 
-## Getting Started
+Plataforma de negociação de opções binárias desenvolvida para o mercado angolano.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 18+
+- PostgreSQL (recomendado: [Neon](https://neon.tech) — serverless, plano gratuito disponível)
+- npm
+
+## Instalação local
 
 ```bash
+# 1. Clonar o repositório
+git clone <repo-url>
+cd dynamics-works
+
+# 2. Instalar dependências
+npm install
+
+# 3. Configurar variáveis de ambiente
+cp .env.example .env.local
+# Editar .env.local com os seus valores
+
+# 4. Sincronizar base de dados
+npx prisma db push
+
+# 5. Iniciar em desenvolvimento
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build para produção
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Variáveis de ambiente obrigatórias
 
-To learn more about Next.js, take a look at the following resources:
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | URL de ligação PostgreSQL |
+| `NEXTAUTH_SECRET` | Segredo para JWT (`openssl rand -base64 32`) |
+| `NEXTAUTH_URL` | URL público da aplicação (ex: `https://dynamicsworks.ao`) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Variáveis opcionais
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variável | Descrição | Padrão |
+|---|---|---|
+| `RESEND_API_KEY` | Chave API Resend para emails | Emails desativados |
+| `BNA_USD_RATE` | Taxa USD→Kz de fallback | `920` |
 
-## Deploy on Vercel
+## Criar conta administrador
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Em produção, executar diretamente na base de dados:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```sql
+UPDATE "User" SET role = 'admin' WHERE email = 'seu@email.com';
+```
+
+Ou via API em desenvolvimento: `GET /api/admin/seed`
+
+## Deploy no Vercel
+
+1. Importar o repositório no [Vercel](https://vercel.com)
+2. Adicionar as variáveis de ambiente (Settings → Environment Variables)
+3. O ficheiro `vercel.json` configura os crons automaticamente:
+
+```json
+{
+  "crons": [
+    { "path": "/api/worker",         "schedule": "* * * * *" },
+    { "path": "/api/price-recorder", "schedule": "* * * * *" }
+  ]
+}
+```
+
+> Os crons do Vercel requerem plano Pro ou superior.
+
+## Arquitectura
+
+| Caminho | Descrição |
+|---|---|
+| `app/trade` | Página principal de trading (gráfico + painel) |
+| `app/wallet` | Carteira — depósitos e levantamentos |
+| `app/dashboard` | Dashboard com estatísticas |
+| `app/profile` | Perfil do utilizador e KYC |
+| `app/ao/admin` | Painel de administração (`/ao/admin`) |
+| `app/api/worker` | Cron — resolve operações expiradas |
+| `app/api/price-recorder` | Cron — regista preços Deriv na BD |
+| `lib/settings.ts` | Configurações da plataforma (singleton em memória) |
+| `lib/derivWebSocket.ts` | Cliente WebSocket Deriv |
+| `lib/email.ts` | Envio de emails via Resend |
+| `lib/notify.ts` | Notificações in-app |
+| `prisma/schema.prisma` | Esquema da base de dados |
+| `proxy.ts` | Middleware de autenticação e manutenção |
+
+## Licença
+
+Todos os direitos reservados — Dynamics Works © 2025

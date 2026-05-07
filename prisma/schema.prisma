@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  password     String
+  phone        String?
+  province     String?
+  biNumber     String?
+  balance      Float         @default(10000)
+  demoBalance  Float         @default(10000)
+  isDemo       Boolean       @default(true)
+  role         String        @default("user")
+  status       String        @default("active")
+  kycStatus      String        @default("pending")
+  emailVerified  Boolean       @default(false)
+  verifyCode     String?
+  verifyExpires  DateTime?
+  createdAt      DateTime      @default(now())
+  trades        Trade[]
+  transactions  Transaction[]
+  notifications Notification[]
+}
+
+model Trade {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  asset      String
+  direction  String
+  amount     Float
+  entryPrice Float
+  closePrice Float?
+  payout     Float     @default(0.85)
+  result     String?
+  profit     Float?
+  expirySecs Int
+  status     String    @default("active")
+  createdAt  DateTime  @default(now())
+  closedAt   DateTime?
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  amount    Float
+  method    String?
+  status    String   @default("pending")
+  reference String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model PriceCandle {
+  id        String   @id @default(cuid())
+  asset     String
+  timeframe String
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float    @default(0)
+  timestamp DateTime
+  createdAt DateTime @default(now())
+
+  @@index([asset, timeframe, timestamp])
+  @@unique([asset, timeframe, timestamp])
+}
