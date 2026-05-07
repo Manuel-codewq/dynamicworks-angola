@@ -714,61 +714,60 @@ export default function TradePage() {
 
   // ── MOBILE RENDER ─────────────────────────────────────────────────────────
   if (isMobile) {
-    const TOPBAR_H    = 52;
-    const TICKER_H    = 28;
-    const TF_H        = 38;
-    const BOTTOMNAV_H = 60;
-    const CONTENT_TOP = TOPBAR_H + TICKER_H + TF_H;
-    const chartH      = windowHeight > 0 ? windowHeight - CONTENT_TOP - BOTTOMNAV_H : 400;
+    const TOPBAR_H     = 52;
+    const TICKER_H     = 28;
+    const TF_H         = 38;
+    const TRADEBAR_H   = 84;
+    const BOTTOMNAV_H  = 56;
+    const CONTENT_TOP  = TOPBAR_H + TICKER_H + TF_H;
+    const chartH       = windowHeight > 0 ? windowHeight - CONTENT_TOP - TRADEBAR_H - BOTTOMNAV_H : 300;
 
     return (
       <div style={{ height: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif", overflow: "hidden" }}>
+        <style>{`
+          @keyframes ticker { from { transform:translateX(0) } to { transform:translateX(-50%) } }
+          @keyframes slideUp { from { transform:translateY(100%); opacity:0 } to { transform:translateY(0); opacity:1 } }
+        `}</style>
 
-        {/* Win/loss toast — below all fixed bars */}
+        {/* Toast notification */}
         {notification && (
-          <div style={{ position: "fixed", top: CONTENT_TOP + 8, left: 12, right: 12, zIndex: 2000, background: notification.type === "win" ? "rgba(34,197,94,0.96)" : notification.type === "loss" ? "rgba(239,68,68,0.96)" : "rgba(245,166,35,0.96)", color: "#fff", padding: "12px 16px", borderRadius: 10, fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px rgba(0,0,0,0.5)", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ position: "fixed", top: CONTENT_TOP + 8, left: 12, right: 12, zIndex: 2000,
+            background: notification.type === "win" ? "rgba(34,197,94,0.97)" : notification.type === "loss" ? "rgba(239,68,68,0.97)" : "rgba(245,166,35,0.97)",
+            color: "#fff", padding: "12px 16px", borderRadius: 12, fontWeight: 700, fontSize: 14,
+            boxShadow: "0 4px 24px rgba(0,0,0,0.6)", display: "flex", alignItems: "center", gap: 8,
+            animation: "slideUp 0.2s ease" }}>
             {notification.type === "win" ? <TrendingUp size={16} /> : notification.type === "loss" ? <TrendingDown size={16} /> : <AlertCircle size={16} />}
             {notification.msg}
           </div>
         )}
 
         {/* ── Topbar ── */}
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
-          {/* Logo + brand */}
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110,
+          background: "#111827", borderBottom: "1px solid #1e2d50",
+          display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <div style={{ width: 28, height: 28, background: "#f5a623", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <TrendingUp size={16} color="#0a0f1e" strokeWidth={2.5} />
             </div>
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Dynamics Works</span>
+            <span style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Dynamics Works</span>
           </div>
-
-          {/* Asset selector */}
           <AssetDropdown mobile />
-
           <div style={{ flex: 1 }} />
-
-          {/* Reload demo */}
           {isDemo && demoBalance < 5000 && (
             <button onClick={resetDemo} disabled={demoReloading}
-              style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 5, fontSize: 10, padding: "2px 6px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, whiteSpace: "nowrap", flexShrink: 0 }}>
+              style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 5, fontSize: 10, padding: "2px 6px", cursor: "pointer", flexShrink: 0 }}>
               {demoReloading ? "..." : "↺"}
             </button>
           )}
-
-          {/* Notification bell */}
           <NotificationBell />
-
-          {/* Balance — click to toggle demo/real */}
           <button onClick={toggleAccount}
             style={{ background: "#0a0f1e", border: `1px solid ${isDemo ? "rgba(245,166,35,0.4)" : "rgba(34,197,94,0.4)"}`, borderRadius: 7, padding: "4px 8px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0 }}>
             <Wallet size={11} color="#f5a623" />
             <span style={{ color: "#fff", fontWeight: 700, fontSize: 11 }}>{formatKz(Math.floor(displayBalance))}</span>
-            <span style={{ background: isDemo ? "rgba(245,166,35,0.2)" : "rgba(34,197,94,0.2)", color: isDemo ? "#f5a623" : "#22c55e", borderRadius: 3, fontSize: 9, padding: "1px 4px", fontWeight: 800, letterSpacing: 0.3 }}>
+            <span style={{ background: isDemo ? "rgba(245,166,35,0.2)" : "rgba(34,197,94,0.2)", color: isDemo ? "#f5a623" : "#22c55e", borderRadius: 3, fontSize: 9, padding: "1px 4px", fontWeight: 800 }}>
               {isDemo ? "D" : "R"}
             </span>
           </button>
-
-          {/* Avatar + dropdown */}
           <div style={{ position: "relative", flexShrink: 0 }}>
             <button onClick={() => setUserMenuOpen(!userMenuOpen)}
               style={{ width: 28, height: 28, background: "#f5a623", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -792,89 +791,106 @@ export default function TradePage() {
           </div>
         </div>
 
-        {/* ── Ticker bar ── */}
+        {/* ── Ticker ── */}
         <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TICKER_H, zIndex: 109, background: "#0d1526", borderBottom: "1px solid #1e2d50", overflow: "hidden", display: "flex", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 24, padding: "0 12px", animation: "ticker 20s linear infinite", whiteSpace: "nowrap" }}>
             {[...pairs, ...pairs].map((p, i) => {
               const price = tickerPrices[p.symbol] ?? 0;
-              const seed  = SEED_PRICES[p.symbol] ?? 1;
-              const isUp  = price >= seed;
+              const isUp  = price >= (SEED_PRICES[p.symbol] ?? 1);
               return (
                 <span key={i} style={{ fontSize: 11, color: "#94a3b8" }}>
                   <span style={{ color: "#fff", fontWeight: 600 }}>{p.label} </span>
-                  <span style={{ color: isUp ? "#22c55e" : "#ef4444" }}>
-                    {price > 0 ? price.toFixed(p.decimals) : "—"}
-                  </span>
+                  <span style={{ color: isUp ? "#22c55e" : "#ef4444" }}>{price > 0 ? price.toFixed(p.decimals) : "—"}</span>
                 </span>
               );
             })}
           </div>
-          <style>{`@keyframes ticker { from { transform:translateX(0) } to { transform:translateX(-50%) } }`}</style>
         </div>
 
         {/* ── Timeframe strip ── */}
-        <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 12px", gap: 6 }}>
+        <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
           {["1m", "5m", "15m", "1h", "1D"].map(tf => (
             <button key={tf} onClick={() => setTimeframe(tf)}
-              style={{ background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#0a0f1e" : "#94a3b8", border: `1px solid ${timeframe === tf ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              style={{ background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#0a0f1e" : "#64748b", border: `1px solid ${timeframe === tf ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {tf}
             </button>
           ))}
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: priceUp ? "#22c55e" : "#ef4444" }}>
+          <div style={{ flex: 1, textAlign: "right" }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: priceUp ? "#22c55e" : "#ef4444" }}>
               {priceUp ? "▲" : "▼"} {priceStr}
             </span>
           </div>
         </div>
 
         {/* ── Chart ── */}
-        <div ref={chartRef} style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }} />
+        <div ref={chartRef} style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c" }} />
 
-        {/* ── Bottom nav ── */}
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 110, background: "#111827", borderTop: "1px solid #1e2d50", display: "flex", alignItems: "center" }}>
-          {([
-            { id: "chart",   label: "Gráfico",  Icon: BarChart2   },
-            { id: "trade",   label: "Negociar", Icon: DollarSign  },
-            { id: "wallet",  label: "Carteira", Icon: Wallet      },
-            { id: "account", label: "Conta",    Icon: User        },
-          ] as const).map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => {
-              if (id === "wallet")  { router.push("/wallet");  return; }
-              if (id === "account") { router.push("/profile"); return; }
-              if (id === "trade")   { setMobileTab("trade"); setTradeDrawer(true); return; }
-              setMobileTab("chart"); setTradeDrawer(false);
-            }}
-              style={{ flex: 1, height: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
-              <Icon size={22} color={mobileTab === id ? "#f5a623" : "#64748b"} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: mobileTab === id ? "#f5a623" : "#64748b" }}>{label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Drawer backdrop ── */}
-        {tradeDrawer && (
-          <div onClick={() => { setTradeDrawer(false); setMobileTab("chart"); }}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200 }} />
+        {/* ── Active trades bar (above trade bar, if any) ── */}
+        {activeTrades.length > 0 && (
+          <div style={{ position: "fixed", bottom: TRADEBAR_H + BOTTOMNAV_H, left: 0, right: 0, zIndex: 108, background: "rgba(10,15,30,0.95)", borderTop: "1px solid #1e2d50", padding: "4px 10px", display: "flex", gap: 8, overflowX: "auto" }}>
+            {activeTrades.map(t => (
+              <div key={t.id} style={{ flexShrink: 0, background: "#111827", border: `1px solid ${t.direction === "call" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "4px 10px", display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ color: t.direction === "call" ? "#22c55e" : "#ef4444", fontSize: 11, fontWeight: 700 }}>
+                  {t.direction === "call" ? "▲" : "▼"} {t.asset}
+                </span>
+                <span style={{ color: "#f5a623", fontSize: 11, fontWeight: 700 }}>{getCountdown(t)}</span>
+                <span style={{ color: "#64748b", fontSize: 10 }}>{formatKz(t.amount)}</span>
+              </div>
+            ))}
+          </div>
         )}
 
-        {/* ── Trade drawer ── */}
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, height: "82vh", background: "#111827", borderRadius: "16px 16px 0 0", transform: tradeDrawer ? "translateY(0)" : "translateY(100%)", transition: "transform 0.3s cubic-bezier(0.32,0.72,0,1)", display: "flex", flexDirection: "column", boxShadow: "0 -8px 40px rgba(0,0,0,0.6)" }}>
-          <div style={{ padding: "12px 0 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            <div style={{ width: 36, height: 4, background: "#374151", borderRadius: 2 }} />
-            <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
-              <div>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Abrir Operação</span>
-                <span style={{ marginLeft: 8, color: "#94a3b8", fontSize: 12 }}>{selectedPair?.label}</span>
-              </div>
-              <button onClick={() => { setTradeDrawer(false); setMobileTab("chart"); }}
-                style={{ background: "#1e2d50", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={16} color="#94a3b8" />
-              </button>
+        {/* ── Trade bar (always visible) ── */}
+        <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, height: TRADEBAR_H, zIndex: 109, background: "#111827", borderTop: "1px solid #1e2d50", padding: "8px 10px", display: "flex", flexDirection: "column", gap: 7 }}>
+          {/* Row 1: amount + expiry selectors */}
+          <div style={{ display: "flex", gap: 6 }}>
+            {/* Amount quick pick */}
+            <div style={{ flex: 1, display: "flex", gap: 4 }}>
+              {QUICK_AMOUNTS.map(q => (
+                <button key={q} onClick={() => setAmount(q)}
+                  style={{ flex: 1, height: 28, background: amount === q ? "#f5a623" : "#0a0f1e", color: amount === q ? "#0a0f1e" : "#64748b", border: `1px solid ${amount === q ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                  {q / 1000}k
+                </button>
+              ))}
+            </div>
+            {/* Expiry quick pick */}
+            <div style={{ display: "flex", gap: 4 }}>
+              {EXPIRY_OPTIONS.map(opt => (
+                <button key={opt.secs} onClick={() => setExpiry(opt)}
+                  style={{ height: 28, padding: "0 7px", background: expiry.secs === opt.secs ? "rgba(245,166,35,0.15)" : "transparent", color: expiry.secs === opt.secs ? "#f5a623" : "#64748b", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 24px" }}>
-            <TradePanelContent compact />
+
+          {/* Row 2: ALTA / BAIXA buttons */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => openTrade("call")} disabled={loading || currentPrice === 0}
+              style={{ flex: 1, height: 38, background: loading ? "#14532d" : "#22c55e", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 800, cursor: loading || currentPrice === 0 ? "not-allowed" : "pointer", opacity: currentPrice === 0 ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 0.15s" }}>
+              {loading ? <span style={{ fontSize: 12 }}>A processar...</span> : <><TrendingUp size={16} /> ALTA +{Math.round(amount * 0.85 / 1000)}k</>}
+            </button>
+            <button onClick={() => openTrade("put")} disabled={loading || currentPrice === 0}
+              style={{ flex: 1, height: 38, background: loading ? "#7f1d1d" : "#ef4444", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 800, cursor: loading || currentPrice === 0 ? "not-allowed" : "pointer", opacity: currentPrice === 0 ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 0.15s" }}>
+              {loading ? <span style={{ fontSize: 12 }}>A processar...</span> : <><TrendingDown size={16} /> BAIXA +{Math.round(amount * 0.85 / 1000)}k</>}
+            </button>
           </div>
+        </div>
+
+        {/* ── Bottom nav ── */}
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 110, background: "#0d1117", borderTop: "1px solid #1e2d50", display: "flex" }}>
+          {([
+            { id: "chart",   label: "Gráfico",    Icon: BarChart2, action: () => {} },
+            { id: "wallet",  label: "Carteira",   Icon: Wallet,    action: () => router.push("/wallet") },
+            { id: "dash",    label: "Dashboard",  Icon: DollarSign,action: () => router.push("/dashboard") },
+            { id: "account", label: "Conta",      Icon: User,      action: () => router.push("/profile") },
+          ] as const).map(({ id, label, Icon, action }) => (
+            <button key={id} onClick={action}
+              style={{ flex: 1, height: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
+              <Icon size={20} color={id === "chart" ? "#f5a623" : "#4b5563"} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: id === "chart" ? "#f5a623" : "#4b5563" }}>{label}</span>
+            </button>
+          ))}
         </div>
       </div>
     );
