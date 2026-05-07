@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { settings } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
 
 export async function GET() {
-  return NextResponse.json({ maintenance: settings.maintenanceMode });
+  const { maintenanceMode } = await getSettings();
+  return NextResponse.json({ maintenance: maintenanceMode });
 }

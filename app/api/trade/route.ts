@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { settings } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
 
 const ALLOWED_ASSETS = [
   // Live forex
@@ -66,7 +66,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Expiração entre 1 e 60 minutos" }, { status: 400 });
   }
 
-  if (settings.maintenanceMode) {
+  const cfg = await getSettings();
+  if (cfg.maintenanceMode) {
     return NextResponse.json({ error: "Plataforma em manutenção. Tente novamente em breve." }, { status: 503 });
   }
 
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
   // Schedule resolution — outcome determined server-side with house edge
   setTimeout(async () => {
     try {
-      const winProb = settings.winProbability[asset] ?? 0.47;
+      const winProb = cfg.winProbability[asset] ?? 0.47;
       const result: "win" | "loss" = Math.random() < winProb ? "win" : "loss";
       const profit = result === "win" ? amount * payout : -amount;
       const returnAmount = result === "win" ? amount + amount * payout : 0;

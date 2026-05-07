@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { settings } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
 
 export async function GET() {
   const activeTrades = await prisma.trade.findMany({
@@ -12,6 +12,8 @@ export async function GET() {
     return NextResponse.json({ processed: 0, wins: 0, losses: 0 });
   }
 
+  const cfg = await getSettings();
+
   const now = new Date();
   let wins = 0;
   let losses = 0;
@@ -22,7 +24,7 @@ export async function GET() {
       const expiresAt = new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
       if (now < expiresAt) return; // not yet expired
 
-      const winProb = settings.winProbability[trade.asset] ?? 0.47;
+      const winProb = cfg.winProbability[trade.asset] ?? 0.47;
       const isWin   = Math.random() < winProb;
 
       const closePrice = isWin

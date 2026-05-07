@@ -11,6 +11,7 @@ import {
 } from "lightweight-charts";
 import {
   derivWS, getAvailablePairs, GRANULARITY, OTC_BASE_PRICES,
+  FOREX_PAIRS, OTC_PAIRS,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -162,13 +163,24 @@ export default function TradePage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ── Available pairs (weekday forex / weekend synthetic) ──────────────────
-  const [pairs]        = useState<DerivPair[]>(() =>
-    typeof window === "undefined" ? [] : getAvailablePairs()
-  );
+  // ── Available pairs — loaded from /api/market-mode (respects admin setting) ─
+  const [pairs,        setPairs]        = useState<DerivPair[]>([]);
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
-  // initialise after pairs are known (avoids SSR mismatch)
-  useEffect(() => { if (pairs.length > 0 && !selectedPair) setSelectedPair(pairs[0]); }, [pairs]); // eslint-disable-line
+
+  useEffect(() => {
+    fetch("/api/market-mode")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const list = d?.mode === "otc" ? OTC_PAIRS : d?.mode === "live" ? FOREX_PAIRS : getAvailablePairs();
+        setPairs(list);
+        setSelectedPair(p => p ?? list[0] ?? null);
+      })
+      .catch(() => {
+        const fallback = getAvailablePairs();
+        setPairs(fallback);
+        setSelectedPair(p => p ?? fallback[0] ?? null);
+      });
+  }, []); // eslint-disable-line
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [assetDropdown, setAssetDropdown] = useState(false);

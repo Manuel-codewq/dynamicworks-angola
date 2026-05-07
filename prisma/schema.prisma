@@ -72,6 +72,15 @@ model Notification {
   @@index([userId, createdAt])
 }
 
+model Settings {
+  id              String  @id @default("singleton")
+  otcMode         String  @default("auto")
+  maintenanceMode Boolean @default(false)
+  winProbability  Json    @default("{}")
+  payout          Json    @default("{}")
+  updatedAt       DateTime @updatedAt
+}
+
 model PriceCandle {
   id        String   @id @default(cuid())
   asset     String
