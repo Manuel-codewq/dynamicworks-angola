@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       const isOTC = asset.includes("(OTC)");
 
       // Fetch real close price; OTC pairs are simulated since market is closed
-      let closePrice: number;
+      let closePrice: number = entryPrice * (1 + (Math.random() - 0.5) * 0.004);
       let fetchedReal = false;
 
       if (!isOTC) {
@@ -132,10 +132,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (!fetchedReal) {
-        // OTC or fetch failed: simulate a small random movement from entry price
-        closePrice = entryPrice * (1 + (Math.random() - 0.5) * 0.004);
-      }
+      // closePrice already defaulted to simulated value above; no extra assignment needed
 
       // Determine result by comparing close vs entry price
       let result: "win" | "loss";
