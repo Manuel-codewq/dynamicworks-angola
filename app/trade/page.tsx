@@ -64,7 +64,7 @@ const SEED_PRICES: Record<string, number> = {
   frxEURJPY: 162.5,  frxGBPJPY: 188.7,  frxEURCAD: 1.475,
   frxAUDJPY: 97.5,   frxGBPAUD: 1.965,  frxEURCHF: 0.968,
   // Crypto
-  cryBTCUSD: 60000,  cryETHUSD: 3200,   cryXRPUSD: 0.52,   cryLTCUSD: 85,
+  cryBTCUSD: 60000,  cryETHUSD: 3200,
   // Commodities
   frxXAUUSD: 2350,   frxXAGUSD: 27.5,
   // Synthetic indices

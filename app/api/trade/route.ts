@@ -14,7 +14,7 @@ const ALLOWED_ASSETS = [
   "EUR/JPY (OTC)", "GBP/JPY (OTC)", "EUR/CAD (OTC)",
   "AUD/JPY (OTC)", "GBP/AUD (OTC)", "EUR/CHF (OTC)",
   // Crypto (24/7)
-  "BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD",
+  "BTC/USD", "ETH/USD",
   // Commodities (24/7)
   "XAU/USD", "XAG/USD",
   // Synthetic / Volatility (weekends)

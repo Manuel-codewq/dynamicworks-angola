@@ -28,8 +28,6 @@ export const FOREX_PAIRS: DerivPair[] = [
 export const CRYPTO_PAIRS: DerivPair[] = [
   { symbol: "cryBTCUSD", label: "BTC/USD", category: "Cripto", decimals: 2 },
   { symbol: "cryETHUSD", label: "ETH/USD", category: "Cripto", decimals: 2 },
-  { symbol: "cryXRPUSD", label: "XRP/USD", category: "Cripto", decimals: 4 },
-  { symbol: "cryLTCUSD", label: "LTC/USD", category: "Cripto", decimals: 2 },
 ];
 
 // Commodities — live 24/5 via Deriv WebSocket

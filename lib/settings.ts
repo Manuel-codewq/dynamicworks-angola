@@ -11,7 +11,7 @@ const ALL_PAIRS = [
   "EUR/JPY (OTC)", "GBP/JPY (OTC)", "EUR/CAD (OTC)",
   "AUD/JPY (OTC)", "GBP/AUD (OTC)", "EUR/CHF (OTC)",
   // Crypto
-  "BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD",
+  "BTC/USD", "ETH/USD",
   // Commodities
   "XAU/USD", "XAG/USD",
   // Synthetic
