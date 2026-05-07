@@ -4,7 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, Clock, Wallet,
-  User, LogOut, BarChart2, AlertCircle, X, DollarSign,
+  User, LogOut, BarChart2, AlertCircle, X, DollarSign, Trophy,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries,
@@ -54,12 +54,6 @@ const EXPIRY_OPTIONS = [
 ];
 
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
-
-const FAKE_NAMES = [
-  "João de Luanda", "Maria de Benguela", "Pedro do Huambo", "Ana de Cabinda",
-  "Carlos do Bié", "Sofia de Malanje", "David do Namibe", "Graça de Huíla",
-  "António do Uíge", "Beatriz do Cunene",
-];
 
 // Approximate initial prices for placeholder candles while WS connects
 const SEED_PRICES: Record<string, number> = {
@@ -407,13 +401,15 @@ export default function TradePage() {
     return () => clearInterval(id);
   }, [isOTC, selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Fake wins feed ───────────────────────────────────────────────────────
+  // ── Real wins feed (polls every 15s) ─────────────────────────────────────
   useEffect(() => {
-    const id = setInterval(() => {
-      const name = FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)];
-      const amt  = (Math.floor(Math.random() * 20) + 1) * 1000;
-      setRecentWins(prev => [{ name, amount: amt, time: Date.now() }, ...prev].slice(0, 5));
-    }, 4000);
+    function fetchWins() {
+      fetch("/api/recent-wins")
+        .then(r => r.ok ? r.json() : [])
+        .then((d: any[]) => setRecentWins(d.slice(0, 8).map(w => ({ name: w.name, amount: w.amount, time: new Date(w.time).getTime() }))));
+    }
+    fetchWins();
+    const id = setInterval(fetchWins, 15_000);
     return () => clearInterval(id);
   }, []);
 
@@ -952,11 +948,11 @@ export default function TradePage() {
           {([
             { id: "chart",   label: "Gráfico",  Icon: BarChart2   },
             { id: "trade",   label: "Negociar", Icon: DollarSign  },
-            { id: "wallet",  label: "Carteira", Icon: Wallet      },
+            { id: "ranking", label: "Ranking",  Icon: Trophy      },
             { id: "account", label: "Conta",    Icon: User        },
           ] as const).map(({ id, label, Icon }) => (
             <button key={id} onClick={() => {
-              if (id === "wallet")  { router.push("/wallet");  return; }
+              if (id === "ranking") { router.push("/ranking");  return; }
               if (id === "account") { router.push("/profile"); return; }
               if (id === "trade")   { setMobileTab("trade"); setTradeDrawer(true); return; }
               setMobileTab("chart"); setTradeDrawer(false);
@@ -1059,6 +1055,7 @@ export default function TradePage() {
                 <div style={{ color: "#94a3b8", fontSize: 12 }}>{session?.user?.email}</div>
               </div>
               <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={14} /> Dashboard</a>
+              <a href="/ranking"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Trophy size={14} /> Ranking</a>
               <a href="/wallet"    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Wallet size={14} /> Carteira</a>
               <a href="/profile"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><User size={14} /> Perfil</a>
               <button onClick={() => signOut({ callbackUrl: "/login" })}
