@@ -145,7 +145,7 @@ function toChartCandles(raw: DerivCandle[]): CandlestickData[] {
 interface ActiveTrade {
   id: string; asset: string; direction: string;
   amount: number; entryPrice: number; expirySecs: number;
-  createdAt: string; payout: number;
+  createdAt: string; payout: number; remainingSecs: number;
 }
 interface RecentWin { name: string; amount: number; time: number; }
 
@@ -244,6 +244,7 @@ export default function TradePage() {
   const lastPriceRef       = useRef<number>(0);
   const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
   const activeTradesRef    = useRef<ActiveTrade[]>([]);
+  const lastPollAtRef      = useRef<number>(Date.now());
   // Stable refs for use inside WS callbacks (avoid stale closures)
   const selectedPairRef  = useRef<DerivPair | null>(null);
   const timeframeRef     = useRef<string>("1m");
@@ -532,6 +533,7 @@ export default function TradePage() {
       if (!res.ok) return;
       const data = await res.json();
       const trades: any[] = data.trades ?? [];
+      lastPollAtRef.current = Date.now();
       setActiveTrades(trades.filter((t: any) => t.status === "active"));
       const justClosed = trades.filter((t: any) => {
         if (t.status !== "closed") return false;
@@ -596,8 +598,10 @@ export default function TradePage() {
   }
 
   function getCountdown(trade: ActiveTrade) {
-    const elapsed = (Date.now() - new Date(trade.createdAt).getTime()) / 1000;
-    const rem = Math.max(0, trade.expirySecs - elapsed);
+    // Use server-provided remainingSecs to avoid client/server clock skew.
+    // Subtract time elapsed since the last poll using the client's own clock.
+    const elapsedSincePoll = Math.max(0, (Date.now() - lastPollAtRef.current) / 1000);
+    const rem = Math.max(0, trade.remainingSecs - elapsedSincePoll);
     return `${Math.floor(rem / 60)}:${String(Math.floor(rem % 60)).padStart(2, "0")}`;
   }
 

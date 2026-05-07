@@ -165,5 +165,15 @@ export async function GET(req: NextRequest) {
     prisma.trade.count({ where: { userId: session.user.id } }),
   ]);
 
-  return NextResponse.json({ trades, total, page, totalPages: Math.ceil(total / limit) });
+  // Include server-calculated remainingSecs so the client doesn't need to
+  // compare clocks (avoids inflated countdowns from server/client clock skew)
+  const now = Date.now();
+  const tradesWithRemaining = trades.map(t => ({
+    ...t,
+    remainingSecs: t.status === "active"
+      ? Math.max(0, t.expirySecs - Math.floor((now - t.createdAt.getTime()) / 1000))
+      : 0,
+  }));
+
+  return NextResponse.json({ trades: tradesWithRemaining, total, page, totalPages: Math.ceil(total / limit) });
 }
