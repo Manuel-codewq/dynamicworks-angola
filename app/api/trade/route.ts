@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
   if (!amount || amount < 1000 || amount > 500000) {
     return NextResponse.json({ error: "Valor entre 1.000 e 500.000 Kz" }, { status: 400 });
   }
-  if (![60, 300, 900, 3600].includes(expirySecs)) {
-    return NextResponse.json({ error: "Expiração inválida" }, { status: 400 });
+  if (!Number.isInteger(expirySecs) || expirySecs < 60 || expirySecs > 3600) {
+    return NextResponse.json({ error: "Expiração entre 1 e 60 minutos" }, { status: 400 });
   }
 
   if (settings.maintenanceMode) {

@@ -192,6 +192,7 @@ export default function TradePage() {
   const [clockStr,       setClockStr]       = useState("");
   const [demoReloading,  setDemoReloading]  = useState(false);
   const [bnaRate,        setBnaRate]        = useState<number | null>(null);
+  const [candleTimer,    setCandleTimer]    = useState("");
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const chartRef           = useRef<HTMLDivElement>(null);
@@ -215,6 +216,21 @@ export default function TradePage() {
     const id = setInterval(tick, 10000);
     return () => clearInterval(id);
   }, []);
+
+  // ── Candle countdown timer ──────────────────────────────────────────────
+  useEffect(() => {
+    function tick() {
+      const gran = GRANULARITY[timeframe] ?? 60;
+      const now  = Math.floor(Date.now() / 1000);
+      const rem  = gran - (now % gran);
+      const m    = Math.floor(rem / 60);
+      const s    = rem % 60;
+      setCandleTimer(`${m}:${String(s).padStart(2, "0")}`);
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [timeframe]);
 
   // ── BNA exchange rate (fetched once per hour) ───────────────────────────
   useEffect(() => {
@@ -629,8 +645,10 @@ export default function TradePage() {
         <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 6 }}>Valor de investimento</div>
         <div style={{ position: "relative", marginBottom: 8 }}>
           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#f5a623", fontWeight: 700, fontSize: 13 }}>Kz</span>
-          <input type="number" value={amount}
-            onChange={e => setAmount(Math.max(1000, Math.min(500000, parseInt(e.target.value) || 1000)))}
+          <input type="number" value={amount || ""}
+            onChange={e => { const v = parseInt(e.target.value); setAmount(isNaN(v) ? 0 : Math.min(500000, v)); }}
+            onBlur={() => setAmount(a => Math.max(1000, a || 1000))}
+            placeholder="1000"
             style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 10px 10px 32px", color: "#fff", fontSize: 16, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
         </div>
         <div style={{ display: "flex", gap: 6 }}>
@@ -646,13 +664,26 @@ export default function TradePage() {
       {/* Expiry */}
       <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12 }}>
         <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 6 }}>Tempo de expiração</div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           {EXPIRY_OPTIONS.map(opt => (
             <button key={opt.secs} onClick={() => setExpiry(opt)}
-              style={{ flex: 1, height: 38, background: expiry.secs === opt.secs ? "#f5a623" : "#1e2d50", color: expiry.secs === opt.secs ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              style={{ flex: 1, height: 34, background: expiry.secs === opt.secs ? "#f5a623" : "#1e2d50", color: expiry.secs === opt.secs ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {opt.label}
             </button>
           ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "#94a3b8", fontSize: 11, whiteSpace: "nowrap" }}>Personalizado:</span>
+          <div style={{ position: "relative", flex: 1 }}>
+            <input type="number" min={1} max={59}
+              value={Math.round(expiry.secs / 60) || ""}
+              onChange={e => {
+                const mins = Math.max(1, Math.min(59, parseInt(e.target.value) || 1));
+                setExpiry({ label: `${mins} min`, secs: mins * 60 });
+              }}
+              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 6, padding: "6px 36px 6px 10px", color: "#fff", fontSize: 13, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
+            <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 11 }}>min</span>
+          </div>
         </div>
       </div>
 
@@ -870,7 +901,12 @@ export default function TradePage() {
               {tf}
             </button>
           ))}
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3 }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+            {candleTimer && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#f5a623", background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 5, padding: "2px 6px", fontVariantNumeric: "tabular-nums" }}>
+                ⏱ {candleTimer}
+              </span>
+            )}
             <span style={{ fontSize: 14, fontWeight: 700, color: priceUp ? "#22c55e" : "#ef4444" }}>
               {priceUp ? "▲" : "▼"} {priceStr}
             </span>
@@ -1035,6 +1071,11 @@ export default function TradePage() {
               </button>
             ))}
             <div style={{ flex: 1 }} />
+            {candleTimer && (
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#f5a623", background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 5, padding: "3px 8px", fontVariantNumeric: "tabular-nums" }}>
+                ⏱ {candleTimer}
+              </span>
+            )}
           </div>
           <div ref={chartRef} style={{ flex: 1, minHeight: 0 }} />
         </div>
