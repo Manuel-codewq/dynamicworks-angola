@@ -293,9 +293,12 @@ export default function TradePage() {
   // ── Subscribe to ticks + request candles when pair or timeframe changes ──
   useEffect(() => {
     if (!selectedPair) return;
+    // Reset live-candle state so incoming ticks don't get merged into a stale
+    // candle from the previous timeframe before the new history arrives
+    currentCandleRef.current = null;
+    lastPriceRef.current = 0;
     derivWS.subscribeToTicks(pairs.map(p => p.symbol));
     derivWS.getCandles(selectedPair.symbol, GRANULARITY[timeframe], 150);
-    lastPriceRef.current = 0;
   }, [selectedPair, timeframe, pairs]);
 
   // ── Real wins feed (polls every 15s) ─────────────────────────────────────
