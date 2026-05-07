@@ -14,7 +14,7 @@ model User {
   phone        String?
   province     String?
   biNumber     String?
-  balance      Float         @default(10000)
+  balance      Float         @default(0)
   demoBalance  Float         @default(10000)
   isDemo       Boolean       @default(true)
   role         String        @default("user")

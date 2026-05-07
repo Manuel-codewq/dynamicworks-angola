@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
         verifyCode: code,
         verifyExpires,
         emailVerified: false,
+        balance: 0,
+        demoBalance: 10000,
+        isDemo: true,
       },
     });
 
