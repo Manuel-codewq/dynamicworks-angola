@@ -109,7 +109,7 @@ export default function RegisterPage() {
               <div style={{ position: "relative" }}>
                 <User size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
                 <input type="text" value={form.name} onChange={e => update("name", e.target.value)}
-                  placeholder="João Silva" required style={inputStyle} />
+                  placeholder="Pedro Manuel" required style={inputStyle} />
               </div>
             </div>
 

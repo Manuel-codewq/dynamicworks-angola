@@ -109,7 +109,7 @@ function LoginContent() {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  placeholder="Pedromanuel@email.com"
                   required
                   style={{
                     width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50",
