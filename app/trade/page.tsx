@@ -621,7 +621,7 @@ export default function TradePage() {
   const priceStr       = currentPrice > 0 ? currentPrice.toFixed(decimals) : "—";
 
   // ── Shared trade panel ────────────────────────────────────────────────────
-  const TradePanelContent = ({ compact = false }: { compact?: boolean }) => (
+  function renderTradePanel(compact = false) { return (
     <div style={{ display: "flex", flexDirection: "column", gap: compact ? 10 : 12 }}>
       {/* Live price */}
       <div style={{
@@ -761,7 +761,7 @@ export default function TradePage() {
         </div>
       )}
     </div>
-  );
+  ); }
 
   // ── Asset dropdown (shared) ──────────────────────────────────────────────
   const AssetDropdown = ({ mobile = false }: { mobile?: boolean }) => (
@@ -959,7 +959,7 @@ export default function TradePage() {
             </div>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 24px" }}>
-            <TradePanelContent compact />
+            {renderTradePanel(true)}
           </div>
         </div>
       </div>
@@ -1082,7 +1082,7 @@ export default function TradePage() {
 
         {/* Right panel 30% */}
         <div style={{ flex: "0 0 30%", overflowY: "auto", padding: 16, background: "#0d1526" }}>
-          <TradePanelContent />
+          {renderTradePanel()}
         </div>
       </div>
     </div>
