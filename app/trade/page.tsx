@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  TrendingUp, TrendingDown, ChevronDown, Clock, Wallet,
+  TrendingUp, TrendingDown, ChevronDown, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, DollarSign, Trophy,
 } from "lucide-react";
 import {
@@ -144,7 +144,6 @@ export default function TradePage() {
   const [timeframe,      setTimeframe]      = useState("1m");
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
   const [userMenuOpen,   setUserMenuOpen]   = useState(false);
-  const [clockStr,       setClockStr]       = useState("");
   const [demoReloading,  setDemoReloading]  = useState(false);
   const [bnaRate,        setBnaRate]        = useState<number | null>(null);
   const [candleTimer,    setCandleTimer]    = useState("");
@@ -168,13 +167,6 @@ export default function TradePage() {
   useEffect(() => { selectedPairRef.current = selectedPair; }, [selectedPair]);
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
 
-  // ── Clock ────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const tick = () => setClockStr(new Date().toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" }));
-    tick();
-    const id = setInterval(tick, 10000);
-    return () => clearInterval(id);
-  }, []);
 
   // ── Candle countdown timer — pure UTC alignment ──────────────────────────
   // Deriv epoch and Date.now() are both UTC. gran - (nowSec % gran) always
@@ -960,8 +952,6 @@ export default function TradePage() {
           {isDemo ? "DEMO" : "REAL"}
         </button>
 
-        <Clock size={16} color="#94a3b8" />
-        <span style={{ color: "#94a3b8", fontSize: 13, minWidth: 44 }}>{clockStr}</span>
 
         <NotificationBell />
 
