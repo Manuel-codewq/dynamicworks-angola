@@ -31,29 +31,40 @@ export async function PATCH(
     return NextResponse.json({ error: "Transação já processada" }, { status: 409 });
   }
 
-  if (status === "completed") {
-    if (tx.type === "deposit") {
-      await prisma.user.update({
-        where: { id: tx.userId },
-        data:  { balance: { increment: tx.amount } },
-      });
-    } else if (tx.type === "withdrawal") {
-      const user = await prisma.user.findUnique({ where: { id: tx.userId } });
-      if (!user || user.balance < tx.amount) {
-        return NextResponse.json({ error: "Saldo insuficiente para processar levantamento" }, { status: 422 });
+  let updated;
+  try {
+    updated = await prisma.$transaction(async (dbTx) => {
+      if (status === "completed") {
+        if (tx.type === "deposit") {
+          await dbTx.user.update({
+            where: { id: tx.userId },
+            data:  { balance: { increment: tx.amount } },
+          });
+        } else if (tx.type === "withdrawal") {
+          // Debitar atomicamente: WHERE inclui condição de saldo — sem TOCTOU
+          const deducted = await dbTx.user.updateMany({
+            where: { id: tx.userId, balance: { gte: tx.amount } },
+            data:  { balance: { decrement: tx.amount } },
+          });
+          if (deducted.count === 0) {
+            throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
+          }
+        }
       }
-      await prisma.user.update({
-        where: { id: tx.userId },
-        data:  { balance: { decrement: tx.amount } },
-      });
-    }
-  }
 
-  const updated = await prisma.transaction.update({
-    where:   { id },
-    data:    { status },
-    include: { user: { select: { name: true, email: true } } },
-  });
+      return dbTx.transaction.update({
+        where:   { id },
+        data:    { status },
+        include: { user: { select: { name: true, email: true } } },
+      });
+    });
+  } catch (err: any) {
+    if (err?.code === "INSUFFICIENT_BALANCE") {
+      return NextResponse.json({ error: "Saldo insuficiente para processar levantamento" }, { status: 422 });
+    }
+    console.error("[admin/transactions] erro ao processar:", err);
+    return NextResponse.json({ error: "Erro interno ao processar transação" }, { status: 500 });
+  }
 
   const amt = tx.amount.toLocaleString("pt-AO");
   const notifMap: Record<string, Record<string, { title: string; message: string }>> = {

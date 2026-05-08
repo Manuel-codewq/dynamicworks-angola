@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,7 +9,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Dados em falta" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 5 tentativas por email a cada 15 minutos — protecção contra brute force ao código
+    if (!checkRateLimit("verify-email", normalizedEmail, 5, 15 * 60_000)) {
+      return NextResponse.json(
+        { error: "Demasiadas tentativas. Aguarda 15 minutos ou solicita um novo código." },
+        { status: 429 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
     }

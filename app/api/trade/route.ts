@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { getDerivPrice } from "@/lib/derivPrice";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const ALLOWED_ASSETS = [
   // Live forex
@@ -17,20 +18,6 @@ const ALLOWED_ASSETS = [
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
 ];
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
-    return true;
-  }
-  if (entry.count >= 10) return false;
-  entry.count++;
-  return true;
-}
-
 // Entry price is supplied by the client (from the live Deriv WS tick).
 // The server uses it for record-keeping only; outcome is determined server-side.
 function sanitizeEntryPrice(raw: unknown): number {
@@ -41,15 +28,15 @@ function sanitizeEntryPrice(raw: unknown): number {
 
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
-
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "Demasiadas operações. Aguarde 1 minuto." }, { status: 429 });
-  }
-
+  // Autenticar primeiro para usar userId no rate limit (IP é forjável)
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  // 10 trades por minuto por userId
+  if (!checkRateLimit("trade", session.user.id, 10, 60_000)) {
+    return NextResponse.json({ error: "Demasiadas operações. Aguarde 1 minuto." }, { status: 429 });
   }
 
   const body = await req.json();
@@ -83,28 +70,35 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   if (user.status === "blocked") return NextResponse.json({ error: "Conta bloqueada" }, { status: 403 });
 
-  const currentBalance = user.isDemo ? user.demoBalance : user.balance;
-  if (currentBalance < amount) {
-    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
-  }
-
   // Entry price comes from the client's live Deriv WS tick
   const entryPrice = sanitizeEntryPrice(rawEntryPrice);
   const payout = cfg.payout?.[asset] ?? 0.85;
 
   let trade;
   try {
-    // Deduct immediately
-    if (user.isDemo) {
-      await prisma.user.update({ where: { id: user.id }, data: { demoBalance: { decrement: amount } } });
-    } else {
-      await prisma.user.update({ where: { id: user.id }, data: { balance: { decrement: amount } } });
-    }
+    // Débito atómico: o WHERE inclui a condição de saldo para evitar race conditions
+    trade = await prisma.$transaction(async (tx) => {
+      const balanceField = user.isDemo ? "demoBalance" : "balance";
+      const updated = await tx.user.updateMany({
+        where: {
+          id: user.id,
+          [balanceField]: { gte: amount },
+        },
+        data: { [balanceField]: { decrement: amount } },
+      });
 
-    trade = await prisma.trade.create({
-      data: { userId: user.id, asset, direction, amount, entryPrice, payout, expirySecs, status: "active", isDemo: user.isDemo },
+      if (updated.count === 0) {
+        throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
+      }
+
+      return tx.trade.create({
+        data: { userId: user.id, asset, direction, amount, entryPrice, payout, expirySecs, status: "active", isDemo: user.isDemo },
+      });
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.code === "INSUFFICIENT_BALANCE") {
+      return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
+    }
     console.error("[trade/open]", err);
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
@@ -131,18 +125,20 @@ export async function POST(req: NextRequest) {
       const profit = result === "win" ? amount * payout : -amount;
       const returnAmount = result === "win" ? amount + amount * payout : 0;
 
-      await prisma.trade.update({
-        where: { id: trade.id },
-        data: { closePrice, result, profit, status: "closed", closedAt: new Date() },
-      });
+      await prisma.$transaction(async (tx) => {
+        await tx.trade.update({
+          where: { id: trade.id },
+          data: { closePrice, result, profit, status: "closed", closedAt: new Date() },
+        });
 
-      if (returnAmount > 0) {
-        if (user.isDemo) {
-          await prisma.user.update({ where: { id: user.id }, data: { demoBalance: { increment: returnAmount } } });
-        } else {
-          await prisma.user.update({ where: { id: user.id }, data: { balance: { increment: returnAmount } } });
+        if (returnAmount > 0) {
+          const balanceField = user.isDemo ? "demoBalance" : "balance";
+          await tx.user.update({
+            where: { id: user.id },
+            data:  { [balanceField]: { increment: returnAmount } },
+          });
         }
-      }
+      });
     } catch (err) {
       console.error("Trade resolution error:", err);
     }

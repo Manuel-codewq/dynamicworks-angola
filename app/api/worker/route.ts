@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Endpoint interno — requer segredo partilhado (ex: chamado por cron externo)
+  const secret = process.env.WORKER_SECRET;
+  if (!secret || req.headers.get("x-worker-secret") !== secret) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
   const activeTrades = await prisma.trade.findMany({
     where:   { status: "active" },
-    include: { user: { select: { id: true, isDemo: true, balance: true, demoBalance: true } } },
+    include: { user: { select: { id: true, isDemo: true } } },
   });
 
   if (activeTrades.length === 0) {
@@ -22,42 +28,48 @@ export async function GET() {
   await Promise.all(
     activeTrades.map(async (trade) => {
       const expiresAt = new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
-      if (now < expiresAt) return; // not yet expired
+      if (now < expiresAt) return;
 
       const winProb = cfg.winProbability[trade.asset] ?? 0.47;
-      const isWin   = Math.random() < winProb;
+
+      // Usar crypto.randomInt para decisão de ganho/perda
+      const { randomInt } = await import("crypto");
+      const isWin = randomInt(0, 1_000_000) < Math.round(winProb * 1_000_000);
 
       const closePrice = isWin
-        ? trade.entryPrice * (1 + Math.random() * 0.002)
-        : trade.entryPrice * (1 - Math.random() * 0.002);
+        ? trade.entryPrice * (1 + randomInt(1, 20) / 10_000)
+        : trade.entryPrice * (1 - randomInt(1, 20) / 10_000);
 
-      const profit = isWin ? trade.amount * trade.payout : -trade.amount;
+      const profit      = isWin ? trade.amount * trade.payout : -trade.amount;
       const returnAmount = isWin ? trade.amount + trade.amount * trade.payout : 0;
 
-      await prisma.trade.update({
-        where: { id: trade.id },
-        data: {
-          status:     "closed",
-          result:     isWin ? "win" : "loss",
-          profit,
-          closePrice,
-          closedAt:   now,
-        },
-      });
+      // Atualizar trade e saldo em transação atómica
+      await prisma.$transaction(async (tx) => {
+        await tx.trade.update({
+          where: { id: trade.id },
+          data: {
+            status:    "closed",
+            result:    isWin ? "win" : "loss",
+            profit,
+            closePrice,
+            closedAt:  now,
+          },
+        });
 
-      if (returnAmount > 0) {
-        if (trade.user.isDemo) {
-          await prisma.user.update({
-            where: { id: trade.userId },
-            data:  { demoBalance: { increment: returnAmount } },
-          });
-        } else {
-          await prisma.user.update({
-            where: { id: trade.userId },
-            data:  { balance: { increment: returnAmount } },
-          });
+        if (returnAmount > 0) {
+          if (trade.user.isDemo) {
+            await tx.user.update({
+              where: { id: trade.userId },
+              data:  { demoBalance: { increment: returnAmount } },
+            });
+          } else {
+            await tx.user.update({
+              where: { id: trade.userId },
+              data:  { balance: { increment: returnAmount } },
+            });
+          }
         }
-      }
+      });
 
       processed++;
       if (isWin) wins++; else losses++;

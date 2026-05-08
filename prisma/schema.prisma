@@ -23,6 +23,8 @@ model User {
   emailVerified  Boolean       @default(false)
   verifyCode     String?
   verifyExpires  DateTime?
+  otpCode        String?
+  otpExpires     DateTime?
   createdAt      DateTime      @default(now())
   trades        Trade[]
   transactions  Transaction[]
@@ -46,6 +48,9 @@ model Trade {
   isDemo     Boolean   @default(false)
   createdAt  DateTime  @default(now())
   closedAt   DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Transaction {
@@ -58,6 +63,9 @@ model Transaction {
   status    String   @default("pending")
   reference String?
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Notification {

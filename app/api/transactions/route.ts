@@ -27,26 +27,30 @@ export async function POST(req: NextRequest) {
   if (!amount || amount < 1000) {
     return NextResponse.json({ error: "Valor mínimo: 1.000 Kz" }, { status: 400 });
   }
-  if (!otp) {
-    return NextResponse.json({ error: "Código OTP obrigatório" }, { status: 400 });
+  if (amount > 5_000_000) {
+    return NextResponse.json({ error: "Valor máximo por transação: 5.000.000 Kz" }, { status: 400 });
+  }
+  if (!otp || typeof otp !== "string" || !/^\d{6}$/.test(otp.trim())) {
+    return NextResponse.json({ error: "Código OTP inválido" }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
 
+  // Validar OTP no campo dedicado (otpCode) — separado do verifyCode de email
   if (
-    !user.verifyCode ||
-    user.verifyCode !== String(otp) ||
-    !user.verifyExpires ||
-    user.verifyExpires < new Date()
+    !user.otpCode ||
+    user.otpCode !== otp.trim() ||
+    !user.otpExpires ||
+    user.otpExpires < new Date()
   ) {
     return NextResponse.json({ error: "Código OTP inválido ou expirado" }, { status: 400 });
   }
 
-  // Invalidar o OTP após uso
+  // Invalidar OTP imediatamente após verificação
   await prisma.user.update({
     where: { id: user.id },
-    data:  { verifyCode: null, verifyExpires: null },
+    data:  { otpCode: null, otpExpires: null },
   });
 
   const tx = await prisma.transaction.create({
@@ -54,8 +58,8 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
       type,
       amount,
-      method,
-      reference,
+      method:    method ? String(method).slice(0, 100) : null,
+      reference: reference ? String(reference).slice(0, 200) : null,
       status: "pending",
     },
   });

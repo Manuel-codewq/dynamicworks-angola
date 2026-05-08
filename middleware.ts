@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(req: NextRequest) {
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
-  if (!secret) return NextResponse.next();
+  // Falhar fechado: sem segredo não é possível verificar tokens — bloquear rotas protegidas
+  if (!secret) {
+    return NextResponse.redirect(new URL("/login", req.nextUrl));
+  }
 
   const isSecure = req.nextUrl.protocol === "https:";
   const cookieName = isSecure ? "__Secure-authjs.session-token" : "authjs.session-token";

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendVerificationEmail } from "@/lib/email";
+import { randomInt } from "crypto";
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -17,21 +18,21 @@ export async function POST(req: NextRequest) {
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Campos obrigatórios em falta" }, { status: 400 });
     }
-    if (password.length < 6) {
-      return NextResponse.json({ error: "A senha deve ter pelo menos 6 caracteres" }, { status: 400 });
+    if (password.length < 8) {
+      return NextResponse.json({ error: "A senha deve ter pelo menos 8 caracteres" }, { status: 400 });
     }
     if (province && !PROVINCES.includes(province)) {
       return NextResponse.json({ error: "Província inválida" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json({ error: "Email já registado" }, { status: 409 });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
     const hashed = await bcrypt.hash(password, 12);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = String(randomInt(100000, 1000000));
     const verifyExpires = new Date(Date.now() + 15 * 60 * 1000);
 
     const user = await prisma.user.create({

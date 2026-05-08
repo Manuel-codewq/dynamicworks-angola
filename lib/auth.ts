@@ -29,7 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (!user) return null;
           if (user.status === "blocked") return null;
-          if ((user as any).emailVerified === false) return null;
+          if (user.emailVerified === false) return null;
 
           const valid = await bcrypt.compare(
             credentials.password as string,
@@ -37,14 +37,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
           if (!valid) return null;
 
+          // Apenas dados imutáveis ou de longa vida no JWT
+          // balance/demoBalance/isDemo são lidos em tempo real via /api/balance
           return {
-            id: user.id,
-            name: user.name,
+            id:    user.id,
+            name:  user.name,
             email: user.email,
-            role: user.role,
-            balance: user.balance,
-            demoBalance: user.demoBalance,
-            isDemo: user.isDemo,
+            role:  user.role,
           };
         } catch (err) {
           console.error("[auth] authorize error:", err);
@@ -56,21 +55,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
+        token.id   = user.id;
         token.role = (user as any).role;
-        token.balance = (user as any).balance;
-        token.demoBalance = (user as any).demoBalance;
-        token.isDemo = (user as any).isDemo;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string;
+        session.user.id          = token.id as string;
         (session.user as any).role = token.role;
-        (session.user as any).balance = token.balance;
-        (session.user as any).demoBalance = token.demoBalance;
-        (session.user as any).isDemo = token.isDemo;
       }
       return session;
     },
