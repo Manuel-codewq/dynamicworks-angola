@@ -253,10 +253,12 @@ export default function TradePage() {
       const c = currentCandleRef.current;
 
       if (!c || (c.time as number) < (candleTime as number)) {
-        currentCandleEpochRef.current = candleTime as number; // sync timer to Deriv epoch
+        currentCandleEpochRef.current = candleTime as number;
         const newC: CandlestickData = { time: candleTime, open: q, high: q, low: q, close: q };
         currentCandleRef.current = newC;
         candleSeriesRef.current.update(newC);
+        // Scroll to show the new candle — keeps the chart anchored to live data
+        chartApiRef.current?.timeScale().scrollToRealTime();
       } else {
         const updated: CandlestickData = {
           ...c, high: Math.max(c.high, q), low: Math.min(c.low, q), close: q,
@@ -276,7 +278,15 @@ export default function TradePage() {
 
       candleSeriesRef.current.setData(candles);
       currentCandleRef.current = candles[candles.length - 1];
-      chartApiRef.current?.timeScale().fitContent();
+      // If last historical candle is older than 2 minutes, scroll to real time
+      // so the live candle area is visible (not hidden off-screen to the right)
+      const lastEpoch = candles[candles.length - 1].time as number;
+      const nowEpoch  = Math.floor(Date.now() / 1000);
+      if (nowEpoch - lastEpoch > 120) {
+        chartApiRef.current?.timeScale().scrollToRealTime();
+      } else {
+        chartApiRef.current?.timeScale().fitContent();
+      }
 
       // Seed price display from last candle if no tick yet
       const last = candles[candles.length - 1].close;
