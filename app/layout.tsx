@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
-const BASE_URL = "https://dynamicsworks.ao";
+const BASE_URL = "https://dynamicworks.ao";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
