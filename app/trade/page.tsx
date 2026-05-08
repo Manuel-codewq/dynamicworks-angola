@@ -176,27 +176,15 @@ export default function TradePage() {
     return () => clearInterval(id);
   }, []);
 
-  // ── Candle countdown timer — anchored to the actual Deriv tick epoch ────────
-  // Never uses modulo wrap: counts down to 0:00 and holds there until a new
-  // candle really arrives (currentCandleEpochRef updates), then restarts.
+  // ── Candle countdown timer — pure UTC alignment ──────────────────────────
+  // Deriv epoch and Date.now() are both UTC. gran - (nowSec % gran) always
+  // gives [1..gran], so 1m can never exceed 1:00, 5m never 5:00, etc.
   useEffect(() => {
     function update() {
-      const gran       = GRANULARITY[timeframe] ?? 60;
-      const candleOpen = currentCandleEpochRef.current;
-      const nowSec     = Math.floor(Date.now() / 1000);
-
-      let rem: number;
-      if (candleOpen > 0) {
-        // Anchored to Deriv server epoch — no wrap, stays at 0 if overdue
-        rem = Math.max(0, gran - (nowSec - candleOpen));
-      } else {
-        // Fallback before first tick: align to UTC boundary
-        rem = gran - (nowSec % gran);
-      }
-
-      const m = Math.floor(rem / 60);
-      const s = rem % 60;
-      setCandleTimer(`${m}:${String(s).padStart(2, "0")}`);
+      const gran   = GRANULARITY[timeframe] ?? 60;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const rem    = gran - (nowSec % gran);
+      setCandleTimer(`${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`);
     }
     update();
     const id = setInterval(update, 1000);
