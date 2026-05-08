@@ -159,6 +159,8 @@ export default function TradePage() {
   const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
   const activeTradesRef    = useRef<ActiveTrade[]>([]);
   const lastPollAtRef      = useRef<number>(Date.now());
+  // Tracks the Deriv server epoch of the current candle's open (used to sync the countdown timer)
+  const currentCandleEpochRef = useRef<number>(0);
   // Stable refs for use inside WS callbacks (avoid stale closures)
   const selectedPairRef  = useRef<DerivPair | null>(null);
   const timeframeRef     = useRef<string>("1m");
@@ -174,18 +176,24 @@ export default function TradePage() {
     return () => clearInterval(id);
   }, []);
 
-  // ── Candle countdown timer ──────────────────────────────────────────────
+  // ── Candle countdown timer — driven by Deriv server epoch, not client clock ──
+  // currentCandleEpochRef holds the epoch (seconds) of when the current candle opened,
+  // as reported by the Deriv tick. This keeps the timer in sync with actual candle births.
   useEffect(() => {
-    function tick() {
-      const gran = GRANULARITY[timeframe] ?? 60;
-      const now  = Math.floor(Date.now() / 1000);
-      const rem  = gran - (now % gran);
-      const m    = Math.floor(rem / 60);
-      const s    = rem % 60;
+    function update() {
+      const gran       = GRANULARITY[timeframe] ?? 60;
+      const candleOpen = currentCandleEpochRef.current;
+      const nowSec     = Math.floor(Date.now() / 1000);
+
+      // Before first tick arrives, fall back to client UTC alignment
+      const elapsed = candleOpen > 0 ? nowSec - candleOpen : nowSec % gran;
+      const rem     = Math.max(0, gran - (elapsed % gran));
+      const m       = Math.floor(rem / 60);
+      const s       = rem % 60;
       setCandleTimer(`${m}:${String(s).padStart(2, "0")}`);
     }
-    tick();
-    const id = setInterval(tick, 1000);
+    update();
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [timeframe]);
 
@@ -251,6 +259,7 @@ export default function TradePage() {
       const c = currentCandleRef.current;
 
       if (!c || (c.time as number) < (candleTime as number)) {
+        currentCandleEpochRef.current = candleTime as number; // sync timer to Deriv epoch
         const newC: CandlestickData = { time: candleTime, open: q, high: q, low: q, close: q };
         currentCandleRef.current = newC;
         candleSeriesRef.current.update(newC);
@@ -294,6 +303,9 @@ export default function TradePage() {
   useEffect(() => {
     if (!selectedPair) return;
     const gran = GRANULARITY[timeframe] ?? 60;
+
+    // Reset sync refs so the timer re-anchors to the first real tick of this pair/timeframe
+    currentCandleEpochRef.current = 0;
 
     // Show placeholder with correct candle width while real history loads
     if (candleSeriesRef.current) {
