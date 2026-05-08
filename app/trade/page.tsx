@@ -196,6 +196,7 @@ export default function TradePage() {
 
   // ── Payout map (polls every 30s so admin changes appear quickly) ─────────
   useEffect(() => {
+    if (status !== "authenticated") return;
     function fetchPayout() {
       fetch("/api/payout")
         .then(r => r.ok ? r.json() : null)
@@ -205,7 +206,7 @@ export default function TradePage() {
     fetchPayout();
     const id = setInterval(fetchPayout, 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [status]);
 
   // ── Auth guard + balance ─────────────────────────────────────────────────
   const fetchBalance = useCallback(async () => {
@@ -400,6 +401,7 @@ export default function TradePage() {
 
   // ── Poll active trades / notify result ───────────────────────────────────
   useEffect(() => {
+    if (status !== "authenticated") return;
     async function poll() {
       const res = await fetch("/api/trade");
       if (!res.ok) return;
@@ -425,7 +427,7 @@ export default function TradePage() {
     }
     const id = setInterval(poll, 3000);
     return () => clearInterval(id);
-  }, [fetchBalance]);
+  }, [status, fetchBalance]);
 
   // ── Price lines — create/remove when active trades change ────────────────
   useEffect(() => {
