@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 const FOREX_PAIRS = [
@@ -112,7 +112,12 @@ async function recordPairs(
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const secret = process.env.WORKER_SECRET;
+  if (!secret || req.headers.get("x-worker-secret") !== secret) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
   const saved  = { count: 0 };
   const assets: string[] = [];
 

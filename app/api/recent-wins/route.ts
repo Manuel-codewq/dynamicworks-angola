@@ -10,11 +10,17 @@ export async function GET() {
   });
 
   return NextResponse.json(
-    wins.map(w => ({
-      name:   w.user.name,
-      amount: Math.round(w.profit ?? 0),
-      asset:  w.asset,
-      time:   w.closedAt,
-    }))
+    wins.map(w => {
+      const parts = w.user.name.trim().split(" ");
+      const masked = parts.length > 1
+        ? `${parts[0]} ${parts[parts.length - 1][0]}.`
+        : parts[0];
+      return {
+        name:   masked,
+        amount: Math.round(w.profit ?? 0),
+        asset:  w.asset,
+        time:   w.closedAt,
+      };
+    })
   );
 }
