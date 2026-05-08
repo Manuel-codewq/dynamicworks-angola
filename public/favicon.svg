@@ -1,5 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Fundo dourado com cantos arredondados -->
   <rect width="32" height="32" rx="7" fill="#f5a623"/>
-  <polyline points="5,22 11,14 17,18 27,8" fill="none" stroke="#0a0f1e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <polyline points="22,8 27,8 27,13" fill="none" stroke="#0a0f1e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Vela 1 (esquerda) — bearish, vermelha -->
+  <!-- Pavio superior -->
+  <line x1="8" y1="6" x2="8" y2="9" stroke="#0a0f1e" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Corpo -->
+  <rect x="5.5" y="9" width="5" height="8" rx="1" fill="#0a0f1e"/>
+  <!-- Pavio inferior -->
+  <line x1="8" y1="17" x2="8" y2="21" stroke="#0a0f1e" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Vela 2 (centro) — bullish, verde (vazia) -->
+  <!-- Pavio superior -->
+  <line x1="16" y1="5" x2="16" y2="8" stroke="#0a0f1e" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Corpo (contorno apenas = bullish) -->
+  <rect x="13.5" y="8" width="5" height="10" rx="1" fill="#f5a623" stroke="#0a0f1e" stroke-width="1.5"/>
+  <!-- Pavio inferior -->
+  <line x1="16" y1="18" x2="16" y2="22" stroke="#0a0f1e" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Vela 3 (direita) — bearish preenchida -->
+  <!-- Pavio superior -->
+  <line x1="24" y1="8" x2="24" y2="11" stroke="#0a0f1e" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Corpo -->
+  <rect x="21.5" y="11" width="5" height="7" rx="1" fill="#0a0f1e"/>
+  <!-- Pavio inferior -->
+  <line x1="24" y1="18" x2="24" y2="23" stroke="#0a0f1e" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Linha de base -->
+  <line x1="4" y1="27" x2="28" y2="27" stroke="#0a0f1e" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
 </svg>
