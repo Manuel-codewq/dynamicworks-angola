@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 
@@ -32,8 +33,6 @@ export async function GET(req: NextRequest) {
 
       const winProb = cfg.winProbability[trade.asset] ?? 0.47;
 
-      // Usar crypto.randomInt para decisão de ganho/perda
-      const { randomInt } = await import("crypto");
       const isWin = randomInt(0, 1_000_000) < Math.round(winProb * 1_000_000);
 
       const closePrice = isWin
@@ -44,9 +43,10 @@ export async function GET(req: NextRequest) {
       const returnAmount = isWin ? trade.amount + trade.amount * trade.payout : 0;
 
       // Atualizar trade e saldo em transação atómica
+      // updateMany com WHERE status=active evita double-resolution
       await prisma.$transaction(async (tx) => {
-        await tx.trade.update({
-          where: { id: trade.id },
+        const closed = await tx.trade.updateMany({
+          where: { id: trade.id, status: "active" },
           data: {
             status:    "closed",
             result:    isWin ? "win" : "loss",
@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
             closedAt:  now,
           },
         });
+        if (closed.count === 0) return; // já foi fechado por outra chamada
 
         if (returnAmount > 0) {
           if (trade.user.isDemo) {

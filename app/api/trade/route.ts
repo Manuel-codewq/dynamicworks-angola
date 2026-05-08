@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
-import { getDerivPrice } from "@/lib/derivPrice";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 const ALLOWED_ASSETS = [
@@ -103,47 +102,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
 
-  // Schedule resolution — outcome determined by real close price from Deriv
-  setTimeout(async () => {
-    try {
-      // Fetch real close price from Deriv; fall back to small random walk if unavailable
-      let closePrice: number = entryPrice * (1 + (Math.random() - 0.5) * 0.004);
-
-      const realPrice = await getDerivPrice(asset);
-      if (realPrice !== null) closePrice = realPrice;
-
-      // Determine result by comparing close vs entry price
-      let result: "win" | "loss";
-      if (closePrice === entryPrice) {
-        result = "loss"; // exact tie → house wins
-      } else if (direction === "call") {
-        result = closePrice > entryPrice ? "win" : "loss";
-      } else {
-        result = closePrice < entryPrice ? "win" : "loss";
-      }
-
-      const profit = result === "win" ? amount * payout : -amount;
-      const returnAmount = result === "win" ? amount + amount * payout : 0;
-
-      await prisma.$transaction(async (tx) => {
-        await tx.trade.update({
-          where: { id: trade.id },
-          data: { closePrice, result, profit, status: "closed", closedAt: new Date() },
-        });
-
-        if (returnAmount > 0) {
-          const balanceField = user.isDemo ? "demoBalance" : "balance";
-          await tx.user.update({
-            where: { id: user.id },
-            data:  { [balanceField]: { increment: returnAmount } },
-          });
-        }
-      });
-    } catch (err) {
-      console.error("Trade resolution error:", err);
-    }
-  }, expirySecs * 1000);
-
+  // Resolução feita pelo worker cron (/api/worker) chamado a cada minuto
+  // setTimeout não é usado — funções serverless (Netlify) têm vida máxima de 10s
   return NextResponse.json({ trade, entryPrice });
 }
 
