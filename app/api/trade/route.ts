@@ -116,23 +116,15 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
   const skip  = (page - 1) * limit;
 
-  // Marca automaticamente como "lost" operações ativas que expiraram
-  // há mais de 5 minutos e cujo preço de fecho não pôde ser determinado.
-  // Isto evita que operações presas (ex: bug de símbolo antigo) contaminem
-  // o painel com countdowns errados.
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-  await prisma.trade.updateMany({
-    where: {
-      userId:    session.user.id,
-      status:    "active",
-      createdAt: { lt: fiveMinutesAgo },
-    },
-    data: {
-      status:   "closed",
-      result:   "loss",
-      closedAt: new Date(),
-    },
-  }).catch(() => {}); // silencioso — não bloqueia o GET
+  // Fecha automaticamente qualquer operação ativa já expirada (createdAt + expirySecs < agora).
+  // Usa SQL direto porque Prisma não suporta aritmética entre colunas no WHERE.
+  await prisma.$queryRaw`
+    UPDATE "Trade"
+    SET status = 'closed', result = 'loss', "closedAt" = now()
+    WHERE "userId" = ${session.user.id}
+      AND status   = 'active'
+      AND "createdAt" + ("expirySecs" * interval '1 second') < now() - interval '30 seconds'
+  `.catch(() => {}); // silencioso — não bloqueia o GET
 
   const [trades, total] = await Promise.all([
     prisma.trade.findMany({
