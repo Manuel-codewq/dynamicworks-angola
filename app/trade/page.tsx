@@ -7,13 +7,15 @@ import {
   User, LogOut, BarChart2, AlertCircle, X, DollarSign, Trophy,
 } from "lucide-react";
 import {
-  createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries,
+  createChart, IChartApi, ISeriesApi, CandlestickData, Time,
+  CandlestickSeries, LineSeries, HistogramSeries,
 } from "lightweight-charts";
 import {
   derivWS, GRANULARITY, getAvailablePairs,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
+import { calcSMA, calcEMA, calcBB, calcRSI, calcMACD, calcStochastic } from "@/lib/indicators";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -94,7 +96,8 @@ function toChartCandles(raw: DerivCandle[]): CandlestickData[] {
 interface ActiveTrade {
   id: string; asset: string; direction: string;
   amount: number; entryPrice: number; expirySecs: number;
-  createdAt: string; payout: number; remainingSecs: number;
+  createdAt: string; payout: number;
+  expiresAt: number; // client epoch ms — recalibrated by each poll
 }
 interface RecentWin { name: string; amount: number; time: number; }
 
@@ -148,6 +151,7 @@ export default function TradePage() {
   const [bnaRate,        setBnaRate]        = useState<number | null>(null);
   const [candleTimer,    setCandleTimer]    = useState("");
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
+  const [, setTick]                         = useState(0);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const chartRef           = useRef<HTMLDivElement>(null);
@@ -157,7 +161,6 @@ export default function TradePage() {
   const lastPriceRef       = useRef<number>(0);
   const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
   const activeTradesRef    = useRef<ActiveTrade[]>([]);
-  const lastPollAtRef      = useRef<number>(Date.now());
   // Tracks the Deriv server epoch of the current candle's open (used to sync the countdown timer)
   const currentCandleEpochRef = useRef<number>(0);
   // Stable refs for use inside WS callbacks (avoid stale closures)
@@ -166,6 +169,103 @@ export default function TradePage() {
 
   useEffect(() => { selectedPairRef.current = selectedPair; }, [selectedPair]);
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
+
+  // ── Indicator state + refs ───────────────────────────────────────────────
+  const [showIndicators, setShowIndicators] = useState(false);
+
+  const DEFAULT_INDICATORS = {
+    ma:    { enabled: false, periods: [20] as number[] },
+    ema:   { enabled: false, periods: [20] as number[] },
+    bb:    { enabled: false, period: 20 },
+    rsi:   { enabled: false, period: 14 },
+    macd:  { enabled: false, fast: 12, slow: 26, signal: 9 },
+    stoch: { enabled: false, kPeriod: 14, dPeriod: 3 },
+  };
+  type IndicatorState = typeof DEFAULT_INDICATORS;
+  function loadIndicators(): IndicatorState {
+    try {
+      const raw = localStorage.getItem("dw_indicators");
+      if (raw) {
+        const p = JSON.parse(raw) as any;
+        const migrateMA = (key: "ma" | "ema") => {
+          const s = p[key] ?? {};
+          // migrate old {period:N} → {periods:[N]}
+          const periods: number[] = s.periods ?? (s.period ? [s.period] : DEFAULT_INDICATORS[key].periods);
+          return { ...DEFAULT_INDICATORS[key], ...s, periods };
+        };
+        return {
+          ma:    migrateMA("ma"),
+          ema:   migrateMA("ema"),
+          bb:    { ...DEFAULT_INDICATORS.bb,    ...(p.bb    ?? {}) },
+          rsi:   { ...DEFAULT_INDICATORS.rsi,   ...(p.rsi   ?? {}) },
+          macd:  { ...DEFAULT_INDICATORS.macd,  ...(p.macd  ?? {}) },
+          stoch: { ...DEFAULT_INDICATORS.stoch, ...(p.stoch ?? {}) },
+        };
+      }
+    } catch {}
+    return DEFAULT_INDICATORS;
+  }
+  const [indicators, setIndicators] = useState<IndicatorState>(loadIndicators);
+
+  // Persist to localStorage immediately (fast, works offline)
+  useEffect(() => {
+    try { localStorage.setItem("dw_indicators", JSON.stringify(indicators)); } catch {}
+  }, [indicators]);
+
+  // On login: load from DB (source of truth across devices), debounced save on change
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/preferences")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d?.indicatorPrefs) return;
+        const p = d.indicatorPrefs as Partial<IndicatorState>;
+        setIndicators({
+          ma:    { ...DEFAULT_INDICATORS.ma,    ...(p.ma    ?? {}) },
+          ema:   { ...DEFAULT_INDICATORS.ema,   ...(p.ema   ?? {}) },
+          bb:    { ...DEFAULT_INDICATORS.bb,    ...(p.bb    ?? {}) },
+          rsi:   { ...DEFAULT_INDICATORS.rsi,   ...(p.rsi   ?? {}) },
+          macd:  { ...DEFAULT_INDICATORS.macd,  ...(p.macd  ?? {}) },
+          stoch: { ...DEFAULT_INDICATORS.stoch, ...(p.stoch ?? {}) },
+        });
+      })
+      .catch(() => {});
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      fetch("/api/preferences", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ indicatorPrefs: indicators }),
+      }).catch(() => {});
+    }, 1500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [indicators, status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const indicatorsRef  = useRef(indicators);
+  const candleDataRef  = useRef<CandlestickData[]>([]);
+  const maSeriesRefs   = useRef<Map<number, ISeriesApi<"Line">>>(new Map());
+  const emaSeriesRefs  = useRef<Map<number, ISeriesApi<"Line">>>(new Map());
+  const bbUpperRef     = useRef<ISeriesApi<"Line"> | null>(null);
+  const bbMiddleRef    = useRef<ISeriesApi<"Line"> | null>(null);
+  const bbLowerRef     = useRef<ISeriesApi<"Line"> | null>(null);
+  const rsiSeriesRef   = useRef<ISeriesApi<"Line"> | null>(null);
+  const rsiPaneRef     = useRef<any>(null);
+  const macdLineRef    = useRef<ISeriesApi<"Line"> | null>(null);
+  const macdSignalRef  = useRef<ISeriesApi<"Line"> | null>(null);
+  const macdHistRef    = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const macdPaneRef    = useRef<any>(null);
+  const stochKRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const stochDRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const stochPaneRef   = useRef<any>(null);
+  const recalcRef          = useRef<() => void>(() => {});
+  const [legend, setLegend] = useState<{ label: string; value: string; color: string }[]>([]);
+  const lastLegendRef      = useRef<{ label: string; value: string; color: string }[]>([]);
+  const closingTradesRef   = useRef(new Set<string>()); // trades com pedido de fecho em voo
+  const notifiedTradesRef  = useRef(new Set<string>()); // trades para as quais já mostrámos notificação
 
 
   // ── Candle countdown timer — pure UTC alignment ──────────────────────────
@@ -182,6 +282,177 @@ export default function TradePage() {
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [timeframe]);
+
+  useEffect(() => { indicatorsRef.current = indicators; }, [indicators]);
+
+  // ── Indicator recalc — rebuilds all indicator series from candleDataRef ──
+  // Defined as a standalone function (not useCallback) so it always captures
+  // the current refs without needing to be listed as a dependency anywhere.
+  // Colors for MA/EMA multi-period lines
+  const MA_COLORS:  Record<number, string> = { 9: "#f5a623", 20: "#3b82f6", 50: "#a78bfa" };
+  const EMA_COLORS: Record<number, string> = { 9: "#fbbf24", 20: "#60a5fa", 50: "#c084fc" };
+
+  function runRecalc(cfg: typeof indicators) {
+    const chart = chartApiRef.current;
+    const data  = candleDataRef.current;
+    if (!chart || data.length < 2) return;
+
+    const visibleRange = chart.timeScale().getVisibleRange();
+    const dec = selectedPairRef.current?.decimals ?? 5;
+    const leg: typeof legend = [];
+
+    const lineOpts = { priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false } as const;
+
+    // ── MA (multiple periods) ──
+    if (cfg.ma.enabled && cfg.ma.periods.length > 0) {
+      const active = new Set(cfg.ma.periods);
+      maSeriesRefs.current.forEach((s, p) => {
+        if (!active.has(p)) { chart.removeSeries(s); maSeriesRefs.current.delete(p); }
+      });
+      cfg.ma.periods.forEach(p => {
+        const color = MA_COLORS[p] ?? "#f5a623";
+        if (!maSeriesRefs.current.has(p))
+          maSeriesRefs.current.set(p, chart.addSeries(LineSeries, { ...lineOpts, color, lineWidth: 2 }));
+        const d = calcSMA(data, p);
+        maSeriesRefs.current.get(p)!.setData(d);
+        if (d.length > 0) leg.push({ label: `MA ${p}`, value: d[d.length - 1].value.toFixed(dec), color });
+      });
+    } else if (!cfg.ma.enabled) {
+      maSeriesRefs.current.forEach(s => chart.removeSeries(s));
+      maSeriesRefs.current.clear();
+    }
+
+    // ── EMA (multiple periods) ──
+    if (cfg.ema.enabled && cfg.ema.periods.length > 0) {
+      const active = new Set(cfg.ema.periods);
+      emaSeriesRefs.current.forEach((s, p) => {
+        if (!active.has(p)) { chart.removeSeries(s); emaSeriesRefs.current.delete(p); }
+      });
+      cfg.ema.periods.forEach(p => {
+        const color = EMA_COLORS[p] ?? "#a78bfa";
+        if (!emaSeriesRefs.current.has(p))
+          emaSeriesRefs.current.set(p, chart.addSeries(LineSeries, { ...lineOpts, color, lineWidth: 2 }));
+        const d = calcEMA(data, p);
+        emaSeriesRefs.current.get(p)!.setData(d);
+        if (d.length > 0) leg.push({ label: `EMA ${p}`, value: d[d.length - 1].value.toFixed(dec), color });
+      });
+    } else if (!cfg.ema.enabled) {
+      emaSeriesRefs.current.forEach(s => chart.removeSeries(s));
+      emaSeriesRefs.current.clear();
+    }
+
+    // ── Bollinger Bands ──
+    if (cfg.bb.enabled) {
+      const bb = calcBB(data, cfg.bb.period);
+      if (!bbUpperRef.current) {
+        const o = { priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, lineWidth: 1 } as const;
+        bbUpperRef.current  = chart.addSeries(LineSeries, { ...o, color: "#38bdf8" });
+        bbMiddleRef.current = chart.addSeries(LineSeries, { ...o, color: "#38bdf860", lineStyle: 2 });
+        bbLowerRef.current  = chart.addSeries(LineSeries, { ...o, color: "#38bdf8" });
+      }
+      bbUpperRef.current.setData(bb.upper);
+      bbMiddleRef.current!.setData(bb.middle);
+      bbLowerRef.current!.setData(bb.lower);
+      if (bb.upper.length > 0) {
+        leg.push({ label: `BB↑ ${cfg.bb.period}`, value: bb.upper[bb.upper.length - 1].value.toFixed(dec), color: "#38bdf8" });
+        leg.push({ label: `BB↓`, value: bb.lower[bb.lower.length - 1].value.toFixed(dec), color: "#38bdf880" });
+      }
+    } else if (bbUpperRef.current) {
+      chart.removeSeries(bbUpperRef.current);  bbUpperRef.current  = null;
+      chart.removeSeries(bbMiddleRef.current!); bbMiddleRef.current = null;
+      chart.removeSeries(bbLowerRef.current!);  bbLowerRef.current  = null;
+    }
+
+    // ── RSI (new pane) with 70/30/50 reference lines ──
+    if (cfg.rsi.enabled) {
+      if (!rsiSeriesRef.current) {
+        const paneIdx = chart.panes().length;
+        rsiSeriesRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#f97316", lineWidth: 2 }, paneIdx);
+        rsiPaneRef.current   = chart.panes()[paneIdx];
+        rsiSeriesRef.current.createPriceLine({ price: 70, color: "#ef444470", lineWidth: 1, lineStyle: 2, axisLabelVisible: true,  title: "OB" });
+        rsiSeriesRef.current.createPriceLine({ price: 50, color: "#64748b50", lineWidth: 1, lineStyle: 1, axisLabelVisible: false, title: "" });
+        rsiSeriesRef.current.createPriceLine({ price: 30, color: "#22c55e70", lineWidth: 1, lineStyle: 2, axisLabelVisible: true,  title: "OS" });
+      }
+      const rsiData = calcRSI(data, cfg.rsi.period);
+      rsiSeriesRef.current.setData(rsiData);
+      if (rsiData.length > 0) leg.push({ label: `RSI ${cfg.rsi.period}`, value: rsiData[rsiData.length - 1].value.toFixed(1), color: "#f97316" });
+    } else if (rsiSeriesRef.current) {
+      chart.removeSeries(rsiSeriesRef.current);
+      rsiSeriesRef.current = null;
+      if (rsiPaneRef.current) {
+        const idx = chart.panes().indexOf(rsiPaneRef.current);
+        if (idx > 0) try { chart.removePane(idx); } catch {}
+        rsiPaneRef.current = null;
+      }
+    }
+
+    // ── MACD (new pane) with zero line ──
+    if (cfg.macd.enabled) {
+      const m = calcMACD(data, cfg.macd.fast, cfg.macd.slow, cfg.macd.signal);
+      if (!macdLineRef.current) {
+        const paneIdx = chart.panes().length;
+        macdLineRef.current   = chart.addSeries(LineSeries,      { ...lineOpts, color: "#22c55e", lineWidth: 2 }, paneIdx);
+        macdSignalRef.current = chart.addSeries(LineSeries,      { ...lineOpts, color: "#ef4444", lineWidth: 1, lastValueVisible: false }, paneIdx);
+        macdHistRef.current   = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, paneIdx);
+        macdPaneRef.current   = chart.panes()[paneIdx];
+        macdLineRef.current.createPriceLine({ price: 0, color: "#64748b", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "0" });
+      }
+      macdLineRef.current.setData(m.macd);
+      macdSignalRef.current!.setData(m.signal);
+      macdHistRef.current!.setData(m.histogram);
+      if (m.macd.length > 0) leg.push({ label: `MACD`, value: m.macd[m.macd.length - 1].value.toFixed(4), color: "#22c55e" });
+    } else if (macdLineRef.current) {
+      chart.removeSeries(macdLineRef.current);    macdLineRef.current   = null;
+      chart.removeSeries(macdSignalRef.current!); macdSignalRef.current = null;
+      chart.removeSeries(macdHistRef.current!);   macdHistRef.current   = null;
+      if (macdPaneRef.current) {
+        const idx = chart.panes().indexOf(macdPaneRef.current);
+        if (idx > 0) try { chart.removePane(idx); } catch {}
+        macdPaneRef.current = null;
+      }
+    }
+
+    // ── Stochastic (new pane) with 80/20 reference lines ──
+    if (cfg.stoch.enabled) {
+      const stoch = calcStochastic(data, cfg.stoch.kPeriod, cfg.stoch.dPeriod);
+      if (!stochKRef.current) {
+        const paneIdx = chart.panes().length;
+        stochKRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#22d3ee", lineWidth: 2 }, paneIdx);
+        stochDRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#f59e0b", lineWidth: 1, lastValueVisible: false }, paneIdx);
+        stochPaneRef.current = chart.panes()[paneIdx];
+        stochKRef.current.createPriceLine({ price: 80, color: "#ef444470", lineWidth: 1, lineStyle: 2, axisLabelVisible: true,  title: "80" });
+        stochKRef.current.createPriceLine({ price: 20, color: "#22c55e70", lineWidth: 1, lineStyle: 2, axisLabelVisible: true,  title: "20" });
+      }
+      stochKRef.current.setData(stoch.k);
+      stochDRef.current!.setData(stoch.d);
+      if (stoch.k.length > 0) {
+        const kVal = stoch.k[stoch.k.length - 1].value;
+        const dVal = stoch.d.length > 0 ? stoch.d[stoch.d.length - 1].value : null;
+        leg.push({ label: `Stoch K`, value: kVal.toFixed(1), color: "#22d3ee" });
+        if (dVal !== null) leg.push({ label: `D`, value: dVal.toFixed(1), color: "#f59e0b" });
+      }
+    } else if (stochKRef.current) {
+      chart.removeSeries(stochKRef.current);  stochKRef.current  = null;
+      chart.removeSeries(stochDRef.current!); stochDRef.current  = null;
+      if (stochPaneRef.current) {
+        const idx = chart.panes().indexOf(stochPaneRef.current);
+        if (idx > 0) try { chart.removePane(idx); } catch {}
+        stochPaneRef.current = null;
+      }
+    }
+
+    if (visibleRange) try { chart.timeScale().setVisibleRange(visibleRange); } catch {}
+    lastLegendRef.current = leg;
+    setLegend(leg);
+  }
+
+  // Keep recalcRef pointing at a closure that always has the latest indicators.
+  // This lets WS callbacks (captured once in [] effects) call recalcRef.current().
+  useEffect(() => {
+    recalcRef.current = () => runRecalc(indicators);
+    // Also trigger immediately so toggling an indicator takes effect right away
+    recalcRef.current();
+  }, [indicators]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── BNA exchange rate (fetched once per hour) ───────────────────────────
   useEffect(() => {
@@ -250,6 +521,9 @@ export default function TradePage() {
         const newC: CandlestickData = { time: candleTime, open: q, high: q, low: q, close: q };
         currentCandleRef.current = newC;
         candleSeriesRef.current.update(newC);
+        // Append new candle and recalc indicators on candle open
+        candleDataRef.current = [...candleDataRef.current, newC];
+        recalcRef.current();
         // Scroll to show the new candle — keeps the chart anchored to live data
         chartApiRef.current?.timeScale().scrollToRealTime();
       } else {
@@ -258,7 +532,18 @@ export default function TradePage() {
         };
         currentCandleRef.current = updated;
         candleSeriesRef.current.update(updated);
+        // Keep last data point in sync (no recalc on every tick — only on candle open)
+        const d = candleDataRef.current;
+        if (d.length > 0) d[d.length - 1] = updated;
       }
+    });
+
+    // On reconnect, re-request fresh candle history so any spike from the
+    // offline gap is replaced by real server data within 1-2 seconds.
+    const unsubConnect = derivWS.onConnect(() => {
+      const pair = selectedPairRef.current;
+      if (!pair) return;
+      derivWS.getCandles(pair.symbol, GRANULARITY[timeframeRef.current] ?? 60, 300);
     });
 
     const unsubCandles = derivWS.onCandles((symbol, raw) => {
@@ -270,16 +555,11 @@ export default function TradePage() {
       if (candles.length === 0) return;
 
       candleSeriesRef.current.setData(candles);
+      candleDataRef.current = candles;
+      recalcRef.current();
       currentCandleRef.current = candles[candles.length - 1];
-      // If last historical candle is older than 2 minutes, scroll to real time
-      // so the live candle area is visible (not hidden off-screen to the right)
-      const lastEpoch = candles[candles.length - 1].time as number;
-      const nowEpoch  = Math.floor(Date.now() / 1000);
-      if (nowEpoch - lastEpoch > 120) {
-        chartApiRef.current?.timeScale().scrollToRealTime();
-      } else {
-        chartApiRef.current?.timeScale().fitContent();
-      }
+      // Sempre ancorar à vela live — as velas preenchem a partir do lado direito
+      chartApiRef.current?.timeScale().scrollToRealTime();
 
       // Seed price display from last candle if no tick yet
       const last = candles[candles.length - 1].close;
@@ -292,6 +572,7 @@ export default function TradePage() {
     return () => {
       unsubTick();
       unsubCandles();
+      unsubConnect();
       derivWS.unsubscribeAll();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -307,7 +588,7 @@ export default function TradePage() {
     // Show placeholder with correct candle width while real history loads
     if (candleSeriesRef.current) {
       const base = lastPriceRef.current > 0 ? lastPriceRef.current : (SEED_PRICES[selectedPair.symbol] ?? 1);
-      const seed = generatePlaceholder(base, 100, gran);
+      const seed = generatePlaceholder(base, 300, gran);
       candleSeriesRef.current.setData(seed);
       currentCandleRef.current = seed[seed.length - 1];
       chartApiRef.current?.timeScale().fitContent();
@@ -317,7 +598,7 @@ export default function TradePage() {
 
     lastPriceRef.current = 0;
     derivWS.subscribeToTicks(pairs.map(p => p.symbol));
-    derivWS.getCandles(selectedPair.symbol, gran, 150);
+    derivWS.getCandles(selectedPair.symbol, gran, 300);
   }, [selectedPair, timeframe, pairs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Real wins feed (polls every 15s) ─────────────────────────────────────
@@ -355,14 +636,66 @@ export default function TradePage() {
       if (w === 0 || h === 0) return;
 
       const chart = createChart(el, {
-        layout: { background: { color: "#0a0f1e" }, textColor: "#94a3b8" },
+        layout: { background: { color: "#0a0f1e" }, textColor: "#94a3b8", attributionLogo: false },
         grid:   { vertLines: { color: "#1e2d50" }, horzLines: { color: "#1e2d50" } },
         crosshair:       { mode: 1 },
         rightPriceScale: { borderColor: "#1e2d50" },
-        timeScale:       { borderColor: "#1e2d50", timeVisible: true },
+        timeScale: {
+          borderColor: "#1e2d50", timeVisible: true,
+          rightOffset: 8,        // pequeno espaço depois da vela live
+          barSpacing: 6,         // ~100 velas visíveis num gráfico de 700px
+          fixLeftEdge: true,     // impede scroll para além da primeira vela
+          lockVisibleTimeRangeOnResize: true,
+        },
         width: w, height: h,
       });
       chartApiRef.current = chart;
+
+      chart.subscribeCrosshairMove((param) => {
+        const cfg = indicatorsRef.current;
+        if (!param.time) { setLegend(lastLegendRef.current); return; }
+        const dec = selectedPairRef.current?.decimals ?? 5;
+        const leg: { label: string; value: string; color: string }[] = [];
+
+        if (cfg.ma.enabled) {
+          cfg.ma.periods.forEach(p => {
+            const s = maSeriesRefs.current.get(p);
+            const d = s ? (param.seriesData.get(s) as { value?: number } | undefined) : undefined;
+            if (d?.value !== undefined) leg.push({ label: `MA ${p}`, value: d.value.toFixed(dec), color: MA_COLORS[p] ?? "#f5a623" });
+          });
+        }
+        if (cfg.ema.enabled) {
+          cfg.ema.periods.forEach(p => {
+            const s = emaSeriesRefs.current.get(p);
+            const d = s ? (param.seriesData.get(s) as { value?: number } | undefined) : undefined;
+            if (d?.value !== undefined) leg.push({ label: `EMA ${p}`, value: d.value.toFixed(dec), color: EMA_COLORS[p] ?? "#a78bfa" });
+          });
+        }
+        if (cfg.bb.enabled) {
+          const u = bbUpperRef.current  ? (param.seriesData.get(bbUpperRef.current)  as { value?: number } | undefined) : undefined;
+          const l = bbLowerRef.current  ? (param.seriesData.get(bbLowerRef.current)  as { value?: number } | undefined) : undefined;
+          if (u?.value !== undefined) leg.push({ label: `BB↑`, value: u.value.toFixed(dec), color: "#38bdf8" });
+          if (l?.value !== undefined) leg.push({ label: `BB↓`, value: l.value.toFixed(dec), color: "#38bdf880" });
+        }
+        if (cfg.rsi.enabled && rsiSeriesRef.current) {
+          const d = param.seriesData.get(rsiSeriesRef.current) as { value?: number } | undefined;
+          if (d?.value !== undefined) leg.push({ label: `RSI ${cfg.rsi.period}`, value: d.value.toFixed(1), color: "#f97316" });
+        }
+        if (cfg.macd.enabled) {
+          const ml = macdLineRef.current   ? (param.seriesData.get(macdLineRef.current)   as { value?: number } | undefined) : undefined;
+          const ms = macdSignalRef.current ? (param.seriesData.get(macdSignalRef.current) as { value?: number } | undefined) : undefined;
+          if (ml?.value !== undefined) leg.push({ label: `MACD`, value: ml.value.toFixed(4), color: "#22c55e" });
+          if (ms?.value !== undefined) leg.push({ label: `Sig`,  value: ms.value.toFixed(4), color: "#ef4444" });
+        }
+        if (cfg.stoch.enabled) {
+          const k = stochKRef.current ? (param.seriesData.get(stochKRef.current) as { value?: number } | undefined) : undefined;
+          const d = stochDRef.current ? (param.seriesData.get(stochDRef.current) as { value?: number } | undefined) : undefined;
+          if (k?.value !== undefined) leg.push({ label: `Stoch K`, value: k.value.toFixed(1), color: "#22d3ee" });
+          if (d?.value !== undefined) leg.push({ label: `D`,       value: d.value.toFixed(1), color: "#f59e0b" });
+        }
+
+        if (leg.length) setLegend(leg);
+      });
 
       const series = chart.addSeries(CandlestickSeries, {
         upColor:       "#22c55e", downColor:       "#ef4444",
@@ -372,14 +705,20 @@ export default function TradePage() {
       candleSeriesRef.current  = series;
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
+      // Null indicator refs — chart.remove() invalidated them
+      maSeriesRefs.current.clear(); emaSeriesRefs.current.clear();
+      bbUpperRef.current  = null; bbMiddleRef.current  = null; bbLowerRef.current = null;
+      rsiSeriesRef.current = null;  rsiPaneRef.current  = null;
+      macdLineRef.current = null; macdSignalRef.current = null; macdHistRef.current = null; macdPaneRef.current = null;
+      stochKRef.current = null; stochDRef.current = null; stochPaneRef.current = null;
 
       // Placeholder while WS loads real candles — use correct granularity so
       // candle widths match the selected timeframe from the start
       const sym  = selectedPair!.symbol;
-      const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1, 100, GRANULARITY[timeframe] ?? 60);
+      const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1, 300, GRANULARITY[timeframe] ?? 60);
       series.setData(seed);
       currentCandleRef.current = seed[seed.length - 1];
-      chart.timeScale().fitContent();
+      chart.timeScale().scrollToRealTime();
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) chartApiRef.current.applyOptions({ width: el.clientWidth });
@@ -406,20 +745,26 @@ export default function TradePage() {
       const res = await fetch("/api/trade");
       if (!res.ok) return;
       const data = await res.json();
-      const trades: any[] = data.trades ?? [];
-      lastPollAtRef.current = Date.now();
+      const now   = Date.now();
+      const trades: any[] = (data.trades ?? []).map((t: any) => ({
+        ...t,
+        expiresAt: t.status === "active" ? now + (t.remainingSecs ?? 0) * 1000 : 0,
+      }));
       setActiveTrades(trades.filter((t: any) => t.status === "active"));
       const justClosed = trades.filter((t: any) => {
         if (t.status !== "closed") return false;
         return Date.now() - new Date(t.closedAt).getTime() < 6000;
       });
-      if (justClosed.length > 0) {
-        const t = justClosed[0];
+      const unnotified = justClosed.find(t => !notifiedTradesRef.current.has(t.id));
+      if (unnotified) {
+        notifiedTradesRef.current.add(unnotified.id);
+        const isDraw = unnotified.result === "draw";
+        const isWin  = unnotified.result === "win";
         setNotification({
-          msg: t.result === "win"
-            ? `Ganhou +${formatKz(Math.round(t.profit))} 🎉`
-            : `Perdeu ${formatKz(t.amount)}`,
-          type: t.result === "win" ? "win" : "loss",
+          msg:  isWin  ? `Ganhou +${formatKz(Math.round(unnotified.profit))} 🎉`
+              : isDraw ? `Empate — aposta devolvida`
+              :          `Perdeu ${formatKz(unnotified.amount)}`,
+          type: isWin ? "win" : isDraw ? "info" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);
         fetchBalance();
@@ -472,12 +817,56 @@ export default function TradePage() {
   }
 
   function getCountdown(trade: ActiveTrade) {
-    // Use server-provided remainingSecs to avoid client/server clock skew.
-    // Subtract time elapsed since the last poll using the client's own clock.
-    const elapsedSincePoll = Math.max(0, (Date.now() - lastPollAtRef.current) / 1000);
-    const rem = Math.max(0, trade.remainingSecs - elapsedSincePoll);
-    return `${Math.floor(rem / 60)}:${String(Math.floor(rem % 60)).padStart(2, "0")}`;
+    // expiresAt = client_now + remainingSecs (calculado no servidor)
+    // Imune a desfasamento de relógio entre cliente e servidor DB
+    const remMs = trade.expiresAt - Date.now();
+    if (remMs <= 0) return "A fechar...";
+    const rem = Math.ceil(remMs / 1000);
+    return `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`;
   }
+
+  // ── Client-side trade expiry trigger ────────────────────────────────────
+  // When a trade's countdown reaches 0, the client calls /api/trade/[id]/close
+  // so the result appears immediately instead of waiting for the next cron run.
+  const triggerClose = useCallback(async (tradeId: string) => {
+    if (closingTradesRef.current.has(tradeId)) return;
+    closingTradesRef.current.add(tradeId);
+    try {
+      const res = await fetch(`/api/trade/${tradeId}/close`, { method: "POST" });
+      if (!res.ok) { closingTradesRef.current.delete(tradeId); return; }
+      const data = await res.json();
+      setActiveTrades(prev => prev.filter(t => t.id !== tradeId));
+      const t = data.trade;
+      if (t?.status === "closed" && !notifiedTradesRef.current.has(t.id)) {
+        notifiedTradesRef.current.add(t.id);
+        const isDraw = t.result === "draw";
+        const isWin  = t.result === "win";
+        setNotification({
+          msg:  isWin  ? `Ganhou +${formatKz(Math.round(t.profit ?? 0))} 🎉`
+              : isDraw ? `Empate — aposta devolvida`
+              :          `Perdeu ${formatKz(t.amount)}`,
+          type: isWin ? "win" : isDraw ? "info" : "loss",
+        });
+        setTimeout(() => setNotification(null), 4000);
+        fetchBalance();
+      }
+    } catch {
+      closingTradesRef.current.delete(tradeId); // permite nova tentativa
+    }
+  }, [fetchBalance]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      // Força re-render para o countdown atualizar a cada segundo
+      setTick(t => t + 1);
+      const now = Date.now();
+      activeTradesRef.current.forEach(trade => {
+        // expiresAt vem do servidor (remainingSecs) — sem clock skew
+        if (now >= trade.expiresAt + 2000) triggerClose(trade.id);
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [triggerClose]);
 
   async function openTrade(direction: "call" | "put") {
     if (loading || !selectedPair) return;
@@ -505,10 +894,12 @@ export default function TradePage() {
         });
         if (isMobile) setTradeDrawer(false);
         fetchBalance();
-        fetch("/api/trade").then(r => r.json()).then(d => {
-          const ts: any[] = d.trades ?? [];
-          setActiveTrades(ts.filter((t: any) => t.status === "active"));
-        });
+        if (data.trade) {
+          setActiveTrades(prev => {
+            if (prev.some((t: any) => t.id === data.trade.id)) return prev;
+            return [...prev, { ...data.trade, expiresAt: Date.now() + (data.trade.remainingSecs ?? expiry.secs) * 1000 }];
+          });
+        }
       }
     } catch {
       setNotification({ msg: "Erro de ligação. Tente novamente.", type: "info" });
@@ -546,60 +937,74 @@ export default function TradePage() {
   // ── Shared trade panel ────────────────────────────────────────────────────
   function renderTradePanel(compact = false) { return (
     <div style={{ display: "flex", flexDirection: "column", gap: compact ? 10 : 12 }}>
-      {/* Live price */}
+
+      {/* ── Live price card ── */}
       <div style={{
-        background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10,
-        padding: compact ? "10px 12px" : "14px 16px", textAlign: "center",
+        background: "linear-gradient(135deg,#0d1526 0%,#111827 100%)",
+        border: `1px solid ${priceUp ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+        borderRadius: 12, padding: compact ? "12px 14px" : "16px 18px",
+        textAlign: "center", position: "relative", overflow: "hidden",
       }}>
-        <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 2 }}>{selectedPair?.label}</div>
-        <div style={{ fontSize: compact ? 22 : 28, fontWeight: 800, color: priceUp ? "#22c55e" : "#ef4444", letterSpacing: 0.5 }}>
+        <div style={{ position: "absolute", inset: 0, background: priceUp ? "radial-gradient(ellipse at 50% 0%,rgba(34,197,94,0.07) 0%,transparent 70%)" : "radial-gradient(ellipse at 50% 0%,rgba(239,68,68,0.07) 0%,transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{selectedPair?.label}</div>
+        <div style={{ fontSize: compact ? 24 : 30, fontWeight: 900, color: priceUp ? "#22c55e" : "#ef4444", letterSpacing: 0.5, fontVariantNumeric: "tabular-nums" }}>
           {priceStr}
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 2 }}>
-          {priceUp ? <TrendingUp size={12} color="#22c55e" /> : <TrendingDown size={12} color="#ef4444" />}
-          <span style={{ color: priceUp ? "#22c55e" : "#ef4444", fontSize: 11 }}>
-            {currentPrice > 0 ? (priceUp ? "▲ A subir" : "▼ A descer") : "Conectando..."}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: priceUp ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)" }}>
+            {priceUp ? <TrendingUp size={10} color="#22c55e" /> : <TrendingDown size={10} color="#ef4444" />}
+          </div>
+          <span style={{ color: priceUp ? "#22c55e" : "#ef4444", fontSize: 11, fontWeight: 600 }}>
+            {currentPrice > 0 ? (priceUp ? "A subir" : "A descer") : "A conectar..."}
           </span>
         </div>
       </div>
 
-      {/* Amount */}
-      <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12 }}>
-        <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 6 }}>Valor de investimento</div>
+      {/* ── Amount ── */}
+      <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 12, padding: compact ? 10 : 12 }}>
+        <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>Investimento</div>
         <div style={{ position: "relative", marginBottom: 8 }}>
-          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#f5a623", fontWeight: 700, fontSize: 13 }}>Kz</span>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#f5a623", fontWeight: 800, fontSize: 12, pointerEvents: "none" }}>Kz</span>
           <input type="number" value={amount || ""}
             onChange={e => { const v = parseInt(e.target.value); setAmount(isNaN(v) ? 0 : Math.min(500000, v)); }}
             onBlur={() => setAmount(a => Math.max(1000, a || 1000))}
-            placeholder="1000"
-            style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 10px 10px 32px", color: "#fff", fontSize: 16, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
+            placeholder="1.000"
+            style={{ width: "100%", background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 8, padding: "11px 12px 11px 36px", color: "#fff", fontSize: 17, fontWeight: 800, outline: "none", boxSizing: "border-box", fontVariantNumeric: "tabular-nums" }} />
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 5 }}>
           {QUICK_AMOUNTS.map(q => (
-            <button key={q} onClick={() => setAmount(q)}
-              style={{ flex: 1, height: 36, background: amount === q ? "#f5a623" : "#1e2d50", color: amount === q ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {q / 1000}k
-            </button>
+            <button key={q} onClick={() => setAmount(q)} style={{
+              flex: 1, height: 32,
+              background: amount === q ? "#f5a623" : "#0d1526",
+              color: amount === q ? "#0a0f1e" : "#64748b",
+              border: `1px solid ${amount === q ? "#f5a623" : "#1e2d50"}`,
+              borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer",
+              transition: "all 0.12s",
+            }}>{q >= 1000 ? `${q / 1000}k` : q}</button>
           ))}
         </div>
       </div>
 
-      {/* Expiry */}
-      <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12 }}>
-        <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 6 }}>Tempo de expiração</div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+      {/* ── Expiry ── */}
+      <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 12, padding: compact ? 10 : 12 }}>
+        <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>Expiração</div>
+        <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
           {EXPIRY_OPTIONS.map(opt => (
-            <button key={opt.secs} onClick={() => { setExpiry(opt); setCustomMins(String(opt.secs / 60)); }}
-              style={{ flex: 1, height: 34, background: expiry.secs === opt.secs ? "#f5a623" : "#1e2d50", color: expiry.secs === opt.secs ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-              {opt.label}
-            </button>
+            <button key={opt.secs} onClick={() => { setExpiry(opt); setCustomMins(String(opt.secs / 60)); }} style={{
+              flex: 1, height: 34,
+              background: expiry.secs === opt.secs ? "rgba(245,166,35,0.15)" : "#0d1526",
+              color: expiry.secs === opt.secs ? "#f5a623" : "#64748b",
+              border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1e2d50"}`,
+              borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              transition: "all 0.12s",
+              boxShadow: expiry.secs === opt.secs ? "0 0 8px rgba(245,166,35,0.25)" : "none",
+            }}>{opt.label}</button>
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#94a3b8", fontSize: 11, whiteSpace: "nowrap" }}>Personalizado:</span>
+          <span style={{ color: "#4b5563", fontSize: 10, whiteSpace: "nowrap" }}>Personalizado</span>
           <div style={{ position: "relative", flex: 1 }}>
-            <input type="number" min={1} max={59}
-              value={customMins}
+            <input type="number" min={1} max={59} value={customMins}
               onChange={e => setCustomMins(e.target.value)}
               onBlur={e => {
                 const mins = Math.max(1, Math.min(59, parseInt(e.target.value) || 1));
@@ -614,66 +1019,126 @@ export default function TradePage() {
                   (e.target as HTMLInputElement).blur();
                 }
               }}
-              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 6, padding: "6px 36px 6px 10px", color: "#fff", fontSize: 13, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
-            <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 11 }}>min</span>
+              style={{ width: "100%", background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 7, padding: "7px 32px 7px 10px", color: "#fff", fontSize: 13, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
+            <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#4b5563", fontSize: 10 }}>min</span>
           </div>
         </div>
       </div>
 
-      {/* Payout */}
-      <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, padding: "9px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "#94a3b8", fontSize: 12 }}>Retorno potencial</span>
-        <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 14 }}>+{formatKz(Math.round(profit))} ({Math.round(currentPayout * 100)}%)</span>
-      </div>
-      {bnaRate && (
-        <div style={{ textAlign: "center", color: "#4b5563", fontSize: 11 }}>
-          1 USD = {bnaRate.toLocaleString("pt-AO")} Kz
+      {/* ── Payout + BNA ── */}
+      <div style={{ background: "linear-gradient(90deg,rgba(245,166,35,0.1) 0%,rgba(245,166,35,0.04) 100%)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, padding: "10px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.5 }}>RETORNO POTENCIAL</div>
+            <div style={{ color: "#f5a623", fontWeight: 900, fontSize: compact ? 15 : 16, marginTop: 2 }}>
+              +{formatKz(Math.round(profit))}
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: "#64748b", fontSize: 10 }}>Payout</div>
+            <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 20 }}>{Math.round(currentPayout * 100)}%</div>
+          </div>
         </div>
-      )}
-
-      {/* Sentiment */}
-      <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 12px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 12 }}>
-          <span style={{ color: "#22c55e", fontWeight: 700 }}>ALTA {sentiment}%</span>
-          <span style={{ color: "#ef4444", fontWeight: 700 }}>{100 - sentiment}% BAIXA</span>
-        </div>
-        <div style={{ height: 5, background: "#1e2d50", borderRadius: 3, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${sentiment}%`, background: "linear-gradient(90deg,#22c55e,#f5a623)", transition: "width 0.5s", borderRadius: 3 }} />
-        </div>
+        {bnaRate && (
+          <div style={{ marginTop: 6, color: "#374151", fontSize: 10 }}>1 USD = {bnaRate.toLocaleString("pt-AO")} Kz</div>
+        )}
       </div>
 
-      {/* ALTA / BAIXA buttons */}
+      {/* ── Sentiment ── */}
+      <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 10, padding: "9px 12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <TrendingUp size={11} color="#22c55e" />
+            <span style={{ color: "#22c55e", fontSize: 11, fontWeight: 700 }}>ALTA {sentiment}%</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 700 }}>{100 - sentiment}% BAIXA</span>
+            <TrendingDown size={11} color="#ef4444" />
+          </div>
+        </div>
+        <div style={{ height: 6, background: "#0d1526", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${sentiment}%`, background: "linear-gradient(90deg,#22c55e,#f5a623)", transition: "width 0.6s ease", borderRadius: 3 }} />
+        </div>
+      </div>
+
+      {/* ── CALL / PUT buttons ── */}
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => openTrade("call")} disabled={loading || currentPrice === 0}
-          style={{ flex: 1, height: 56, background: "#22c55e", color: "#fff", border: "none", borderRadius: 10, fontSize: 16, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer", opacity: loading || currentPrice === 0 ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "opacity 0.15s" }}>
-          {loading ? "A processar..." : <><TrendingUp size={18} /> ALTA</>}
+        <button onClick={() => openTrade("call")} disabled={loading || currentPrice === 0} style={{
+          flex: 1, height: compact ? 52 : 60,
+          background: "linear-gradient(135deg,#16a34a 0%,#22c55e 100%)",
+          color: "#fff", border: "none", borderRadius: 12,
+          fontSize: compact ? 14 : 15, fontWeight: 900,
+          cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading || currentPrice === 0 ? 0.5 : 1,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+          boxShadow: loading || currentPrice === 0 ? "none" : "0 4px 16px rgba(34,197,94,0.35)",
+          transition: "opacity 0.15s, box-shadow 0.15s",
+          letterSpacing: 0.5,
+        }}>
+          {loading ? "..." : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
         </button>
-        <button onClick={() => openTrade("put")} disabled={loading || currentPrice === 0}
-          style={{ flex: 1, height: 56, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, fontSize: 16, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer", opacity: loading || currentPrice === 0 ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "opacity 0.15s" }}>
-          {loading ? "A processar..." : <><TrendingDown size={18} /> BAIXA</>}
+        <button onClick={() => openTrade("put")} disabled={loading || currentPrice === 0} style={{
+          flex: 1, height: compact ? 52 : 60,
+          background: "linear-gradient(135deg,#b91c1c 0%,#ef4444 100%)",
+          color: "#fff", border: "none", borderRadius: 12,
+          fontSize: compact ? 14 : 15, fontWeight: 900,
+          cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading || currentPrice === 0 ? 0.5 : 1,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+          boxShadow: loading || currentPrice === 0 ? "none" : "0 4px 16px rgba(239,68,68,0.35)",
+          transition: "opacity 0.15s, box-shadow 0.15s",
+          letterSpacing: 0.5,
+        }}>
+          {loading ? "..." : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
         </button>
       </div>
 
-      {/* Active trades */}
+      {/* ── Active trades ── */}
       {activeTrades.length > 0 && (
-        <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12 }}>
-          <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 8 }}>Operações ativas ({activeTrades.length})</div>
+        <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 12, padding: compact ? 10 : 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}>Operações ativas</span>
+            <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontSize: 10, fontWeight: 800, borderRadius: 10, padding: "1px 8px" }}>{activeTrades.length}</span>
+          </div>
           {activeTrades.map(t => {
             const winning = isTradeWinning(t.direction, t.entryPrice);
+            const cd = getCountdown(t);
+            const closing = cd === "A fechar...";
             return (
-              <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: winning ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${winning ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"}`, borderRadius: 8, padding: "8px 10px", marginBottom: 6, transition: "border-color 0.4s, background 0.4s" }}>
-                <div>
-                  <div style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{t.asset}</div>
-                  <div style={{ color: t.direction === "call" ? "#22c55e" : "#ef4444", fontSize: 11 }}>
-                    {t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"} · {formatKz(t.amount)}
+              <div key={t.id} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                background: winning ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
+                border: `1px solid ${winning ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                borderRadius: 10, padding: "10px 12px", marginBottom: 6,
+                transition: "all 0.4s",
+              }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{t.asset}</span>
+                    <span style={{
+                      background: t.direction === "call" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                      color: t.direction === "call" ? "#22c55e" : "#ef4444",
+                      fontSize: 9, fontWeight: 800, borderRadius: 4, padding: "1px 5px",
+                    }}>{t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}</span>
                   </div>
-                  <div style={{ color: winning ? "#22c55e" : "#ef4444", fontSize: 10, fontWeight: 800, marginTop: 2 }}>
-                    {currentPrice === 0 ? "—" : winning ? "● GANHO" : "● PERDA"}
-                  </div>
+                  <div style={{ color: "#64748b", fontSize: 11 }}>{formatKz(t.amount)}</div>
+                  {currentPrice > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: winning ? "#22c55e" : "#ef4444" }} />
+                      <span style={{ color: winning ? "#22c55e" : "#ef4444", fontSize: 10, fontWeight: 700 }}>
+                        {winning ? "GANHO" : "PERDA"}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 13 }}>{getCountdown(t)}</div>
-                  <div style={{ color: "#94a3b8", fontSize: 10 }}>restante</div>
+                  <div style={{
+                    color: closing ? "#64748b" : "#f5a623",
+                    fontWeight: 800, fontSize: 14,
+                    fontVariantNumeric: "tabular-nums",
+                    animation: closing ? "pulse 1s ease-in-out infinite" : "none",
+                  }}>{cd}</div>
+                  <div style={{ color: "#374151", fontSize: 9, marginTop: 1 }}>restante</div>
                 </div>
               </div>
             );
@@ -681,18 +1146,20 @@ export default function TradePage() {
         </div>
       )}
 
-      {/* Recent wins */}
+      {/* ── Recent wins ── */}
       {recentWins.length > 0 && (
-        <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12 }}>
-          <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 6 }}>Vitórias recentes</div>
+        <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 12, padding: compact ? 10 : 12 }}>
+          <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>Vitórias recentes</div>
           {recentWins.map((w, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-              <span style={{ color: "#94a3b8" }}>{w.name}</span>
-              <span style={{ color: "#22c55e", fontWeight: 600 }}>+{formatKz(w.amount)}</span>
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < recentWins.length - 1 ? "1px solid #0d1526" : "none" }}>
+              <span style={{ color: "#94a3b8", fontSize: 12 }}>{w.name}</span>
+              <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12 }}>+{formatKz(w.amount)}</span>
             </div>
           ))}
         </div>
       )}
+
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
     </div>
   ); }
 
@@ -734,6 +1201,111 @@ export default function TradePage() {
     );
   }
 
+  // ── Indicator panel ───────────────────────────────────────────────────────
+  function renderIndicatorPanel(compact = false) {
+    const maOn    = indicators.ma.enabled;
+    const emaOn   = indicators.ema.enabled;
+    const bbOn    = indicators.bb.enabled;
+    const rsiOn   = indicators.rsi.enabled;
+    const macdOn  = indicators.macd.enabled;
+    const stochOn = indicators.stoch.enabled;
+
+    const chip = (label: string, color: string, active: boolean, onClick: () => void, sub?: string) => (
+      <button onClick={onClick} style={{
+        display: "flex", alignItems: "center", gap: 4,
+        background: active ? `${color}22` : "transparent",
+        color: active ? color : "#64748b",
+        border: `1px solid ${active ? color : "#1e2d50"}`,
+        borderRadius: 20, padding: compact ? "3px 10px" : "4px 12px",
+        fontSize: compact ? 10 : 11, fontWeight: 700, cursor: "pointer",
+        boxShadow: active ? `0 0 8px ${color}44` : "none",
+        transition: "all 0.15s", whiteSpace: "nowrap",
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? color : "#374151", flexShrink: 0 }} />
+        {label}
+        {sub && active && <span style={{ color: "#64748b", fontSize: 9, fontWeight: 400 }}>{sub}</span>}
+      </button>
+    );
+
+    const periodPill = (p: number, color: string, active: boolean, onClick: () => void) => (
+      <button key={p} onClick={onClick} style={{
+        background: active ? color : "#0a0f1e",
+        color: active ? "#0a0f1e" : "#94a3b8",
+        border: `1px solid ${active ? color : "#1e2d50"}`,
+        borderRadius: 12, padding: compact ? "2px 7px" : "3px 8px",
+        fontSize: compact ? 9 : 10, fontWeight: 800, cursor: "pointer",
+        transition: "all 0.12s",
+      }}>{p}</button>
+    );
+
+    return (
+      <div style={{
+        background: "#080e1d",
+        borderBottom: "1px solid #1e2d50",
+        padding: compact ? "5px 10px" : "6px 14px",
+        display: "flex", gap: compact ? 6 : 8, alignItems: "center",
+        overflowX: "auto", flexWrap: compact ? "nowrap" : "wrap",
+      }}>
+        <style>{`.ind-bar::-webkit-scrollbar{display:none}`}</style>
+
+        {/* MA */}
+        <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+          {chip("MA", "#f5a623", maOn, () => setIndicators(prev => ({ ...prev, ma: { ...prev.ma, enabled: !prev.ma.enabled } })))}
+          {maOn && ([9, 20, 50] as const).map(p => periodPill(p, MA_COLORS[p], indicators.ma.periods.includes(p),
+            () => setIndicators(prev => {
+              const has = prev.ma.periods.includes(p);
+              const periods = has ? prev.ma.periods.filter(x => x !== p) : [...prev.ma.periods, p];
+              return { ...prev, ma: { ...prev.ma, periods: periods.length ? periods : [p] } };
+            })
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 18, background: "#1e2d50", flexShrink: 0 }} />
+
+        {/* EMA */}
+        <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+          {chip("EMA", "#a78bfa", emaOn, () => setIndicators(prev => ({ ...prev, ema: { ...prev.ema, enabled: !prev.ema.enabled } })))}
+          {emaOn && ([9, 20, 50] as const).map(p => periodPill(p, EMA_COLORS[p], indicators.ema.periods.includes(p),
+            () => setIndicators(prev => {
+              const has = prev.ema.periods.includes(p);
+              const periods = has ? prev.ema.periods.filter(x => x !== p) : [...prev.ema.periods, p];
+              return { ...prev, ema: { ...prev.ema, periods: periods.length ? periods : [p] } };
+            })
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 18, background: "#1e2d50", flexShrink: 0 }} />
+
+        {/* BB */}
+        {chip("BB", "#38bdf8", bbOn, () => setIndicators(prev => ({ ...prev, bb: { ...prev.bb, enabled: !prev.bb.enabled } })), bbOn ? `(${indicators.bb.period})` : undefined)}
+
+        {/* RSI */}
+        {chip("RSI", "#f97316", rsiOn, () => setIndicators(prev => ({ ...prev, rsi: { ...prev.rsi, enabled: !prev.rsi.enabled } })), rsiOn ? `(${indicators.rsi.period})` : undefined)}
+
+        {/* MACD */}
+        {chip("MACD", "#22c55e", macdOn, () => setIndicators(prev => ({ ...prev, macd: { ...prev.macd, enabled: !prev.macd.enabled } })), macdOn ? `${indicators.macd.fast}/${indicators.macd.slow}` : undefined)}
+
+        {/* Stochastic */}
+        {chip("Stoch", "#fb923c", stochOn, () => setIndicators(prev => ({ ...prev, stoch: { ...prev.stoch, enabled: !prev.stoch.enabled } })), stochOn ? `${indicators.stoch.kPeriod}/${indicators.stoch.dPeriod}` : undefined)}
+      </div>
+    );
+  }
+
+  function renderLegend() {
+    if (!legend.length) return null;
+    return (
+      <div style={{ position: "absolute", top: 6, left: 6, zIndex: 10, display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
+        {legend.map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(7,13,28,0.75)", borderRadius: 4, padding: "2px 6px" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: item.color, flexShrink: 0, display: "inline-block" }} />
+            <span style={{ color: "#94a3b8", fontSize: 10, fontFamily: "monospace" }}>{item.label}</span>
+            <span style={{ color: item.color, fontSize: 10, fontWeight: 700, fontFamily: "monospace" }}>{item.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (status === "loading" || !selectedPair) {
     return (
       <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -763,13 +1335,13 @@ export default function TradePage() {
         )}
 
         {/* ── Topbar ── */}
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 8px", gap: 5 }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#080e1d", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 8px", gap: 5 }}>
           {/* Logo + brand */}
           <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-            <div style={{ width: 26, height: 26, background: "#f5a623", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <TrendingUp size={14} color="#0a0f1e" strokeWidth={2.5} />
+            <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 0 8px rgba(245,166,35,0.3)" }}>
+              <TrendingUp size={13} color="#0a0f1e" strokeWidth={2.5} />
             </div>
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 13, whiteSpace: "nowrap" }}>Dynamics</span>
+            <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, whiteSpace: "nowrap" }}>Dynamics</span>
           </div>
 
           {/* Asset selector */}
@@ -789,11 +1361,15 @@ export default function TradePage() {
           <NotificationBell />
 
           {/* Balance — click to toggle demo/real */}
-          <button onClick={toggleAccount}
-            style={{ background: "#0a0f1e", border: `1px solid ${isDemo ? "rgba(245,166,35,0.4)" : "rgba(34,197,94,0.4)"}`, borderRadius: 7, padding: "4px 8px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0 }}>
-            <Wallet size={11} color="#f5a623" />
-            <span style={{ color: "#fff", fontWeight: 700, fontSize: 11 }}>{formatKz(Math.floor(displayBalance))}</span>
-            <span style={{ background: isDemo ? "rgba(245,166,35,0.2)" : "rgba(34,197,94,0.2)", color: isDemo ? "#f5a623" : "#22c55e", borderRadius: 3, fontSize: 9, padding: "1px 4px", fontWeight: 800, letterSpacing: 0.3 }}>
+          <button onClick={toggleAccount} style={{
+            background: "#0d1526",
+            border: `1px solid ${isDemo ? "rgba(245,166,35,0.35)" : "rgba(34,197,94,0.35)"}`,
+            borderRadius: 8, padding: "4px 8px",
+            display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0,
+          }}>
+            <Wallet size={10} color="#f5a623" />
+            <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
+            <span style={{ background: isDemo ? "rgba(245,166,35,0.2)" : "rgba(34,197,94,0.2)", color: isDemo ? "#f5a623" : "#22c55e", borderRadius: 3, fontSize: 8, padding: "1px 4px", fontWeight: 900 }}>
               {isDemo ? "D" : "R"}
             </span>
           </button>
@@ -823,23 +1399,28 @@ export default function TradePage() {
         </div>
 
         {/* ── Ticker bar ── */}
-        <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TICKER_H, zIndex: 109, background: "#0d1526", borderBottom: "1px solid #1e2d50", overflow: "hidden", display: "flex", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 24, padding: "0 12px", animation: "ticker 20s linear infinite", whiteSpace: "nowrap" }}>
+        <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TICKER_H, zIndex: 109, background: "#080e1d", borderBottom: "1px solid #1e2d50", overflow: "hidden", display: "flex", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 18, padding: "0 10px", animation: "ticker 20s linear infinite", whiteSpace: "nowrap" }}>
             {[...pairs, ...pairs].map((p, i) => {
               const price = tickerPrices[p.symbol] ?? 0;
               const seed  = SEED_PRICES[p.symbol] ?? 1;
               const isUp  = price >= seed;
+              const pct   = seed > 0 && price > 0 ? ((price - seed) / seed * 100) : 0;
               return (
-                <span key={i} style={{ fontSize: 11, color: "#94a3b8" }}>
-                  <span style={{ color: "#fff", fontWeight: 600 }}>{p.label} </span>
-                  <span style={{ color: isUp ? "#22c55e" : "#ef4444" }}>
+                <span key={i} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10 }}>
+                  <span style={{ color: "#64748b", fontWeight: 600 }}>{p.label}</span>
+                  <span style={{ color: isUp ? "#22c55e" : "#ef4444", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                     {price > 0 ? price.toFixed(p.decimals) : "—"}
                   </span>
+                  {price > 0 && (
+                    <span style={{ color: isUp ? "#16a34a" : "#dc2626", fontSize: 8, background: isUp ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", borderRadius: 3, padding: "0 2px" }}>
+                      {isUp ? "+" : ""}{pct.toFixed(2)}%
+                    </span>
+                  )}
                 </span>
               );
             })}
           </div>
-          <style>{`@keyframes ticker { from { transform:translateX(0) } to { transform:translateX(-50%) } }`}</style>
         </div>
 
         {/* ── Timeframe strip ── */}
@@ -856,39 +1437,65 @@ export default function TradePage() {
                 ⏱ {candleTimer}
               </span>
             )}
+            <button onClick={() => setShowIndicators(v => !v)}
+              style={{ background: showIndicators ? "rgba(245,166,35,0.15)" : "transparent", color: showIndicators ? "#f5a623" : "#64748b", border: `1px solid ${showIndicators ? "#f5a623" : "#1e2d50"}`, borderRadius: 5, padding: "2px 7px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+              IND
+            </button>
             <span style={{ fontSize: 14, fontWeight: 700, color: priceUp ? "#22c55e" : "#ef4444" }}>
               {priceUp ? "▲" : "▼"} {priceStr}
             </span>
           </div>
         </div>
 
+        {/* ── Indicator panel (mobile overlay) ── */}
+        {showIndicators && (
+          <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H + TF_H, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
+            {renderIndicatorPanel(true)}
+          </div>
+        )}
+
         {/* ── Chart ── */}
         <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
           <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
+          {renderLegend()}
           <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
           </div>
         </div>
 
         {/* ── Bottom nav ── */}
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 110, background: "#111827", borderTop: "1px solid #1e2d50", display: "flex", alignItems: "center" }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1e2d50", display: "flex", alignItems: "center" }}>
           {([
             { id: "chart",   label: "Gráfico",  Icon: BarChart2   },
             { id: "trade",   label: "Negociar", Icon: DollarSign  },
             { id: "ranking", label: "Ranking",  Icon: Trophy      },
             { id: "account", label: "Conta",    Icon: User        },
-          ] as const).map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => {
-              if (id === "ranking") { router.push("/ranking");  return; }
-              if (id === "account") { router.push("/profile"); return; }
-              if (id === "trade")   { setMobileTab("trade"); setTradeDrawer(true); return; }
-              setMobileTab("chart"); setTradeDrawer(false);
-            }}
-              style={{ flex: 1, height: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
-              <Icon size={22} color={mobileTab === id ? "#f5a623" : "#64748b"} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: mobileTab === id ? "#f5a623" : "#64748b" }}>{label}</span>
-            </button>
-          ))}
+          ] as const).map(({ id, label, Icon }) => {
+            const isActive = mobileTab === id;
+            const isTradeBtn = id === "trade";
+            return (
+              <button key={id} onClick={() => {
+                if (id === "ranking") { router.push("/ranking");  return; }
+                if (id === "account") { router.push("/profile"); return; }
+                if (id === "trade")   { setMobileTab("trade"); setTradeDrawer(true); return; }
+                setMobileTab("chart"); setTradeDrawer(false);
+              }} style={{ flex: 1, height: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, position: "relative" }}>
+                {isTradeBtn ? (
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg,#f5a623,#e8940f)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(245,166,35,0.4)", marginTop: -8 }}>
+                    <DollarSign size={20} color="#0a0f1e" strokeWidth={2.5} />
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ position: "relative" }}>
+                      <Icon size={20} color={isActive ? "#f5a623" : "#4b5563"} />
+                      {isActive && <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#f5a623" }} />}
+                    </div>
+                    <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? "#f5a623" : "#4b5563" }}>{label}</span>
+                  </>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Drawer backdrop ── */}
@@ -898,21 +1505,21 @@ export default function TradePage() {
         )}
 
         {/* ── Trade drawer ── */}
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, height: "82vh", background: "#111827", borderRadius: "16px 16px 0 0", transform: tradeDrawer ? "translateY(0)" : "translateY(100%)", transition: "transform 0.3s cubic-bezier(0.32,0.72,0,1)", display: "flex", flexDirection: "column", boxShadow: "0 -8px 40px rgba(0,0,0,0.6)" }}>
-          <div style={{ padding: "12px 0 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            <div style={{ width: 36, height: 4, background: "#374151", borderRadius: 2 }} />
-            <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
-              <div>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Abrir Operação</span>
-                <span style={{ marginLeft: 8, color: "#94a3b8", fontSize: 12 }}>{selectedPair?.label}</span>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, height: "84vh", background: "#080e1d", borderRadius: "20px 20px 0 0", transform: tradeDrawer ? "translateY(0)" : "translateY(100%)", transition: "transform 0.3s cubic-bezier(0.32,0.72,0,1)", display: "flex", flexDirection: "column", boxShadow: "0 -12px 48px rgba(0,0,0,0.7)" }}>
+          <div style={{ padding: "10px 0 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, flexShrink: 0, borderBottom: "1px solid #1e2d50" }}>
+            <div style={{ width: 40, height: 4, background: "#1e2d50", borderRadius: 2 }} />
+            <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", boxShadow: priceUp ? "0 0 6px #22c55e" : "0 0 6px #ef4444" }} />
+                <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Abrir Operação</span>
+                <span style={{ color: "#64748b", fontSize: 12 }}>{selectedPair?.label}</span>
               </div>
-              <button onClick={() => { setTradeDrawer(false); setMobileTab("chart"); }}
-                style={{ background: "#1e2d50", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={16} color="#94a3b8" />
+              <button onClick={() => { setTradeDrawer(false); setMobileTab("chart"); }} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} color="#64748b" />
               </button>
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 24px" }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px 28px" }}>
             {renderTradePanel(true)}
           </div>
         </div>
@@ -932,39 +1539,42 @@ export default function TradePage() {
       )}
 
       {/* Desktop Topbar */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, zIndex: 100, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 16px", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 160 }}>
-          <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <TrendingUp size={18} color="#0a0f1e" strokeWidth={2.5} />
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, zIndex: 100, background: "#080e1d", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 16px", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 150 }}>
+          <div style={{ width: 30, height: 30, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 12px rgba(245,166,35,0.3)" }}>
+            <TrendingUp size={16} color="#0a0f1e" strokeWidth={2.5} />
           </div>
-          <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Dynamics Works</span>
+          <span style={{ color: "#fff", fontWeight: 900, fontSize: 14, letterSpacing: 0.3 }}>Dynamics Works</span>
         </div>
 
         {renderAssetDropdown()}
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: priceUp ? "#22c55e" : "#ef4444" }}>{priceStr}</span>
-          {priceUp ? <TrendingUp size={16} color="#22c55e" /> : <TrendingDown size={16} color="#ef4444" />}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 8, padding: "5px 10px" }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", boxShadow: priceUp ? "0 0 6px #22c55e" : "0 0 6px #ef4444" }} />
+          <span style={{ fontSize: 16, fontWeight: 900, color: priceUp ? "#22c55e" : "#ef4444", fontVariantNumeric: "tabular-nums" }}>{priceStr}</span>
         </div>
 
         <div style={{ flex: 1 }} />
 
-        <button onClick={toggleAccount}
-          style={{ background: isDemo ? "rgba(245,166,35,0.15)" : "rgba(34,197,94,0.15)", border: `1px solid ${isDemo ? "rgba(245,166,35,0.4)" : "rgba(34,197,94,0.4)"}`, borderRadius: 8, padding: "5px 12px", color: isDemo ? "#f5a623" : "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+        <button onClick={toggleAccount} style={{
+          background: isDemo ? "rgba(245,166,35,0.12)" : "rgba(34,197,94,0.12)",
+          border: `1px solid ${isDemo ? "rgba(245,166,35,0.35)" : "rgba(34,197,94,0.35)"}`,
+          borderRadius: 8, padding: "5px 12px",
+          color: isDemo ? "#f5a623" : "#22c55e", cursor: "pointer", fontSize: 11, fontWeight: 800, letterSpacing: 0.5,
+        }}>
           {isDemo ? "DEMO" : "REAL"}
         </button>
 
-
         <NotificationBell />
 
-        <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "5px 12px", display: "flex", alignItems: "center", gap: 6 }}>
-          <Wallet size={14} color="#f5a623" />
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{formatKz(Math.floor(displayBalance))}</span>
-        </div>
+        <button onClick={toggleAccount} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 8, padding: "5px 12px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+          <Wallet size={13} color="#f5a623" />
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
+        </button>
+
         {isDemo && demoBalance < 5000 && (
-          <button onClick={resetDemo} disabled={demoReloading}
-            style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 6, fontSize: 11, padding: "3px 8px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, whiteSpace: "nowrap" }}>
-            {demoReloading ? "A recarregar..." : "↺ Recarregar"}
+          <button onClick={resetDemo} disabled={demoReloading} style={{ background: "transparent", border: "1px solid rgba(245,166,35,0.4)", color: "#f5a623", borderRadius: 6, fontSize: 11, padding: "4px 8px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, whiteSpace: "nowrap" }}>
+            {demoReloading ? "..." : "↺ Recarregar"}
           </button>
         )}
 
@@ -993,18 +1603,24 @@ export default function TradePage() {
       </div>
 
       {/* Ticker bar */}
-      <div style={{ position: "fixed", top: 56, left: 0, right: 0, height: 32, zIndex: 99, background: "#0d1526", borderBottom: "1px solid #1e2d50", overflow: "hidden", display: "flex", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 32, padding: "0 20px", animation: "ticker 30s linear infinite", whiteSpace: "nowrap" }}>
+      <div style={{ position: "fixed", top: 56, left: 0, right: 0, height: 32, zIndex: 99, background: "#080e1d", borderBottom: "1px solid #1e2d50", overflow: "hidden", display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 28, padding: "0 20px", animation: "ticker 30s linear infinite", whiteSpace: "nowrap" }}>
           {[...pairs, ...pairs].map((p, i) => {
             const price = tickerPrices[p.symbol] ?? 0;
             const seed  = SEED_PRICES[p.symbol] ?? 1;
             const isUp  = price >= seed;
+            const pct   = seed > 0 && price > 0 ? ((price - seed) / seed * 100) : 0;
             return (
-              <span key={i} style={{ fontSize: 12, color: "#94a3b8" }}>
-                <span style={{ color: "#fff", fontWeight: 600 }}>{p.label} </span>
-                <span style={{ color: isUp ? "#22c55e" : "#ef4444" }}>
+              <span key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
+                <span style={{ color: "#64748b", fontWeight: 600 }}>{p.label}</span>
+                <span style={{ color: isUp ? "#22c55e" : "#ef4444", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                   {price > 0 ? price.toFixed(p.decimals) : "—"}
                 </span>
+                {price > 0 && (
+                  <span style={{ color: isUp ? "#16a34a" : "#dc2626", fontSize: 9, fontWeight: 600, background: isUp ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", borderRadius: 3, padding: "0px 3px" }}>
+                    {isUp ? "+" : ""}{pct.toFixed(2)}%
+                  </span>
+                )}
               </span>
             );
           })}
@@ -1016,22 +1632,35 @@ export default function TradePage() {
       <div style={{ paddingTop: 88, height: "100vh", display: "flex" }}>
         {/* Chart area 70% */}
         <div style={{ flex: "0 0 70%", display: "flex", flexDirection: "column", borderRight: "1px solid #1e2d50" }}>
-          <div style={{ padding: "8px 16px", background: "#111827", display: "flex", gap: 6, borderBottom: "1px solid #1e2d50" }}>
+          <div style={{ padding: "6px 14px", background: "#080e1d", display: "flex", gap: 5, borderBottom: "1px solid #1e2d50", alignItems: "center" }}>
             {["1m", "5m", "15m", "1h", "1D"].map(tf => (
-              <button key={tf} onClick={() => setTimeframe(tf)}
-                style={{ background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#0a0f1e" : "#94a3b8", border: `1px solid ${timeframe === tf ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                {tf}
-              </button>
+              <button key={tf} onClick={() => setTimeframe(tf)} style={{
+                background: timeframe === tf ? "rgba(245,166,35,0.12)" : "transparent",
+                color: timeframe === tf ? "#f5a623" : "#4b5563",
+                border: `1px solid ${timeframe === tf ? "rgba(245,166,35,0.4)" : "#1e2d50"}`,
+                borderRadius: 6, padding: "4px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                boxShadow: timeframe === tf ? "0 0 8px rgba(245,166,35,0.15)" : "none",
+                transition: "all 0.12s",
+              }}>{tf}</button>
             ))}
             <div style={{ flex: 1 }} />
             {candleTimer && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#f5a623", background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 5, padding: "3px 8px", fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#f5a623", background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "3px 8px", fontVariantNumeric: "tabular-nums" }}>
                 ⏱ {candleTimer}
               </span>
             )}
+            <button onClick={() => setShowIndicators(v => !v)} style={{
+              background: showIndicators ? "rgba(245,166,35,0.12)" : "transparent",
+              color: showIndicators ? "#f5a623" : "#4b5563",
+              border: `1px solid ${showIndicators ? "rgba(245,166,35,0.4)" : "#1e2d50"}`,
+              borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              transition: "all 0.12s",
+            }}>Indicadores</button>
           </div>
+          {showIndicators && renderIndicatorPanel()}
           <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
             <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
+            {renderLegend()}
             <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
               <span style={{ fontSize: 52, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 4, userSelect: "none" }}>{selectedPair?.label}</span>
             </div>
@@ -1039,7 +1668,7 @@ export default function TradePage() {
         </div>
 
         {/* Right panel 30% */}
-        <div style={{ flex: "0 0 30%", overflowY: "auto", padding: 16, background: "#0d1526" }}>
+        <div style={{ flex: "0 0 30%", overflowY: "auto", padding: 16, background: "#080e1d" }}>
           {renderTradePanel()}
         </div>
       </div>

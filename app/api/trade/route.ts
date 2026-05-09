@@ -5,7 +5,7 @@ import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 const ALLOWED_ASSETS = [
-  // Live forex
+  // Forex
   "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD",
   "USD/CAD", "EUR/GBP", "USD/CHF", "NZD/USD",
   "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY", "GBP/AUD", "EUR/CHF",
@@ -13,8 +13,6 @@ const ALLOWED_ASSETS = [
   "BTC/USD", "ETH/USD",
   // Commodities
   "XAU/USD", "XAG/USD",
-  // DW Index — synthetic 24/7 (Deriv Volatility rebrandizados)
-  "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
 ];
 
 // Entry price is supplied by the client (from the live Deriv WS tick).
@@ -102,9 +100,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
 
-  // Resolução feita pelo worker cron (/api/worker) chamado a cada minuto
-  // setTimeout não é usado — funções serverless (Netlify) têm vida máxima de 10s
-  return NextResponse.json({ trade, entryPrice });
+  // remainingSecs calculado server-side para o cliente definir expiresAt
+  // sem depender do relógio do cliente (evita clock skew)
+  const remainingSecs = trade.expirySecs;
+  return NextResponse.json({ trade: { ...trade, remainingSecs }, entryPrice });
 }
 
 export async function GET(req: NextRequest) {
@@ -117,6 +116,24 @@ export async function GET(req: NextRequest) {
   const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
   const skip  = (page - 1) * limit;
+
+  // Marca automaticamente como "lost" operações ativas que expiraram
+  // há mais de 5 minutos e cujo preço de fecho não pôde ser determinado.
+  // Isto evita que operações presas (ex: bug de símbolo antigo) contaminem
+  // o painel com countdowns errados.
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  await prisma.trade.updateMany({
+    where: {
+      userId:    session.user.id,
+      status:    "active",
+      createdAt: { lt: fiveMinutesAgo },
+    },
+    data: {
+      status:   "closed",
+      result:   "loss",
+      closedAt: new Date(),
+    },
+  }).catch(() => {}); // silencioso — não bloqueia o GET
 
   const [trades, total] = await Promise.all([
     prisma.trade.findMany({

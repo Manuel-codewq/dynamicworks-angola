@@ -36,24 +36,15 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
-// Índices proprietários — disponíveis 24/7 incluindo fins de semana
-export const VOLATILITY_PAIRS: DerivPair[] = [
-  { symbol: "R_10",  label: "DW Index 10",  category: "Índices", decimals: 3 },
-  { symbol: "R_25",  label: "DW Index 25",  category: "Índices", decimals: 3 },
-  { symbol: "R_50",  label: "DW Index 50",  category: "Índices", decimals: 4 },
-  { symbol: "R_75",  label: "DW Index 75",  category: "Índices", decimals: 4 },
-  { symbol: "R_100", label: "DW Index 100", category: "Índices", decimals: 2 },
-];
-
 export function getAvailablePairs(): DerivPair[] {
   if (typeof window === "undefined") {
-    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS, ...VOLATILITY_PAIRS];
+    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
   }
   const day = new Date().getUTCDay(); // 0=Dom, 6=Sab
   const isWeekend = day === 0 || day === 6;
-  // Ao fim de semana só cripto e volatilidade têm dados reais
-  if (isWeekend) return [...CRYPTO_PAIRS, ...VOLATILITY_PAIRS];
-  return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS, ...VOLATILITY_PAIRS];
+  // Ao fim de semana só cripto tem dados reais (forex e commodities fechados)
+  if (isWeekend) return [...CRYPTO_PAIRS];
+  return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
 }
 
 export const GRANULARITY: Record<string, number> = {
@@ -72,8 +63,10 @@ export class DerivWS {
   private pendingMessages: object[] = [];
   private subscribedSymbols = new Set<string>();
   private pendingCandleSymbol = "";
-  private tickHandlers   = new Set<TickHandler>();
-  private candleHandlers = new Set<CandleHandler>();
+  private tickHandlers    = new Set<TickHandler>();
+  private candleHandlers  = new Set<CandleHandler>();
+  private connectHandlers = new Set<() => void>();
+  private isFirstConnect  = true;
 
   connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
@@ -85,6 +78,9 @@ export class DerivWS {
       this.subscribedSymbols.forEach(sym =>
         this.ws!.send(JSON.stringify({ ticks: sym, subscribe: 1 }))
       );
+      // Notify reconnect listeners (skip very first connect — pair effect handles it)
+      if (!this.isFirstConnect) this.connectHandlers.forEach(h => h());
+      this.isFirstConnect = false;
     };
 
     this.ws.onmessage = (e) => {
@@ -144,8 +140,9 @@ export class DerivWS {
     this.send({ ticks_history: symbol, style: "candles", granularity, count, end: "latest" });
   }
 
-  onTick(handler: TickHandler):     () => void { this.tickHandlers.add(handler);   return () => this.tickHandlers.delete(handler); }
-  onCandles(handler: CandleHandler): () => void { this.candleHandlers.add(handler); return () => this.candleHandlers.delete(handler); }
+  onTick(handler: TickHandler):      () => void { this.tickHandlers.add(handler);    return () => this.tickHandlers.delete(handler); }
+  onCandles(handler: CandleHandler): () => void { this.candleHandlers.add(handler);  return () => this.candleHandlers.delete(handler); }
+  onConnect(handler: () => void):    () => void { this.connectHandlers.add(handler); return () => this.connectHandlers.delete(handler); }
 
   disconnect() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);

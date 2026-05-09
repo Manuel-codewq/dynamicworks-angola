@@ -18,7 +18,7 @@ const FOREX_PAIRS = [
   { asset: "EUR/CHF", symbol: "frxEURCHF" },
 ];
 
-// Crypto and commodities — recorded 24/7 (market always open)
+// Crypto e commodities — disponíveis 24/7
 const ALWAYS_ON_PAIRS = [
   { asset: "BTC/USD", symbol: "cryBTCUSD" },
   { asset: "ETH/USD", symbol: "cryETHUSD" },

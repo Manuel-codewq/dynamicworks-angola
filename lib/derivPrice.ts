@@ -37,7 +37,13 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   // Commodities
   "XAU/USD":        "frxXAUUSD",
   "XAG/USD":        "frxXAGUSD",
-  // Sintéticos
+  // Sintéticos — nomes usados na UI (derivWebSocket.ts labels)
+  "DW Index 10":    "R_10",
+  "DW Index 25":    "R_25",
+  "DW Index 50":    "R_50",
+  "DW Index 75":    "R_75",
+  "DW Index 100":   "R_100",
+  // aliases antigos (manter compatibilidade com trades existentes)
   "Vol. 10":        "R_10",
   "Vol. 25":        "R_25",
   "Vol. 50":        "R_50",
