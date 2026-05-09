@@ -100,10 +100,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
 
-  // remainingSecs calculado server-side para o cliente definir expiresAt
-  // sem depender do relógio do cliente (evita clock skew)
-  const remainingSecs = trade.expirySecs;
-  return NextResponse.json({ trade: { ...trade, remainingSecs }, entryPrice });
+  const serverTime = Date.now();
+  const expiresAt  = trade.createdAt.getTime() + trade.expirySecs * 1000;
+  return NextResponse.json({ trade: { ...trade, expiresAt }, entryPrice, serverTime });
 }
 
 export async function GET(req: NextRequest) {
@@ -145,15 +144,16 @@ export async function GET(req: NextRequest) {
     prisma.trade.count({ where: { userId: session.user.id } }),
   ]);
 
-  // Include server-calculated remainingSecs so the client doesn't need to
-  // compare clocks (avoids inflated countdowns from server/client clock skew)
   const now = Date.now();
   const tradesWithRemaining = trades.map(t => ({
     ...t,
+    // expiresAt em Unix ms (tempo do servidor) — autoridade absoluta sobre quando expira
+    expiresAt: t.createdAt.getTime() + t.expirySecs * 1000,
     remainingSecs: t.status === "active"
       ? Math.max(0, t.expirySecs - Math.floor((now - t.createdAt.getTime()) / 1000))
       : 0,
   }));
 
-  return NextResponse.json({ trades: tradesWithRemaining, total, page, totalPages: Math.ceil(total / limit) });
+  // serverTime permite ao cliente medir o desfasamento entre o seu relógio e o servidor
+  return NextResponse.json({ trades: tradesWithRemaining, total, page, totalPages: Math.ceil(total / limit), serverTime: now });
 }

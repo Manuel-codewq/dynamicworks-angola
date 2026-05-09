@@ -266,6 +266,9 @@ export default function TradePage() {
   const lastLegendRef      = useRef<{ label: string; value: string; color: string }[]>([]);
   const closingTradesRef   = useRef(new Set<string>()); // trades com pedido de fecho em voo
   const notifiedTradesRef  = useRef(new Set<string>()); // trades para as quais já mostrámos notificação
+  // Desfasamento entre relógio do servidor e do cliente (ms). Positivo = servidor adiantado.
+  // Calculado em cada poll para compensar clock skew e dar ao cliente o "tempo da corretora".
+  const clockOffsetRef     = useRef<number>(0);
 
 
   // ── Candle countdown timer — pure UTC alignment ──────────────────────────
@@ -742,13 +745,19 @@ export default function TradePage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     async function poll() {
+      const sentAt = Date.now();
       const res = await fetch("/api/trade");
       if (!res.ok) return;
       const data = await res.json();
-      const now   = Date.now();
+      // Mede o desfasamento: serverTime está entre sentAt e agora (latência/2 de aproximação)
+      if (data.serverTime) {
+        const latency = (Date.now() - sentAt) / 2;
+        clockOffsetRef.current = data.serverTime - Date.now() + latency;
+      }
       const trades: any[] = (data.trades ?? []).map((t: any) => ({
         ...t,
-        expiresAt: t.status === "active" ? now + (t.remainingSecs ?? 0) * 1000 : 0,
+        // expiresAt vem do servidor em Unix ms — autoridade sobre o tempo de expiração
+        expiresAt: t.expiresAt ?? (t.createdAt ? new Date(t.createdAt).getTime() + t.expirySecs * 1000 : 0),
       }));
       setActiveTrades(trades.filter((t: any) => t.status === "active"));
       const justClosed = trades.filter((t: any) => {
@@ -816,10 +825,13 @@ export default function TradePage() {
     return direction === "call" ? currentPrice > entryPrice : currentPrice < entryPrice;
   }
 
+  function serverNow() {
+    return Date.now() + clockOffsetRef.current;
+  }
+
   function getCountdown(trade: ActiveTrade) {
-    // expiresAt = client_now + remainingSecs (calculado no servidor)
-    // Imune a desfasamento de relógio entre cliente e servidor DB
-    const remMs = trade.expiresAt - Date.now();
+    // Usa o tempo do servidor (com offset medido) — igual ao que a corretora usa
+    const remMs = trade.expiresAt - serverNow();
     if (remMs <= 0) return "A fechar...";
     const rem = Math.ceil(remMs / 1000);
     return `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`;
@@ -860,9 +872,10 @@ export default function TradePage() {
       // Força re-render para o countdown atualizar a cada segundo
       setTick(t => t + 1);
       const now = Date.now();
+      // serverNow() = relógio do cliente corrigido com o offset medido no poll
+      const sNow = now + clockOffsetRef.current;
       activeTradesRef.current.forEach(trade => {
-        // expiresAt vem do servidor (remainingSecs) — sem clock skew
-        if (now >= trade.expiresAt + 2000) triggerClose(trade.id);
+        if (sNow >= trade.expiresAt + 2000) triggerClose(trade.id);
       });
     }, 1000);
     return () => clearInterval(id);
@@ -895,9 +908,14 @@ export default function TradePage() {
         if (isMobile) setTradeDrawer(false);
         fetchBalance();
         if (data.trade) {
+          // Actualiza o offset com o serverTime da resposta de abertura
+          if (data.serverTime) {
+            clockOffsetRef.current = data.serverTime - Date.now();
+          }
           setActiveTrades(prev => {
             if (prev.some((t: any) => t.id === data.trade.id)) return prev;
-            return [...prev, { ...data.trade, expiresAt: Date.now() + (data.trade.remainingSecs ?? expiry.secs) * 1000 }];
+            // expiresAt vem do servidor (tempo da corretora)
+            return [...prev, { ...data.trade }];
           });
         }
       }
