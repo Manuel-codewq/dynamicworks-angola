@@ -266,6 +266,12 @@ export default function TradePage() {
   const lastLegendRef      = useRef<{ label: string; value: string; color: string }[]>([]);
   const closingTradesRef   = useRef(new Set<string>()); // trades com pedido de fecho em voo
   const notifiedTradesRef  = useRef(new Set<string>()); // trades para as quais já mostrámos notificação
+  const closeAttemptsRef   = useRef(new Map<string, number>()); // nº tentativas de fecho por trade
+  const closeLastAtRef     = useRef(new Map<string, number>()); // timestamp última tentativa por trade
+  // Trades abertos nesta sessão — só estes mostram notificação win/loss
+  const sessionTradeIdsRef = useRef(new Set<string>());
+  // setTimeout IDs para trades desta sessão — garante expiração exacta como o demo HTML
+  const tradeTimersRef     = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   // Desfasamento entre relógio do servidor e do cliente (ms). Positivo = servidor adiantado.
   // Calculado em cada poll para compensar clock skew e dar ao cliente o "tempo da corretora".
   const clockOffsetRef     = useRef<number>(0);
@@ -764,7 +770,10 @@ export default function TradePage() {
         if (t.status !== "closed") return false;
         return Date.now() - new Date(t.closedAt).getTime() < 6000;
       });
-      const unnotified = justClosed.find(t => !notifiedTradesRef.current.has(t.id));
+      // Só notifica trades abertos nesta sessão — trades antigos fecham silenciosamente
+      const unnotified = justClosed.find(t =>
+        !notifiedTradesRef.current.has(t.id) && sessionTradeIdsRef.current.has(t.id)
+      );
       if (unnotified) {
         notifiedTradesRef.current.add(unnotified.id);
         const isDraw = unnotified.result === "draw";
@@ -830,26 +839,49 @@ export default function TradePage() {
   }
 
   function getCountdown(trade: ActiveTrade) {
-    // Usa o tempo do servidor (com offset medido) — igual ao que a corretora usa
-    const remMs = trade.expiresAt - serverNow();
+    const remMs = trade.expiresAt - Date.now();
     if (remMs <= 0) return "A fechar...";
     const rem = Math.ceil(remMs / 1000);
     return `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`;
   }
 
-  // ── Client-side trade expiry trigger ────────────────────────────────────
-  // When a trade's countdown reaches 0, the client calls /api/trade/[id]/close
-  // so the result appears immediately instead of waiting for the next cron run.
+  // ── Fechar um trade — tenta o servidor com backoff, notifica só trades desta sessão ──
   const triggerClose = useCallback(async (tradeId: string) => {
     if (closingTradesRef.current.has(tradeId)) return;
+
+    const attempts = closeAttemptsRef.current.get(tradeId) ?? 0;
+    if (attempts >= 8) return; // poll de 3s apanha o resultado depois disso
+
     closingTradesRef.current.add(tradeId);
     try {
-      const res = await fetch(`/api/trade/${tradeId}/close`, { method: "POST" });
-      if (!res.ok) { closingTradesRef.current.delete(tradeId); return; }
+      // Envia o preço actual como fallback — o servidor usa o seu próprio preço se conseguir
+      const exitPrice = lastPriceRef.current > 0 ? lastPriceRef.current : undefined;
+      const res = await fetch(`/api/trade/${tradeId}/close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exitPrice }),
+      });
+      if (!res.ok) {
+        closeAttemptsRef.current.set(tradeId, attempts + 1);
+        closingTradesRef.current.delete(tradeId);
+        // Reagenda com backoff exponencial (1s, 2s, 4s, 8s, 16s, 32s, 64s, 128s)
+        const delay = Math.min(128, Math.pow(2, attempts)) * 1000;
+        tradeTimersRef.current.set(
+          tradeId,
+          setTimeout(() => { tradeTimersRef.current.delete(tradeId); triggerClose(tradeId); }, delay),
+        );
+        return;
+      }
+      closeAttemptsRef.current.delete(tradeId);
+      // Cancela qualquer timer pendente para este trade
+      const pending = tradeTimersRef.current.get(tradeId);
+      if (pending !== undefined) { clearTimeout(pending); tradeTimersRef.current.delete(tradeId); }
+
       const data = await res.json();
       setActiveTrades(prev => prev.filter(t => t.id !== tradeId));
       const t = data.trade;
-      if (t?.status === "closed" && !notifiedTradesRef.current.has(t.id)) {
+      // Só notifica trades desta sessão — trades antigos fecham silenciosamente
+      if (t?.status === "closed" && !notifiedTradesRef.current.has(t.id) && sessionTradeIdsRef.current.has(tradeId)) {
         notifiedTradesRef.current.add(t.id);
         const isDraw = t.result === "draw";
         const isWin  = t.result === "win";
@@ -861,25 +893,39 @@ export default function TradePage() {
         });
         setTimeout(() => setNotification(null), 4000);
         fetchBalance();
+      } else if (t?.status === "closed") {
+        fetchBalance(); // trade antigo — actualiza saldo silenciosamente
       }
     } catch {
-      closingTradesRef.current.delete(tradeId); // permite nova tentativa
+      closeAttemptsRef.current.set(tradeId, attempts + 1);
+      closingTradesRef.current.delete(tradeId);
     }
   }, [fetchBalance]);
 
+  // ── setInterval apenas para atualizar o countdown e apanhar trades antigos ──
+  // Trades desta sessão são fechados pelo setTimeout agendado em openTrade.
   useEffect(() => {
     const id = setInterval(() => {
-      // Força re-render para o countdown atualizar a cada segundo
-      setTick(t => t + 1);
+      setTick(t => t + 1); // força re-render do countdown
       const now = Date.now();
-      // serverNow() = relógio do cliente corrigido com o offset medido no poll
-      const sNow = now + clockOffsetRef.current;
       activeTradesRef.current.forEach(trade => {
-        if (sNow >= trade.expiresAt + 2000) triggerClose(trade.id);
+        if (sessionTradeIdsRef.current.has(trade.id)) return; // setTimeout trata destes
+        if (now < trade.expiresAt + 2000) return;
+        const attempts = closeAttemptsRef.current.get(trade.id) ?? 0;
+        const delay  = Math.min(16, Math.pow(2, attempts)) * 1000;
+        const lastAt = closeLastAtRef.current.get(trade.id) ?? 0;
+        if (Date.now() - lastAt < delay) return;
+        closeLastAtRef.current.set(trade.id, Date.now());
+        triggerClose(trade.id);
       });
     }, 1000);
     return () => clearInterval(id);
   }, [triggerClose]);
+
+  // Limpa timers pendentes ao desmontar
+  useEffect(() => {
+    return () => { tradeTimersRef.current.forEach(clearTimeout); };
+  }, []);
 
   async function openTrade(direction: "call" | "put") {
     if (loading || !selectedPair) return;
@@ -912,15 +958,27 @@ export default function TradePage() {
           if (data.serverTime) {
             clockOffsetRef.current = data.serverTime - Date.now();
           }
+          // Regista como trade desta sessão
+          sessionTradeIdsRef.current.add(data.trade.id);
+
+          // ── setTimeout exacto: dispara quando o trade expira (igual ao demo HTML) ──
+          // Usa expiresAt do servidor + 2s de buffer para garantir que o servidor já resolveu.
+          const msUntilExpiry = Math.max(200, data.trade.expiresAt - Date.now() + 500);
+          const timerId = setTimeout(() => {
+            tradeTimersRef.current.delete(data.trade.id);
+            triggerClose(data.trade.id);
+          }, msUntilExpiry);
+          tradeTimersRef.current.set(data.trade.id, timerId);
+
           setActiveTrades(prev => {
             if (prev.some((t: any) => t.id === data.trade.id)) return prev;
-            // expiresAt vem do servidor (tempo da corretora)
             return [...prev, { ...data.trade }];
           });
         }
       }
-    } catch {
-      setNotification({ msg: "Erro de ligação. Tente novamente.", type: "info" });
+    } catch (err: any) {
+      console.error("[openTrade]", err);
+      setNotification({ msg: `Erro: ${err?.message ?? "ligação falhou"}`, type: "info" });
     }
     // Enforce minimum 2s to prevent accidental double-submit
     const elapsed = Date.now() - started;
@@ -1080,36 +1138,44 @@ export default function TradePage() {
       </div>
 
       {/* ── CALL / PUT buttons ── */}
+      {(() => {
+        // Só bloqueia se há um trade DESTA SESSÃO activo — ignora trades antigos da DB
+        const sessionActiveTrade = activeTrades.find(t => sessionTradeIdsRef.current.has(t.id));
+        const hasActiveTrade = !!sessionActiveTrade;
+        const btnDisabled = loading || currentPrice === 0 || hasActiveTrade;
+        const activeCountdown = hasActiveTrade ? getCountdown(sessionActiveTrade!) : null;
+      return (
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => openTrade("call")} disabled={loading || currentPrice === 0} style={{
+        <button onClick={() => openTrade("call")} disabled={btnDisabled} style={{
           flex: 1, height: compact ? 52 : 60,
-          background: "linear-gradient(135deg,#16a34a 0%,#22c55e 100%)",
+          background: hasActiveTrade ? "linear-gradient(135deg,#0d3320 0%,#14532d 100%)" : "linear-gradient(135deg,#16a34a 0%,#22c55e 100%)",
           color: "#fff", border: "none", borderRadius: 12,
           fontSize: compact ? 14 : 15, fontWeight: 900,
-          cursor: loading ? "not-allowed" : "pointer",
-          opacity: loading || currentPrice === 0 ? 0.5 : 1,
+          cursor: btnDisabled ? "not-allowed" : "pointer",
+          opacity: btnDisabled ? 0.6 : 1,
           display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-          boxShadow: loading || currentPrice === 0 ? "none" : "0 4px 16px rgba(34,197,94,0.35)",
+          boxShadow: btnDisabled ? "none" : "0 4px 16px rgba(34,197,94,0.35)",
           transition: "opacity 0.15s, box-shadow 0.15s",
           letterSpacing: 0.5,
         }}>
-          {loading ? "..." : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
+          {loading ? "..." : hasActiveTrade ? <><TrendingUp size={16} strokeWidth={2.5} /> {activeCountdown}</> : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
         </button>
-        <button onClick={() => openTrade("put")} disabled={loading || currentPrice === 0} style={{
+        <button onClick={() => openTrade("put")} disabled={btnDisabled} style={{
           flex: 1, height: compact ? 52 : 60,
-          background: "linear-gradient(135deg,#b91c1c 0%,#ef4444 100%)",
+          background: hasActiveTrade ? "linear-gradient(135deg,#3b0a0a 0%,#7f1d1d 100%)" : "linear-gradient(135deg,#b91c1c 0%,#ef4444 100%)",
           color: "#fff", border: "none", borderRadius: 12,
           fontSize: compact ? 14 : 15, fontWeight: 900,
-          cursor: loading ? "not-allowed" : "pointer",
-          opacity: loading || currentPrice === 0 ? 0.5 : 1,
+          cursor: btnDisabled ? "not-allowed" : "pointer",
+          opacity: btnDisabled ? 0.6 : 1,
           display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-          boxShadow: loading || currentPrice === 0 ? "none" : "0 4px 16px rgba(239,68,68,0.35)",
+          boxShadow: btnDisabled ? "none" : "0 4px 16px rgba(239,68,68,0.35)",
           transition: "opacity 0.15s, box-shadow 0.15s",
           letterSpacing: 0.5,
         }}>
-          {loading ? "..." : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
+          {loading ? "..." : hasActiveTrade ? <><TrendingDown size={16} strokeWidth={2.5} /> {activeCountdown}</> : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
         </button>
       </div>
+      ); })()}
 
       {/* ── Active trades ── */}
       {activeTrades.length > 0 && (

@@ -25,19 +25,27 @@ function sanitizeEntryPrice(raw: unknown): number {
 
 
 export async function POST(req: NextRequest) {
-  // Autenticar primeiro para usar userId no rate limit (IP é forjável)
-  const session = await auth();
+  let session: any;
+  try {
+    session = await auth();
+  } catch (err) {
+    console.error("[trade/open] auth()", err);
+    return NextResponse.json({ error: "Erro de autenticação." }, { status: 500 });
+  }
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  // 10 trades por minuto por userId
   if (!checkRateLimit("trade", session.user.id, 10, 60_000)) {
     return NextResponse.json({ error: "Demasiadas operações. Aguarde 1 minuto." }, { status: 429 });
   }
 
-  const body = await req.json();
-  const { asset, direction, amount, expirySecs, entryPrice: rawEntryPrice } = body;
+  let body: any;
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  const { asset, direction, amount, expirySecs, entryPrice: rawEntryPrice } = body ?? {};
 
   if (!ALLOWED_ASSETS.includes(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
@@ -45,63 +53,76 @@ export async function POST(req: NextRequest) {
   if (!["call", "put"].includes(direction)) {
     return NextResponse.json({ error: "Direção inválida" }, { status: 400 });
   }
-  if (!amount || amount < 1000 || amount > 500000) {
+  const amountNum = Number(amount);
+  if (!amountNum || amountNum < 1000 || amountNum > 500000) {
     return NextResponse.json({ error: "Valor entre 1.000 e 500.000 Kz" }, { status: 400 });
   }
-  if (!Number.isInteger(expirySecs) || expirySecs < 60 || expirySecs > 3600) {
+  const expiry = Number(expirySecs);
+  if (!Number.isInteger(expiry) || expiry < 60 || expiry > 3600) {
     return NextResponse.json({ error: "Expiração entre 1 e 60 minutos" }, { status: 400 });
   }
 
-  let cfg;
-  let user;
+  // Buscar utilizador
+  let user: any;
   try {
-    cfg = await getSettings();
-    if (cfg.maintenanceMode) {
-      return NextResponse.json({ error: "Plataforma em manutenção. Tente novamente em breve." }, { status: 503 });
-    }
     user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  } catch {
-    return NextResponse.json({ error: "Erro interno. Tente novamente." }, { status: 500 });
+  } catch (err) {
+    console.error("[trade/open] findUser", err);
+    return NextResponse.json({ error: "Erro de ligação. Tente novamente." }, { status: 500 });
   }
 
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   if (user.status === "blocked") return NextResponse.json({ error: "Conta bloqueada" }, { status: 403 });
 
-  // Entry price comes from the client's live Deriv WS tick
+  const balanceField = user.isDemo ? "demoBalance" : "balance";
+  const currentBalance: number = user[balanceField] ?? 0;
+  if (currentBalance < amountNum) {
+    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
+  }
+
+  // Obter payout das definições (com fallback)
+  const cfg = await getSettings().catch(() => null);
+  const payout = cfg?.payout?.[asset] ?? 0.85;
   const entryPrice = sanitizeEntryPrice(rawEntryPrice);
-  const payout = cfg.payout?.[asset] ?? 0.85;
 
-  let trade;
+  // Débito atómico: WHERE garante que saldo não ficou negativo entre a verificação e o débito
+  let deducted: any;
   try {
-    // Débito atómico: o WHERE inclui a condição de saldo para evitar race conditions
-    trade = await prisma.$transaction(async (tx) => {
-      const balanceField = user.isDemo ? "demoBalance" : "balance";
-      const updated = await tx.user.updateMany({
-        where: {
-          id: user.id,
-          [balanceField]: { gte: amount },
-        },
-        data: { [balanceField]: { decrement: amount } },
-      });
-
-      if (updated.count === 0) {
-        throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
-      }
-
-      return tx.trade.create({
-        data: { userId: user.id, asset, direction, amount, entryPrice, payout, expirySecs, status: "active", isDemo: user.isDemo },
-      });
+    deducted = await prisma.user.updateMany({
+      where: { id: user.id, [balanceField]: { gte: amountNum } },
+      data:  { [balanceField]: { decrement: amountNum } },
     });
-  } catch (err: any) {
-    if (err?.code === "INSUFFICIENT_BALANCE") {
-      return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
-    }
-    console.error("[trade/open]", err);
+  } catch (err) {
+    console.error("[trade/open] deduct", err);
+    return NextResponse.json({ error: "Erro ao processar saldo. Tente novamente." }, { status: 500 });
+  }
+
+  if (deducted.count === 0) {
+    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
+  }
+
+  // Criar operação
+  let trade: any;
+  try {
+    trade = await prisma.trade.create({
+      data: {
+        userId: user.id, asset, direction,
+        amount: amountNum, entryPrice, payout,
+        expirySecs: expiry, status: "active", isDemo: user.isDemo,
+      },
+    });
+  } catch (err) {
+    console.error("[trade/open] create", err);
+    // Reembolsar saldo se a criação falhou
+    await prisma.user.update({
+      where: { id: user.id },
+      data:  { [balanceField]: { increment: amountNum } },
+    }).catch(() => {});
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
 
   const serverTime = Date.now();
-  const expiresAt  = trade.createdAt.getTime() + trade.expirySecs * 1000;
+  const expiresAt  = new Date(trade.createdAt).getTime() + expiry * 1000;
   return NextResponse.json({ trade: { ...trade, expiresAt }, entryPrice, serverTime });
 }
 
@@ -115,16 +136,6 @@ export async function GET(req: NextRequest) {
   const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
   const skip  = (page - 1) * limit;
-
-  // Fecha automaticamente qualquer operação ativa já expirada (createdAt + expirySecs < agora).
-  // Usa SQL direto porque Prisma não suporta aritmética entre colunas no WHERE.
-  await prisma.$queryRaw`
-    UPDATE "Trade"
-    SET status = 'closed', result = 'loss', "closedAt" = now()
-    WHERE "userId" = ${session.user.id}
-      AND status   = 'active'
-      AND "createdAt" + ("expirySecs" * interval '1 second') < now() - interval '30 seconds'
-  `.catch(() => {}); // silencioso — não bloqueia o GET
 
   const [trades, total] = await Promise.all([
     prisma.trade.findMany({

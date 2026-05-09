@@ -25,6 +25,7 @@ model User {
   verifyExpires  DateTime?
   otpCode        String?
   otpExpires     DateTime?
+  indicatorPrefs Json?
   createdAt      DateTime      @default(now())
   trades        Trade[]
   transactions  Transaction[]

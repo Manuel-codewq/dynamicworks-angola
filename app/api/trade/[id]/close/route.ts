@@ -21,12 +21,21 @@ export async function POST(
     return NextResponse.json({ error: "Não encontrada" }, { status: 404 });
   }
 
-  // Já foi resolvida (race com o worker) — devolver o resultado existente
   if (trade.status !== "active") {
     return NextResponse.json({ result: trade.result, trade });
   }
 
-  const outcome = await resolveExpiredTrade(trade);
+  // Aceita o preço actual enviado pelo browser como fallback quando o servidor
+  // não consegue aceder ao Deriv WS (mercado fechado, rede, etc.)
+  let clientPrice: number | undefined;
+  try {
+    const body = await req.json();
+    if (typeof body?.exitPrice === "number" && body.exitPrice > 0) {
+      clientPrice = body.exitPrice;
+    }
+  } catch { /* body vazio — ok */ }
+
+  const outcome = await resolveExpiredTrade(trade, clientPrice);
 
   if (outcome === "pending") {
     return NextResponse.json({ error: "A operação ainda não expirou" }, { status: 400 });
