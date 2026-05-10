@@ -35,7 +35,7 @@ export default function KYCVerificationPage() {
     };
   }, [stream]);
 
-  // Efeito para ligar a câmara assim que o view muda e o elemento de vídeo é montado
+  // Efeito para ligar a câmara assim que o view muda
   useEffect(() => {
     if (currentView === 'liveness-cam') {
       const start = async () => {
@@ -46,8 +46,7 @@ export default function KYCVerificationPage() {
           setCurrentView('permission');
         }
       };
-      // Pequeno delay para garantir que o elemento <video> já está no DOM
-      const timer = setTimeout(start, 500);
+      const timer = setTimeout(start, 600);
       return () => clearTimeout(timer);
     }
     
@@ -55,10 +54,10 @@ export default function KYCVerificationPage() {
       const start = async () => {
         const success = await attachCamera('environment');
         if (!success) {
-          await attachCamera('user'); // Fallback se não houver câmara traseira
+          await attachCamera('user'); 
         }
       };
-      const timer = setTimeout(start, 500);
+      const timer = setTimeout(start, 600);
       return () => clearTimeout(timer);
     }
   }, [currentView]);
@@ -69,35 +68,49 @@ export default function KYCVerificationPage() {
     }
 
     if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert("Erro Crítico: O seu browser não tem permissão ou não suporta câmara em ligações não seguras (HTTP). Use HTTPS.");
+      alert("Browser não suporta câmara ou ligação não é segura (HTTPS).");
       return false;
     }
 
+    // Tentativa 1: Com facingMode específico
     try {
-      // Constraints super básicas para garantir compatibilidade máxima
-      const constraints = { 
-        video: { 
-          facingMode: facingMode
-        },
+      const s = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: { ideal: facingMode } },
         audio: false 
-      };
+      });
+      return await bindStream(s);
+    } catch (err1) {
+      console.warn("Tentativa 1 falhou, tentando modo genérico...", err1);
       
-      const s = await navigator.mediaDevices.getUserMedia(constraints);
-      setStream(s);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = s;
-        // Forçar play e silenciar (obrigatório para autoplay em mobile)
-        videoRef.current.muted = true;
+      // Tentativa 2: Apenas vídeo genérico (fallback universal)
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ 
+          video: true,
+          audio: false 
+        });
+        return await bindStream(s);
+      } catch (err2: any) {
+        console.error("Todas as tentativas de câmara falharam:", err2);
+        alert(`Erro de Câmara: ${err2.name}. Verifique se a câmara não está a ser usada por outra app.`);
+        return false;
+      }
+    }
+  };
+
+  const bindStream = async (s: MediaStream) => {
+    setStream(s);
+    if (videoRef.current) {
+      videoRef.current.srcObject = s;
+      videoRef.current.muted = true;
+      try {
         await videoRef.current.play();
         return true;
+      } catch (e) {
+        console.error("Play error:", e);
+        return false;
       }
-      return false;
-    } catch (err: any) {
-      console.error("Camera Error:", err);
-      alert(`Erro ao aceder à câmara: ${err.name}. Por favor, verifique as definições de privacidade do seu telemóvel.`);
-      return false;
     }
+    return false;
   };
 
   const takePhoto = () => {
@@ -110,7 +123,6 @@ export default function KYCVerificationPage() {
     
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Se for a câmara frontal, precisamos de inverter o canvas antes de desenhar
       if (currentView === 'liveness-cam') {
         ctx.save();
         ctx.scale(-1, 1);
@@ -152,7 +164,7 @@ export default function KYCVerificationPage() {
         }
         setCurrentView('bi-intro');
       }
-    }, 4000); // Aumentado para 4 segundos para dar tempo no mobile
+    }, 4000);
   };
 
   const captureBI = () => {
