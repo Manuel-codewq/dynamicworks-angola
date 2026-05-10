@@ -9,7 +9,6 @@ export default function KYCVerificationPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // States
   const [currentView, setCurrentView] = useState<'liveness-intro' | 'permission' | 'liveness-cam' | 'bi-intro' | 'bi-cam' | 'review'>('liveness-intro');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [livenessStep, setLivenessStep] = useState(1);
@@ -18,99 +17,118 @@ export default function KYCVerificationPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [livenessScore, setLivenessScore] = useState(0);
   const [debugInfo, setDebugInfo] = useState('');
-  
-  // Data
-  const [kycData, setKycData] = useState({
-    faceFront: '', faceRight: '', faceLeft: '', biFront: '', biBack: ''
-  });
-
+  const [kycData, setKycData] = useState({ faceFront: '', faceRight: '', faceLeft: '', biFront: '', biBack: '' });
   const [message, setMessage] = useState('');
   const [flash, setFlash] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-      }
+      stopStream();
     };
-  }, [stream]);
+  }, []);
+
+  const stopStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      setStream(null);
+    }
+  };
 
   useEffect(() => {
     if (currentView === 'liveness-cam') {
-      const timer = setTimeout(() => attachCamera('user').then(success => {
-        if (success) runLivenessStep(1);
-        else setCurrentView('permission');
-      }), 800);
+      const timer = setTimeout(async () => {
+        const success = await attachCamera('user');
+        if (success) {
+          runLivenessStep(1);
+        } else {
+          setCurrentView('permission');
+        }
+      }, 800);
       return () => clearTimeout(timer);
     }
-    
+
     if (currentView === 'bi-cam') {
-      const timer = setTimeout(() => attachCamera('environment').then(success => {
-        if (!success) attachCamera('user');
-      }), 800);
+      const timer = setTimeout(async () => {
+        const success = await attachCamera('environment');
+        if (!success) {
+          await attachCamera('user');
+        }
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [currentView]);
 
-  const attachCamera = async (facingMode: 'user' | 'environment') => {
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-    }
+  const attachCamera = async (facingMode: 'user' | 'environment'): Promise<boolean> => {
+    stopStream();
 
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
-      setDebugInfo("Navegador não suporta mediaDevices.");
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setDebugInfo('getUserMedia não suportado neste browser.');
       return false;
     }
 
-    // TENTATIVA 1: Modo ideal solicitado
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: { ideal: facingMode } },
-        audio: false 
-      });
-      return await bindStream(s);
-    } catch (err1: any) {
-      console.warn("Falha na tentativa 1:", err1.name);
-      setDebugInfo(`Erro 1: ${err1.name}`);
+    // Lista de constraints para tentar em ordem
+    const constraintOptions: MediaStreamConstraints[] = [
+      { video: { facingMode: facingMode }, audio: false },
+      { video: { facingMode: { ideal: facingMode } }, audio: false },
+      { video: true, audio: false },
+    ];
 
-      // TENTATIVA 2: Qualquer câmara de vídeo (Compatibilidade total)
+    for (const constraints of constraintOptions) {
       try {
-        const s = await navigator.mediaDevices.getUserMedia({ video: true });
-        return await bindStream(s);
-      } catch (err2: any) {
-        console.error("Falha total na câmara:", err2);
-        setDebugInfo(`Erro Final: ${err2.name} - ${err2.message}`);
-        return false;
+        const s = await navigator.mediaDevices.getUserMedia(constraints);
+        const bound = await bindStream(s);
+        if (bound) {
+          setDebugInfo('');
+          return true;
+        }
+      } catch (err: any) {
+        setDebugInfo(`Tentativa falhou: ${err.name} — ${err.message}`);
+        continue;
       }
     }
+
+    setDebugInfo('Nenhuma câmara disponível. Verifique as permissões ou use HTTPS.');
+    return false;
   };
 
-  const bindStream = async (s: MediaStream) => {
+  const bindStream = async (s: MediaStream): Promise<boolean> => {
+    streamRef.current = s;
     setStream(s);
-    if (videoRef.current) {
-      videoRef.current.srcObject = s;
-      videoRef.current.setAttribute('playsinline', 'true');
-      videoRef.current.setAttribute('autoplay', 'true');
-      videoRef.current.muted = true;
-      try {
-        await videoRef.current.play();
-        return true;
-      } catch (e) {
-        console.error("Play falhou:", e);
-        return false;
-      }
-    }
-    return false;
+
+    const video = videoRef.current;
+    if (!video) return false;
+
+    video.srcObject = s;
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('autoplay', 'true');
+    video.muted = true;
+    video.playsInline = true;
+
+    return new Promise((resolve) => {
+      video.onloadedmetadata = async () => {
+        try {
+          await video.play();
+          resolve(true);
+        } catch (e: any) {
+          setDebugInfo(`Play falhou: ${e.name}`);
+          resolve(false);
+        }
+      };
+      // timeout de segurança
+      setTimeout(() => resolve(false), 5000);
+    });
   };
 
   const takePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return '';
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
-    
+
     const ctx = canvas.getContext('2d');
     if (ctx) {
       if (currentView === 'liveness-cam') {
@@ -131,24 +149,25 @@ export default function KYCVerificationPage() {
     setTimeout(() => setFlash(false), 150);
   };
 
+  const livenessStepsInfo = [
+    { text: '1. Olhe diretamente para a câmara', prop: 'faceFront' },
+    { text: '2. Vire o rosto ligeiramente para a DIREITA', prop: 'faceRight' },
+    { text: '3. Vire o rosto ligeiramente para a ESQUERDA', prop: 'faceLeft' },
+  ];
+
   const runLivenessStep = (step: number) => {
     setLivenessStep(step);
-    const stepsInfo = [
-      { text: "1. Olhe diretamente para a câmara", prop: 'faceFront' },
-      { text: "2. Vire o rosto ligeiramente para a DIREITA", prop: 'faceRight' },
-      { text: "3. Vire o rosto ligeiramente para a ESQUERDA", prop: 'faceLeft' }
-    ];
-    setMessage(stepsInfo[step - 1].text);
+    setMessage(livenessStepsInfo[step - 1].text);
 
     setTimeout(() => {
       triggerFlash();
       const photo = takePhoto();
-      setKycData(prev => ({ ...prev, [stepsInfo[step - 1].prop]: photo }));
-      
+      setKycData(prev => ({ ...prev, [livenessStepsInfo[step - 1].prop]: photo }));
+
       if (step < 3) {
         runLivenessStep(step + 1);
       } else {
-        if (stream) stream.getTracks().forEach(t => t.stop());
+        stopStream();
         setCurrentView('bi-intro');
       }
     }, 4500);
@@ -160,18 +179,20 @@ export default function KYCVerificationPage() {
     if (biStep === 1) {
       setKycData(prev => ({ ...prev, biFront: photo }));
       setBiStep(2);
-      setMessage("Vire o documento. Alinhe o VERSO.");
+      setMessage('Vire o documento. Alinhe o VERSO.');
     } else {
       setKycData(prev => ({ ...prev, biBack: photo }));
-      if (stream) stream.getTracks().forEach(t => t.stop());
+      stopStream();
       setLivenessScore(Math.floor(Math.random() * (98 - 92 + 1)) + 92);
       setCurrentView('review');
     }
   };
 
   const restartKYC = () => {
-    if (stream) stream.getTracks().forEach(t => t.stop());
+    stopStream();
     setKycData({ faceFront: '', faceRight: '', faceLeft: '', biFront: '', biBack: '' });
+    setBiStep(1);
+    setLivenessStep(1);
     setCurrentView('liveness-intro');
   };
 
@@ -181,7 +202,7 @@ export default function KYCVerificationPage() {
       const res = await fetch('/api/profile/kyc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...kycData, livenessScore })
+        body: JSON.stringify({ ...kycData, livenessScore }),
       });
       if (res.ok) {
         setSubmitSuccess(true);
@@ -190,7 +211,7 @@ export default function KYCVerificationPage() {
         const d = await res.json();
         alert(d.error || 'Erro ao enviar.');
       }
-    } catch (err) {
+    } catch {
       alert('Erro de conexão.');
     } finally {
       setIsSubmitting(false);
@@ -233,6 +254,7 @@ export default function KYCVerificationPage() {
         .kyc-btn-secondary { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.2); }
         .kyc-btn-success { background: #22c55e; color: #fff; }
         .kyc-liveness-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; margin-bottom: 15px; }
+        .kyc-debug { margin-top: 20px; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 10px; font-size: 10px; color: #ef4444; text-align: left; word-break: break-all; }
         @media (min-width: 768px) {
           .kyc-view { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(15px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 25px 50px rgba(0,0,0,0.5); margin: 20px 0; padding-bottom: 30px; }
           .kyc-card { background: transparent; box-shadow: none; border: none; padding: 10px 0; }
@@ -248,12 +270,11 @@ export default function KYCVerificationPage() {
               <div className="kyc-icon-wrapper"><ScanFace size={36} /></div>
               <h2 className="kyc-h2">Verificação Facial</h2>
               <p className="kyc-subtitle">Iremos capturar o seu rosto em diferentes ângulos.</p>
-              
               <div className="kyc-instruction-list">
                 <div className="kyc-instruction-item"><span><Sun size={18} /></span> Fique num ambiente claro</div>
                 <div className="kyc-instruction-item"><span><User size={18} /></span> Remova óculos e acessórios</div>
+                <div className="kyc-instruction-item"><span><Smartphone size={18} /></span> Use HTTPS ou localhost</div>
               </div>
-              
               <button className="kyc-btn kyc-btn-primary" onClick={() => setCurrentView('permission')}><Camera size={20} /> Começar Verificação</button>
             </div>
           </div>
@@ -262,35 +283,28 @@ export default function KYCVerificationPage() {
         {currentView === 'permission' && (
           <div className="kyc-view">
             <div className="kyc-card">
-              <div className="kyc-icon-wrapper" style={{ background: 'rgba(245, 166, 35, 0.1)', color: '#f5a623' }}><ShieldAlert size={36} /></div>
+              <div className="kyc-icon-wrapper"><ShieldAlert size={36} /></div>
               <h2 className="kyc-h2">Acesso à Câmara</h2>
-              <p className="kyc-subtitle">Precisamos da sua permissão para utilizar a câmara.</p>
-              
+              <p className="kyc-subtitle">Precisamos da sua permissão para utilizar a câmara. Quando solicitado, carregue em <strong>"Permitir"</strong>.</p>
               <button className="kyc-btn kyc-btn-primary" onClick={() => setCurrentView('liveness-cam')}><Camera size={20} /> Permitir Acesso</button>
-              
-              {debugInfo && (
-                <div style={{ marginTop: 20, padding: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 10, fontSize: 10, color: '#ef4444', textAlign: 'left' }}>
-                  <strong>Debug:</strong> {debugInfo}
-                </div>
-              )}
+              {debugInfo && <div className="kyc-debug"><strong>Debug:</strong> {debugInfo}</div>}
             </div>
           </div>
         )}
 
         {currentView === 'liveness-cam' && (
           <div className="kyc-view">
-            <div style={{ textAlign: "center", marginBottom: 15 }}>
+            <div style={{ textAlign: 'center', marginBottom: 15 }}>
               <h2 className="kyc-h2">Posicione o Rosto</h2>
               <p className="kyc-subtitle">Passo {livenessStep} de 3</p>
             </div>
-
             <div className="kyc-cam-wrapper">
               <video ref={videoRef} playsInline muted autoPlay className="kyc-video" style={{ transform: 'scaleX(-1)' }} />
               <div className="kyc-cam-overlay-face" style={{ borderColor: flash ? '#fff' : 'rgba(255,255,255,0.5)', backgroundColor: flash ? 'rgba(255,255,255,0.3)' : 'transparent' }}></div>
               <div className="kyc-status-ring kyc-status-ring-face"></div>
             </div>
-            
-            <div style={{ color: "#f5a623", fontWeight: 600, fontSize: 16, textAlign: "center", minHeight: 24 }}>{message}</div>
+            <div style={{ color: '#f5a623', fontWeight: 600, fontSize: 16, textAlign: 'center', minHeight: 24 }}>{message}</div>
+            {debugInfo && <div className="kyc-debug"><strong>Debug:</strong> {debugInfo}</div>}
           </div>
         )}
 
@@ -300,38 +314,39 @@ export default function KYCVerificationPage() {
               <div className="kyc-icon-wrapper"><CreditCard size={36} /></div>
               <h2 className="kyc-h2">B.I. Nacional</h2>
               <p className="kyc-subtitle">Agora, fotos claras do seu documento.</p>
-              <button className="kyc-btn kyc-btn-primary" onClick={() => setCurrentView('bi-cam')}><Camera size={20} /> Fotografar B.I.</button>
+              <button className="kyc-btn kyc-btn-primary" onClick={() => { setBiStep(1); setCurrentView('bi-cam'); }}><Camera size={20} /> Fotografar B.I.</button>
             </div>
           </div>
         )}
 
         {currentView === 'bi-cam' && (
           <div className="kyc-view">
-            <div style={{ textAlign: "center", marginBottom: 15 }}>
-              <h2 className="kyc-h2">{biStep === 1 ? "B.I. - FRENTE" : "B.I. - VERSO"}</h2>
+            <div style={{ textAlign: 'center', marginBottom: 15 }}>
+              <h2 className="kyc-h2">{biStep === 1 ? 'B.I. — FRENTE' : 'B.I. — VERSO'}</h2>
+              <p className="kyc-subtitle">{message || 'Alinhe o documento dentro do rectângulo'}</p>
             </div>
             <div className="kyc-cam-wrapper">
               <video ref={videoRef} playsInline muted autoPlay className="kyc-video" />
               <div className="kyc-cam-overlay-bi" style={{ borderColor: flash ? '#fff' : 'rgba(255,255,255,0.5)', backgroundColor: flash ? 'rgba(255,255,255,0.3)' : 'transparent' }}></div>
             </div>
             <button className="kyc-btn kyc-btn-primary" onClick={captureBI}><Aperture size={20} /> Tirar Foto</button>
+            {debugInfo && <div className="kyc-debug"><strong>Debug:</strong> {debugInfo}</div>}
           </div>
         )}
 
         {currentView === 'review' && (
           <div className="kyc-view">
             <h2 className="kyc-h2">Revisão</h2>
-            <div className="kyc-liveness-badge">
-              <ShieldCheck size={16} /> Liveness IA: {livenessScore}%
-            </div>
+            <div className="kyc-liveness-badge"><ShieldCheck size={16} /> Liveness IA: {livenessScore}%</div>
             <div className="kyc-gallery">
-              <div className="kyc-gallery-item"><span>Rosto</span><img src={kycData.faceFront} style={{ transform: 'scaleX(-1)' }} /></div>
-              <div className="kyc-gallery-item"><span>Lado</span><img src={kycData.faceRight} style={{ transform: 'scaleX(-1)' }} /></div>
-              <div className="kyc-gallery-item"><span>B.I. Frente</span><img src={kycData.biFront} /></div>
-              <div className="kyc-gallery-item"><span>B.I. Verso</span><img src={kycData.biBack} /></div>
+              <div className="kyc-gallery-item"><span>Rosto</span><img src={kycData.faceFront} style={{ transform: 'scaleX(-1)' }} alt="rosto" /></div>
+              <div className="kyc-gallery-item"><span>Lado</span><img src={kycData.faceRight} style={{ transform: 'scaleX(-1)' }} alt="lado" /></div>
+              <div className="kyc-gallery-item"><span>B.I. Frente</span><img src={kycData.biFront} alt="bi frente" /></div>
+              <div className="kyc-gallery-item"><span>B.I. Verso</span><img src={kycData.biBack} alt="bi verso" /></div>
             </div>
+            <button className="kyc-btn kyc-btn-secondary" style={{ marginBottom: 12 }} onClick={restartKYC}><RefreshCcw size={18} /> Repetir</button>
             <button className="kyc-btn kyc-btn-success" onClick={submitKYC} disabled={isSubmitting || submitSuccess}>
-              {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> Enviando...</> : 'Finalizar'}
+              {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> Enviando...</> : submitSuccess ? <><CheckCircle size={20} /> Enviado!</> : 'Finalizar'}
             </button>
           </div>
         )}
