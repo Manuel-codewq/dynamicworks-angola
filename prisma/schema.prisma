@@ -30,6 +30,7 @@ model User {
   trades        Trade[]
   transactions  Transaction[]
   notifications Notification[]
+  kycSubmission KycSubmission?
 }
 
 model Trade {
@@ -105,4 +106,16 @@ model PriceCandle {
 
   @@index([asset, timeframe, timestamp])
   @@unique([asset, timeframe, timestamp])
+}
+
+model KycSubmission {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  faceFront String
+  faceRight String
+  faceLeft  String
+  biFront   String
+  biBack    String
+  createdAt DateTime @default(now())
 }

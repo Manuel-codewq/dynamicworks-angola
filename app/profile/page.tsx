@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   TrendingUp, ChevronLeft, User, Shield, BarChart2, Lock,
-  CheckCircle, Clock, XCircle, Save,
+  CheckCircle, Clock, XCircle, Save, Camera
 } from "lucide-react";
 
 const PROVINCES = [
@@ -269,24 +269,12 @@ export default function ProfilePage() {
           </div>
 
           {kycStatus !== "approved" && (
-            <>
-              <div style={{ marginBottom: 14 }}>
-                <label style={label}>Número do Bilhete de Identidade</label>
-                <input
-                  value={biInput}
-                  onChange={e => setBiInput(e.target.value)}
-                  placeholder="Ex: 006123456LA042"
-                  maxLength={14}
-                  style={input}
-                />
-                <div style={{ color: "#64748b", fontSize: 11, marginTop: 4 }}>{biInput.length}/14 caracteres</div>
-              </div>
-              <button onClick={submitKyc} disabled={kycBusy || biInput.length < 8}
-                style={{ display: "flex", alignItems: "center", gap: 7, background: biInput.length >= 8 ? "#f5a623" : "#1e2d50", color: biInput.length >= 8 ? "#0a0f1e" : "#64748b", border: "none", borderRadius: 8, padding: "11px 22px", fontSize: 14, fontWeight: 700, cursor: kycBusy || biInput.length < 8 ? "not-allowed" : "pointer" }}>
-                <CheckCircle size={15} /> {kycBusy ? "A submeter..." : "Submeter para verificação"}
+            <div style={{ marginTop: 14 }}>
+              <button onClick={() => router.push("/kyc")}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", gap: 7, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "14px 22px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                <Camera size={18} /> Iniciar Verificação KYC Avançada
               </button>
-              <Msg fb={kycMsg} />
-            </>
+            </div>
           )}
         </div>
 
