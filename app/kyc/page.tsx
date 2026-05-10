@@ -26,6 +26,7 @@ export default function KYCVerificationPage() {
   const [message, setMessage] = useState('');
   const [flash, setFlash] = useState(false);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (stream) {
@@ -34,53 +35,67 @@ export default function KYCVerificationPage() {
     };
   }, [stream]);
 
-  const requestPermission = async () => {
-    setCurrentView('liveness-cam');
-    setLivenessStep(1);
-    const success = await attachCamera('user');
-    if (success) {
-      runLivenessStep(1);
-    } else {
-      setCurrentView('permission');
-      alert("Acesso à câmara falhou. Verifique se deu permissão no browser e se o seu site está em HTTPS.");
+  // Efeito para ligar a câmara assim que o view muda e o elemento de vídeo é montado
+  useEffect(() => {
+    if (currentView === 'liveness-cam') {
+      const start = async () => {
+        const success = await attachCamera('user');
+        if (success) {
+          runLivenessStep(1);
+        } else {
+          setCurrentView('permission');
+        }
+      };
+      // Pequeno delay para garantir que o elemento <video> já está no DOM
+      const timer = setTimeout(start, 500);
+      return () => clearTimeout(timer);
     }
-  };
+    
+    if (currentView === 'bi-cam') {
+      const start = async () => {
+        const success = await attachCamera('environment');
+        if (!success) {
+          await attachCamera('user'); // Fallback se não houver câmara traseira
+        }
+      };
+      const timer = setTimeout(start, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentView]);
 
   const attachCamera = async (facingMode: 'user' | 'environment') => {
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
     }
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert("O seu browser não suporta acesso à câmara ou você não está em uma conexão segura (HTTPS).");
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Erro Crítico: O seu browser não tem permissão ou não suporta câmara em ligações não seguras (HTTP). Use HTTPS.");
       return false;
     }
 
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ 
+      // Constraints super básicas para garantir compatibilidade máxima
+      const constraints = { 
         video: { 
-          facingMode: facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
+          facingMode: facingMode
+        },
+        audio: false 
+      };
       
+      const s = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(s);
       
       if (videoRef.current) {
         videoRef.current.srcObject = s;
-        // Importante para iOS: garantir que o vídeo começa a tocar
-        try {
-          await videoRef.current.play();
-          return true;
-        } catch (playErr) {
-          console.error("Video play error:", playErr);
-          return false;
-        }
+        // Forçar play e silenciar (obrigatório para autoplay em mobile)
+        videoRef.current.muted = true;
+        await videoRef.current.play();
+        return true;
       }
       return false;
-    } catch (err) {
-      console.error("Camera access error:", err);
+    } catch (err: any) {
+      console.error("Camera Error:", err);
+      alert(`Erro ao aceder à câmara: ${err.name}. Por favor, verifique as definições de privacidade do seu telemóvel.`);
       return false;
     }
   };
@@ -90,13 +105,20 @@ export default function KYCVerificationPage() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    // Usar dimensões reais do vídeo capturado
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Se for a câmara frontal, precisamos de inverter o canvas antes de desenhar
+      if (currentView === 'liveness-cam') {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+      } else {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      }
       return canvas.toDataURL('image/jpeg', 0.8);
     }
     return '';
@@ -130,18 +152,7 @@ export default function KYCVerificationPage() {
         }
         setCurrentView('bi-intro');
       }
-    }, 3500);
-  };
-
-  const startBI = async () => {
-    setCurrentView('bi-cam');
-    setBiStep(1);
-    setMessage("Alinhe o documento e clique em Tirar Foto");
-    const success = await attachCamera('environment');
-    if (!success) {
-      // Fallback para câmara frontal se a traseira falhar
-      await attachCamera('user');
-    }
+    }, 4000); // Aumentado para 4 segundos para dar tempo no mobile
   };
 
   const captureBI = () => {
@@ -267,7 +278,7 @@ export default function KYCVerificationPage() {
                 <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>Clique no botão abaixo e selecione "Permitir" quando o navegador solicitar.</p>
               </div>
               
-              <button className="kyc-btn kyc-btn-primary" onClick={requestPermission}><Camera size={20} /> Permitir Acesso à Câmara</button>
+              <button className="kyc-btn kyc-btn-primary" onClick={() => setCurrentView('liveness-cam')}><Camera size={20} /> Permitir Acesso à Câmara</button>
               <button className="kyc-btn kyc-btn-secondary" style={{ marginTop: 10 }} onClick={() => setCurrentView('liveness-intro')}>Voltar</button>
             </div>
           </div>
@@ -310,7 +321,7 @@ export default function KYCVerificationPage() {
                 <div className="kyc-instruction-item"><span><CheckCircle size={18} /></span> Todos os dados legíveis</div>
               </div>
               
-              <button className="kyc-btn kyc-btn-primary" onClick={startBI}><Camera size={20} /> Fotografar B.I.</button>
+              <button className="kyc-btn kyc-btn-primary" onClick={() => setCurrentView('bi-cam')}><Camera size={20} /> Fotografar B.I.</button>
             </div>
           </div>
         )}
