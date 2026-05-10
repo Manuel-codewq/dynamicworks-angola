@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, CreditCard, Loader2, ScanFace, ShieldCheck, Sun, User, CheckCircle, RotateCcw, AlertCircle, XCircle } from 'lucide-react';
+import { Camera, CreditCard, Loader2, ScanFace, ShieldCheck, Sun, User, CheckCircle, RotateCcw, XCircle, Lock, Clock } from 'lucide-react';
 
-type KYCView = 'intro' | 'loading-model' | 'face' | 'bi-intro' | 'bi' | 'review';
+type KYCView = 'intro' | 'loading-model' | 'face' | 'bi-intro' | 'bi' | 'review' | 'blocked';
 
 interface KYCData {
   faceFront: string;
@@ -17,6 +17,7 @@ interface KYCData {
 interface ValidationResult {
   ok: boolean;
   message: string;
+  score?: number;
 }
 
 export default function KYCVerificationPage() {
@@ -26,8 +27,12 @@ export default function KYCVerificationPage() {
   const [biStep, setBiStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
-  const [livenessScore] = useState<number>(Math.floor(Math.random() * 7) + 92);
-  const [validating, setValidating] = useState<boolean>(false);
+  const [livenessScore, setLivenessScore] = useState<number>(0);
+  const [attemptsLeft, setAttemptsLeft] = useState<number>(2);
+  const [blockedUntil, setBlockedUntil] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState<string>('');
+  const faceScoresRef = useRef<number[]>([]);
+  const [processingMsg, setProcessingMsg] = useState<string>('');
   const [validationError, setValidationError] = useState<string>('');
   const [modelLoaded, setModelLoaded] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<string>('A carregar modelos de IA...');
@@ -45,6 +50,40 @@ export default function KYCVerificationPage() {
     { label: 'Direita', hint: 'Vire o rosto ligeiramente para a direita', prop: 'faceRight' as keyof KYCData },
     { label: 'Esquerda', hint: 'Vire o rosto ligeiramente para a esquerda', prop: 'faceLeft' as keyof KYCData },
   ];
+
+  // Verifica estado KYC ao carregar
+  useEffect(() => {
+    fetch('/api/profile/kyc')
+      .then(r => r.json())
+      .then(data => {
+        if (data.kycBlockedUntil) {
+          const until = new Date(data.kycBlockedUntil);
+          if (until > new Date()) {
+            setBlockedUntil(until);
+            setCurrentView('blocked');
+            return;
+          }
+        }
+        setAttemptsLeft(2 - (data.kycAttempts || 0));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Countdown do bloqueio
+  useEffect(() => {
+    if (!blockedUntil) return;
+    const tick = () => {
+      const diff = blockedUntil.getTime() - Date.now();
+      if (diff <= 0) { setBlockedUntil(null); setCurrentView('intro'); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setCountdown(`${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [blockedUntil]);
 
   // Carrega face-api.js dinamicamente
   useEffect(() => {
@@ -65,8 +104,15 @@ export default function KYCVerificationPage() {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const faceapi = (window as any).faceapi;
-        faceapiRef.current = faceapi;
 
+        if (!faceapi?.nets) {
+          // Script carregou mas global não disponível — continua sem validação
+          setModelLoaded(true);
+          faceapiRef.current = null;
+          return;
+        }
+
+        faceapiRef.current = faceapi;
         setLoadingProgress('A carregar modelos de deteção...');
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
 
@@ -79,7 +125,6 @@ export default function KYCVerificationPage() {
         setLoadingProgress('Pronto!');
       } catch (err) {
         console.error('Erro ao carregar face-api:', err);
-        // Se falhar o carregamento, deixa avançar sem validação
         setModelLoaded(true);
         faceapiRef.current = null;
       }
@@ -88,13 +133,40 @@ export default function KYCVerificationPage() {
     loadFaceAPI();
   }, []);
 
-  const fileToBase64 = (file: File): Promise<string> => {
+  const compressImage = (file: File, maxWidth = 1024, quality = 0.78): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = reader.result as string;
+      };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  };
+
+  const uploadToCloud = async (b64: string): Promise<string> => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    const fd = new FormData();
+    fd.append('file', b64);
+    fd.append('upload_preset', preset!);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: fd,
+    });
+    if (!res.ok) throw new Error('Falha no upload para Cloudinary');
+    const data = await res.json();
+    return data.secure_url as string;
   };
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
@@ -154,7 +226,7 @@ export default function KYCVerificationPage() {
         return { ok: false, message: 'Foto pouco nítida. Melhore a iluminação e tente novamente.' };
       }
 
-      return { ok: true, message: '' };
+      return { ok: true, message: '', score };
     } catch (err) {
       console.error('Erro na validação:', err);
       return { ok: true, message: '' }; // fallback
@@ -195,28 +267,41 @@ export default function KYCVerificationPage() {
     if (!file) return;
     if (e.target) e.target.value = '';
 
-    setValidating(true);
+    setProcessingMsg('A verificar rosto com IA...');
     setValidationError('');
 
-    const b64 = await fileToBase64(file);
-    const result = await validateFacePhoto(b64);
+    try {
+      const b64 = await compressImage(file);
+      const result = await validateFacePhoto(b64);
 
-    setValidating(false);
+      if (!result.ok) {
+        setValidationError(result.message);
+        setProcessingMsg('');
+        return;
+      }
 
-    if (!result.ok) {
-      setValidationError(result.message);
-      return;
-    }
+      if (result.score !== undefined) faceScoresRef.current.push(result.score);
 
-    const prop = faceSteps[faceStep - 1].prop;
-    setKycData(prev => ({ ...prev, [prop]: b64 }));
-    setValidationError('');
+      setProcessingMsg('A enviar para a nuvem...');
+      const url = await uploadToCloud(b64);
 
-    if (faceStep < 3) {
-      setFaceStep(prev => prev + 1);
-      setTimeout(() => faceInputRef.current?.click(), 400);
-    } else {
-      setCurrentView('bi-intro');
+      const prop = faceSteps[faceStep - 1].prop;
+      setKycData(prev => ({ ...prev, [prop]: url }));
+      setValidationError('');
+      setProcessingMsg('');
+
+      if (faceStep < 3) {
+        setFaceStep(prev => prev + 1);
+        setTimeout(() => faceInputRef.current?.click(), 400);
+      } else {
+        const scores = faceScoresRef.current;
+        const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0.92;
+        setLivenessScore(Math.round(avg * 100));
+        setCurrentView('bi-intro');
+      }
+    } catch (_) {
+      setValidationError('Erro ao processar imagem. Tente novamente.');
+      setProcessingMsg('');
     }
   };
 
@@ -225,28 +310,36 @@ export default function KYCVerificationPage() {
     if (!file) return;
     if (e.target) e.target.value = '';
 
-    setValidating(true);
+    setProcessingMsg('A verificar documento...');
     setValidationError('');
 
-    const b64 = await fileToBase64(file);
-    const result = await validateBIPhoto(b64);
+    try {
+      const b64 = await compressImage(file, 1400, 0.82);
+      const result = await validateBIPhoto(b64);
 
-    setValidating(false);
+      if (!result.ok) {
+        setValidationError(result.message);
+        setProcessingMsg('');
+        return;
+      }
 
-    if (!result.ok) {
-      setValidationError(result.message);
-      return;
-    }
+      setProcessingMsg('A enviar para a nuvem...');
+      const url = await uploadToCloud(b64);
 
-    setValidationError('');
+      setValidationError('');
+      setProcessingMsg('');
 
-    if (biStep === 1) {
-      setKycData(prev => ({ ...prev, biFront: b64 }));
-      setBiStep(2);
-      setTimeout(() => biInputRef.current?.click(), 400);
-    } else {
-      setKycData(prev => ({ ...prev, biBack: b64 }));
-      setCurrentView('review');
+      if (biStep === 1) {
+        setKycData(prev => ({ ...prev, biFront: url }));
+        setBiStep(2);
+        setTimeout(() => biInputRef.current?.click(), 400);
+      } else {
+        setKycData(prev => ({ ...prev, biBack: url }));
+        setCurrentView('review');
+      }
+    } catch (_) {
+      setValidationError('Erro ao processar imagem. Tente novamente.');
+      setProcessingMsg('');
     }
   };
 
@@ -270,6 +363,8 @@ export default function KYCVerificationPage() {
     setFaceStep(1);
     setBiStep(1);
     setValidationError('');
+    setLivenessScore(0);
+    faceScoresRef.current = [];
     setCurrentView('intro');
   };
 
@@ -281,15 +376,26 @@ export default function KYCVerificationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...kycData, livenessScore }),
       });
+      const contentType = res.headers.get('content-type') ?? '';
+      const d = contentType.includes('application/json') ? await res.json() : {};
       if (res.ok) {
-        setSubmitSuccess(true);
-        setTimeout(() => router.push('/profile'), 2000);
+        setAttemptsLeft(d.attemptsLeft ?? 0);
+        if (d.blockedUntil) {
+          setBlockedUntil(new Date(d.blockedUntil));
+          setCurrentView('blocked');
+        } else {
+          setSubmitSuccess(true);
+          setTimeout(() => router.push('/profile'), 2000);
+        }
+      } else if (res.status === 429 && d.blockedUntil) {
+        setBlockedUntil(new Date(d.blockedUntil));
+        setCurrentView('blocked');
       } else {
-        const d = await res.json();
-        alert(d.error || 'Erro ao enviar.');
+        alert(d.error || `Erro ${res.status} ao enviar. Tente novamente.`);
       }
-    } catch (_) {
-      alert('Erro de conexão.');
+    } catch (err) {
+      console.error('[submitKYC]', err);
+      alert('Erro de rede. Verifique a sua ligação e tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -348,6 +454,12 @@ export default function KYCVerificationPage() {
     .loading-bar-inner{height:100%;background:var(--gold);border-radius:4px;animation:loading 1.5s ease-in-out infinite}
     @keyframes loading{0%{width:0%;margin-left:0}50%{width:70%;margin-left:15%}100%{width:0%;margin-left:100%}}
     .model-loading{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px 0}
+    .attempts-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:16px;width:fit-content;align-self:center}
+    .attempts-ok{background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2)}
+    .attempts-warn{background:rgba(245,166,35,0.1);color:#f5a623;border:1px solid rgba(245,166,35,0.2)}
+    .blocked-card{text-align:center;padding:32px 24px}
+    .blocked-icon{width:72px;height:72px;border-radius:50%;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);display:flex;align-items:center;justify-content:center;color:#ef4444;margin:0 auto 20px}
+    .countdown{font-size:36px;font-family:'Syne',sans-serif;font-weight:800;color:var(--gold);letter-spacing:2px;margin:16px 0}
     input[type=file]{display:none}
   `;
 
@@ -360,6 +472,19 @@ export default function KYCVerificationPage() {
         <input ref={faceInputRef} type="file" accept="image/*" capture="user" onChange={handleFaceCapture} />
         <input ref={biInputRef} type="file" accept="image/*" capture="environment" onChange={handleBICapture} />
 
+        {/* ── BLOQUEADO ── */}
+        {currentView === 'blocked' && (
+          <div className="view">
+            <div className="card blocked-card">
+              <div className="blocked-icon"><Lock size={32} /></div>
+              <h2 className="h1" style={{ color: 'var(--red)' }}>Acesso Bloqueado</h2>
+              <p className="sub">Atingiu o limite de tentativas de verificação KYC.</p>
+              <div className="countdown"><Clock size={20} style={{ display: 'inline', marginRight: 8 }} />{countdown || '...'}</div>
+              <p style={{ color: 'var(--muted)', fontSize: 13 }}>O acesso é restabelecido automaticamente quando o contador chegar a zero. Se precisar de ajuda, contacte o suporte.</p>
+            </div>
+          </div>
+        )}
+
         {/* ── INTRO ── */}
         {currentView === 'intro' && (
           <div className="view">
@@ -367,6 +492,9 @@ export default function KYCVerificationPage() {
               <div className="icon-wrap"><ScanFace size={32} /></div>
               <h2 className="h1">Verificação KYC</h2>
               <p className="sub">Vamos confirmar a sua identidade. A IA verifica automaticamente cada foto.</p>
+              <div className={`attempts-badge ${attemptsLeft > 1 ? 'attempts-ok' : 'attempts-warn'}`}>
+                <Clock size={13} /> {attemptsLeft} tentativa{attemptsLeft !== 1 ? 's' : ''} disponível{attemptsLeft !== 1 ? 'is' : ''}
+              </div>
               <div className="tips">
                 <div className="tip"><Sun size={16} />Ambiente bem iluminado</div>
                 <div className="tip"><User size={16} />Remova óculos e chapéus</div>
@@ -399,10 +527,10 @@ export default function KYCVerificationPage() {
               <h2 className="h1">Verificação Facial</h2>
               <p className="sub">Passo {faceStep} de 3 — {faceSteps[faceStep - 1].hint}</p>
 
-              {validating ? (
+              {processingMsg ? (
                 <div className="validating-overlay">
                   <Loader2 size={36} color="var(--gold)" className="animate-spin" />
-                  <p>A verificar rosto com IA...</p>
+                  <p>{processingMsg}</p>
                   <div className="loading-bar"><div className="loading-bar-inner" /></div>
                 </div>
               ) : (
@@ -462,10 +590,10 @@ export default function KYCVerificationPage() {
               <h2 className="h1">{biStep === 1 ? 'B.I. — Frente' : 'B.I. — Verso'}</h2>
               <p className="sub">{biStep === 1 ? 'Fotografe a frente do documento' : 'Vire e fotografe o verso'}</p>
 
-              {validating ? (
+              {processingMsg ? (
                 <div className="validating-overlay">
                   <Loader2 size={36} color="var(--gold)" className="animate-spin" />
-                  <p>A verificar documento...</p>
+                  <p>{processingMsg}</p>
                   <div className="loading-bar"><div className="loading-bar-inner" /></div>
                 </div>
               ) : (

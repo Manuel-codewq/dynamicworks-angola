@@ -16,7 +16,8 @@ export async function GET() {
     select: {
       id: true, name: true, email: true, phone: true, province: true,
       balance: true, demoBalance: true, role: true, status: true,
-      kycStatus: true, createdAt: true,
+      kycStatus: true, kycAttempts: true, createdAt: true,
+      kycSubmission: { select: { id: true } },
       _count: { select: { trades: true, transactions: true } },
     },
   });

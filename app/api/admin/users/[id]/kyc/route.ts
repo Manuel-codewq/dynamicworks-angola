@@ -19,16 +19,23 @@ export async function POST(
     return NextResponse.json({ error: "Status inválido" }, { status: 400 });
   }
 
+  const data: Record<string, unknown> = { kycStatus: status };
+  if (status === "approved") {
+    // Aprovação limpa o histórico de tentativas e desbloqueio
+    data.kycAttempts = 0;
+    data.kycBlockedUntil = null;
+  }
+
   const updated = await prisma.user.update({
     where: { id },
-    data:  { kycStatus: status },
+    data,
     select: { id: true, kycStatus: true },
   });
 
   if (status === "approved") {
     await createNotification(id, "kyc_approved", "KYC aprovado", "A sua identidade foi verificada com sucesso. Pode agora negociar sem restrições.");
   } else {
-    await createNotification(id, "kyc_rejected", "KYC rejeitado", "A verificação de identidade foi rejeitada. Por favor, submeta documentos válidos.");
+    await createNotification(id, "kyc_rejected", "KYC rejeitado", "A verificação de identidade foi rejeitada. Por favor, submeta novos documentos válidos. Tem mais 1 tentativa disponível.");
   }
 
   return NextResponse.json(updated);

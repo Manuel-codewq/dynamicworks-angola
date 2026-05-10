@@ -4,46 +4,63 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
-  Settings, LogOut, ArrowLeftRight, ExternalLink,
+  Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
 } from "lucide-react";
 
-const NAV = [
-  { href: "/ao/admin/dashboard",    label: "Dashboard",    Icon: LayoutDashboard, badge: false },
-  { href: "/ao/admin/users",        label: "Utilizadores", Icon: Users,            badge: false },
-  { href: "/ao/admin/transactions", label: "Transações",   Icon: ArrowLeftRight,   badge: true  },
-  { href: "/ao/admin/trades",       label: "Operações",    Icon: BarChart2,        badge: false },
-  { href: "/ao/admin/settings",     label: "Configurações",Icon: Settings,         badge: false },
+type NavItem = {
+  href: string;
+  label: string;
+  Icon: React.ElementType;
+  badgeKey?: "txn" | "kyc";
+};
+
+const NAV: NavItem[] = [
+  { href: "/ao/admin/dashboard",    label: "Dashboard",    Icon: LayoutDashboard },
+  { href: "/ao/admin/users",        label: "Utilizadores", Icon: Users },
+  { href: "/ao/admin/kyc",          label: "KYC",          Icon: ScanFace,       badgeKey: "kyc" },
+  { href: "/ao/admin/transactions", label: "Transações",   Icon: ArrowLeftRight, badgeKey: "txn" },
+  { href: "/ao/admin/trades",       label: "Operações",    Icon: BarChart2 },
+  { href: "/ao/admin/settings",     label: "Configurações",Icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
   const { data: session, status } = useSession();
-  const [pendingCount, setPendingCount] = useState(0);
+  const [txnCount, setTxnCount] = useState(0);
+  const [kycCount, setKycCount] = useState(0);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated" && (session?.user as any)?.role !== "admin") router.push("/trade");
+    if (status === "authenticated" && (session?.user as { role?: string })?.role !== "admin") router.push("/trade");
   }, [status, session, router]);
 
-  // Poll pending transactions count
   useEffect(() => {
     if (status !== "authenticated") return;
 
-    async function fetchPending() {
+    async function fetchCounts() {
       try {
-        const res = await fetch("/api/admin/transactions?status=pending");
-        if (res.ok) {
-          const data = await res.json();
-          setPendingCount(Array.isArray(data) ? data.length : 0);
+        const [txnRes, kycRes] = await Promise.all([
+          fetch("/api/admin/transactions?status=pending"),
+          fetch("/api/admin/kyc"),
+        ]);
+        if (txnRes.ok) {
+          const d = await txnRes.json();
+          setTxnCount(Array.isArray(d) ? d.length : 0);
+        }
+        if (kycRes.ok) {
+          const d: { user: { kycStatus: string } }[] = await kycRes.json();
+          setKycCount(d.filter(e => e.user.kycStatus === "pending").length);
         }
       } catch { /* silent */ }
     }
 
-    fetchPending();
-    const id = setInterval(fetchPending, 30_000);
+    fetchCounts();
+    const id = setInterval(fetchCounts, 30_000);
     return () => clearInterval(id);
   }, [status]);
+
+  const badges: Record<string, number> = { txn: txnCount, kyc: kycCount };
 
   if (status === "loading") {
     return (
@@ -57,31 +74,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div style={{ minHeight: "100vh", display: "flex", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif" }}>
 
       {/* Sidebar */}
-      <aside style={{
-        width: 240, flexShrink: 0, background: "#111827",
-        borderRight: "1px solid #1e2d50",
-        display: "flex", flexDirection: "column",
-        position: "sticky", top: 0, height: "100vh",
-      }}>
+      <aside style={{ width: 240, flexShrink: 0, background: "#111827", borderRight: "1px solid #1e2d50", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
 
         {/* Logo */}
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #1e2d50" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, background: "#ef4444", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <TrendingUp size={18} color="#fff" strokeWidth={2.5} />
+            <div style={{ width: 34, height: 34, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <TrendingUp size={18} color="#000" strokeWidth={2.5} />
             </div>
             <div>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Dynamics Works</div>
-              <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>ADMIN PANEL</div>
+              <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>ADMIN PANEL</div>
             </div>
           </div>
         </div>
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
-          {NAV.map(({ href, label, Icon, badge }) => {
-            const active = pathname === href || pathname.startsWith(href + "/");
-            const showBadge = badge && pendingCount > 0;
+          {NAV.map(({ href, label, Icon, badgeKey }) => {
+            const active  = pathname === href || pathname.startsWith(href + "/");
+            const count   = badgeKey ? (badges[badgeKey] ?? 0) : 0;
+            const isKyc   = badgeKey === "kyc";
+            const badgeColor = isKyc ? "#f5a623" : "#ef4444";
             return (
               <a key={href} href={href}
                 style={{
@@ -96,13 +110,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 }}>
                 <Icon size={17} style={{ flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>{label}</span>
-                {showBadge && (
-                  <span style={{
-                    background: "#ef4444", color: "#fff",
-                    borderRadius: 20, fontSize: 11, fontWeight: 700,
-                    padding: "1px 7px", lineHeight: "16px",
-                  }}>
-                    {pendingCount}
+                {count > 0 && (
+                  <span style={{ background: badgeColor, color: isKyc ? "#000" : "#fff", borderRadius: 20, fontSize: 11, fontWeight: 800, padding: "1px 7px", lineHeight: "16px" }}>
+                    {count}
                   </span>
                 )}
               </a>
@@ -112,21 +122,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Footer */}
         <div style={{ padding: "12px 10px", borderTop: "1px solid #1e2d50" }}>
-          {/* Admin info */}
           <div style={{ padding: "8px 12px", marginBottom: 8 }}>
-            <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 1 }}>
-              {session?.user?.name ?? "—"}
-            </div>
+            <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 1 }}>{session?.user?.name ?? "—"}</div>
             <div style={{ color: "#64748b", fontSize: 11 }}>{session?.user?.email}</div>
           </div>
-
-          {/* Ver plataforma */}
           <a href="/trade" target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", marginBottom: 6, background: "rgba(245,166,35,0.07)", border: "1px solid rgba(245,166,35,0.15)", borderRadius: 8, color: "#f5a623", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
             <ExternalLink size={14} /> Ver plataforma
           </a>
-
-          {/* Sair */}
           <button onClick={() => signOut({ callbackUrl: "/login" })}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#ef4444", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
             <LogOut size={15} /> Sair

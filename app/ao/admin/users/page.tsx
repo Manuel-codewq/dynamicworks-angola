@@ -1,30 +1,40 @@
 "use client";
-import { useEffect, useState } from "react";
-import { RefreshCw, CheckCircle, XCircle, Shield, Eye, Loader2, Image as ImageIcon } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import {
+  RefreshCw, CheckCircle, XCircle, Shield, ScanFace,
+  Search, Users, UserCheck, UserX, Clock,
+} from "lucide-react";
 
 function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
-
-interface AdminUser {
-  id: string; name: string; email: string; province: string | null;
-  balance: number; role: string; status: string; kycStatus: string;
-  createdAt: string; _count: { trades: number };
+function formatDate(s: string) {
+  return new Date(s).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-const KYC_LABEL: Record<string, string> = { pending: "Pendente", approved: "Verificado", rejected: "Rejeitado" };
-const KYC_COLOR: Record<string, string> = { pending: "#f5a623", approved: "#22c55e", rejected: "#ef4444" };
-const KYC_BG:    Record<string, string> = {
-  pending:  "rgba(245,166,35,0.12)",
-  approved: "rgba(34,197,94,0.12)",
-  rejected: "rgba(239,68,68,0.12)",
+interface AdminUser {
+  id: string; name: string; email: string; phone: string | null;
+  province: string | null; balance: number; role: string;
+  status: string; kycStatus: string; kycAttempts: number; createdAt: string;
+  kycSubmission: { id: string } | null;
+  _count: { trades: number; transactions: number };
+}
+
+const KYC_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  "no-submit": { label: "Sem docs",   color: "#64748b", bg: "rgba(100,116,139,0.12)" },
+  pending:     { label: "A rever",    color: "#f5a623", bg: "rgba(245,166,35,0.12)"  },
+  approved:    { label: "Verificado", color: "#22c55e", bg: "rgba(34,197,94,0.12)"   },
+  rejected:    { label: "Rejeitado",  color: "#ef4444", bg: "rgba(239,68,68,0.12)"   },
 };
 
+type StatusFilter = "all" | "active" | "blocked";
+
 export default function AdminUsersPage() {
-  const [users,      setUsers]      = useState<AdminUser[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [busyId,     setBusyId]     = useState<string | null>(null);
-  const [balInputs,  setBalInputs]  = useState<Record<string, string>>({});
-  const [selectedKyc, setSelectedKyc] = useState<any>(null);
-  const [kycLoading, setKycLoading] = useState(false);
+  const [users,     setUsers]     = useState<AdminUser[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [busyId,    setBusyId]    = useState<string | null>(null);
+  const [search,    setSearch]    = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [editBal,   setEditBal]   = useState<{ id: string; value: string } | null>(null);
+  const [selected,  setSelected]  = useState<AdminUser | null>(null);
 
   async function load() {
     setLoading(true);
@@ -34,189 +44,232 @@ export default function AdminUsersPage() {
   }
   useEffect(() => { load(); }, []);
 
-  async function patch(id: string, url: string, body: object, method: "PATCH" | "POST" = "PATCH") {
+  async function action(id: string, url: string, body: object, method: "PATCH" | "POST" = "PATCH") {
     setBusyId(id);
-    await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || "Erro ao executar ação.");
+    }
     setBusyId(null);
-    if (selectedKyc) setSelectedKyc(null);
+    setSelected(null);
+    setEditBal(null);
     load();
   }
 
-  async function viewKyc(userId: string) {
-    setKycLoading(true);
-    const res = await fetch(`/api/admin/kyc/${userId}`);
-    if (res.ok) setSelectedKyc(await res.json());
-    else alert("Não foi possível carregar os documentos.");
-    setKycLoading(false);
+  async function saveBalance() {
+    if (!editBal) return;
+    await action(editBal.id, `/api/admin/users/${editBal.id}/balance`, { balance: editBal.value });
   }
 
-  const th: React.CSSProperties = { color: "#94a3b8", fontSize: 12, padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #1e2d50", fontWeight: 600, whiteSpace: "nowrap" };
-  const td: React.CSSProperties = { padding: "10px 12px", borderBottom: "1px solid rgba(30,45,80,0.4)", fontSize: 13 };
+  const filtered = useMemo(() => {
+    let list = users;
+    if (statusFilter !== "all") list = list.filter(u => u.status === statusFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+    }
+    return list;
+  }, [users, search, statusFilter]);
+
+  const counts = useMemo(() => ({
+    total:      users.length,
+    active:     users.filter(u => u.status === "active").length,
+    blocked:    users.filter(u => u.status === "blocked").length,
+    kycSubmitted: users.filter(u => u.kycSubmission !== null && u.kycStatus === "pending").length,
+  }), [users]);
+
+  const th: React.CSSProperties = { color: "#64748b", fontSize: 11, padding: "10px 14px", textAlign: "left", borderBottom: "1px solid #1e2d50", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", whiteSpace: "nowrap" };
+  const td: React.CSSProperties = { padding: "11px 14px", borderBottom: "1px solid rgba(30,45,80,0.3)", fontSize: 13, verticalAlign: "middle" };
 
   return (
-    <div style={{ padding: 28 }}>
+    <div style={{ padding: 28, maxWidth: 1400 }}>
+
+      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Utilizadores</h1>
-          <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>{users.length} contas registadas</p>
+          <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
+            <Users size={22} color="#f5a623" /> Utilizadores
+          </h1>
+          <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 0" }}>Gestão de contas e permissões</p>
         </div>
         <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
           <RefreshCw size={14} /> Atualizar
         </button>
       </div>
 
-      {loading ? <p style={{ color: "#94a3b8" }}>A carregar...</p> : (
-        <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, overflow: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1050 }}>
-            <thead>
-              <tr>
-                {["Nome","Email","Província","Saldo Real","Operações","Estado","KYC","Ações"].map(h => (
-                  <th key={h} style={th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u.id} style={{ opacity: busyId === u.id ? 0.5 : 1, transition: "opacity 0.2s" }}>
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
+        {[
+          { label: "Total", value: counts.total,   Icon: Users,     color: "#94a3b8", filter: "all"     as StatusFilter },
+          { label: "Ativos",   value: counts.active,  Icon: UserCheck, color: "#22c55e", filter: "active"  as StatusFilter },
+          { label: "Bloqueados", value: counts.blocked, Icon: UserX,    color: "#ef4444", filter: "blocked" as StatusFilter },
+          { label: "KYC a rever", value: counts.kycSubmitted, Icon: Clock, color: "#f5a623", filter: null },
+        ].map(s => (
+          <button key={s.label} onClick={() => s.filter && setStatusFilter(s.filter)}
+            style={{ background: "#111827", border: statusFilter === s.filter ? `1px solid ${s.color}` : "1px solid #1e2d50", borderRadius: 14, padding: "16px 18px", textAlign: "left", cursor: s.filter ? "pointer" : "default", transition: "border-color .2s" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ color: "#64748b", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px" }}>{s.label}</span>
+              <s.Icon size={16} color={s.color} />
+            </div>
+            <div style={{ color: "#fff", fontSize: 26, fontWeight: 800 }}>{s.value}</div>
+          </button>
+        ))}
+      </div>
 
-                  {/* Nome */}
-                  <td style={{ ...td, color: "#fff", fontWeight: 600 }}>
-                    {u.name}
-                    {u.role === "admin" && (
-                      <span style={{ marginLeft: 6, background: "rgba(239,68,68,0.15)", color: "#ef4444", fontSize: 10, borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>ADMIN</span>
-                    )}
-                  </td>
+      {/* Search + filter */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
+        <div style={{ flex: 1, position: "relative" }}>
+          <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+          <input
+            placeholder="Pesquisar por nome ou email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: "9px 12px 9px 36px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
+        {(["all", "active", "blocked"] as StatusFilter[]).map(f => (
+          <button key={f} onClick={() => setStatusFilter(f)}
+            style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid", borderColor: statusFilter === f ? "#f5a623" : "#1e2d50", background: statusFilter === f ? "rgba(245,166,35,0.12)" : "transparent", color: statusFilter === f ? "#f5a623" : "#64748b", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            {f === "all" ? "Todos" : f === "active" ? "Ativos" : "Bloqueados"}
+          </button>
+        ))}
+      </div>
 
-                  {/* Email */}
-                  <td style={{ ...td, color: "#94a3b8" }}>{u.email}</td>
-
-                  {/* Província */}
-                  <td style={{ ...td, color: "#94a3b8" }}>{u.province ?? "—"}</td>
-
-                  {/* Saldo + ajuste */}
-                  <td style={td}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <input
-                        type="number"
-                        defaultValue={Math.floor(u.balance)}
-                        onChange={e => setBalInputs(p => ({ ...p, [u.id]: e.target.value }))}
-                        style={{ width: 100, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 12, outline: "none" }}
-                      />
-                      <button
-                        onClick={() => patch(u.id, `/api/admin/users/${u.id}/balance`, { balance: balInputs[u.id] ?? Math.floor(u.balance) })}
-                        disabled={busyId === u.id}
-                        style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 5, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                        OK
-                      </button>
-                    </div>
-                  </td>
-
-                  {/* Operações */}
-                  <td style={{ ...td, color: "#94a3b8" }}>{u._count.trades}</td>
-
-                  {/* Estado conta */}
-                  <td style={td}>
-                    <span style={{ background: u.status === "active" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: u.status === "active" ? "#22c55e" : "#ef4444", borderRadius: 20, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
-                      {u.status === "active" ? "Ativo" : "Bloqueado"}
-                    </span>
-                  </td>
-
-                  {/* KYC */}
-                  <td style={td}>
-                    <span style={{ background: KYC_BG[u.kycStatus] ?? KYC_BG.pending, color: KYC_COLOR[u.kycStatus] ?? KYC_COLOR.pending, borderRadius: 20, padding: "2px 8px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {KYC_LABEL[u.kycStatus] ?? u.kycStatus}
-                    </span>
-                  </td>
-
-                  {/* Ações */}
-                  <td style={td}>
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                      {u.role !== "admin" && (
-                        u.status === "active" ? (
-                          <button onClick={() => patch(u.id, `/api/admin/users/${u.id}/status`, { status: "blocked" })} disabled={busyId === u.id}
-                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                            <XCircle size={11} /> Bloquear
-                          </button>
-                        ) : (
-                          <button onClick={() => patch(u.id, `/api/admin/users/${u.id}/status`, { status: "active" })} disabled={busyId === u.id}
-                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                            <CheckCircle size={11} /> Desbloquear
-                          </button>
-                        )
-                      )}
-                      {u.role !== "admin" && (
-                        <button onClick={() => patch(u.id, `/api/admin/users/${u.id}/role`, { role: "admin" })} disabled={busyId === u.id}
-                          style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                          <Shield size={11} /> Admin
-                        </button>
-                      )}
-                      {u.kycStatus === "pending" && u.role !== "admin" && (
-                        <>
-                          <button onClick={() => viewKyc(u.id)} disabled={kycLoading}
-                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                            <Eye size={11} /> Ver Fotos
-                          </button>
-                          <button onClick={() => patch(u.id, `/api/admin/users/${u.id}/kyc`, { status: "approved" }, "POST")} disabled={busyId === u.id}
-                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                            <CheckCircle size={11} /> KYC ✓
-                          </button>
-                          <button onClick={() => patch(u.id, `/api/admin/users/${u.id}/kyc`, { status: "rejected" }, "POST")} disabled={busyId === u.id}
-                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                            <XCircle size={11} /> KYC ✗
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-
+      {/* Table */}
+      <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, overflow: "hidden" }}>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>A carregar...</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
+              <thead>
+                <tr>
+                  {["Utilizador", "Contacto", "Saldo Real", "Trades", "KYC", "Estado", "Registo", "Ações"].map(h => (
+                    <th key={h} style={th}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Nenhum utilizador encontrado.</td></tr>
+                ) : filtered.map(u => {
+                  const busy = busyId === u.id;
+                  const kyc = KYC_STYLE[u.kycStatus] ?? KYC_STYLE.pending;
+                  const isEditing = editBal?.id === u.id;
+                  return (
+                    <tr key={u.id} style={{ opacity: busy ? 0.5 : 1, transition: "opacity .2s", background: selected?.id === u.id ? "rgba(245,166,35,0.04)" : "transparent" }}>
 
-      {/* KYC Review Modal */}
-      {selectedKyc && (
-        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 20, width: "100%", maxWidth: 800, maxHeight: "90vh", overflowY: "auto", padding: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ color: "#fff", margin: 0, fontSize: 18 }}>Revisão de Documentos KYC</h2>
-              <button onClick={() => setSelectedKyc(null)} style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}><XCircle /></button>
-            </div>
+                      {/* Utilizador */}
+                      <td style={{ ...td, color: "#fff", fontWeight: 600 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <span>
+                            {u.name}
+                            {u.role === "admin" && <span style={{ marginLeft: 6, background: "rgba(239,68,68,0.15)", color: "#ef4444", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>ADMIN</span>}
+                          </span>
+                          <span style={{ color: "#64748b", fontSize: 11, fontWeight: 400 }}>{u.province ?? "—"}</span>
+                        </div>
+                      </td>
 
-            <div style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", padding: "10px 15px", borderRadius: 10, fontSize: 14, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
-              <Shield size={18} /> Pontuação de Liveness IA: {selectedKyc.livenessScore}% Confiável
-            </div>
+                      {/* Contacto */}
+                      <td style={{ ...td, color: "#64748b" }}>
+                        <div style={{ fontSize: 12 }}>{u.email}</div>
+                        {u.phone && <div style={{ fontSize: 11, marginTop: 2 }}>{u.phone}</div>}
+                      </td>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
-              {[
-                { label: "Rosto (Frente)", img: selectedKyc.faceFront },
-                { label: "Rosto (Direita)", img: selectedKyc.faceRight },
-                { label: "Rosto (Esquerda)", img: selectedKyc.faceLeft },
-                { label: "B.I. Frente", img: selectedKyc.biFront },
-                { label: "B.I. Verso", img: selectedKyc.biBack },
-              ].map(item => (
-                <div key={item.label} style={{ background: "#0a0f1e", borderRadius: 12, padding: 8, border: "1px solid #1e2d50" }}>
-                  <span style={{ display: "block", color: "#94a3b8", fontSize: 11, marginBottom: 6, fontWeight: 700 }}>{item.label}</span>
-                  <img src={item.img} style={{ width: "100%", borderRadius: 8, objectFit: "cover", aspectRatio: "4/3" }} />
-                </div>
-              ))}
-            </div>
+                      {/* Saldo */}
+                      <td style={td}>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input
+                              type="number"
+                              value={editBal.value}
+                              onChange={e => setEditBal({ id: u.id, value: e.target.value })}
+                              onKeyDown={e => { if (e.key === "Enter") saveBalance(); if (e.key === "Escape") setEditBal(null); }}
+                              autoFocus
+                              style={{ width: 110, background: "#0a0f1e", border: "1px solid #f5a623", borderRadius: 6, padding: "5px 8px", color: "#fff", fontSize: 12, outline: "none" }}
+                            />
+                            <button onClick={saveBalance} disabled={busy} style={{ background: "#f5a623", color: "#000", border: "none", borderRadius: 5, padding: "5px 8px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>✓</button>
+                            <button onClick={() => setEditBal(null)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>✕</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setEditBal({ id: u.id, value: String(Math.floor(u.balance)) })}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 600, padding: 0, textAlign: "left" }}
+                            title="Clique para editar">
+                            {formatKz(Math.floor(u.balance))}
+                          </button>
+                        )}
+                      </td>
 
-            <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => patch(selectedKyc.userId, `/api/admin/users/${selectedKyc.userId}/kyc`, { status: "approved" }, "POST")}
-                style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 10, padding: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <CheckCircle size={18} /> Aprovar Identidade
-              </button>
-              <button onClick={() => patch(selectedKyc.userId, `/api/admin/users/${selectedKyc.userId}/kyc`, { status: "rejected" }, "POST")}
-                style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <XCircle size={18} /> Rejeitar Documentos
-              </button>
-            </div>
+                      {/* Trades */}
+                      <td style={{ ...td, color: "#94a3b8" }}>{u._count.trades}</td>
+
+                      {/* KYC */}
+                      <td style={td}>
+                        {(() => {
+                          const key = u.kycSubmission !== null ? u.kycStatus : "no-submit";
+                          const s = KYC_STYLE[key];
+                          return (
+                            <span style={{ background: s.bg, color: s.color, borderRadius: 20, padding: "3px 9px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+                              {s.label}
+                            </span>
+                          );
+                        })()}
+                      </td>
+
+                      {/* Estado */}
+                      <td style={td}>
+                        <span style={{ background: u.status === "active" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: u.status === "active" ? "#22c55e" : "#ef4444", borderRadius: 20, padding: "3px 9px", fontSize: 11, fontWeight: 700 }}>
+                          {u.status === "active" ? "Ativo" : "Bloqueado"}
+                        </span>
+                      </td>
+
+                      {/* Registo */}
+                      <td style={{ ...td, color: "#64748b", fontSize: 12 }}>{formatDate(u.createdAt)}</td>
+
+                      {/* Ações */}
+                      <td style={td}>
+                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                          {u.role !== "admin" && (
+                            u.status === "active" ? (
+                              <button onClick={() => action(u.id, `/api/admin/users/${u.id}/status`, { status: "blocked" })} disabled={busy}
+                                style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                                <XCircle size={11} /> Bloquear
+                              </button>
+                            ) : (
+                              <button onClick={() => action(u.id, `/api/admin/users/${u.id}/status`, { status: "active" })} disabled={busy}
+                                style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                                <CheckCircle size={11} /> Ativar
+                              </button>
+                            )
+                          )}
+                          {u.role !== "admin" && (
+                            <button onClick={() => { if (confirm(`Promover ${u.name} a admin?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "admin" }); }} disabled={busy}
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              <Shield size={11} /> Admin
+                            </button>
+                          )}
+                          {u.kycSubmission !== null && u.kycStatus === "pending" && (
+                            <a href="/ao/admin/kyc"
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(99,102,241,0.1)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>
+                              <ScanFace size={11} /> Ver KYC
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
+        )}
+        {!loading && (
+          <div style={{ padding: "10px 14px", borderTop: "1px solid #1e2d50", color: "#64748b", fontSize: 12 }}>
+            {filtered.length} de {users.length} utilizadores
+          </div>
+        )}
+      </div>
     </div>
   );
 }
