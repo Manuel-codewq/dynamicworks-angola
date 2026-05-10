@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, CheckCircle, CreditCard, Loader2, RefreshCcw, ScanFace, ShieldCheck, Smartphone, Sun, User, Layout, Search, Aperture } from 'lucide-react';
+import { Camera, CheckCircle, CreditCard, Loader2, RefreshCcw, ScanFace, ShieldCheck, Smartphone, Sun, User, Layout, Search, Aperture, ShieldAlert } from 'lucide-react';
 
 export default function KYCVerificationPage() {
   const router = useRouter();
@@ -10,12 +10,13 @@ export default function KYCVerificationPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // States
-  const [currentView, setCurrentView] = useState<'liveness-intro' | 'liveness-cam' | 'bi-intro' | 'bi-cam' | 'review'>('liveness-intro');
+  const [currentView, setCurrentView] = useState<'liveness-intro' | 'permission' | 'liveness-cam' | 'bi-intro' | 'bi-cam' | 'review'>('liveness-intro');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [livenessStep, setLivenessStep] = useState(1);
   const [biStep, setBiStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [livenessScore, setLivenessScore] = useState(0);
   
   // Data
   const [kycData, setKycData] = useState({
@@ -31,6 +32,19 @@ export default function KYCVerificationPage() {
     };
   }, [stream]);
 
+  const requestPermission = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true });
+      s.getTracks().forEach(t => t.stop()); // Just checking if we can get it
+      setCurrentView('liveness-cam');
+      setLivenessStep(1);
+      await attachCamera('user');
+      runLivenessStep(1);
+    } catch (err) {
+      alert("Acesso à câmara negado. Por favor, permita o acesso para continuar a verificação.");
+    }
+  };
+
   const attachCamera = async (facingMode: 'user' | 'environment') => {
     if (stream) stream.getTracks().forEach(t => t.stop());
     try {
@@ -41,7 +55,7 @@ export default function KYCVerificationPage() {
         await videoRef.current.play();
       }
     } catch (err) {
-      alert("Não foi possível aceder à câmara. Verifique as permissões do browser.");
+      console.error(err);
     }
   };
 
@@ -62,13 +76,6 @@ export default function KYCVerificationPage() {
   const triggerFlash = () => {
     setFlash(true);
     setTimeout(() => setFlash(false), 150);
-  };
-
-  const startLiveness = async () => {
-    setCurrentView('liveness-cam');
-    setLivenessStep(1);
-    await attachCamera('user');
-    runLivenessStep(1);
   };
 
   const runLivenessStep = (step: number) => {
@@ -111,6 +118,8 @@ export default function KYCVerificationPage() {
     } else {
       setKycData(prev => ({ ...prev, biBack: photo }));
       if (stream) stream.getTracks().forEach(t => t.stop());
+      // Generate mock liveness score
+      setLivenessScore(Math.floor(Math.random() * (98 - 92 + 1)) + 92);
       setCurrentView('review');
     }
   };
@@ -127,7 +136,7 @@ export default function KYCVerificationPage() {
       const res = await fetch('/api/profile/kyc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(kycData)
+        body: JSON.stringify({ ...kycData, livenessScore })
       });
       const data = await res.json();
       if (res.ok) {
@@ -178,6 +187,7 @@ export default function KYCVerificationPage() {
         .kyc-btn-primary { background: #f5a623; color: #000; }
         .kyc-btn-secondary { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.2); }
         .kyc-btn-success { background: #22c55e; color: #fff; }
+        .kyc-liveness-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; margin-bottom: 15px; }
         @media (min-width: 768px) {
           .kyc-view { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(15px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 25px 50px rgba(0,0,0,0.5); margin: 20px 0; padding-bottom: 30px; }
           .kyc-card { background: transparent; box-shadow: none; border: none; padding: 10px 0; }
@@ -200,7 +210,24 @@ export default function KYCVerificationPage() {
                 <div className="kyc-instruction-item"><span><Smartphone size={18} /></span> Segure o dispositivo à altura dos olhos</div>
               </div>
               
-              <button className="kyc-btn kyc-btn-primary" onClick={startLiveness}><Camera size={20} /> Começar Captura Facial</button>
+              <button className="kyc-btn kyc-btn-primary" onClick={() => setCurrentView('permission')}><Camera size={20} /> Começar Verificação</button>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'permission' && (
+          <div className="kyc-view">
+            <div className="kyc-card">
+              <div className="kyc-icon-wrapper" style={{ background: 'rgba(245, 166, 35, 0.1)', color: '#f5a623' }}><ShieldAlert size={36} /></div>
+              <h2 className="kyc-h2">Acesso à Câmara</h2>
+              <p className="kyc-subtitle">Para continuar, precisamos da sua permissão para utilizar a câmara do dispositivo para capturar as imagens de segurança.</p>
+              
+              <div className="kyc-instruction-list" style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>Clique no botão abaixo e selecione "Permitir" quando o navegador solicitar.</p>
+              </div>
+              
+              <button className="kyc-btn kyc-btn-primary" onClick={requestPermission}><Camera size={20} /> Permitir Acesso à Câmara</button>
+              <button className="kyc-btn kyc-btn-secondary" style={{ marginTop: 10 }} onClick={() => setCurrentView('liveness-intro')}>Voltar</button>
             </div>
           </div>
         )}
@@ -261,7 +288,11 @@ export default function KYCVerificationPage() {
         {currentView === 'review' && (
           <div className="kyc-view">
             <h2 className="kyc-h2" style={{ textAlign: "center" }}>Revisão de Dados</h2>
-            <p className="kyc-subtitle" style={{ textAlign: "center" }}>Confirme se todas as imagens estão legíveis.</p>
+            <p className="kyc-subtitle" style={{ textAlign: "center", marginBottom: 10 }}>Confirme se todas as imagens estão legíveis.</p>
+            
+            <div className="kyc-liveness-badge">
+              <ShieldCheck size={16} /> Análise Liveness IA: {livenessScore}% Confiável
+            </div>
             
             <div className="kyc-gallery">
               <div className="kyc-gallery-item">

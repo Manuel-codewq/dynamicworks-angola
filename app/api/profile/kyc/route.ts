@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const data = await req.json();
-    const { faceFront, faceRight, faceLeft, biFront, biBack } = data;
+    const { faceFront, faceRight, faceLeft, biFront, biBack, livenessScore } = data;
 
     if (!faceFront || !biFront || !biBack) {
       return NextResponse.json({ error: "Imagens incompletas. Faça o processo até ao fim." }, { status: 400 });
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
         faceLeft: face3,
         biFront: bi1,
         biBack: bi2,
+        livenessScore: livenessScore || 0,
       },
       update: {
         faceFront: face1,
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
         faceLeft: face3,
         biFront: bi1,
         biBack: bi2,
+        livenessScore: livenessScore || 0,
         createdAt: new Date(),
       },
     });

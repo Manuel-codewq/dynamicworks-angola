@@ -117,5 +117,6 @@ model KycSubmission {
   faceLeft  String
   biFront   String
   biBack    String
+  livenessScore Float @default(0)
   createdAt DateTime @default(now())
 }

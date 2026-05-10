@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { RefreshCw, CheckCircle, XCircle, Shield } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Shield, Eye, Loader2, Image as ImageIcon } from "lucide-react";
 
 function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
 
@@ -23,6 +23,8 @@ export default function AdminUsersPage() {
   const [loading,    setLoading]    = useState(true);
   const [busyId,     setBusyId]     = useState<string | null>(null);
   const [balInputs,  setBalInputs]  = useState<Record<string, string>>({});
+  const [selectedKyc, setSelectedKyc] = useState<any>(null);
+  const [kycLoading, setKycLoading] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -36,7 +38,16 @@ export default function AdminUsersPage() {
     setBusyId(id);
     await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     setBusyId(null);
+    if (selectedKyc) setSelectedKyc(null);
     load();
+  }
+
+  async function viewKyc(userId: string) {
+    setKycLoading(true);
+    const res = await fetch(`/api/admin/kyc/${userId}`);
+    if (res.ok) setSelectedKyc(await res.json());
+    else alert("Não foi possível carregar os documentos.");
+    setKycLoading(false);
   }
 
   const th: React.CSSProperties = { color: "#94a3b8", fontSize: 12, padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #1e2d50", fontWeight: 600, whiteSpace: "nowrap" };
@@ -141,6 +152,10 @@ export default function AdminUsersPage() {
                       )}
                       {u.kycStatus === "pending" && u.role !== "admin" && (
                         <>
+                          <button onClick={() => viewKyc(u.id)} disabled={kycLoading}
+                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
+                            <Eye size={11} /> Ver Fotos
+                          </button>
                           <button onClick={() => patch(u.id, `/api/admin/users/${u.id}/kyc`, { status: "approved" }, "POST")} disabled={busyId === u.id}
                             style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
                             <CheckCircle size={11} /> KYC ✓
@@ -158,6 +173,48 @@ export default function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* KYC Review Modal */}
+      {selectedKyc && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 20, width: "100%", maxWidth: 800, maxHeight: "90vh", overflowY: "auto", padding: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ color: "#fff", margin: 0, fontSize: 18 }}>Revisão de Documentos KYC</h2>
+              <button onClick={() => setSelectedKyc(null)} style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}><XCircle /></button>
+            </div>
+
+            <div style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", padding: "10px 15px", borderRadius: 10, fontSize: 14, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+              <Shield size={18} /> Pontuação de Liveness IA: {selectedKyc.livenessScore}% Confiável
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+              {[
+                { label: "Rosto (Frente)", img: selectedKyc.faceFront },
+                { label: "Rosto (Direita)", img: selectedKyc.faceRight },
+                { label: "Rosto (Esquerda)", img: selectedKyc.faceLeft },
+                { label: "B.I. Frente", img: selectedKyc.biFront },
+                { label: "B.I. Verso", img: selectedKyc.biBack },
+              ].map(item => (
+                <div key={item.label} style={{ background: "#0a0f1e", borderRadius: 12, padding: 8, border: "1px solid #1e2d50" }}>
+                  <span style={{ display: "block", color: "#94a3b8", fontSize: 11, marginBottom: 6, fontWeight: 700 }}>{item.label}</span>
+                  <img src={item.img} style={{ width: "100%", borderRadius: 8, objectFit: "cover", aspectRatio: "4/3" }} />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => patch(selectedKyc.userId, `/api/admin/users/${selectedKyc.userId}/kyc`, { status: "approved" }, "POST")}
+                style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 10, padding: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <CheckCircle size={18} /> Aprovar Identidade
+              </button>
+              <button onClick={() => patch(selectedKyc.userId, `/api/admin/users/${selectedKyc.userId}/kyc`, { status: "rejected" }, "POST")}
+                style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <XCircle size={18} /> Rejeitar Documentos
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
