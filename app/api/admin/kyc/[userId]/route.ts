@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const session = await auth();
   if (session?.user?.role !== "admin") return NextResponse.json({ error: "Proibido" }, { status: 403 });
 
-  const { userId } = params;
+  const { userId } = await params;
 
   const submission = await prisma.kycSubmission.findUnique({
     where: { userId },
