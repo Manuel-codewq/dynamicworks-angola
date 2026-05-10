@@ -3,8 +3,10 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  TrendingUp, ChevronLeft, User, Shield, BarChart2, Lock,
-  CheckCircle, Clock, XCircle, Save, Camera
+  ChevronLeft, User, Shield, BarChart2, Lock,
+  CheckCircle, Clock, XCircle, Save, ScanFace,
+  TrendingUp, TrendingDown, Edit3, AlertTriangle,
+  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound,
 } from "lucide-react";
 
 const PROVINCES = [
@@ -17,40 +19,64 @@ function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString("pt-AO", { year: "numeric", month: "long", day: "numeric" });
 }
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+}
+function maskEmail(email: string) {
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  const visible = local.slice(0, 2);
+  return `${visible}${"*".repeat(Math.max(3, local.length - 2))}@${domain}`;
+}
+function maskValue(val: string, hidden: boolean) {
+  return hidden ? "••••••" : val;
+}
 
 type Feedback = { text: string; ok: boolean } | null;
+type PwdStep = "idle" | "sending" | "verify";
+
+const KYC_CFG = {
+  pending:     { color: "#f5a623", bg: "rgba(245,166,35,0.10)", border: "rgba(245,166,35,0.25)", Icon: Clock,          label: "Pendente",     desc: "A aguardar verificação da identidade" },
+  approved:    { color: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.25)",  Icon: CheckCircle,    label: "Verificado",   desc: "Identidade verificada com sucesso" },
+  rejected:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.25)",  Icon: XCircle,        label: "Rejeitado",    desc: "Documentos rejeitados. Submeta novamente." },
+  unsubmitted: { color: "#64748b", bg: "rgba(100,116,139,0.10)",border: "rgba(100,116,139,0.25)",Icon: AlertTriangle,  label: "Não iniciado", desc: "Inicie a verificação para desbloquear saques" },
+};
 
 export default function ProfilePage() {
   const { status } = useSession();
   const router = useRouter();
 
-  // Profile fields
-  const [name,       setName]       = useState("");
-  const [email,      setEmail]      = useState("");
-  const [phone,      setPhone]      = useState("");
-  const [province,   setProvince]   = useState("");
-  const [kycStatus,  setKycStatus]  = useState("pending");
-  const [biNumber,   setBiNumber]   = useState("");
-  const [biInput,    setBiInput]    = useState("");
-  const [createdAt,  setCreatedAt]  = useState("");
+  const [name,        setName]        = useState("");
+  const [email,       setEmail]       = useState("");
+  const [phone,       setPhone]       = useState("");
+  const [province,    setProvince]    = useState("");
+  const [kycStatus,   setKycStatus]   = useState("unsubmitted");
+  const [kycAttempts, setKycAttempts] = useState(0);
+  const [blockedUntil,setBlockedUntil]= useState<Date | null>(null);
+  const [createdAt,   setCreatedAt]   = useState("");
+  const [balance,     setBalance]     = useState(0);
 
-  // Password fields
-  const [curPwd,  setCurPwd]  = useState("");
-  const [newPwd,  setNewPwd]  = useState("");
-  const [confPwd, setConfPwd] = useState("");
+  const [editMode,    setEditMode]    = useState(false);
+  const [showValues,  setShowValues]  = useState(true);
+
+  // Password OTP flow
+  const [pwdStep,   setPwdStep]   = useState<PwdStep>("idle");
+  const [otpInput,  setOtpInput]  = useState("");
+  const [newPwd,    setNewPwd]    = useState("");
+  const [confPwd,   setConfPwd]   = useState("");
+  const [otpTimer,  setOtpTimer]  = useState(0);
 
   // Stats
   const [totalTrades, setTotalTrades] = useState(0);
-  const [winRate,     setWinRate]     = useState(0);
+  const [wins,        setWins]        = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
 
-  // UI state
   const [profileBusy,  setProfileBusy]  = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
-  const [kycBusy,      setKycBusy]      = useState(false);
+  const [sendingOtp,   setSendingOtp]   = useState(false);
   const [profileMsg,   setProfileMsg]   = useState<Feedback>(null);
   const [passwordMsg,  setPasswordMsg]  = useState<Feedback>(null);
-  const [kycMsg,       setKycMsg]       = useState<Feedback>(null);
+  const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -58,222 +84,355 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
+    Promise.all([
+      fetch("/api/profile").then(r => r.json()),
+      fetch("/api/profile/kyc").then(r => r.json()),
+      fetch("/api/trade").then(r => r.json()),
+    ]).then(([profile, kyc, trades]) => {
+      setName(profile.name ?? "");
+      setEmail(profile.email ?? "");
+      setPhone(profile.phone ?? "");
+      setProvince(profile.province ?? "");
+      setBalance(profile.balance ?? 0);
+      setCreatedAt(profile.createdAt ?? "");
 
-    fetch("/api/profile").then(r => r.json()).then(d => {
-      setName(d.name ?? "");
-      setEmail(d.email ?? "");
-      setPhone(d.phone ?? "");
-      setProvince(d.province ?? "");
-      setKycStatus(d.kycStatus ?? "pending");
-      setBiNumber(d.biNumber ?? "");
-      setCreatedAt(d.createdAt ?? "");
-    });
+      if (kyc.kycBlockedUntil && new Date(kyc.kycBlockedUntil) > new Date()) {
+        setBlockedUntil(new Date(kyc.kycBlockedUntil));
+      }
+      setKycAttempts(kyc.kycAttempts ?? 0);
+      if (kyc.kycStatus === "approved")      setKycStatus("approved");
+      else if (kyc.kycStatus === "rejected") setKycStatus("rejected");
+      else if (kyc.kycAttempts > 0)          setKycStatus("pending");
+      else                                   setKycStatus("unsubmitted");
 
-    fetch("/api/trade").then(r => r.json()).then((trades: any[]) => {
-      if (!Array.isArray(trades)) return;
-      const closed  = trades.filter(t => t.status === "closed");
-      const wins    = closed.filter(t => t.result === "win");
-      const profit  = closed.reduce((s, t) => s + (t.profit ?? 0), 0);
-      setTotalTrades(trades.length);
-      setWinRate(closed.length > 0 ? Math.round((wins.length / closed.length) * 100) : 0);
-      setTotalProfit(profit);
+      if (Array.isArray(trades)) {
+        const closed = trades.filter((t: { status: string }) => t.status === "closed");
+        const w = closed.filter((t: { result: string }) => t.result === "win");
+        const profit = closed.reduce((s: number, t: { profit?: number }) => s + (t.profit ?? 0), 0);
+        setTotalTrades(trades.length);
+        setWins(w.length);
+        setTotalProfit(profit);
+      }
+      setLoading(false);
     });
   }, [status]);
+
+  // OTP countdown
+  useEffect(() => {
+    if (otpTimer <= 0) return;
+    const id = setInterval(() => setOtpTimer(t => t - 1), 1000);
+    return () => clearInterval(id);
+  }, [otpTimer]);
 
   async function saveProfile() {
     setProfileBusy(true); setProfileMsg(null);
     const res = await fetch("/api/profile", {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ name, phone, province }),
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, phone, province }),
     });
     const d = await res.json();
-    setProfileMsg(res.ok ? { text: "Perfil atualizado com sucesso!", ok: true } : { text: d.error, ok: false });
+    setProfileMsg(res.ok ? { text: "Perfil atualizado!", ok: true } : { text: d.error, ok: false });
     setProfileBusy(false);
+    if (res.ok) setEditMode(false);
   }
 
-  async function savePassword() {
+  async function sendOtp() {
+    setSendingOtp(true); setPasswordMsg(null);
+    const res = await fetch("/api/profile/password-otp", { method: "POST" });
+    const d = await res.json();
+    if (res.ok) {
+      setPwdStep("verify");
+      setOtpTimer(600);
+      setPasswordMsg({ text: `Código enviado para ${maskEmail(email)}`, ok: true });
+    } else {
+      setPasswordMsg({ text: d.error || "Erro ao enviar código", ok: false });
+    }
+    setSendingOtp(false);
+  }
+
+  async function confirmPassword() {
     setPasswordMsg(null);
-    if (newPwd.length < 6) { setPasswordMsg({ text: "A nova senha deve ter pelo menos 6 caracteres", ok: false }); return; }
-    if (newPwd !== confPwd) { setPasswordMsg({ text: "As senhas não coincidem", ok: false }); return; }
+    if (newPwd.length < 8)    { setPasswordMsg({ text: "Mínimo 8 caracteres", ok: false }); return; }
+    if (newPwd !== confPwd)   { setPasswordMsg({ text: "As senhas não coincidem", ok: false }); return; }
+    if (!otpInput.trim())     { setPasswordMsg({ text: "Introduza o código recebido", ok: false }); return; }
     setPasswordBusy(true);
     const res = await fetch("/api/profile/password", {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ currentPassword: curPwd, newPassword: newPwd }),
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ otpCode: otpInput.trim(), newPassword: newPwd }),
     });
     const d = await res.json();
-    if (res.ok) { setPasswordMsg({ text: "Senha alterada com sucesso!", ok: true }); setCurPwd(""); setNewPwd(""); setConfPwd(""); }
-    else setPasswordMsg({ text: d.error, ok: false });
+    if (res.ok) {
+      setPasswordMsg({ text: "Senha alterada com sucesso!", ok: true });
+      setPwdStep("idle"); setOtpInput(""); setNewPwd(""); setConfPwd(""); setOtpTimer(0);
+    } else {
+      setPasswordMsg({ text: d.error, ok: false });
+    }
     setPasswordBusy(false);
   }
 
-  async function submitKyc() {
-    setKycMsg(null); setKycBusy(true);
-    const res = await fetch("/api/profile/kyc", {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ biNumber: biInput }),
-    });
-    const d = await res.json();
-    if (res.ok) { setKycMsg({ text: "BI submetido! A verificação pode demorar 1-2 dias úteis.", ok: true }); setKycStatus("pending"); setBiNumber(biInput); }
-    else setKycMsg({ text: d.error, ok: false });
-    setKycBusy(false);
-  }
+  const kyc = KYC_CFG[kycStatus as keyof typeof KYC_CFG] ?? KYC_CFG.unsubmitted;
+  const winRate = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
 
-  const input: React.CSSProperties = {
+  const inp: React.CSSProperties = {
     width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50",
-    borderRadius: 8, padding: "11px 14px", color: "#fff",
+    borderRadius: 10, padding: "12px 14px", color: "#fff",
     fontSize: 14, outline: "none", boxSizing: "border-box",
   };
-  const label: React.CSSProperties = { color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 };
-  const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "22px 24px", marginBottom: 20 };
-  const sectionTitle: React.CSSProperties = { color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 18px", display: "flex", alignItems: "center", gap: 8 };
+  const lbl: React.CSSProperties = { color: "#64748b", fontSize: 11, fontWeight: 700, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" };
+  const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: "22px", marginBottom: 16 };
 
   function Msg({ fb }: { fb: Feedback }) {
     if (!fb) return null;
     return (
-      <div style={{ background: fb.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${fb.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "9px 14px", marginTop: 14, color: fb.ok ? "#22c55e" : "#ef4444", fontSize: 13 }}>
-        {fb.text}
+      <div style={{ background: fb.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${fb.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginTop: 12, color: fb.ok ? "#22c55e" : "#ef4444", fontSize: 13, display: "flex", alignItems: "center", gap: 7 }}>
+        {fb.ok ? <CheckCircle size={14} /> : <XCircle size={14} />} {fb.text}
       </div>
     );
   }
 
-  const kycConfig: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode; label: string }> = {
-    pending:  { color: "#f5a623", bg: "rgba(245,166,35,0.1)",  border: "rgba(245,166,35,0.25)",  icon: <Clock size={14} />,        label: "Verificação pendente"       },
-    approved: { color: "#22c55e", bg: "rgba(34,197,94,0.1)",   border: "rgba(34,197,94,0.25)",   icon: <CheckCircle size={14} />,  label: "Conta verificada ✓"         },
-    rejected: { color: "#ef4444", bg: "rgba(239,68,68,0.1)",   border: "rgba(239,68,68,0.25)",   icon: <XCircle size={14} />,      label: "Verificação rejeitada"      },
-  };
-  const kyc = kycConfig[kycStatus] ?? kycConfig.pending;
-
-  if (status === "loading") return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <span style={{ color: "#f5a623", fontFamily: "system-ui", fontSize: 16 }}>A carregar...</span>
+  if (loading || status === "loading") return (
+    <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 40 }}>
 
       {/* Header */}
       <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
-        <button onClick={() => router.push("/trade")}
-          style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, color: "#94a3b8" }}>
+        <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <TrendingUp size={18} color="#0a0f1e" strokeWidth={2.5} />
-        </div>
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Perfil</span>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ background: kyc.bg, color: kyc.color, border: `1px solid ${kyc.border}`, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
-            {kyc.icon} {kyc.label}
-          </span>
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>Meu Perfil</span>
+
+        {/* Toggle ocultar valores */}
+        <button onClick={() => setShowValues(v => !v)}
+          title={showValues ? "Ocultar valores" : "Mostrar valores"}
+          style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8", marginRight: 4 }}>
+          {showValues ? <Eye size={18} /> : <EyeOff size={18} />}
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: kyc.bg, border: `1px solid ${kyc.border}`, borderRadius: 20, padding: "4px 12px" }}>
+          <kyc.Icon size={12} color={kyc.color} />
+          <span style={{ color: kyc.color, fontSize: 12, fontWeight: 700 }}>KYC {kyc.label}</span>
         </div>
       </div>
 
-      <div style={{ maxWidth: 660, margin: "0 auto", padding: "24px 16px" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px" }}>
 
-        {/* A — Estatísticas rápidas */}
-        <div style={{ ...card, padding: "18px 24px" }}>
-          <p style={{ ...sectionTitle, fontSize: 13 }}><BarChart2 size={15} color="#94a3b8" /> <span style={{ color: "#94a3b8" }}>Resumo da conta</span></p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-            {[
-              { label: "Operações", value: totalTrades.toString(), color: "#94a3b8" },
-              { label: "Taxa vitória", value: `${winRate}%`, color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
-              { label: "Lucro total", value: formatKz(Math.floor(totalProfit)), color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
-              { label: "Membro desde", value: createdAt ? formatDate(createdAt) : "—", color: "#94a3b8" },
-            ].map(s => (
-              <div key={s.label} style={{ background: "#0a0f1e", borderRadius: 10, padding: "12px 14px" }}>
-                <div style={{ color: "#64748b", fontSize: 11, marginBottom: 4 }}>{s.label}</div>
-                <div style={{ color: s.color, fontWeight: 700, fontSize: 14 }}>{s.value}</div>
+        {/* Hero */}
+        <div style={{ ...card, padding: "28px 24px", textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1e38 100%)", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, background: "radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+          {/* Avatar */}
+          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg, #f5a623, #e8950f)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 28, fontWeight: 800, color: "#000", boxShadow: "0 0 0 4px rgba(245,166,35,0.2)" }}>
+            {initials(name) || "?"}
+          </div>
+
+          {/* Nome + badge verificado */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
+            <h2 style={{ color: "#fff", margin: 0, fontSize: 20, fontWeight: 800 }}>{name}</h2>
+            {kycStatus === "approved" && (
+              <span title="Identidade verificada"><BadgeCheck size={22} color="#22c55e" /></span>
+            )}
+          </div>
+
+          {/* Email mascarado */}
+          <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 18px", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            <Mail size={13} /> {maskEmail(email)}
+          </p>
+
+          {/* Saldo */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 12, padding: "10px 24px" }}>
+            <div>
+              <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px" }}>Saldo Real</div>
+              <div style={{ color: "#f5a623", fontSize: 22, fontWeight: 800 }}>
+                {maskValue(formatKz(Math.floor(balance)), !showValues)}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* B — Informações pessoais */}
-        <div style={card}>
-          <p style={sectionTitle}><User size={16} color="#f5a623" /> Informações pessoais</p>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={label}>Nome completo</label>
-              <input value={name} onChange={e => setName(e.target.value)} style={input} />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={label}>Email</label>
-              <input value={email} readOnly style={{ ...input, color: "#64748b", cursor: "not-allowed" }} />
-            </div>
-            <div>
-              <label style={label}>Telefone</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+244 9XX XXX XXX" style={input} />
-            </div>
-            <div>
-              <label style={label}>Província</label>
-              <select value={province} onChange={e => setProvince(e.target.value)}
-                style={{ ...input, cursor: "pointer", colorScheme: "dark" }}>
-                <option value="">Selecionar...</option>
-                {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
             </div>
           </div>
 
-          <button onClick={saveProfile} disabled={profileBusy}
-            style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 7, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "11px 22px", fontSize: 14, fontWeight: 700, cursor: profileBusy ? "not-allowed" : "pointer", opacity: profileBusy ? 0.7 : 1 }}>
-            <Save size={15} /> {profileBusy ? "A guardar..." : "Guardar alterações"}
-          </button>
-          <Msg fb={profileMsg} />
+          {createdAt && (
+            <p style={{ color: "#374151", fontSize: 11, margin: "14px 0 0" }}>Membro desde {formatDate(createdAt)}</p>
+          )}
         </div>
 
-        {/* C — Segurança */}
-        <div style={card}>
-          <p style={sectionTitle}><Lock size={16} color="#f5a623" /> Segurança — alterar senha</p>
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+          {[
+            { label: "Operações",   value: maskValue(String(totalTrades), !showValues),          icon: <BarChart2 size={16} color="#94a3b8" />,    color: "#fff"    },
+            { label: "Taxa vitória",value: maskValue(`${winRate}%`, !showValues),                 icon: <TrendingUp size={16} color="#22c55e" />,   color: "#22c55e" },
+            { label: "Lucro total", value: maskValue(formatKz(Math.floor(totalProfit)), !showValues), icon: totalProfit >= 0 ? <TrendingUp size={16} color="#22c55e" /> : <TrendingDown size={16} color="#ef4444" />, color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
+          ].map(s => (
+            <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".4px" }}>{s.label}</span>
+                {s.icon}
+              </div>
+              <div style={{ color: s.color, fontWeight: 800, fontSize: 16 }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div>
-              <label style={label}>Senha atual</label>
-              <input type="password" value={curPwd} onChange={e => setCurPwd(e.target.value)} style={input} />
-            </div>
-            <div>
-              <label style={label}>Nova senha</label>
-              <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Mínimo 6 caracteres" style={input} />
-            </div>
-            <div>
-              <label style={label}>Confirmar nova senha</label>
-              <input type="password" value={confPwd} onChange={e => setConfPwd(e.target.value)} style={input} />
-            </div>
+        {/* KYC */}
+        <div style={card}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+              <ScanFace size={17} color="#f5a623" /> Verificação KYC
+            </p>
+            {kycAttempts > 0 && kycStatus !== "approved" && (
+              <span style={{ color: kycAttempts >= 2 ? "#ef4444" : "#f5a623", fontSize: 12, fontWeight: 600 }}>{kycAttempts}/2 tentativas</span>
+            )}
           </div>
-
-          <button onClick={savePassword} disabled={passwordBusy}
-            style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 7, background: "#1e2d50", color: "#fff", border: "1px solid #2d3f6b", borderRadius: 8, padding: "11px 22px", fontSize: 14, fontWeight: 700, cursor: passwordBusy ? "not-allowed" : "pointer", opacity: passwordBusy ? 0.7 : 1 }}>
-            <Shield size={15} /> {passwordBusy ? "A alterar..." : "Alterar senha"}
-          </button>
-          <Msg fb={passwordMsg} />
-        </div>
-
-        {/* D — KYC */}
-        <div style={card}>
-          <p style={sectionTitle}><Shield size={16} color="#f5a623" /> Verificação de identidade (KYC)</p>
-
-          <div style={{ background: kyc.bg, border: `1px solid ${kyc.border}`, borderRadius: 10, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ color: kyc.color }}>{kyc.icon}</span>
+          <div style={{ background: kyc.bg, border: `1px solid ${kyc.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: kycStatus !== "approved" ? 14 : 0 }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: `${kyc.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <kyc.Icon size={20} color={kyc.color} />
+            </div>
             <div>
               <div style={{ color: kyc.color, fontWeight: 700, fontSize: 14 }}>{kyc.label}</div>
-              <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
-                {kycStatus === "pending"  && (biNumber ? `BI submetido: ${biNumber}` : "Envie o seu BI para verificar a conta")}
-                {kycStatus === "approved" && "A sua identidade foi verificada com sucesso."}
-                {kycStatus === "rejected" && "A verificação foi rejeitada. Contacte o suporte para mais informações."}
-              </div>
+              <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{kyc.desc}</div>
+              {blockedUntil && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4, fontWeight: 600 }}>Bloqueado até {blockedUntil.toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}</div>}
             </div>
           </div>
+          {kycStatus !== "approved" && !blockedUntil && (
+            <button onClick={() => router.push("/kyc")} style={{ width: "100%", background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <ScanFace size={17} />
+              {kycStatus === "unsubmitted" ? "Iniciar Verificação" : kycStatus === "rejected" ? "Submeter Novamente" : "Ver estado da verificação"}
+            </button>
+          )}
+        </div>
 
-          {kycStatus !== "approved" && (
-            <div style={{ marginTop: 14 }}>
-              <button onClick={() => router.push("/kyc")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", gap: 7, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "14px 22px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-                <Camera size={18} /> Iniciar Verificação KYC Avançada
+        {/* Dados pessoais */}
+        <div style={card}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+            <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+              <User size={17} color="#f5a623" /> Dados pessoais
+            </p>
+            {!editMode && (
+              <button onClick={() => setEditMode(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: "6px 12px", color: "#f5a623", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                <Edit3 size={13} /> Editar
               </button>
+            )}
+          </div>
+
+          {!editMode ? (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {[
+                { label: "Nome completo", value: name || "—" },
+                { label: "Email", value: maskEmail(email) },
+                { label: "Telefone", value: phone || "—" },
+                { label: "Província", value: province || "—" },
+              ].map((row, i, arr) => (
+                <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: i < arr.length - 1 ? "1px solid rgba(30,45,80,0.5)" : "none" }}>
+                  <span style={{ color: "#64748b", fontSize: 13 }}>{row.label}</span>
+                  <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={lbl}>Nome completo</label>
+                <input value={name} onChange={e => setName(e.target.value)} style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>Email</label>
+                <input value={email} readOnly style={{ ...inp, color: "#64748b", cursor: "not-allowed" }} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={lbl}>Telefone</label>
+                  <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+244 9XX XXX XXX" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Província</label>
+                  <select value={province} onChange={e => setProvince(e.target.value)} style={{ ...inp, cursor: "pointer", colorScheme: "dark" }}>
+                    <option value="">Selecionar...</option>
+                    {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+              <Msg fb={profileMsg} />
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={saveProfile} disabled={profileBusy} style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: profileBusy ? "not-allowed" : "pointer", opacity: profileBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                  <Save size={15} /> {profileBusy ? "A guardar..." : "Guardar"}
+                </button>
+                <button onClick={() => { setEditMode(false); setProfileMsg(null); }} style={{ padding: "12px 18px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Segurança — Alterar senha via OTP */}
+        <div style={card}>
+          <p style={{ margin: "0 0 18px", color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+            <Lock size={17} color="#f5a623" /> Alterar senha
+          </p>
+
+          {pwdStep === "idle" && (
+            <div>
+              <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 16px", lineHeight: 1.6 }}>
+                Por segurança, vamos enviar um código de verificação para <strong style={{ color: "#fff" }}>{maskEmail(email)}</strong> antes de alterar a senha.
+              </p>
+              <button onClick={sendOtp} disabled={sendingOtp}
+                style={{ width: "100%", background: "#1e2d50", color: "#fff", border: "1px solid #2d3f6b", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: sendingOtp ? "not-allowed" : "pointer", opacity: sendingOtp ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Send size={16} /> {sendingOtp ? "A enviar código..." : "Enviar código por email"}
+              </button>
+              <Msg fb={passwordMsg} />
+            </div>
+          )}
+
+          {pwdStep === "verify" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                <Mail size={15} color="#22c55e" />
+                <span style={{ color: "#94a3b8", fontSize: 13 }}>
+                  Código enviado para <strong style={{ color: "#fff" }}>{maskEmail(email)}</strong>
+                  {otpTimer > 0 && <span style={{ color: "#64748b" }}> · expira em {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, "0")}</span>}
+                </span>
+              </div>
+
+              <div>
+                <label style={lbl}>Código recebido no email</label>
+                <input
+                  value={otpInput} onChange={e => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="000000" maxLength={6}
+                  style={{ ...inp, fontSize: 24, letterSpacing: 8, textAlign: "center", fontWeight: 800, color: "#f5a623" }}
+                />
+              </div>
+
+              <div>
+                <label style={lbl}>Nova senha</label>
+                <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Mínimo 8 caracteres" style={inp} />
+              </div>
+
+              <div>
+                <label style={lbl}>Confirmar nova senha</label>
+                <input type="password" value={confPwd} onChange={e => setConfPwd(e.target.value)} style={inp} />
+              </div>
+
+              <Msg fb={passwordMsg} />
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={confirmPassword} disabled={passwordBusy}
+                  style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 800, cursor: passwordBusy ? "not-allowed" : "pointer", opacity: passwordBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <KeyRound size={16} /> {passwordBusy ? "A confirmar..." : "Confirmar nova senha"}
+                </button>
+                <button onClick={() => { setPwdStep("idle"); setPasswordMsg(null); setOtpInput(""); setNewPwd(""); setConfPwd(""); }}
+                  style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+              </div>
+
+              {otpTimer === 0 && (
+                <button onClick={sendOtp} disabled={sendingOtp} style={{ background: "none", border: "none", color: "#f5a623", fontSize: 13, cursor: "pointer", padding: "4px 0", textDecoration: "underline" }}>
+                  Reenviar código
+                </button>
+              )}
             </div>
           )}
         </div>

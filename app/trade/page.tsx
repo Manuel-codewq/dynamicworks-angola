@@ -4,7 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, Wallet,
-  User, LogOut, BarChart2, AlertCircle, X, DollarSign, Trophy,
+  User, LogOut, BarChart2, AlertCircle, X, Trophy,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -160,6 +160,7 @@ export default function TradePage() {
   const currentCandleRef   = useRef<CandlestickData | null>(null);
   const lastPriceRef       = useRef<number>(0);
   const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
+  const livePriceLineRef   = useRef<any>(null);
   const activeTradesRef    = useRef<ActiveTrade[]>([]);
   // Tracks the Deriv server epoch of the current candle's open (used to sync the countdown timer)
   const currentCandleEpochRef = useRef<number>(0);
@@ -514,9 +515,16 @@ export default function TradePage() {
       if (tick.symbol !== selectedPairRef.current?.symbol) return;
 
       const q = tick.quote;
-      setPriceUp(q >= lastPriceRef.current);
+      const up = q >= lastPriceRef.current;
+      setPriceUp(up);
       lastPriceRef.current = q;
       setCurrentPrice(q);
+      if (livePriceLineRef.current) {
+        livePriceLineRef.current.applyOptions({
+          price: q,
+          color: up ? "#22c55e" : "#ef4444",
+        });
+      }
       setSentiment(Math.floor(45 + Math.random() * 30));
 
       // Update live candle
@@ -714,6 +722,14 @@ export default function TradePage() {
       candleSeriesRef.current  = series;
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
+      livePriceLineRef.current = series.createPriceLine({
+        price: SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1,
+        color: "#22c55e",
+        lineWidth: 2,
+        lineStyle: 0,
+        axisLabelVisible: true,
+        title: "",
+      });
       // Null indicator refs — chart.remove() invalidated them
       maSeriesRefs.current.clear(); emaSeriesRefs.current.clear();
       bbUpperRef.current  = null; bbMiddleRef.current  = null; bbLowerRef.current = null;
@@ -1517,8 +1533,8 @@ export default function TradePage() {
           ))}
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
             {candleTimer && (
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#f5a623", background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 5, padding: "2px 6px", fontVariantNumeric: "tabular-nums" }}>
-                ⏱ {candleTimer}
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", fontVariantNumeric: "tabular-nums", letterSpacing: 1 }}>
+                {candleTimer}
               </span>
             )}
             <button onClick={() => setShowIndicators(v => !v)}
@@ -1551,7 +1567,7 @@ export default function TradePage() {
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1e2d50", display: "flex", alignItems: "center" }}>
           {([
             { id: "chart",   label: "Gráfico",  Icon: BarChart2   },
-            { id: "trade",   label: "Negociar", Icon: DollarSign  },
+            { id: "trade",   label: "Negociar", Icon: TrendingUp  },
             { id: "ranking", label: "Ranking",  Icon: Trophy      },
             { id: "account", label: "Conta",    Icon: User        },
           ] as const).map(({ id, label, Icon }) => {
@@ -1564,19 +1580,13 @@ export default function TradePage() {
                 if (id === "trade")   { setMobileTab("trade"); setTradeDrawer(true); return; }
                 setMobileTab("chart"); setTradeDrawer(false);
               }} style={{ flex: 1, height: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, position: "relative" }}>
-                {isTradeBtn ? (
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg,#f5a623,#e8940f)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(245,166,35,0.4)", marginTop: -8 }}>
-                    <DollarSign size={20} color="#0a0f1e" strokeWidth={2.5} />
+                <>
+                  <div style={{ position: "relative" }}>
+                    <Icon size={20} color={isActive ? "#f5a623" : "#4b5563"} />
+                    {isActive && <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#f5a623" }} />}
                   </div>
-                ) : (
-                  <>
-                    <div style={{ position: "relative" }}>
-                      <Icon size={20} color={isActive ? "#f5a623" : "#4b5563"} />
-                      {isActive && <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#f5a623" }} />}
-                    </div>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? "#f5a623" : "#4b5563" }}>{label}</span>
-                  </>
-                )}
+                  <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? "#f5a623" : "#4b5563" }}>{label}</span>
+                </>
               </button>
             );
           })}
@@ -1729,8 +1739,8 @@ export default function TradePage() {
             ))}
             <div style={{ flex: 1 }} />
             {candleTimer && (
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#f5a623", background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "3px 8px", fontVariantNumeric: "tabular-nums" }}>
-                ⏱ {candleTimer}
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", fontVariantNumeric: "tabular-nums", letterSpacing: 1 }}>
+                {candleTimer}
               </span>
             )}
             <button onClick={() => setShowIndicators(v => !v)} style={{

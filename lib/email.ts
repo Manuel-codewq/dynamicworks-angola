@@ -252,6 +252,33 @@ export async function sendTransactionOtpEmail(to: string, name: string, code: st
   }
 }
 
+export async function sendPasswordOtpEmail(to: string, name: string, code: string) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p("Recebemos um pedido para alterar a senha da tua conta. Usa o código abaixo para confirmar:")}
+    <div style="background:#0a0f1e;border:2px solid #f5a623;border-radius:14px;padding:28px;margin:20px 0;text-align:center;">
+      <p style="color:#64748b;font-size:12px;font-weight:600;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Código de segurança</p>
+      <p style="color:#f5a623;font-size:42px;font-weight:900;margin:0;letter-spacing:12px;font-variant-numeric:tabular-nums;">${code}</p>
+    </div>
+    ${p("Este código é válido durante <strong style=\"color:#fff;\">10 minutos</strong>. Não o partilhes com ninguém.")}
+    ${p("Se não solicitaste esta alteração, ignora este email. A tua senha não será alterada.", "#64748b")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: "Código para alteração de senha — Dynamics Works",
+      html:    baseTemplate("Confirmar alteração de senha", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar password OTP email:", err);
+  }
+}
+
 export async function sendWithdrawalRejectedEmail(to: string, name: string, amount: number) {
   const client = getClient();
   if (!client) return;
