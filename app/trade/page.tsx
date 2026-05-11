@@ -281,15 +281,6 @@ export default function TradePage() {
   const sessionTradeIdsRef = useRef(new Set<string>());
   // setTimeout IDs para trades desta sessão — garante expiração exacta como o demo HTML
   const tradeTimersRef     = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  // Referência de tempo do servidor: após cada poll guardamos serverTime e o Date.now() correspondente.
-  // Assim estimamos "que horas são no servidor agora" sem depender do relógio do cliente.
-  const serverTimeRef  = useRef<number>(0); // último serverTime recebido (ms UTC)
-  const clientTimeRef  = useRef<number>(0); // Date.now() quando serverTime foi recebido
-  // Helper: tempo estimado do servidor agora
-  function estServerNow() {
-    if (serverTimeRef.current === 0) return Date.now();
-    return serverTimeRef.current + (Date.now() - clientTimeRef.current);
-  }
 
 
   // ── Candle countdown timer — pure UTC alignment ──────────────────────────
@@ -847,12 +838,6 @@ export default function TradePage() {
       const res = await fetch("/api/trade");
       if (!res.ok) return;
       const data = await res.json();
-      // Regista o tempo do servidor com compensação de latência de rede
-      if (data.serverTime) {
-        const latency = (Date.now() - sentAt) / 2;
-        serverTimeRef.current = data.serverTime + latency;
-        clientTimeRef.current = Date.now();
-      }
       const trades: any[] = (data.trades ?? []).map((t: any) => ({
         ...t,
         expiresAt: typeof t.expiresAt === "number" ? t.expiresAt : 0,
@@ -929,7 +914,7 @@ export default function TradePage() {
 
 
   function getCountdown(trade: ActiveTrade) {
-    const remMs = trade.expiresAt - estServerNow();
+    const remMs = trade.expiresAt - Date.now();
     if (remMs <= 0) return "A fechar...";
     const rem = Math.ceil(remMs / 1000);
     return `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`;
@@ -997,9 +982,8 @@ export default function TradePage() {
     const id = setInterval(() => {
       setTick(t => t + 1); // força re-render do countdown
       const now = Date.now();
-      const serverNow = estServerNow();
       activeTradesRef.current.forEach(trade => {
-        if (serverNow < trade.expiresAt) return;
+        if (now < trade.expiresAt) return;
         const attempts = closeAttemptsRef.current.get(trade.id) ?? 0;
         const delay  = Math.min(16, Math.pow(2, attempts)) * 1000;
         const lastAt = closeLastAtRef.current.get(trade.id) ?? 0;
@@ -1044,12 +1028,6 @@ export default function TradePage() {
         if (isMobile) setTradeDrawer(false);
         fetchBalance();
         if (data.trade) {
-          // Regista o tempo do servidor a partir da resposta de abertura
-          if (data.serverTime) {
-            const latency = (receivedAt - started) / 2;
-            serverTimeRef.current = data.serverTime + latency;
-            clientTimeRef.current = Date.now();
-          }
           // Regista como trade desta sessão (para notificação win/loss)
           sessionTradeIdsRef.current.add(data.trade.id);
 
