@@ -127,16 +127,21 @@ model KycSubmission {
 }
 
 model Tournament {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  startDate   DateTime
-  endDate     DateTime
-  prizePool   Float    @default(0)
-  prizes      Json     @default("[]")
-  status      String   @default("upcoming")
-  createdAt   DateTime @default(now())
-  participants TournamentParticipant[]
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  rules           String?
+  startDate       DateTime
+  endDate         DateTime
+  prizePool       Float    @default(0)
+  prizes          Json     @default("[]")
+  status          String   @default("upcoming")
+  isFree          Boolean  @default(true)
+  entryFee        Float    @default(0)
+  maxParticipants Int?
+  bannerColor     String   @default("#f5a623")
+  createdAt       DateTime @default(now())
+  participants    TournamentParticipant[]
 
   @@index([status, startDate])
 }

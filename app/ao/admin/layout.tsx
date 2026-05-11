@@ -4,7 +4,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
-  Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
+  Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace, Trophy,
 } from "lucide-react";
 
 type NavItem = {
@@ -19,8 +19,9 @@ const NAV: NavItem[] = [
   { href: "/ao/admin/users",        label: "Utilizadores", Icon: Users },
   { href: "/ao/admin/kyc",          label: "KYC",          Icon: ScanFace,       badgeKey: "kyc" },
   { href: "/ao/admin/transactions", label: "Transações",   Icon: ArrowLeftRight, badgeKey: "txn" },
-  { href: "/ao/admin/trades",       label: "Operações",    Icon: BarChart2 },
-  { href: "/ao/admin/settings",     label: "Configurações",Icon: Settings },
+  { href: "/ao/admin/trades",        label: "Operações",    Icon: BarChart2 },
+  { href: "/ao/admin/tournaments",   label: "Torneios",     Icon: Trophy },
+  { href: "/ao/admin/settings",      label: "Configurações",Icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

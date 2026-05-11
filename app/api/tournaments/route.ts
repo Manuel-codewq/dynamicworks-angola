@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if ((session.user as any).role !== "admin") return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const { name, description, startDate, endDate, prizePool, prizes } = await req.json();
+  const { name, description, rules, startDate, endDate, prizePool, prizes, isFree, entryFee, maxParticipants, bannerColor } = await req.json();
 
   if (!name || !startDate || !endDate) {
     return NextResponse.json({ error: "Nome, data de início e data de fim são obrigatórios" }, { status: 400 });
@@ -30,12 +30,17 @@ export async function POST(req: NextRequest) {
   const tournament = await prisma.tournament.create({
     data: {
       name: String(name).slice(0, 100),
-      description: description ? String(description).slice(0, 500) : null,
+      description: description ? String(description).slice(0, 1000) : null,
+      rules: rules ? String(rules).slice(0, 2000) : null,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       prizePool: Number(prizePool) || 0,
       prizes: prizes ?? [],
       status,
+      isFree: isFree !== false,
+      entryFee: isFree !== false ? 0 : Number(entryFee) || 0,
+      maxParticipants: maxParticipants ? Number(maxParticipants) : null,
+      bannerColor: bannerColor ?? "#f5a623",
     },
   });
 

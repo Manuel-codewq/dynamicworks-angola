@@ -32,10 +32,27 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   if (!tournament) return NextResponse.json({ error: "Torneio não encontrado" }, { status: 404 });
   if (tournament.status === "finished") return NextResponse.json({ error: "Torneio já terminou" }, { status: 400 });
 
+  // Check max participants
+  if (tournament.maxParticipants) {
+    const count = await prisma.tournamentParticipant.count({ where: { tournamentId: id } });
+    if (count >= tournament.maxParticipants) return NextResponse.json({ error: "Torneio sem vagas disponíveis" }, { status: 400 });
+  }
+
   const existing = await prisma.tournamentParticipant.findUnique({
     where: { tournamentId_userId: { tournamentId: id, userId: session.user.id } },
   });
   if (existing) return NextResponse.json({ error: "Já participas neste torneio" }, { status: 400 });
+
+  // Paid tournament: debit entry fee from real balance
+  if (!tournament.isFree && tournament.entryFee > 0) {
+    const deducted = await prisma.user.updateMany({
+      where: { id: session.user.id, balance: { gte: tournament.entryFee } },
+      data:  { balance: { decrement: tournament.entryFee } },
+    });
+    if (deducted.count === 0) {
+      return NextResponse.json({ error: `Saldo insuficiente. É necessário ${tournament.entryFee.toLocaleString("pt-AO")} Kz para participar.`, insufficientFunds: true }, { status: 400 });
+    }
+  }
 
   const participant = await prisma.tournamentParticipant.create({
     data: { tournamentId: id, userId: session.user.id },
@@ -52,18 +69,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
-  const { name, description, startDate, endDate, prizePool, prizes, status } = body;
+  const { name, description, rules, startDate, endDate, prizePool, prizes, status, isFree, entryFee, maxParticipants, bannerColor } = body;
 
   const tournament = await prisma.tournament.update({
     where: { id },
     data: {
-      ...(name        && { name: String(name).slice(0, 100) }),
-      ...(description !== undefined && { description: description ? String(description).slice(0, 500) : null }),
-      ...(startDate   && { startDate: new Date(startDate) }),
-      ...(endDate     && { endDate: new Date(endDate) }),
-      ...(prizePool   !== undefined && { prizePool: Number(prizePool) }),
-      ...(prizes      !== undefined && { prizes }),
-      ...(status      && { status }),
+      ...(name               && { name: String(name).slice(0, 100) }),
+      ...(description        !== undefined && { description: description ? String(description).slice(0, 1000) : null }),
+      ...(rules              !== undefined && { rules: rules ? String(rules).slice(0, 2000) : null }),
+      ...(startDate          && { startDate: new Date(startDate) }),
+      ...(endDate            && { endDate: new Date(endDate) }),
+      ...(prizePool          !== undefined && { prizePool: Number(prizePool) }),
+      ...(prizes             !== undefined && { prizes }),
+      ...(status             && { status }),
+      ...(isFree             !== undefined && { isFree }),
+      ...(entryFee           !== undefined && { entryFee: Number(entryFee) }),
+      ...(maxParticipants    !== undefined && { maxParticipants: maxParticipants ? Number(maxParticipants) : null }),
+      ...(bannerColor        && { bannerColor }),
     },
   });
 
