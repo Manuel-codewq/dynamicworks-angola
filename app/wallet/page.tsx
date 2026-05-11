@@ -53,6 +53,7 @@ export default function WalletPage() {
   const [otpCode,       setOtpCode]       = useState("");
   const [otpLoading,    setOtpLoading]    = useState(false);
   const [pendingType,   setPendingType]   = useState<"deposit" | "withdrawal" | null>(null);
+  const [kycStatus,     setKycStatus]     = useState<string>("pending");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -65,6 +66,9 @@ export default function WalletPage() {
     });
     fetch("/api/transactions").then(r => r.json()).then(d => {
       if (Array.isArray(d)) setTransactions(d);
+    });
+    fetch("/api/profile/kyc").then(r => r.json()).then(d => {
+      if (d?.kycStatus) setKycStatus(d.kycStatus);
     });
   }, [status]);
 
@@ -227,6 +231,26 @@ export default function WalletPage() {
         {/* Withdraw tab */}
         {tab === "withdraw" && (
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
+            {/* KYC banner — bloqueia se não aprovado */}
+            {kycStatus !== "approved" && (
+              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 12, padding: "16px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 14 }}>
+                <ShieldCheck size={28} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Verificação de identidade obrigatória</div>
+                  <div style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.5 }}>
+                    Para efectuar levantamentos precisas de completar o processo de verificação KYC.{" "}
+                    {kycStatus === "pending" && "O teu pedido está a aguardar aprovação."}
+                    {kycStatus === "rejected" && "O teu pedido foi rejeitado. Submete novamente."}
+                    {kycStatus === "not_submitted" && ""}
+                  </div>
+                  {kycStatus !== "pending" && (
+                    <a href="/kyc" style={{ display: "inline-block", marginTop: 10, background: "#ef4444", color: "#fff", borderRadius: 8, padding: "7px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                      Verificar identidade →
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Multicaixa Express badge */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
               <span style={{ fontSize: 26 }}>💳</span>

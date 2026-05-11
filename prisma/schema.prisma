@@ -33,7 +33,9 @@ model User {
   transactions  Transaction[]
   notifications Notification[]
   kycSubmission KycSubmission?
+  tournaments   TournamentParticipant[]
 }
+
 
 model Trade {
   id         String    @id @default(cuid())
@@ -122,4 +124,34 @@ model KycSubmission {
   biBack    String
   livenessScore Float @default(0)
   createdAt DateTime @default(now())
+}
+
+model Tournament {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  prizePool   Float    @default(0)
+  prizes      Json     @default("[]")
+  status      String   @default("upcoming")
+  createdAt   DateTime @default(now())
+  participants TournamentParticipant[]
+
+  @@index([status, startDate])
+}
+
+model TournamentParticipant {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  profit       Float      @default(0)
+  trades       Int        @default(0)
+  wins         Int        @default(0)
+  joinedAt     DateTime   @default(now())
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, profit])
 }

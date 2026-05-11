@@ -37,6 +37,14 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
 
+  // KYC obrigatório para levantamentos
+  if (type === "withdrawal" && user.kycStatus !== "approved") {
+    return NextResponse.json(
+      { error: "Verificação de identidade (KYC) obrigatória para efectuar levantamentos.", kycRequired: true },
+      { status: 403 }
+    );
+  }
+
   // Validar OTP no campo dedicado (otpCode) — separado do verifyCode de email
   if (
     !user.otpCode ||
