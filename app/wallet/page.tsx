@@ -48,7 +48,6 @@ export default function WalletPage() {
   const [loading,       setLoading]       = useState(false);
   const [msg,           setMsg]           = useState<{ text: string; ok: boolean } | null>(null);
   const [demoReloading, setDemoReloading] = useState(false);
-  const [bnaRate,       setBnaRate]       = useState<number | null>(null);
   // OTP flow
   const [otpStep,       setOtpStep]       = useState(false);
   const [otpCode,       setOtpCode]       = useState("");
@@ -67,9 +66,6 @@ export default function WalletPage() {
     fetch("/api/transactions").then(r => r.json()).then(d => {
       if (Array.isArray(d)) setTransactions(d);
     });
-    fetch("/api/bna-rate").then(r => r.ok ? r.json() : null).then(d => {
-      if (d?.usdToKz) setBnaRate(d.usdToKz);
-    }).catch(() => {});
   }, [status]);
 
   async function resetDemo() {
@@ -161,12 +157,6 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {/* BNA rate bar */}
-        {bnaRate && (
-          <div style={{ textAlign: "center", color: "#4b5563", fontSize: 12, marginBottom: 16 }}>
-            Taxa de câmbio: 1 USD = {bnaRate.toLocaleString("pt-AO")} Kz&nbsp;&nbsp;·&nbsp;&nbsp;Fonte: BNA
-          </div>
-        )}
 
         {/* Tabs */}
         <div style={{ display: "flex", background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 20, gap: 4 }}>

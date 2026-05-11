@@ -149,7 +149,6 @@ export default function TradePage() {
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
   const [userMenuOpen,   setUserMenuOpen]   = useState(false);
   const [demoReloading,  setDemoReloading]  = useState(false);
-  const [bnaRate,        setBnaRate]        = useState<number | null>(null);
   const [candleTimer,    setCandleTimer]    = useState("");
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
   const [, setTick]                         = useState(0);
@@ -469,16 +468,6 @@ export default function TradePage() {
     recalcRef.current();
   }, [indicators]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── BNA exchange rate (fetched once per hour) ───────────────────────────
-  useEffect(() => {
-    const fetchRate = () =>
-      fetch("/api/bna-rate").then(r => r.ok ? r.json() : null).then(d => {
-        if (d?.usdToKz) setBnaRate(d.usdToKz);
-      }).catch(() => {});
-    fetchRate();
-    const id = setInterval(fetchRate, 3_600_000);
-    return () => clearInterval(id);
-  }, []);
 
   // ── Payout map (polls every 30s so admin changes appear quickly) ─────────
   useEffect(() => {
@@ -1176,9 +1165,6 @@ export default function TradePage() {
             <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 20 }}>{Math.round(currentPayout * 100)}%</div>
           </div>
         </div>
-        {bnaRate && (
-          <div style={{ marginTop: 6, color: "#374151", fontSize: 10 }}>1 USD = {bnaRate.toLocaleString("pt-AO")} Kz</div>
-        )}
       </div>
 
       {/* ── Sentiment ── */}
