@@ -31,9 +31,10 @@ model User {
   createdAt      DateTime      @default(now())
   trades        Trade[]
   transactions  Transaction[]
-  notifications Notification[]
-  kycSubmission KycSubmission?
-  tournaments   TournamentParticipant[]
+  notifications    Notification[]
+  kycSubmission    KycSubmission?
+  tournaments      TournamentParticipant[]
+  supportTickets   SupportTicket[]
 }
 
 
@@ -111,6 +112,32 @@ model PriceCandle {
 
   @@index([asset, timeframe, timestamp])
   @@unique([asset, timeframe, timestamp])
+}
+
+model SupportTicket {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  subject   String
+  category  String           @default("outro")
+  status    String           @default("open")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  messages  SupportMessage[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  body      String
+  isAdmin   Boolean       @default(false)
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
 }
 
 model RateLimit {

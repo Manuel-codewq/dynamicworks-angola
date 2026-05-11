@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import Script from "next/script";
+import SupportWidget from "./components/SupportWidget";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
@@ -195,7 +196,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body style={{ margin: 0, padding: 0, background: "#0a0f1e" }}>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          {children}
+          <SupportWidget />
+        </SessionProvider>
 
         {/* Google Analytics 4 — carrega após interacção para não penalizar performance */}
         <Script

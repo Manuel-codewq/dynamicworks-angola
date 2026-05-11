@@ -4,14 +4,14 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
-  Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace, Trophy,
+  Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace, Trophy, MessageCircle,
 } from "lucide-react";
 
 type NavItem = {
   href: string;
   label: string;
   Icon: React.ElementType;
-  badgeKey?: "txn" | "kyc";
+  badgeKey?: "txn" | "kyc" | "support";
 };
 
 const NAV: NavItem[] = [
@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { href: "/ao/admin/transactions", label: "Transações",   Icon: ArrowLeftRight, badgeKey: "txn" },
   { href: "/ao/admin/trades",        label: "Operações",    Icon: BarChart2 },
   { href: "/ao/admin/tournaments",   label: "Torneios",     Icon: Trophy },
+  { href: "/ao/admin/support",       label: "Suporte",      Icon: MessageCircle, badgeKey: "support" },
   { href: "/ao/admin/settings",      label: "Configurações",Icon: Settings },
 ];
 
@@ -28,8 +29,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router   = useRouter();
   const { data: session, status } = useSession();
-  const [txnCount, setTxnCount] = useState(0);
-  const [kycCount, setKycCount] = useState(0);
+  const [txnCount,     setTxnCount]     = useState(0);
+  const [kycCount,     setKycCount]     = useState(0);
+  const [supportCount, setSupportCount] = useState(0);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -53,6 +55,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           const d: { user: { kycStatus: string } }[] = await kycRes.json();
           setKycCount(d.filter(e => e.user.kycStatus === "pending").length);
         }
+        const supRes = await fetch("/api/admin/support?status=open");
+        if (supRes.ok) {
+          const d = await supRes.json();
+          setSupportCount(Array.isArray(d) ? d.length : 0);
+        }
       } catch { /* silent */ }
     }
 
@@ -61,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => clearInterval(id);
   }, [status]);
 
-  const badges: Record<string, number> = { txn: txnCount, kyc: kycCount };
+  const badges: Record<string, number> = { txn: txnCount, kyc: kycCount, support: supportCount };
 
   if (status === "loading") {
     return (
