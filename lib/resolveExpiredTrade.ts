@@ -118,5 +118,31 @@ export async function resolveExpiredTrade(
     }
   });
 
+  // Update tournament participant stats for real (non-demo) trades
+  if (resolved && !trade.user.isDemo) {
+    try {
+      const participants = await prisma.tournamentParticipant.findMany({
+        where: {
+          userId: trade.userId,
+          tournament: {
+            status: "active",
+            startDate: { lte: trade.createdAt },
+            endDate:   { gte: trade.createdAt },
+          },
+        },
+      });
+      for (const tp of participants) {
+        await prisma.tournamentParticipant.update({
+          where: { id: tp.id },
+          data: {
+            profit: { increment: profit },
+            trades: { increment: 1 },
+            wins:   { increment: result === "win" ? 1 : 0 },
+          },
+        });
+      }
+    } catch { /* silent — never fail trade resolution */ }
+  }
+
   return resolved ? result : "already_closed";
 }
