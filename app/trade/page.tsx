@@ -1888,6 +1888,13 @@ export default function TradePage() {
             <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
               <span style={{ fontSize: 52, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 4, userSelect: "none" }}>{selectedPair?.label}</span>
             </div>
+            {/* Zoom controls — bottom centre, over time axis */}
+            <div style={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", gap: 4 }}>
+              <button onClick={() => { const ts = chartApiRef.current?.timeScale(); if (!ts) return; const cur = (ts.options() as any).barSpacing ?? 6; ts.applyOptions({ barSpacing: Math.max(cur - 2, 2) }); }}
+                style={{ width: 28, height: 22, background: "rgba(8,14,29,0.85)", border: "1px solid #1e2d50", borderRadius: 5, color: "#64748b", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+              <button onClick={() => { const ts = chartApiRef.current?.timeScale(); if (!ts) return; const cur = (ts.options() as any).barSpacing ?? 6; ts.applyOptions({ barSpacing: Math.min(cur + 2, 40) }); }}
+                style={{ width: 28, height: 22, background: "rgba(8,14,29,0.85)", border: "1px solid #1e2d50", borderRadius: 5, color: "#64748b", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+            </div>
           </div>
         </div>
 
