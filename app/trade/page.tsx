@@ -6,6 +6,7 @@ import {
   TrendingUp, TrendingDown, ChevronDown, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy,
   MousePointer, Minus, GitCommit, BarChart, Eraser, Trash2,
+  Pencil, ZoomIn, ZoomOut, Crosshair,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -164,9 +165,10 @@ export default function TradePage() {
   // ── Drawing tools ────────────────────────────────────────────────────────
   const [drawingTool, setDrawingTool] = useState<"cursor"|"hline"|"tline"|"fib"|"eraser">("cursor");
   const drawingToolRef  = useRef("cursor");
-  const drawnHLinesRef  = useRef<any[]>([]);   // price lines (hline + fib levels)
-  const drawnTLinesRef  = useRef<any[]>([]);   // LineSeries (trend lines)
+  const drawnHLinesRef  = useRef<any[]>([]);
+  const drawnTLinesRef  = useRef<any[]>([]);
   const drawFirstPtRef  = useRef<{ time: number; price: number } | null>(null);
+  const barSpacingRef   = useRef(14);
   const activeTradesRef    = useRef<ActiveTrade[]>([]);
   // Tracks the Deriv server epoch of the current candle's open (used to sync the countdown timer)
   const currentCandleEpochRef = useRef<number>(0);
@@ -1596,40 +1598,87 @@ export default function TradePage() {
             <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
           </div>
 
-          {/* Toolbar de ferramentas — barra vertical esquerda */}
-          <div style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", zIndex: 20, display: "flex", flexDirection: "column", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: "6px 4px" }}>
-            {([
-              { id: "cursor", icon: <MousePointer size={15} />, tip: "Cursor" },
-              { id: "hline",  icon: <Minus size={15} />,        tip: "Linha Horizontal" },
-              { id: "tline",  icon: <GitCommit size={15} />,    tip: "Linha de Tendência" },
-              { id: "fib",    icon: <BarChart size={15} />,     tip: "Fibonacci" },
-              { id: "eraser", icon: <Eraser size={15} />,       tip: "Apagar Último" },
-            ] as { id: typeof drawingTool; icon: React.ReactNode; tip: string }[]).map(({ id, icon, tip }) => (
-              <button
-                key={id}
-                title={tip}
-                onClick={() => { setDrawingTool(id); drawFirstPtRef.current = null; }}
-                style={{
-                  width: 30, height: 30, border: "none", borderRadius: 7, cursor: "pointer",
-                  background: drawingTool === id ? "#f5a623" : "transparent",
-                  color:      drawingTool === id ? "#0a0f1e" : "#64748b",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "all 0.15s",
-                }}
-              >{icon}</button>
-            ))}
-            <div style={{ height: 1, background: "#1e2d50", margin: "2px 0" }} />
-            <button
-              title="Apagar Tudo"
-              onClick={() => {
+          {/* ── Toolbar vertical esquerda ── */}
+          <div style={{
+            position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
+            zIndex: 20, display: "flex", flexDirection: "column",
+            background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10,
+            overflow: "hidden", width: 38,
+          }}>
+
+            {/* ── GRUPO 1: Desenho (Lápis) ── */}
+            <div style={{ padding: "4px 3px 2px", display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ color: "#374151", fontSize: 8, fontWeight: 700, textAlign: "center", letterSpacing: 0.5, padding: "2px 0 3px", textTransform: "uppercase" }}>
+                <Pencil size={10} style={{ display: "block", margin: "0 auto" }} />
+              </div>
+              {([
+                { id: "cursor", icon: <MousePointer size={13} />, tip: "Cursor" },
+                { id: "hline",  icon: <Minus size={13} />,        tip: "Linha Horizontal" },
+                { id: "tline",  icon: <GitCommit size={13} />,    tip: "Linha de Tendência" },
+                { id: "fib",    icon: <BarChart size={13} />,     tip: "Fibonacci" },
+              ] as { id: typeof drawingTool; icon: React.ReactNode; tip: string }[]).map(({ id, icon, tip }) => (
+                <button key={id} title={tip}
+                  onClick={() => { setDrawingTool(id); drawFirstPtRef.current = null; }}
+                  style={{
+                    width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer",
+                    background: drawingTool === id ? "#f5a623" : "transparent",
+                    color:      drawingTool === id ? "#0a0f1e" : "#64748b",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >{icon}</button>
+              ))}
+              <button title="Apagar Último" onClick={() => setDrawingTool("eraser")}
+                style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: drawingTool === "eraser" ? "#f5a623" : "transparent", color: drawingTool === "eraser" ? "#0a0f1e" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Eraser size={13} />
+              </button>
+              <button title="Limpar Tudo" onClick={() => {
                 drawnTLinesRef.current.forEach(s => { try { chartApiRef.current?.removeSeries(s); } catch {} });
                 drawnHLinesRef.current.forEach(l => { try { candleSeriesRef.current?.removePriceLine(l); } catch {} });
-                drawnTLinesRef.current = [];
-                drawnHLinesRef.current = [];
-                drawFirstPtRef.current = null;
+                drawnTLinesRef.current = []; drawnHLinesRef.current = []; drawFirstPtRef.current = null;
               }}
-              style={{ width: 30, height: 30, border: "none", borderRadius: 7, cursor: "pointer", background: "transparent", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}
-            ><Trash2 size={13} /></button>
+                style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#ef444480", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            <div style={{ height: 1, background: "#1e2d50" }} />
+
+            {/* ── GRUPO 2: Timeframes do gráfico ── */}
+            <div style={{ padding: "4px 3px", display: "flex", flexDirection: "column", gap: 2 }}>
+              {["1m", "5m", "15m", "1h", "1D"].map(tf => (
+                <button key={tf} title={`Timeframe ${tf}`} onClick={() => setTimeframe(tf)}
+                  style={{
+                    width: 32, height: 26, border: "none", borderRadius: 6, cursor: "pointer",
+                    background: timeframe === tf ? "#f5a623" : "transparent",
+                    color:      timeframe === tf ? "#0a0f1e" : "#64748b",
+                    fontSize: 10, fontWeight: 700,
+                  }}>{tf}</button>
+              ))}
+            </div>
+
+            <div style={{ height: 1, background: "#1e2d50" }} />
+
+            {/* ── GRUPO 3: Outras ferramentas ── */}
+            <div style={{ padding: "4px 3px 4px", display: "flex", flexDirection: "column", gap: 2 }}>
+              <button title="Zoom +" onClick={() => {
+                const next = Math.min(30, barSpacingRef.current + 2);
+                barSpacingRef.current = next;
+                chartApiRef.current?.applyOptions({ timeScale: { barSpacing: next } });
+              }} style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ZoomIn size={13} />
+              </button>
+              <button title="Zoom -" onClick={() => {
+                const next = Math.max(4, barSpacingRef.current - 2);
+                barSpacingRef.current = next;
+                chartApiRef.current?.applyOptions({ timeScale: { barSpacing: next } });
+              }} style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ZoomOut size={13} />
+              </button>
+              <button title="Ir para vela actual" onClick={() => chartApiRef.current?.timeScale().scrollToRealTime()}
+                style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Crosshair size={13} />
+              </button>
+            </div>
           </div>
 
           {/* Indicação de 1º clique para tline/fib */}
