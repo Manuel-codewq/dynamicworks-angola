@@ -650,12 +650,16 @@ export default function TradePage() {
         layout: { background: { color: "#0a0f1e" }, textColor: "#94a3b8", attributionLogo: false },
         grid:   { vertLines: { color: "#1e2d50" }, horzLines: { color: "#1e2d50" } },
         crosshair:       { mode: 1 },
-        rightPriceScale: { borderColor: "#1e2d50" },
+        rightPriceScale: {
+          borderColor: "#1e2d50",
+          autoScale:   true,
+          scaleMargins: { top: 0.04, bottom: 0.04 },
+        },
         timeScale: {
           borderColor: "#1e2d50", timeVisible: true,
-          rightOffset: 8,        // pequeno espaço depois da vela live
-          barSpacing: 6,         // ~100 velas visíveis num gráfico de 700px
-          fixLeftEdge: true,     // impede scroll para além da primeira vela
+          rightOffset: 8,
+          barSpacing: 14,
+          fixLeftEdge: true,
           lockVisibleTimeRangeOnResize: true,
         },
         width: w, height: h,
