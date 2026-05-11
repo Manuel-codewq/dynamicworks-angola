@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft, User, Shield, BarChart2, Lock,
   CheckCircle, Clock, XCircle, Save, ScanFace,
@@ -41,6 +41,24 @@ const KYC_CFG = {
   rejected:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.25)",  Icon: XCircle,        label: "Rejeitado",    desc: "Documentos rejeitados. Submeta novamente." },
   unsubmitted: { color: "#64748b", bg: "rgba(100,116,139,0.10)",border: "rgba(100,116,139,0.25)",Icon: AlertTriangle,  label: "Não iniciado", desc: "Inicie a verificação para desbloquear saques" },
 };
+
+function KycRedirectBanner() {
+  const searchParams = useSearchParams();
+  const kycParam = searchParams.get("kyc");
+  if (kycParam === "done") return (
+    <div style={{ background: "rgba(34,197,94,0.1)", borderBottom: "1px solid rgba(34,197,94,0.25)", padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+      <CheckCircle size={16} color="#22c55e" />
+      <span style={{ color: "#22c55e", fontSize: 13, fontWeight: 600 }}>A tua identidade já foi verificada. Não é necessário repetir o processo.</span>
+    </div>
+  );
+  if (kycParam === "pending") return (
+    <div style={{ background: "rgba(245,166,35,0.08)", borderBottom: "1px solid rgba(245,166,35,0.25)", padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+      <Clock size={16} color="#f5a623" />
+      <span style={{ color: "#f5a623", fontSize: 13, fontWeight: 600 }}>Os teus documentos já foram submetidos e estão em análise. Aguarda a aprovação.</span>
+    </div>
+  );
+  return null;
+}
 
 export default function ProfilePage() {
   const { status } = useSession();
@@ -199,6 +217,11 @@ export default function ProfilePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 40 }}>
+
+      {/* Banner KYC redirect */}
+      <Suspense fallback={null}>
+        <KycRedirectBanner />
+      </Suspense>
 
       {/* Header */}
       <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>

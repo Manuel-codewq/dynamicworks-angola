@@ -14,7 +14,7 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret, cookieName });
   const { pathname } = req.nextUrl;
 
-  const protectedRoutes = ["/trade", "/dashboard", "/wallet", "/ao/admin", "/profile"];
+  const protectedRoutes = ["/trade", "/dashboard", "/wallet", "/ao/admin", "/profile", "/kyc"];
   const isProtected = protectedRoutes.some(r => pathname.startsWith(r));
 
   if (isProtected && !token) {
@@ -31,5 +31,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/trade/:path*", "/dashboard/:path*", "/wallet/:path*", "/ao/admin/:path*", "/profile/:path*"],
+  matcher: ["/trade/:path*", "/dashboard/:path*", "/wallet/:path*", "/ao/admin/:path*", "/profile/:path*", "/kyc/:path*"],
 };
