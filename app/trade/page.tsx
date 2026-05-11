@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy,
-  MousePointer, Minus, GitCommit, BarChart, Eraser, Trash2,
-  Pencil, ZoomIn, ZoomOut, Crosshair,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -162,13 +160,6 @@ export default function TradePage() {
   const lastPriceRef       = useRef<number>(0);
   const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
   const livePriceLineRef   = useRef<any>(null);
-  // ── Drawing tools ────────────────────────────────────────────────────────
-  const [drawingTool, setDrawingTool] = useState<"cursor"|"hline"|"tline"|"fib"|"eraser">("cursor");
-  const drawingToolRef  = useRef("cursor");
-  const drawnHLinesRef  = useRef<any[]>([]);
-  const drawnTLinesRef  = useRef<any[]>([]);
-  const drawFirstPtRef  = useRef<{ time: number; price: number } | null>(null);
-  const barSpacingRef   = useRef(14);
   const activeTradesRef    = useRef<ActiveTrade[]>([]);
   // Tracks the Deriv server epoch of the current candle's open (used to sync the countdown timer)
   const currentCandleEpochRef = useRef<number>(0);
@@ -178,7 +169,6 @@ export default function TradePage() {
 
   useEffect(() => { selectedPairRef.current = selectedPair; }, [selectedPair]);
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
-  useEffect(() => { drawingToolRef.current = drawingTool; },   [drawingTool]);
 
   // ── Indicator state + refs ───────────────────────────────────────────────
   const [showIndicators, setShowIndicators] = useState(false);
@@ -721,67 +711,6 @@ export default function TradePage() {
       candleSeriesRef.current  = series;
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
-      // Limpar desenhos ao re-iniciar gráfico
-      drawnHLinesRef.current = [];
-      drawnTLinesRef.current = [];
-      drawFirstPtRef.current = null;
-
-      // ── Ferramentas de desenho ──────────────────────────────────────────
-      chart.subscribeClick((param) => {
-        const tool = drawingToolRef.current;
-        if (tool === "cursor" || !param.point) return;
-        const price = series.coordinateToPrice(param.point.y);
-        if (!price || price <= 0) return;
-        const dec = selectedPairRef.current?.decimals ?? 2;
-
-        if (tool === "hline") {
-          const line = series.createPriceLine({
-            price, color: "#f5a623", lineWidth: 1, lineStyle: 2,
-            axisLabelVisible: true, title: price.toFixed(dec),
-          });
-          drawnHLinesRef.current.push(line);
-
-        } else if (tool === "tline" || tool === "fib") {
-          const t = param.time as number | undefined;
-          if (!t) return;
-          if (!drawFirstPtRef.current) {
-            drawFirstPtRef.current = { time: t, price };
-          } else {
-            const s = drawFirstPtRef.current;
-            drawFirstPtRef.current = null;
-            if (tool === "tline") {
-              const sorted = s.time <= t
-                ? [{ time: s.time as Time, value: s.price }, { time: t as Time, value: price }]
-                : [{ time: t as Time, value: price }, { time: s.time as Time, value: s.price }];
-              const tl = chart.addSeries(LineSeries, {
-                color: "#f5a623", lineWidth: 1,
-                priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-              });
-              tl.setData(sorted);
-              drawnTLinesRef.current.push(tl);
-            } else {
-              // Fibonacci retracement
-              const range = price - s.price;
-              [0, 0.236, 0.382, 0.5, 0.618, 0.764, 1].forEach(lvl => {
-                const lp = s.price + range * lvl;
-                const colors: Record<number, string> = { 0: "#94a3b8", 0.236: "#22c55e", 0.382: "#3b82f6", 0.5: "#f5a623", 0.618: "#3b82f6", 0.764: "#22c55e", 1: "#94a3b8" };
-                const line = series.createPriceLine({
-                  price: lp, color: colors[lvl] ?? "#a78bfa", lineWidth: 1, lineStyle: 1,
-                  axisLabelVisible: true, title: `${(lvl * 100).toFixed(1)}%`,
-                });
-                drawnHLinesRef.current.push(line);
-              });
-            }
-          }
-
-        } else if (tool === "eraser") {
-          if (drawnTLinesRef.current.length > 0) {
-            try { chart.removeSeries(drawnTLinesRef.current.pop()); } catch {}
-          } else if (drawnHLinesRef.current.length > 0) {
-            try { series.removePriceLine(drawnHLinesRef.current.pop()); } catch {}
-          }
-        }
-      });
       livePriceLineRef.current = series.createPriceLine({
         price: SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1,
         color: "#22c55e",
@@ -1592,101 +1521,11 @@ export default function TradePage() {
 
         {/* ── Chart ── */}
         <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
-          <div ref={chartRef} style={{ width: "100%", height: "100%", cursor: drawingTool !== "cursor" ? "crosshair" : "default" }} />
+          <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
           {renderLegend()}
           <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
           </div>
-
-          {/* ── Toolbar vertical esquerda ── */}
-          <div style={{
-            position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
-            zIndex: 20, display: "flex", flexDirection: "column",
-            background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10,
-            overflow: "hidden", width: 38,
-          }}>
-
-            {/* ── GRUPO 1: Desenho (Lápis) ── */}
-            <div style={{ padding: "4px 3px 2px", display: "flex", flexDirection: "column", gap: 2 }}>
-              <div style={{ color: "#374151", fontSize: 8, fontWeight: 700, textAlign: "center", letterSpacing: 0.5, padding: "2px 0 3px", textTransform: "uppercase" }}>
-                <Pencil size={10} style={{ display: "block", margin: "0 auto" }} />
-              </div>
-              {([
-                { id: "cursor", icon: <MousePointer size={13} />, tip: "Cursor" },
-                { id: "hline",  icon: <Minus size={13} />,        tip: "Linha Horizontal" },
-                { id: "tline",  icon: <GitCommit size={13} />,    tip: "Linha de Tendência" },
-                { id: "fib",    icon: <BarChart size={13} />,     tip: "Fibonacci" },
-              ] as { id: typeof drawingTool; icon: React.ReactNode; tip: string }[]).map(({ id, icon, tip }) => (
-                <button key={id} title={tip}
-                  onClick={() => { setDrawingTool(id); drawFirstPtRef.current = null; }}
-                  style={{
-                    width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer",
-                    background: drawingTool === id ? "#f5a623" : "transparent",
-                    color:      drawingTool === id ? "#0a0f1e" : "#64748b",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
-                >{icon}</button>
-              ))}
-              <button title="Apagar Último" onClick={() => setDrawingTool("eraser")}
-                style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: drawingTool === "eraser" ? "#f5a623" : "transparent", color: drawingTool === "eraser" ? "#0a0f1e" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Eraser size={13} />
-              </button>
-              <button title="Limpar Tudo" onClick={() => {
-                drawnTLinesRef.current.forEach(s => { try { chartApiRef.current?.removeSeries(s); } catch {} });
-                drawnHLinesRef.current.forEach(l => { try { candleSeriesRef.current?.removePriceLine(l); } catch {} });
-                drawnTLinesRef.current = []; drawnHLinesRef.current = []; drawFirstPtRef.current = null;
-              }}
-                style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#ef444480", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Trash2 size={12} />
-              </button>
-            </div>
-
-            <div style={{ height: 1, background: "#1e2d50" }} />
-
-            {/* ── GRUPO 2: Timeframes do gráfico ── */}
-            <div style={{ padding: "4px 3px", display: "flex", flexDirection: "column", gap: 2 }}>
-              {["1m", "5m", "15m", "1h", "1D"].map(tf => (
-                <button key={tf} title={`Timeframe ${tf}`} onClick={() => setTimeframe(tf)}
-                  style={{
-                    width: 32, height: 26, border: "none", borderRadius: 6, cursor: "pointer",
-                    background: timeframe === tf ? "#f5a623" : "transparent",
-                    color:      timeframe === tf ? "#0a0f1e" : "#64748b",
-                    fontSize: 10, fontWeight: 700,
-                  }}>{tf}</button>
-              ))}
-            </div>
-
-            <div style={{ height: 1, background: "#1e2d50" }} />
-
-            {/* ── GRUPO 3: Outras ferramentas ── */}
-            <div style={{ padding: "4px 3px 4px", display: "flex", flexDirection: "column", gap: 2 }}>
-              <button title="Zoom +" onClick={() => {
-                const next = Math.min(30, barSpacingRef.current + 2);
-                barSpacingRef.current = next;
-                chartApiRef.current?.applyOptions({ timeScale: { barSpacing: next } });
-              }} style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <ZoomIn size={13} />
-              </button>
-              <button title="Zoom -" onClick={() => {
-                const next = Math.max(4, barSpacingRef.current - 2);
-                barSpacingRef.current = next;
-                chartApiRef.current?.applyOptions({ timeScale: { barSpacing: next } });
-              }} style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <ZoomOut size={13} />
-              </button>
-              <button title="Ir para vela actual" onClick={() => chartApiRef.current?.timeScale().scrollToRealTime()}
-                style={{ width: 32, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Crosshair size={13} />
-              </button>
-            </div>
-          </div>
-
-          {/* Indicação de 1º clique para tline/fib */}
-          {(drawingTool === "tline" || drawingTool === "fib") && drawFirstPtRef.current && (
-            <div style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", zIndex: 20, background: "rgba(245,166,35,0.9)", color: "#0a0f1e", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 6, pointerEvents: "none" }}>
-              {drawingTool === "tline" ? "Clica no 2º ponto da linha" : "Clica no 2º ponto do Fibonacci"}
-            </div>
-          )}
         </div>
 
         {/* ── Bottom nav ── */}
