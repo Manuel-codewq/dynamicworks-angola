@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy,
+  Clock, History,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -151,6 +152,13 @@ export default function TradePage() {
   const [candleTimer,    setCandleTimer]    = useState("");
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
   const [, setTick]                         = useState(0);
+  const [showTradesPanel, setShowTradesPanel] = useState(false);
+  const [tradeHistoryTab, setTradeHistoryTab] = useState<"open" | "history">("open");
+  const [tradeHistory,    setTradeHistory]    = useState<any[]>([]);
+  const [timerEditing,    setTimerEditing]    = useState(false);
+  const [timerInput,      setTimerInput]      = useState("");
+  const [amountEditing,   setAmountEditing]   = useState(false);
+  const [amountInput,     setAmountInput]     = useState("");
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const chartRef           = useRef<HTMLDivElement>(null);
@@ -158,6 +166,7 @@ export default function TradePage() {
   const candleSeriesRef    = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const currentCandleRef   = useRef<CandlestickData | null>(null);
   const lastPriceRef       = useRef<number>(0);
+  const reconnectingRef    = useRef<boolean>(false);
   const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
   const livePriceLineRef   = useRef<any>(null);
   const activeTradesRef    = useRef<ActiveTrade[]>([]);
@@ -290,6 +299,16 @@ export default function TradePage() {
   }, [timeframe]);
 
   useEffect(() => { indicatorsRef.current = indicators; }, [indicators]);
+
+  // Resize chart when trades panel opens/closes (mobile only)
+  useEffect(() => {
+    if (!isMobile || !chartApiRef.current || !chartRef.current) return;
+    const OPSPANEL_H = 230;
+    const TOPBAR_H = 52, TICKER_H = 28, TF_H = 38, TRADEPANEL_H = 188;
+    const base = windowHeight - TOPBAR_H - TICKER_H - TF_H - TRADEPANEL_H;
+    const newH = showTradesPanel ? Math.max(80, base - OPSPANEL_H) : base;
+    chartApiRef.current.applyOptions({ height: newH });
+  }, [showTradesPanel, isMobile, windowHeight]);
 
   // ── Indicator recalc — rebuilds all indicator series from candleDataRef ──
   // Defined as a standalone function (not useCallback) so it always captures
@@ -513,6 +532,12 @@ export default function TradePage() {
       }
       setSentiment(Math.floor(45 + Math.random() * 30));
 
+      // Skip candle updates during reconnect window — fresh history will arrive via onCandles
+      if (reconnectingRef.current) return;
+
+      // Sanity check: ignore ticks that deviate > 8% from last known price (bad tick)
+      if (lastPriceRef.current > 0 && Math.abs(q - lastPriceRef.current) / lastPriceRef.current > 0.08) return;
+
       // Update live candle
       if (!candleSeriesRef.current) return;
       const gran = GRANULARITY[timeframeRef.current] ?? 60;
@@ -542,6 +567,8 @@ export default function TradePage() {
     // On reconnect, re-request fresh candle history so any spike from the
     // offline gap is replaced by real server data within 1-2 seconds.
     const unsubConnect = derivWS.onConnect(() => {
+      reconnectingRef.current = true;        // block tick → candle updates until fresh data arrives
+      currentCandleRef.current = null;       // discard stale candle from before disconnect
       const pair = selectedPairRef.current;
       if (!pair) return;
       derivWS.getCandles(pair.symbol, GRANULARITY[timeframeRef.current] ?? 60, 300);
@@ -559,7 +586,7 @@ export default function TradePage() {
       candleDataRef.current = candles;
       recalcRef.current();
       currentCandleRef.current = candles[candles.length - 1];
-      // Sempre ancorar à vela live — as velas preenchem a partir do lado direito
+      reconnectingRef.current = false;       // fresh data arrived — allow tick updates again
       chartApiRef.current?.timeScale().scrollToRealTime();
 
       // Seed price display from last candle if no tick yet
@@ -586,16 +613,11 @@ export default function TradePage() {
     // Reset sync refs so the timer re-anchors to the first real tick of this pair/timeframe
     currentCandleEpochRef.current = 0;
 
-    // Show placeholder with correct candle width while real history loads
+    // Clear stale candles so no fake spike appears before real data arrives
     if (candleSeriesRef.current) {
-      const base = lastPriceRef.current > 0 ? lastPriceRef.current : (SEED_PRICES[selectedPair.symbol] ?? 1);
-      const seed = generatePlaceholder(base, 300, gran);
-      candleSeriesRef.current.setData(seed);
-      currentCandleRef.current = seed[seed.length - 1];
-      chartApiRef.current?.timeScale().fitContent();
-    } else {
-      currentCandleRef.current = null;
+      candleSeriesRef.current.setData([]);
     }
+    currentCandleRef.current = null;
 
     lastPriceRef.current = 0;
     derivWS.subscribeToTicks(pairs.map(p => p.symbol));
@@ -619,12 +641,12 @@ export default function TradePage() {
     if (!selectedPair) return;
     if (isMobile && windowHeight === 0) return;
 
-    const TOPBAR_H    = 52;
-    const TICKER_H    = 28;
-    const TF_H        = 38;
-    const BOTTOMNAV_H = 60;
-    const chartHeight = isMobile
-      ? windowHeight - TOPBAR_H - TICKER_H - TF_H - BOTTOMNAV_H
+    const TOPBAR_H     = 52;
+    const TICKER_H     = 28;
+    const TF_H         = 38;
+    const TRADEPANEL_H = 162;
+    const chartHeight  = isMobile
+      ? windowHeight - TOPBAR_H - TICKER_H - TF_H - TRADEPANEL_H
       : (chartRef.current?.clientHeight || 500);
 
     function initChart() {
@@ -647,10 +669,11 @@ export default function TradePage() {
         },
         timeScale: {
           borderColor: "#1e2d50", timeVisible: true,
-          rightOffset: 8,
-          barSpacing: 14,
-          fixLeftEdge: true,
-          lockVisibleTimeRangeOnResize: true,
+          rightOffset: 5,
+          barSpacing: 6,
+          fixLeftEdge: false,
+          lockVisibleTimeRangeOnResize: false,
+          shiftVisibleRangeOnNewBar: false,
         },
         width: w, height: h,
       });
@@ -726,13 +749,9 @@ export default function TradePage() {
       macdLineRef.current = null; macdSignalRef.current = null; macdHistRef.current = null; macdPaneRef.current = null;
       stochKRef.current = null; stochDRef.current = null; stochPaneRef.current = null;
 
-      // Placeholder while WS loads real candles — use correct granularity so
-      // candle widths match the selected timeframe from the start
-      const sym  = selectedPair!.symbol;
-      const seed = generatePlaceholder(SEED_PRICES[sym] ?? 1, 300, GRANULARITY[timeframe] ?? 60);
-      series.setData(seed);
-      currentCandleRef.current = seed[seed.length - 1];
-      chart.timeScale().scrollToRealTime();
+      // Start with empty chart — real candles arrive via WS within ~1 second
+      series.setData([]);
+      currentCandleRef.current = null;
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) chartApiRef.current.applyOptions({ width: el.clientWidth });
@@ -834,6 +853,15 @@ export default function TradePage() {
     return direction === "call" ? currentPrice > entryPrice : currentPrice < entryPrice;
   }
 
+
+  async function fetchTradeHistory() {
+    try {
+      const res = await fetch("/api/trade?limit=30");
+      if (!res.ok) return;
+      const data = await res.json();
+      setTradeHistory((data.trades ?? []).filter((t: any) => t.status !== "active"));
+    } catch {}
+  }
 
   function getCountdown(trade: ActiveTrade) {
     const remMs = trade.expiresAt - Date.now();
@@ -1380,12 +1408,14 @@ export default function TradePage() {
 
   // ── MOBILE RENDER ─────────────────────────────────────────────────────────
   if (isMobile) {
-    const TOPBAR_H    = 52;
-    const TICKER_H    = 28;
-    const TF_H        = 38;
-    const BOTTOMNAV_H = 60;
-    const CONTENT_TOP = TOPBAR_H + TICKER_H + TF_H;
-    const chartH      = windowHeight > 0 ? windowHeight - CONTENT_TOP - BOTTOMNAV_H : 400;
+    const TOPBAR_H      = 52;
+    const TICKER_H      = 28;
+    const TF_H          = 38;
+    const TRADEPANEL_H  = 188;
+    const OPSPANEL_H    = 230;
+    const CONTENT_TOP   = TOPBAR_H + TICKER_H + TF_H;
+    const chartTop      = CONTENT_TOP + (showTradesPanel ? OPSPANEL_H : 0);
+    const chartH        = windowHeight > 0 ? windowHeight - chartTop - TRADEPANEL_H : 400;
 
     return (
       <div style={{ height: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif", overflow: "hidden" }}>
@@ -1496,7 +1526,14 @@ export default function TradePage() {
               {tf}
             </button>
           ))}
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+            {/* Operações button — opens panel above chart */}
+            <button onClick={() => { setShowTradesPanel(v => !v); if (!showTradesPanel) { setTradeHistoryTab("open"); fetchTradeHistory(); } }}
+              style={{ background: showTradesPanel ? "rgba(245,166,35,0.15)" : "transparent", color: showTradesPanel ? "#f5a623" : "#64748b", border: `1px solid ${showTradesPanel ? "#f5a623" : "#1e2d50"}`, borderRadius: 5, padding: "2px 7px", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, position: "relative" }}>
+              <BarChart2 size={11} />
+              OPS
+              {activeTrades.length > 0 && <span style={{ position: "absolute", top: -4, right: -4, background: "#f5a623", color: "#0a0f1e", borderRadius: "50%", fontSize: 8, fontWeight: 900, width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeTrades.length}</span>}
+            </button>
             {candleTimer && (
               <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", fontVariantNumeric: "tabular-nums", letterSpacing: 1 }}>
                 {candleTimer}
@@ -1520,7 +1557,7 @@ export default function TradePage() {
         )}
 
         {/* ── Chart ── */}
-        <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
+        <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
           <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
           {renderLegend()}
           <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
@@ -1528,60 +1565,230 @@ export default function TradePage() {
           </div>
         </div>
 
-        {/* ── Bottom nav ── */}
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1e2d50", display: "flex", alignItems: "center" }}>
-          {([
-            { id: "chart",   label: "Gráfico",  Icon: BarChart2   },
-            { id: "trade",   label: "Negociar", Icon: TrendingUp  },
-            { id: "ranking", label: "Ranking",  Icon: Trophy      },
-            { id: "account", label: "Conta",    Icon: User        },
-          ] as const).map(({ id, label, Icon }) => {
-            const isActive = mobileTab === id;
-            const isTradeBtn = id === "trade";
-            return (
-              <button key={id} onClick={() => {
-                if (id === "ranking") { router.push("/ranking");  return; }
-                if (id === "account") { router.push("/profile"); return; }
-                if (id === "trade")   { setMobileTab("trade"); setTradeDrawer(true); return; }
-                setMobileTab("chart"); setTradeDrawer(false);
-              }} style={{ flex: 1, height: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, position: "relative" }}>
-                <>
-                  <div style={{ position: "relative" }}>
-                    <Icon size={20} color={isActive ? "#f5a623" : "#4b5563"} />
-                    {isActive && <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#f5a623" }} />}
-                  </div>
-                  <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? "#f5a623" : "#4b5563" }}>{label}</span>
-                </>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Drawer backdrop ── */}
-        {tradeDrawer && (
-          <div onClick={() => { setTradeDrawer(false); setMobileTab("chart"); }}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200 }} />
-        )}
-
-        {/* ── Trade drawer ── */}
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, height: "84vh", background: "#080e1d", borderRadius: "20px 20px 0 0", transform: tradeDrawer ? "translateY(0)" : "translateY(100%)", transition: "transform 0.3s cubic-bezier(0.32,0.72,0,1)", display: "flex", flexDirection: "column", boxShadow: "0 -12px 48px rgba(0,0,0,0.7)" }}>
-          <div style={{ padding: "10px 0 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, flexShrink: 0, borderBottom: "1px solid #1e2d50" }}>
-            <div style={{ width: 40, height: 4, background: "#1e2d50", borderRadius: 2 }} />
-            <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", boxShadow: priceUp ? "0 0 6px #22c55e" : "0 0 6px #ef4444" }} />
-                <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Abrir Operação</span>
-                <span style={{ color: "#64748b", fontSize: 12 }}>{selectedPair?.label}</span>
-              </div>
-              <button onClick={() => { setTradeDrawer(false); setMobileTab("chart"); }} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={15} color="#64748b" />
+        {/* ── Trades panel — ABOVE chart ── */}
+        {showTradesPanel && (
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: OPSPANEL_H, zIndex: 108, background: "#080e1d", borderBottom: "1px solid #1e2d50", display: "flex", flexDirection: "column" }}>
+            {/* Tabs */}
+            <div style={{ display: "flex", borderBottom: "1px solid #1e2d50", flexShrink: 0 }}>
+              {(["open", "history"] as const).map(tab => (
+                <button key={tab} onClick={() => { setTradeHistoryTab(tab); if (tab === "history") fetchTradeHistory(); }}
+                  style={{ flex: 1, padding: "9px 0", background: "none", border: "none", borderBottom: `2px solid ${tradeHistoryTab === tab ? "#f5a623" : "transparent"}`, color: tradeHistoryTab === tab ? "#f5a623" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  {tab === "open" ? `Em aberto (${activeTrades.length})` : "Histórico"}
+                </button>
+              ))}
+              <button onClick={() => setShowTradesPanel(false)} style={{ padding: "9px 14px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                <X size={16} color="#64748b" />
               </button>
             </div>
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px" }}>
+              {tradeHistoryTab === "open" ? (
+                activeTrades.length === 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 8 }}>
+                    <BarChart2 size={32} color="#1e2d50" />
+                    <span style={{ color: "#64748b", fontSize: 13 }}>Nenhuma operação em aberto</span>
+                  </div>
+                ) : (
+                  activeTrades.map(t => {
+                    const rem = t.expiresAt - Date.now();
+                    const remSec = Math.max(0, Math.ceil(rem / 1000));
+                    const mm = String(Math.floor(remSec / 60)).padStart(2, "0");
+                    const ss = String(remSec % 60).padStart(2, "0");
+                    const isWinning = t.direction === "call" ? currentPrice > t.entryPrice : currentPrice < t.entryPrice;
+                    return (
+                      <div key={t.id} style={{ background: "#0d1526", border: `1px solid ${isWinning ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 10, padding: "10px 12px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{t.asset}</span>
+                            <span style={{ background: t.direction === "call" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: t.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "1px 6px" }}>{t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}</span>
+                          </div>
+                          <div style={{ color: "#64748b", fontSize: 11 }}>{formatKz(t.amount)} · entrada {t.entryPrice.toFixed(5)}</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ color: isWinning ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{mm}:{ss}</div>
+                          <div style={{ color: "#64748b", fontSize: 10 }}>{isWinning ? "A ganhar" : "A perder"}</div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )
+              ) : (
+                tradeHistory.length === 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 8 }}>
+                    <History size={32} color="#1e2d50" />
+                    <span style={{ color: "#64748b", fontSize: 13 }}>Nenhum histórico ainda</span>
+                  </div>
+                ) : (
+                  tradeHistory.map((t: any) => {
+                    const isWin = t.status === "win";
+                    const profit = isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : -t.amount;
+                    return (
+                      <div key={t.id} style={{ background: "#0d1526", border: `1px solid ${isWin ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 10, padding: "10px 12px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{t.asset}</span>
+                            <span style={{ background: t.direction === "call" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: t.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "1px 6px" }}>{t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}</span>
+                            <span style={{ background: isWin ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", color: isWin ? "#22c55e" : "#ef4444", borderRadius: 4, fontSize: 9, fontWeight: 900, padding: "1px 5px" }}>{isWin ? "GANHOU" : "PERDEU"}</span>
+                          </div>
+                          <div style={{ color: "#64748b", fontSize: 11 }}>{formatKz(t.amount)} · {new Date(t.createdAt).toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}</div>
+                        </div>
+                        <div style={{ color: isWin ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 14, textAlign: "right" }}>
+                          {isWin ? "+" : ""}{formatKz(profit)}
+                        </div>
+                      </div>
+                    );
+                  })
+                )
+              )}
+            </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px 28px" }}>
-            {renderTradePanel(true)}
-          </div>
-        </div>
+        )}
+
+        {/* ── Bottom trade panel (always visible, QX Broker style) ── */}
+        {(() => {
+          const sessionActiveTrade = activeTrades.find(t => sessionTradeIdsRef.current.has(t.id));
+          const hasActiveTrade = !!sessionActiveTrade;
+          const btnDisabled = loading || currentPrice === 0 || hasActiveTrade;
+          const currentPayout = payoutMap[selectedPair?.symbol ?? ""] ?? 0.74;
+          const payoutAmt = Math.round(amount * currentPayout);
+
+          // Cronómetro: countdown ao trade activo, ou duração seleccionada em repouso
+          let timerDisplay: string;
+          let timerColor = "#fff";
+          if (hasActiveTrade) {
+            const remMs = sessionActiveTrade!.expiresAt - Date.now();
+            if (remMs <= 0) {
+              timerDisplay = "00:00";
+            } else {
+              const rem = Math.ceil(remMs / 1000);
+              const mm  = String(Math.floor(rem / 60)).padStart(2, "0");
+              const ss  = String(rem % 60).padStart(2, "0");
+              timerDisplay = `${mm}:${ss}`;
+            }
+            // vai ficando vermelho conforme o tempo passa
+            const pct = hasActiveTrade ? Math.max(0, (sessionActiveTrade!.expiresAt - Date.now()) / (sessionActiveTrade!.expirySecs * 1000)) : 1;
+            timerColor = pct < 0.25 ? "#ef4444" : pct < 0.5 ? "#f5a623" : "#22c55e";
+          } else {
+            const mm = String(Math.floor(expiry.secs / 60)).padStart(2, "0");
+            const ss = String(expiry.secs % 60).padStart(2, "0");
+            timerDisplay = `${mm}:${ss}`;
+          }
+
+          return (
+            <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1e2d50", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+
+              {/* Row 1 — Asset + Payout % | Expiry selector */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px 0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444" }} />
+                  <span style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>{selectedPair?.label}</span>
+                  <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontWeight: 900, fontSize: 12, borderRadius: 5, padding: "1px 6px" }}>{Math.round(currentPayout * 100)}%</span>
+                </div>
+                {/* Expiry pills */}
+                <div style={{ display: "flex", gap: 4 }}>
+                  {EXPIRY_OPTIONS.map(opt => (
+                    <button key={opt.secs} onClick={() => setExpiry(opt)} disabled={hasActiveTrade} style={{ height: 24, padding: "0 8px", background: expiry.secs === opt.secs ? "#f5a623" : "#0d1526", color: expiry.secs === opt.secs ? "#0a0f1e" : "#64748b", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", opacity: hasActiveTrade ? 0.5 : 1 }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 2 — Cronómetro | Investimento */}
+              <div style={{ display: "flex", gap: 8, padding: "6px 12px" }}>
+                {/* Timer box — clicável para editar quando não há trade activo */}
+                <div onClick={() => { if (!hasActiveTrade && !timerEditing) { setTimerEditing(true); setTimerInput(String(Math.floor(expiry.secs / 60))); } }}
+                  style={{ flex: 1, background: "#0d1526", border: `1px solid ${hasActiveTrade ? timerColor + "44" : timerEditing ? "#f5a623" : "#1e2d50"}`, borderRadius: 8, padding: "5px 10px", transition: "border-color 0.3s", cursor: hasActiveTrade ? "default" : "pointer" }}>
+                  <div style={{ color: "#64748b", fontSize: 9, fontWeight: 600, letterSpacing: 0.5, marginBottom: 2 }}>
+                    CRONÓMETRO {!hasActiveTrade && !timerEditing && <span style={{ color: "#f5a623", fontSize: 8 }}>✎</span>}
+                  </div>
+                  {timerEditing ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={e => e.stopPropagation()}>
+                      <input
+                        autoFocus
+                        type="number" min="1" max="60"
+                        value={timerInput}
+                        onChange={e => setTimerInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            const mins = Math.max(1, Math.min(60, parseInt(timerInput) || 1));
+                            setExpiry({ label: `${mins} min`, secs: mins * 60 });
+                            setTimerEditing(false);
+                          }
+                          if (e.key === "Escape") setTimerEditing(false);
+                        }}
+                        onBlur={() => {
+                          const mins = Math.max(1, Math.min(60, parseInt(timerInput) || 1));
+                          setExpiry({ label: `${mins} min`, secs: mins * 60 });
+                          setTimerEditing(false);
+                        }}
+                        style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 18, fontVariantNumeric: "tabular-nums" }}
+                        placeholder="min"
+                      />
+                      <span style={{ color: "#64748b", fontSize: 10 }}>min</span>
+                    </div>
+                  ) : (
+                    <div style={{ color: timerColor, fontWeight: 900, fontSize: 20, fontVariantNumeric: "tabular-nums", letterSpacing: 2, transition: "color 0.4s" }}>{timerDisplay}</div>
+                  )}
+                </div>
+                {/* Amount box — clicável para editar */}
+                <div style={{ flex: 2, background: "#0d1526", border: `1px solid ${amountEditing ? "#f5a623" : "#1e2d50"}`, borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "border-color 0.3s", cursor: hasActiveTrade ? "default" : "pointer" }}
+                  onClick={() => { if (!hasActiveTrade && !amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: "#64748b", fontSize: 9, fontWeight: 600, letterSpacing: 0.5, marginBottom: 2 }}>
+                      INVESTIMENTO {!hasActiveTrade && !amountEditing && <span style={{ color: "#f5a623", fontSize: 8 }}>✎</span>}
+                    </div>
+                    {amountEditing ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }} onClick={e => e.stopPropagation()}>
+                        <input
+                          autoFocus
+                          type="number" min="1000" max="500000"
+                          value={amountInput}
+                          onChange={e => setAmountInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") {
+                              const val = Math.max(1000, Math.min(500000, parseInt(amountInput) || 1000));
+                              setAmount(val); setAmountEditing(false);
+                            }
+                            if (e.key === "Escape") setAmountEditing(false);
+                          }}
+                          onBlur={() => {
+                            const val = Math.max(1000, Math.min(500000, parseInt(amountInput) || 1000));
+                            setAmount(val); setAmountEditing(false);
+                          }}
+                          style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}
+                        />
+                        <span style={{ color: "#64748b", fontSize: 10, flexShrink: 0 }}>Kz</span>
+                      </div>
+                    ) : (
+                      <div style={{ color: "#fff", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setAmount(a => Math.max(1000, a - 500))} disabled={hasActiveTrade} style={{ width: 30, height: 30, background: "#1e2d50", border: "none", borderRadius: 6, color: "#fff", fontSize: 20, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.4 : 1 }}>−</button>
+                    <button onClick={() => setAmount(a => a + 500)} disabled={hasActiveTrade} style={{ width: 30, height: 30, background: "#1e2d50", border: "none", borderRadius: 6, color: "#fff", fontSize: 20, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.4 : 1 }}>+</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3 — Pagamento */}
+              <div style={{ padding: "0 12px 5px", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#64748b", fontSize: 11, fontWeight: 600 }}>Pagamento:</span>
+                <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>{formatKz(payoutAmt)}</span>
+              </div>
+
+              {/* Row 4 — ALTA + BAIXA */}
+              <div style={{ display: "flex", gap: 8, padding: "0 12px 10px", flex: 1 }}>
+                <button onClick={() => openTrade("call")} disabled={btnDisabled} style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(135deg,#0d3320,#14532d)" : "linear-gradient(135deg,#16a34a,#22c55e)", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: btnDisabled ? "none" : "0 4px 20px rgba(34,197,94,0.4)", letterSpacing: 0.5, minHeight: 46 }}>
+                  {loading ? "..." : hasActiveTrade ? <><TrendingUp size={15} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
+                </button>
+                <button onClick={() => openTrade("put")} disabled={btnDisabled} style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(135deg,#3b0a0a,#7f1d1d)" : "linear-gradient(135deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: btnDisabled ? "none" : "0 4px 20px rgba(239,68,68,0.4)", letterSpacing: 0.5, minHeight: 46 }}>
+                  {loading ? "..." : hasActiveTrade ? <><TrendingDown size={15} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }
