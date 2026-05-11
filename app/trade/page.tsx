@@ -535,8 +535,6 @@ export default function TradePage() {
         // Append new candle and recalc indicators on candle open
         candleDataRef.current = [...candleDataRef.current, newC];
         recalcRef.current();
-        // Scroll to show the new candle — keeps the chart anchored to live data
-        chartApiRef.current?.timeScale().scrollToRealTime();
       } else {
         const updated: CandlestickData = {
           ...c, high: Math.max(c.high, q), low: Math.min(c.low, q), close: q,
