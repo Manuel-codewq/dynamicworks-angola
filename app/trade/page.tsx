@@ -16,6 +16,7 @@ import {
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
+import TradeResultOverlay from "@/app/components/TradeResultOverlay";
 import { calcSMA, calcEMA, calcBB, calcRSI, calcMACD, calcStochastic } from "@/lib/indicators";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -1413,12 +1414,13 @@ export default function TradePage() {
     return (
       <div style={{ height: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif", overflow: "hidden" }}>
 
-        {/* Win/loss toast — below all fixed bars */}
+        {/* Win/loss overlay */}
         {notification && (
-          <div style={{ position: "fixed", top: CONTENT_TOP + 8, left: 12, right: 12, zIndex: 2000, background: notification.type === "win" ? "rgba(34,197,94,0.96)" : notification.type === "loss" ? "rgba(239,68,68,0.96)" : "rgba(245,166,35,0.96)", color: "#fff", padding: "12px 16px", borderRadius: 10, fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px rgba(0,0,0,0.5)", display: "flex", alignItems: "center", gap: 8 }}>
-            {notification.type === "win" ? <TrendingUp size={16} /> : notification.type === "loss" ? <TrendingDown size={16} /> : <AlertCircle size={16} />}
-            {notification.msg}
-          </div>
+          <TradeResultOverlay
+            type={notification.type}
+            msg={notification.msg}
+            onDone={() => setNotification(null)}
+          />
         )}
 
         {/* ── Topbar ── */}
