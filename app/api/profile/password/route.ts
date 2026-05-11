@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function PATCH(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+    // 5 tentativas por utilizador a cada 15 minutos — protecção contra brute force ao OTP
+    if (!await checkRateLimit("pwd-change", session.user.id, 5, 15 * 60_000)) {
+      return NextResponse.json({ error: "Demasiadas tentativas. Aguarde 15 minutos." }, { status: 429 });
+    }
 
     const { otpCode, newPassword } = await req.json();
 
@@ -15,6 +21,9 @@ export async function PATCH(req: NextRequest) {
     }
     if (String(newPassword).length < 8) {
       return NextResponse.json({ error: "A nova senha deve ter pelo menos 8 caracteres" }, { status: 400 });
+    }
+    if (String(newPassword).length > 128) {
+      return NextResponse.json({ error: "Senha demasiado longa" }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({

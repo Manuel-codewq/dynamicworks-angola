@@ -35,6 +35,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Imagens incompletas. Faça o processo até ao fim." }, { status: 400 });
     }
 
+    // Limite de ~450KB por imagem (600 000 chars em base64 ≈ 450KB binário)
+    const MAX_IMG = 600_000;
+    const images: [string, string | undefined][] = [
+      ["faceFront", faceFront], ["faceRight", faceRight], ["faceLeft", faceLeft],
+      ["biFront", biFront],     ["biBack", biBack],
+    ];
+    for (const [field, value] of images) {
+      if (value && value.length > MAX_IMG) {
+        return NextResponse.json(
+          { error: `Imagem ${field} demasiado grande. Máximo 450KB por imagem.` },
+          { status: 413 }
+        );
+      }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { kycAttempts: true, kycBlockedUntil: true },

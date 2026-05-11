@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  if (!checkRateLimit("trade", session.user.id, 10, 60_000)) {
+  if (!await checkRateLimit("trade", session.user.id, 10, 60_000)) {
     return NextResponse.json({ error: "Demasiadas operações. Aguarde 1 minuto." }, { status: 429 });
   }
 

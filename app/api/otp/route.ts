@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   // 3 OTPs por userId a cada 10 minutos
-  if (!checkRateLimit("otp", session.user.id, 3, 10 * 60_000)) {
+  if (!await checkRateLimit("otp", session.user.id, 3, 10 * 60_000)) {
     return NextResponse.json(
       { error: "Demasiados pedidos de OTP. Aguarde 10 minutos." },
       { status: 429 }

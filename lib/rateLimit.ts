@@ -1,30 +1,48 @@
-type RateLimitEntry = { count: number; resetAt: number };
-
-const stores = new Map<string, Map<string, RateLimitEntry>>();
-
-function getStore(name: string): Map<string, RateLimitEntry> {
-  if (!stores.has(name)) stores.set(name, new Map());
-  return stores.get(name)!;
-}
+import { prisma } from "./prisma";
 
 /**
- * Verifica rate limit para uma chave (userId, email, IP, etc).
- * @param name    Nome do store (ex: "otp", "verify-email") — isolado por rota
- * @param key     Identificador único do actor (userId, email, IP…)
- * @param max     Número máximo de tentativas na janela
+ * Rate limiting persistente via DB — funciona em ambientes serverless/multi-instância.
+ *
+ * @param name     Nome do store (ex: "otp", "trade") — isolado por rota
+ * @param key      Identificador único do actor (userId, email, IP…)
+ * @param max      Número máximo de tentativas na janela
  * @param windowMs Duração da janela em milissegundos
  * @returns true se permitido, false se bloqueado
  */
-export function checkRateLimit(name: string, key: string, max: number, windowMs: number): boolean {
-  const store = getStore(name);
-  const now   = Date.now();
-  const entry = store.get(key);
+export async function checkRateLimit(
+  name: string,
+  key: string,
+  max: number,
+  windowMs: number,
+): Promise<boolean> {
+  const id  = `${name}:${key}`;
+  const now = new Date();
 
-  if (!entry || now > entry.resetAt) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const entry = await tx.rateLimit.findUnique({ where: { key: id } });
+
+      if (!entry || entry.resetAt < now) {
+        await tx.rateLimit.upsert({
+          where:  { key: id },
+          create: { key: id, count: 1, resetAt: new Date(Date.now() + windowMs) },
+          update: { count: 1, resetAt: new Date(Date.now() + windowMs) },
+        });
+        return true;
+      }
+
+      if (entry.count >= max) return false;
+
+      await tx.rateLimit.update({
+        where: { key: id },
+        data:  { count: { increment: 1 } },
+      });
+      return true;
+    });
+
+    return result;
+  } catch {
+    // Em caso de falha de DB, falha aberta para não bloquear utilizadores legítimos
     return true;
   }
-  if (entry.count >= max) return false;
-  entry.count++;
-  return true;
 }

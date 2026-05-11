@@ -10,7 +10,7 @@ export async function POST() {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-    if (!checkRateLimit("pwd-otp", session.user.id, 3, 10 * 60_000)) {
+    if (!await checkRateLimit("pwd-otp", session.user.id, 3, 10 * 60_000)) {
       return NextResponse.json({ error: "Demasiados pedidos. Aguarde 10 minutos." }, { status: 429 });
     }
 

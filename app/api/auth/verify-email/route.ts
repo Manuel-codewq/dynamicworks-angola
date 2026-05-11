@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // 5 tentativas por email a cada 15 minutos — protecção contra brute force ao código
-    if (!checkRateLimit("verify-email", normalizedEmail, 5, 15 * 60_000)) {
+    if (!await checkRateLimit("verify-email", normalizedEmail, 5, 15 * 60_000)) {
       return NextResponse.json(
         { error: "Demasiadas tentativas. Aguarda 15 minutos ou solicita um novo código." },
         { status: 429 }
@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
-      return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
+      // Mensagem genérica para não revelar se o email está registado
+      return NextResponse.json({ error: "Código incorrecto" }, { status: 400 });
     }
     if (user.emailVerified) {
       return NextResponse.json({ success: true, alreadyVerified: true });

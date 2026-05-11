@@ -65,8 +65,14 @@ export async function resolveExpiredTrade(
   let resolvedPrice: number | null = null;
 
   if (clientPrice && clientPrice > 0) {
-    // Preço do browser — resolução imediata sem esperar WS do servidor
-    resolvedPrice = clientPrice;
+    // Aceita o preço do browser apenas se estiver dentro de ±10% do entryPrice.
+    // Desvios maiores indicam manipulação — descarta e tenta o servidor.
+    const deviation = Math.abs(clientPrice - trade.entryPrice) / trade.entryPrice;
+    if (deviation <= 0.10) {
+      resolvedPrice = clientPrice;
+    } else {
+      resolvedPrice = await getClosePriceForAsset(trade.asset);
+    }
   } else {
     resolvedPrice = await getClosePriceForAsset(trade.asset);
   }

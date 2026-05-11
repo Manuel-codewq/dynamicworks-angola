@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendVerificationEmail } from "@/lib/email";
 import { randomInt } from "crypto";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -12,14 +13,32 @@ const PROVINCES = [
 
 export async function POST(req: NextRequest) {
   try {
+    // 5 registos por IP por hora
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+            || req.headers.get("x-real-ip")
+            || "unknown";
+
+    if (!await checkRateLimit("register", ip, 5, 60 * 60_000)) {
+      return NextResponse.json({ error: "Demasiados pedidos. Tente mais tarde." }, { status: 429 });
+    }
+
     const body = await req.json();
     const { name, email, password, phone, province } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Campos obrigatórios em falta" }, { status: 400 });
     }
+    if (String(name).length > 120) {
+      return NextResponse.json({ error: "Nome demasiado longo" }, { status: 400 });
+    }
+    if (String(email).length > 254) {
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    }
     if (password.length < 8) {
       return NextResponse.json({ error: "A senha deve ter pelo menos 8 caracteres" }, { status: 400 });
+    }
+    if (String(password).length > 128) {
+      return NextResponse.json({ error: "Senha demasiado longa" }, { status: 400 });
     }
     if (province && !PROVINCES.includes(province)) {
       return NextResponse.json({ error: "Província inválida" }, { status: 400 });

@@ -113,6 +113,14 @@ model PriceCandle {
   @@unique([asset, timeframe, timestamp])
 }
 
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  resetAt   DateTime
+
+  @@index([resetAt])
+}
+
 model KycSubmission {
   id        String   @id @default(cuid())
   userId    String   @unique
