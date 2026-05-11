@@ -1442,6 +1442,11 @@ export default function TradePage() {
 
           <NotificationBell />
 
+          {/* Ranking / Torneios — quick access */}
+          <a href="/ranking" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 7, flexShrink: 0 }}>
+            <Trophy size={14} color="#f5a623" />
+          </a>
+
           <button onClick={toggleAccount} style={{ background: isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${isDemo ? "rgba(245,166,35,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
             <Wallet size={11} color={isDemo ? "#f5a623" : "#22c55e"} />
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
@@ -1462,6 +1467,7 @@ export default function TradePage() {
                 {[
                   { href: "/profile",   icon: <User size={13} />,     label: "Perfil"     },
                   { href: "/dashboard", icon: <BarChart2 size={13} />, label: "Dashboard"  },
+                  { href: "/ranking",   icon: <Trophy size={13} />,    label: "Ranking & Torneios" },
                   { href: "/history",   icon: <History size={13} />,   label: "Histórico"  },
                   { href: "/wallet",    icon: <Wallet size={13} />,    label: "Carteira"   },
                 ].map(({ href, icon, label }) => (
