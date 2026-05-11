@@ -27,22 +27,28 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   const status = new Date(startDate) > now ? "upcoming" : new Date(endDate) < now ? "finished" : "active";
 
-  const tournament = await prisma.tournament.create({
-    data: {
-      name: String(name).slice(0, 100),
-      description: description ? String(description).slice(0, 1000) : null,
-      rules: rules ? String(rules).slice(0, 2000) : null,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      prizePool: Number(prizePool) || 0,
-      prizes: prizes ?? [],
-      status,
-      isFree: isFree !== false,
-      entryFee: isFree !== false ? 0 : Number(entryFee) || 0,
-      maxParticipants: maxParticipants ? Number(maxParticipants) : null,
-      bannerColor: bannerColor ?? "#f5a623",
-    },
-  });
+  let tournament: any;
+  try {
+    tournament = await prisma.tournament.create({
+      data: {
+        name: String(name).slice(0, 100),
+        description: description ? String(description).slice(0, 1000) : null,
+        rules: rules ? String(rules).slice(0, 2000) : null,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        prizePool: Number(prizePool) || 0,
+        prizes: prizes ?? [],
+        status,
+        isFree: isFree !== false,
+        entryFee: isFree !== false ? 0 : Number(entryFee) || 0,
+        maxParticipants: maxParticipants ? Number(maxParticipants) : null,
+        bannerColor: bannerColor ?? "#f5a623",
+      },
+    });
+  } catch (err) {
+    console.error("[tournaments/create]", err);
+    return NextResponse.json({ error: "Erro ao criar torneio. Tenta novamente." }, { status: 500 });
+  }
 
   return NextResponse.json(tournament, { status: 201 });
 }

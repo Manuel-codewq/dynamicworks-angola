@@ -195,7 +195,9 @@ export default function AdminTournamentsPage() {
     if (res.ok) {
       setShowForm(false); load();
     } else {
-      const d = await res.json(); setMsg({ text: d.error ?? "Erro ao guardar. Tenta novamente.", ok: false });
+      let errorText = "Erro ao guardar. Tenta novamente.";
+      try { const d = await res.json(); errorText = d.error ?? errorText; } catch {}
+      setMsg({ text: errorText, ok: false });
     }
     setLoading(false);
   }
