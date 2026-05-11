@@ -28,6 +28,7 @@ export type TradeToResolve = {
   entryPrice: number;
   payout:     number;
   expirySecs: number;
+  expiresAt:  Date | null;
   status:     string;
   createdAt:  Date;
   user:       { id: string; isDemo: boolean };
@@ -49,7 +50,8 @@ export async function resolveExpiredTrade(
 ): Promise<ResolveOutcome> {
   if (trade.status !== "active") return "already_closed";
 
-  const expiresAt = new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
+  // Usa expiresAt da DB (autoridade do servidor); fallback para cálculo se trade antigo
+  const expiresAt = trade.expiresAt ?? new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
   // Tolera 500ms de latência de rede antes de rejeitar como "pending"
   if (Date.now() < expiresAt.getTime() - 500) return "pending";
 

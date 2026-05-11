@@ -104,11 +104,12 @@ export async function POST(req: NextRequest) {
   // Criar operação
   let trade: any;
   try {
+    const expiresAt = new Date(Date.now() + expiry * 1000);
     trade = await prisma.trade.create({
       data: {
         userId: user.id, asset, direction,
         amount: amountNum, entryPrice, payout,
-        expirySecs: expiry, status: "active", isDemo: user.isDemo,
+        expirySecs: expiry, expiresAt, status: "active", isDemo: user.isDemo,
       },
     });
   } catch (err) {
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
   }
 
   const serverTime = Date.now();
-  const expiresAt  = new Date(trade.createdAt).getTime() + expiry * 1000;
+  const expiresAt  = trade.expiresAt.getTime();
   return NextResponse.json({ trade: { ...trade, expiresAt }, entryPrice, serverTime });
 }
 
@@ -148,14 +149,14 @@ export async function GET(req: NextRequest) {
   ]);
 
   const now = Date.now();
-  const tradesWithRemaining = trades.map(t => ({
-    ...t,
-    // expiresAt em Unix ms (tempo do servidor) — autoridade absoluta sobre quando expira
-    expiresAt: t.createdAt.getTime() + t.expirySecs * 1000,
-    remainingSecs: t.status === "active"
-      ? Math.max(0, t.expirySecs - Math.floor((now - t.createdAt.getTime()) / 1000))
-      : 0,
-  }));
+  const tradesWithRemaining = trades.map(t => {
+    const expiresAtMs = t.expiresAt ? t.expiresAt.getTime() : t.createdAt.getTime() + t.expirySecs * 1000;
+    return {
+      ...t,
+      expiresAt: expiresAtMs,
+      remainingSecs: t.status === "active" ? Math.max(0, Math.floor((expiresAtMs - now) / 1000)) : 0,
+    };
+  });
 
   // serverTime permite ao cliente medir o desfasamento entre o seu relógio e o servidor
   return NextResponse.json({ trades: tradesWithRemaining, total, page, totalPages: Math.ceil(total / limit), serverTime: now });

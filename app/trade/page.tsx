@@ -273,9 +273,15 @@ export default function TradePage() {
   const sessionTradeIdsRef = useRef(new Set<string>());
   // setTimeout IDs para trades desta sessão — garante expiração exacta como o demo HTML
   const tradeTimersRef     = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  // Desfasamento entre relógio do servidor e do cliente (ms). Positivo = servidor adiantado.
-  // Calculado em cada poll para compensar clock skew e dar ao cliente o "tempo da corretora".
-  const clockOffsetRef     = useRef<number>(0);
+  // Referência de tempo do servidor: após cada poll guardamos serverTime e o Date.now() correspondente.
+  // Assim estimamos "que horas são no servidor agora" sem depender do relógio do cliente.
+  const serverTimeRef  = useRef<number>(0); // último serverTime recebido (ms UTC)
+  const clientTimeRef  = useRef<number>(0); // Date.now() quando serverTime foi recebido
+  // Helper: tempo estimado do servidor agora
+  function estServerNow() {
+    if (serverTimeRef.current === 0) return Date.now();
+    return serverTimeRef.current + (Date.now() - clientTimeRef.current);
+  }
 
 
   // ── Candle countdown timer — pure UTC alignment ──────────────────────────
@@ -725,7 +731,7 @@ export default function TradePage() {
       livePriceLineRef.current = series.createPriceLine({
         price: SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1,
         color: "#22c55e",
-        lineWidth: 2,
+        lineWidth: 1,
         lineStyle: 0,
         axisLabelVisible: true,
         title: "",
@@ -771,15 +777,15 @@ export default function TradePage() {
       const res = await fetch("/api/trade");
       if (!res.ok) return;
       const data = await res.json();
-      // Mede o desfasamento: serverTime está entre sentAt e agora (latência/2 de aproximação)
+      // Regista o tempo do servidor com compensação de latência de rede
       if (data.serverTime) {
         const latency = (Date.now() - sentAt) / 2;
-        clockOffsetRef.current = data.serverTime - Date.now() + latency;
+        serverTimeRef.current = data.serverTime + latency;
+        clientTimeRef.current = Date.now();
       }
       const trades: any[] = (data.trades ?? []).map((t: any) => ({
         ...t,
-        // expiresAt vem do servidor em Unix ms — autoridade sobre o tempo de expiração
-        expiresAt: t.expiresAt ?? (t.createdAt ? new Date(t.createdAt).getTime() + t.expirySecs * 1000 : 0),
+        expiresAt: typeof t.expiresAt === "number" ? t.expiresAt : 0,
       }));
       setActiveTrades(trades.filter((t: any) => t.status === "active"));
       const justClosed = trades.filter((t: any) => {
@@ -795,7 +801,7 @@ export default function TradePage() {
         const isDraw = unnotified.result === "draw";
         const isWin  = unnotified.result === "win";
         setNotification({
-          msg:  isWin  ? `Ganhou +${formatKz(Math.round(unnotified.profit))} 🎉`
+          msg:  isWin  ? `Ganhou +${formatKz(Math.round(unnotified.profit))}`
               : isDraw ? `Empate — aposta devolvida`
               :          `Perdeu ${formatKz(unnotified.amount)}`,
           type: isWin ? "win" : isDraw ? "info" : "loss",
@@ -808,41 +814,10 @@ export default function TradePage() {
     return () => clearInterval(id);
   }, [status, fetchBalance]);
 
-  // ── Price lines — create/remove when active trades change ────────────────
+  // ── Sync activeTradesRef when activeTrades state changes ─────────────────
   useEffect(() => {
     activeTradesRef.current = activeTrades;
-    if (!candleSeriesRef.current) return;
-    const activeIds = new Set(activeTrades.map(t => t.id));
-    // Remove lines for closed trades
-    tradePriceLinesRef.current.forEach((line, id) => {
-      if (!activeIds.has(id)) {
-        try { candleSeriesRef.current?.removePriceLine(line); } catch {}
-        tradePriceLinesRef.current.delete(id);
-      }
-    });
-    // Add lines for new trades on the current asset
-    activeTrades.filter(t => t.asset === selectedPair?.label).forEach(t => {
-      const win   = t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice;
-      const color = win ? "#22c55e" : "#ef4444";
-      const title = `${t.direction === "call" ? "▲" : "▼"} ${formatKz(t.amount)}`;
-      if (tradePriceLinesRef.current.has(t.id)) {
-        tradePriceLinesRef.current.get(t.id).applyOptions({ color, title });
-      } else if (candleSeriesRef.current) {
-        const line = candleSeriesRef.current.createPriceLine({ price: t.entryPrice, color, lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title });
-        tradePriceLinesRef.current.set(t.id, line);
-      }
-    });
   }, [activeTrades, selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Price lines — update colour on every tick ─────────────────────────────
-  useEffect(() => {
-    tradePriceLinesRef.current.forEach((line, id) => {
-      const trade = activeTradesRef.current.find(t => t.id === id);
-      if (!trade) return;
-      const win = trade.direction === "call" ? currentPrice > trade.entryPrice : currentPrice < trade.entryPrice;
-      line.applyOptions({ color: win ? "#22c55e" : "#ef4444" });
-    });
-  }, [currentPrice]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function isTradeWinning(direction: string, entryPrice: number): boolean {
@@ -850,12 +825,9 @@ export default function TradePage() {
     return direction === "call" ? currentPrice > entryPrice : currentPrice < entryPrice;
   }
 
-  function serverNow() {
-    return Date.now() + clockOffsetRef.current;
-  }
 
   function getCountdown(trade: ActiveTrade) {
-    const remMs = trade.expiresAt - Date.now();
+    const remMs = trade.expiresAt - estServerNow();
     if (remMs <= 0) return "A fechar...";
     const rem = Math.ceil(remMs / 1000);
     return `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`;
@@ -902,7 +874,7 @@ export default function TradePage() {
         const isDraw = t.result === "draw";
         const isWin  = t.result === "win";
         setNotification({
-          msg:  isWin  ? `Ganhou +${formatKz(Math.round(t.profit ?? 0))} 🎉`
+          msg:  isWin  ? `Ganhou +${formatKz(Math.round(t.profit ?? 0))}`
               : isDraw ? `Empate — aposta devolvida`
               :          `Perdeu ${formatKz(t.amount)}`,
           type: isWin ? "win" : isDraw ? "info" : "loss",
@@ -918,15 +890,14 @@ export default function TradePage() {
     }
   }, [fetchBalance]);
 
-  // ── setInterval apenas para atualizar o countdown e apanhar trades antigos ──
-  // Trades desta sessão são fechados pelo setTimeout agendado em openTrade.
+  // ── setInterval: atualiza countdown e fecha trades quando expiram ──
   useEffect(() => {
     const id = setInterval(() => {
       setTick(t => t + 1); // força re-render do countdown
       const now = Date.now();
+      const serverNow = estServerNow();
       activeTradesRef.current.forEach(trade => {
-        if (sessionTradeIdsRef.current.has(trade.id)) return; // setTimeout trata destes
-        if (now < trade.expiresAt + 2000) return;
+        if (serverNow < trade.expiresAt) return;
         const attempts = closeAttemptsRef.current.get(trade.id) ?? 0;
         const delay  = Math.min(16, Math.pow(2, attempts)) * 1000;
         const lastAt = closeLastAtRef.current.get(trade.id) ?? 0;
@@ -959,6 +930,7 @@ export default function TradePage() {
           entryPrice: currentPrice || SEED_PRICES[selectedPair.symbol] || 1,
         }),
       });
+      const receivedAt = Date.now();
       const data = await res.json();
       if (!res.ok) {
         setNotification({ msg: data.error, type: "info" });
@@ -970,21 +942,14 @@ export default function TradePage() {
         if (isMobile) setTradeDrawer(false);
         fetchBalance();
         if (data.trade) {
-          // Actualiza o offset com o serverTime da resposta de abertura
+          // Regista o tempo do servidor a partir da resposta de abertura
           if (data.serverTime) {
-            clockOffsetRef.current = data.serverTime - Date.now();
+            const latency = (receivedAt - started) / 2;
+            serverTimeRef.current = data.serverTime + latency;
+            clientTimeRef.current = Date.now();
           }
-          // Regista como trade desta sessão
+          // Regista como trade desta sessão (para notificação win/loss)
           sessionTradeIdsRef.current.add(data.trade.id);
-
-          // ── setTimeout exacto: dispara quando o trade expira (igual ao demo HTML) ──
-          // Usa expiresAt do servidor + 2s de buffer para garantir que o servidor já resolveu.
-          const msUntilExpiry = Math.max(200, data.trade.expiresAt - Date.now() + 500);
-          const timerId = setTimeout(() => {
-            tradeTimersRef.current.delete(data.trade.id);
-            triggerClose(data.trade.id);
-          }, msUntilExpiry);
-          tradeTimersRef.current.set(data.trade.id, timerId);
 
           setActiveTrades(prev => {
             if (prev.some((t: any) => t.id === data.trade.id)) return prev;
@@ -1488,6 +1453,7 @@ export default function TradePage() {
                 </div>
                 <a href="/profile"   onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><User size={13} /> Perfil</a>
                 <a href="/dashboard" onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={13} /> Dashboard</a>
+                <a href="/history"   onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={13} /> Histórico</a>
                 <a href="/wallet"    onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Wallet size={13} /> Carteira</a>
                 <button onClick={() => signOut({ callbackUrl: "/login" })}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
@@ -1684,6 +1650,7 @@ export default function TradePage() {
                 <div style={{ color: "#94a3b8", fontSize: 12 }}>{session?.user?.email}</div>
               </div>
               <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={14} /> Dashboard</a>
+              <a href="/history"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={14} /> Histórico</a>
               <a href="/ranking"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Trophy size={14} /> Ranking</a>
               <a href="/wallet"    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Wallet size={14} /> Carteira</a>
               <a href="/profile"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><User size={14} /> Perfil</a>

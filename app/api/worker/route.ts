@@ -20,8 +20,7 @@ export async function GET(req: NextRequest) {
   let wins = 0, losses = 0, draws = 0, processed = 0;
 
   await Promise.all(activeTrades.map(async (trade) => {
-    // Quick pre-check before hitting resolveExpiredTrade (avoids settings fetch for pending trades)
-    const expiresAt = new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
+    const expiresAt = trade.expiresAt ?? new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
     if (new Date() < expiresAt) return;
 
     const outcome = await resolveExpiredTrade(trade);
