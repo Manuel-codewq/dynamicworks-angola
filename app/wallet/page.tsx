@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, Wallet, ArrowDownCircle, ArrowUpCircle,
   CheckCircle, Clock, XCircle, ChevronLeft, ShieldCheck, Mail,
+  CreditCard, RefreshCw,
 } from "lucide-react";
 
 const DEPOSIT_METHODS = [
-  { id: "multicaixa", name: "Multicaixa Express", icon: "💳", color: "#e74c3c" },
+  { id: "multicaixa", name: "Multicaixa Express", color: "#e74c3c" },
 ];
 
 function formatKz(n: number) {
@@ -155,7 +156,7 @@ export default function WalletPage() {
             {demoBalance < 5000 && (
               <button onClick={resetDemo} disabled={demoReloading}
                 style={{ marginTop: 10, background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 6, fontSize: 12, padding: "4px 10px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1 }}>
-                {demoReloading ? "A recarregar..." : "↺ Recarregar demo"}
+                <RefreshCw size={12} style={{ display:"inline", marginRight:5, verticalAlign:"middle" }} />{demoReloading ? "A recarregar..." : "Recarregar demo"}
               </button>
             )}
           </div>
@@ -190,7 +191,7 @@ export default function WalletPage() {
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
             {/* Multicaixa Express badge */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
-              <span style={{ fontSize: 26 }}>💳</span>
+              <CreditCard size={26} color="#e74c3c" />
               <div>
                 <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Multicaixa Express</div>
                 <div style={{ color: "#94a3b8", fontSize: 12 }}>Pagamento instantâneo</div>
@@ -253,7 +254,7 @@ export default function WalletPage() {
             )}
             {/* Multicaixa Express badge */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
-              <span style={{ fontSize: 26 }}>💳</span>
+              <CreditCard size={26} color="#e74c3c" />
               <div>
                 <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Multicaixa Express</div>
                 <div style={{ color: "#94a3b8", fontSize: 12 }}>Levantamento para o teu número</div>

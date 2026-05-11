@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { TrendingUp, ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight } from "lucide-react";
+import { TrendingUp, ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight, BarChart2 } from "lucide-react";
 
 function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
 function formatDate(d: string) { return new Date(d).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" }); }
@@ -61,7 +61,10 @@ export default function RankingPage() {
       <div style={{ display: "flex", background: "#111827", borderBottom: "1px solid #1e2d50" }}>
         {(["tournaments", "ranking"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: "13px 0", background: "none", border: "none", borderBottom: `2px solid ${tab === t ? "#f5a623" : "transparent"}`, color: tab === t ? "#f5a623" : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            {t === "tournaments" ? "🏆 Torneios" : "📊 Ranking Global"}
+            {t === "tournaments"
+              ? <><Trophy size={13} style={{ display:"inline", marginRight:5, verticalAlign:"middle" }} />Torneios</>
+              : <><BarChart2 size={13} style={{ display:"inline", marginRight:5, verticalAlign:"middle" }} />Ranking Global</>
+            }
           </button>
         ))}
       </div>

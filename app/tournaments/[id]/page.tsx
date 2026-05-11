@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Trophy, Medal, ChevronLeft, Calendar, Users, Gift,
   Clock, Check, Lock, Unlock, Star, Crown, AlertCircle, Zap,
+  ClipboardList, BarChart2,
 } from "lucide-react";
 
 function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
@@ -51,7 +52,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     if (res.ok) {
       setJoined(true);
       setBalance(b => b - (tournament.isFree ? 0 : tournament.entryFee));
-      setMsg({ text: tournament.isFree ? "Inscrito com sucesso! Boa sorte! 🏆" : `Inscrito! ${formatKz(tournament.entryFee)} debitados do teu saldo real.`, ok: true });
+      setMsg({ text: tournament.isFree ? "Inscrito com sucesso! Boa sorte!" : `Inscrito! ${formatKz(tournament.entryFee)} debitados do teu saldo real.`, ok: true });
     } else {
       setMsg({ text: data.error ?? "Erro ao inscrever.", ok: false });
     }
@@ -163,7 +164,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setConfirmPaid(false)} style={{ flex: 1, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: "11px", color: "#64748b", fontWeight: 700, cursor: "pointer" }}>Cancelar</button>
                 <button onClick={join} disabled={joining} style={{ flex: 2, background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 10, padding: "11px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: joining ? "not-allowed" : "pointer", opacity: joining ? 0.7 : 1 }}>
-                  ✓ Confirmar e participar
+                  <Check size={15} /> Confirmar e participar
                 </button>
               </div>
             </div>
@@ -200,7 +201,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
         {tournament.rules && (
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: "20px 22px", marginBottom: 20 }}>
             <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 800, color: "#94a3b8", letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 8 }}>
-              📋 REGRAS DO TORNEIO
+              <ClipboardList size={14} style={{ display:"inline", marginRight:6, verticalAlign:"middle" }} />REGRAS DO TORNEIO
             </h3>
             <pre style={{ color: "#cbd5e1", fontSize: 14, margin: 0, whiteSpace: "pre-wrap", fontFamily: "inherit", lineHeight: 1.8 }}>{tournament.rules}</pre>
           </div>
@@ -232,7 +233,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
         {/* Leaderboard */}
         <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #1e2d50", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, letterSpacing: 0.5 }}>🏆 CLASSIFICAÇÃO</span>
+            <span style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, letterSpacing: 0.5, display:"flex", alignItems:"center", gap:6 }}><BarChart2 size={13} /> CLASSIFICAÇÃO</span>
             <span style={{ color: "#64748b", fontSize: 12 }}>{total} participante(s)</span>
           </div>
           {participants.length === 0 ? (
@@ -262,7 +263,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                     <div style={{ color: p.profit > 0 ? "#22c55e" : p.profit < 0 ? "#ef4444" : "#64748b", fontWeight: 800, fontSize: 15 }}>
                       {p.profit > 0 ? "+" : ""}{formatKz(p.profit)}
                     </div>
-                    {i < prizes.length && <div style={{ color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#cd7f32", fontSize: 11, fontWeight: 700 }}>🏅 {formatKz(prizes[i].amount)}</div>}
+                    {i < prizes.length && <div style={{ color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#cd7f32", fontSize: 11, fontWeight: 700, display:"flex", alignItems:"center", gap:4 }}><Gift size={10} /> {formatKz(prizes[i].amount)}</div>}
                   </div>
                 </div>
               );
