@@ -300,15 +300,6 @@ export default function TradePage() {
 
   useEffect(() => { indicatorsRef.current = indicators; }, [indicators]);
 
-  // Resize chart when trades panel opens/closes (mobile only)
-  useEffect(() => {
-    if (!isMobile || !chartApiRef.current || !chartRef.current) return;
-    const OPSPANEL_H = 230;
-    const TOPBAR_H = 52, TICKER_H = 28, TF_H = 38, TRADEPANEL_H = 188;
-    const base = windowHeight - TOPBAR_H - TICKER_H - TF_H - TRADEPANEL_H;
-    const newH = showTradesPanel ? Math.max(80, base - OPSPANEL_H) : base;
-    chartApiRef.current.applyOptions({ height: newH });
-  }, [showTradesPanel, isMobile, windowHeight]);
 
   // ── Indicator recalc — rebuilds all indicator series from candleDataRef ──
   // Defined as a standalone function (not useCallback) so it always captures
@@ -665,15 +656,15 @@ export default function TradePage() {
         rightPriceScale: {
           borderColor: "#1e2d50",
           autoScale:   true,
-          scaleMargins: { top: 0.04, bottom: 0.04 },
+          scaleMargins: { top: 0.1, bottom: 0.1 },
         },
         timeScale: {
           borderColor: "#1e2d50", timeVisible: true,
-          rightOffset: 5,
+          rightOffset: 8,
           barSpacing: 6,
           fixLeftEdge: false,
           lockVisibleTimeRangeOnResize: false,
-          shiftVisibleRangeOnNewBar: false,
+          shiftVisibleRangeOnNewBar: true,
         },
         width: w, height: h,
       });
@@ -725,11 +716,13 @@ export default function TradePage() {
         if (leg.length) setLegend(leg);
       });
 
+      const dec = selectedPair?.decimals ?? 5;
       const series = chart.addSeries(CandlestickSeries, {
         upColor:       "#22c55e", downColor:       "#ef4444",
         borderUpColor: "#22c55e", borderDownColor: "#ef4444",
         wickUpColor:   "#22c55e", wickDownColor:   "#ef4444",
         lastValueVisible: false,
+        priceFormat: { type: "price", precision: dec, minMove: Math.pow(10, -dec) },
       });
       candleSeriesRef.current  = series;
       currentCandleRef.current = null;
@@ -1408,14 +1401,14 @@ export default function TradePage() {
 
   // ── MOBILE RENDER ─────────────────────────────────────────────────────────
   if (isMobile) {
-    const TOPBAR_H      = 52;
-    const TICKER_H      = 28;
-    const TF_H          = 38;
-    const TRADEPANEL_H  = 188;
+    const TOPBAR_H      = 48;
+    const TICKER_H      = 26;
+    const TF_H          = 36;
+    const TRADEPANEL_H  = 162;
     const OPSPANEL_H    = 230;
     const CONTENT_TOP   = TOPBAR_H + TICKER_H + TF_H;
-    const chartTop      = CONTENT_TOP + (showTradesPanel ? OPSPANEL_H : 0);
-    const chartH        = windowHeight > 0 ? windowHeight - chartTop - TRADEPANEL_H : 400;
+    const chartTop      = CONTENT_TOP;
+    const chartH        = windowHeight > 0 ? windowHeight - CONTENT_TOP - TRADEPANEL_H : 400;
 
     return (
       <div style={{ height: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif", overflow: "hidden" }}>
@@ -1429,63 +1422,53 @@ export default function TradePage() {
         )}
 
         {/* ── Topbar ── */}
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#080e1d", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 8px", gap: 5 }}>
-          {/* Logo + brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-            <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 0 8px rgba(245,166,35,0.3)" }}>
-              <TrendingUp size={13} color="#0a0f1e" strokeWidth={2.5} />
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <div style={{ width: 24, height: 24, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 10px rgba(245,166,35,0.35)" }}>
+              <TrendingUp size={12} color="#0a0f1e" strokeWidth={2.5} />
             </div>
-            <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, whiteSpace: "nowrap" }}>Dynamics</span>
+            <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>Dynamics</span>
           </div>
 
-          {/* Asset selector */}
           {renderAssetDropdown(true)}
-
           <div style={{ flex: 1 }} />
 
-          {/* Reload demo */}
           {isDemo && demoBalance < 5000 && (
             <button onClick={resetDemo} disabled={demoReloading}
-              style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 5, fontSize: 10, padding: "2px 6px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, whiteSpace: "nowrap", flexShrink: 0 }}>
+              style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 5, fontSize: 10, padding: "2px 6px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, flexShrink: 0 }}>
               {demoReloading ? "..." : "↺"}
             </button>
           )}
 
-          {/* Notification bell */}
           <NotificationBell />
 
-          {/* Balance — click to toggle demo/real */}
-          <button onClick={toggleAccount} style={{
-            background: "#0d1526",
-            border: `1px solid ${isDemo ? "rgba(245,166,35,0.35)" : "rgba(34,197,94,0.35)"}`,
-            borderRadius: 8, padding: "4px 8px",
-            display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0,
-          }}>
-            <Wallet size={10} color="#f5a623" />
+          <button onClick={toggleAccount} style={{ background: isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${isDemo ? "rgba(245,166,35,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
+            <Wallet size={11} color={isDemo ? "#f5a623" : "#22c55e"} />
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
-            <span style={{ background: isDemo ? "rgba(245,166,35,0.2)" : "rgba(34,197,94,0.2)", color: isDemo ? "#f5a623" : "#22c55e", borderRadius: 3, fontSize: 8, padding: "1px 4px", fontWeight: 900 }}>
-              {isDemo ? "D" : "R"}
-            </span>
+            <span style={{ background: isDemo ? "#f5a623" : "#22c55e", color: "#0a0f1e", borderRadius: 3, fontSize: 8, padding: "1px 4px", fontWeight: 900 }}>{isDemo ? "D" : "R"}</span>
           </button>
 
-          {/* Avatar + dropdown */}
           <div style={{ position: "relative", flexShrink: 0 }}>
             <button onClick={() => setUserMenuOpen(!userMenuOpen)}
-              style={{ width: 28, height: 28, background: "#f5a623", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <User size={14} color="#0a0f1e" />
+              style={{ width: 26, height: 26, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 8px rgba(245,166,35,0.3)" }}>
+              <User size={13} color="#0a0f1e" />
             </button>
             {userMenuOpen && (
-              <div style={{ position: "absolute", top: "110%", right: 0, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, minWidth: 168, zIndex: 500, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
-                <div style={{ padding: "10px 12px", borderBottom: "1px solid #1e2d50" }}>
-                  <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>{session?.user?.name}</div>
-                  <div style={{ color: "#94a3b8", fontSize: 11 }}>{session?.user?.email}</div>
+              <div style={{ position: "absolute", top: "110%", right: 0, background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, minWidth: 172, zIndex: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+                <div style={{ padding: "12px 14px", borderBottom: "1px solid #1e2d50" }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{session?.user?.name}</div>
+                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{session?.user?.email}</div>
                 </div>
-                <a href="/profile"   onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><User size={13} /> Perfil</a>
-                <a href="/dashboard" onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={13} /> Dashboard</a>
-                <a href="/history"   onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={13} /> Histórico</a>
-                <a href="/wallet"    onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Wallet size={13} /> Carteira</a>
+                {[
+                  { href: "/profile",   icon: <User size={13} />,     label: "Perfil"     },
+                  { href: "/dashboard", icon: <BarChart2 size={13} />, label: "Dashboard"  },
+                  { href: "/history",   icon: <History size={13} />,   label: "Histórico"  },
+                  { href: "/wallet",    icon: <Wallet size={13} />,    label: "Carteira"   },
+                ].map(({ href, icon, label }) => (
+                  <a key={href} href={href} onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}>{icon}{label}</a>
+                ))}
                 <button onClick={() => signOut({ callbackUrl: "/login" })}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
                   <LogOut size={13} /> Sair
                 </button>
               </div>
@@ -1494,22 +1477,22 @@ export default function TradePage() {
         </div>
 
         {/* ── Ticker bar ── */}
-        <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TICKER_H, zIndex: 109, background: "#080e1d", borderBottom: "1px solid #1e2d50", overflow: "hidden", display: "flex", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 18, padding: "0 10px", animation: "ticker 20s linear infinite", whiteSpace: "nowrap" }}>
+        <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TICKER_H, zIndex: 109, background: "#060c1a", borderBottom: "1px solid #1a2540", overflow: "hidden", display: "flex", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 20, padding: "0 12px", animation: "ticker 24s linear infinite", whiteSpace: "nowrap" }}>
             {[...pairs, ...pairs].map((p, i) => {
               const price = tickerPrices[p.symbol] ?? 0;
               const seed  = SEED_PRICES[p.symbol] ?? 1;
               const isUp  = price >= seed;
               const pct   = seed > 0 && price > 0 ? ((price - seed) / seed * 100) : 0;
               return (
-                <span key={i} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10 }}>
-                  <span style={{ color: "#64748b", fontWeight: 600 }}>{p.label}</span>
-                  <span style={{ color: isUp ? "#22c55e" : "#ef4444", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                <span key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ color: "#64748b", fontWeight: 600, fontSize: 10 }}>{p.label}</span>
+                  <span style={{ color: isUp ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 10, fontVariantNumeric: "tabular-nums" }}>
                     {price > 0 ? price.toFixed(p.decimals) : "—"}
                   </span>
                   {price > 0 && (
-                    <span style={{ color: isUp ? "#16a34a" : "#dc2626", fontSize: 8, background: isUp ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", borderRadius: 3, padding: "0 2px" }}>
-                      {isUp ? "+" : ""}{pct.toFixed(2)}%
+                    <span style={{ color: isUp ? "#22c55e" : "#ef4444", fontSize: 9, opacity: 0.7 }}>
+                      {isUp ? "▲" : "▼"}{Math.abs(pct).toFixed(2)}%
                     </span>
                   )}
                 </span>
@@ -1519,33 +1502,17 @@ export default function TradePage() {
         </div>
 
         {/* ── Timeframe strip ── */}
-        <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#111827", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 12px", gap: 6 }}>
+        <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
           {["1m", "5m", "15m", "1h", "1D"].map(tf => (
-            <button key={tf} onClick={() => setTimeframe(tf)}
-              style={{ background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#0a0f1e" : "#94a3b8", border: `1px solid ${timeframe === tf ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            <button key={tf} onClick={() => setTimeframe(tf)} style={{ height: 24, padding: "0 9px", background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#0a0f1e" : "#64748b", border: `1px solid ${timeframe === tf ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {tf}
             </button>
           ))}
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-            {/* Operações button — opens panel above chart */}
-            <button onClick={() => { setShowTradesPanel(v => !v); if (!showTradesPanel) { setTradeHistoryTab("open"); fetchTradeHistory(); } }}
-              style={{ background: showTradesPanel ? "rgba(245,166,35,0.15)" : "transparent", color: showTradesPanel ? "#f5a623" : "#64748b", border: `1px solid ${showTradesPanel ? "#f5a623" : "#1e2d50"}`, borderRadius: 5, padding: "2px 7px", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, position: "relative" }}>
-              <BarChart2 size={11} />
-              OPS
-              {activeTrades.length > 0 && <span style={{ position: "absolute", top: -4, right: -4, background: "#f5a623", color: "#0a0f1e", borderRadius: "50%", fontSize: 8, fontWeight: 900, width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeTrades.length}</span>}
-            </button>
-            {candleTimer && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", fontVariantNumeric: "tabular-nums", letterSpacing: 1 }}>
-                {candleTimer}
-              </span>
-            )}
-            <button onClick={() => setShowIndicators(v => !v)}
-              style={{ background: showIndicators ? "rgba(245,166,35,0.15)" : "transparent", color: showIndicators ? "#f5a623" : "#64748b", border: `1px solid ${showIndicators ? "#f5a623" : "#1e2d50"}`, borderRadius: 5, padding: "2px 7px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            {candleTimer && <span style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontVariantNumeric: "tabular-nums" }}>{candleTimer}</span>}
+            <button onClick={() => setShowIndicators(v => !v)} style={{ height: 24, padding: "0 8px", background: showIndicators ? "rgba(245,166,35,0.12)" : "transparent", color: showIndicators ? "#f5a623" : "#4b5563", border: `1px solid ${showIndicators ? "rgba(245,166,35,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
               IND
             </button>
-            <span style={{ fontSize: 14, fontWeight: 700, color: priceUp ? "#22c55e" : "#ef4444" }}>
-              {priceUp ? "▲" : "▼"} {priceStr}
-            </span>
           </div>
         </div>
 
@@ -1563,11 +1530,29 @@ export default function TradePage() {
           <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
           </div>
+
+          {/* ── OPS button (top-left of chart) ── */}
+          <button onClick={() => { setShowTradesPanel(v => !v); if (!showTradesPanel) { setTradeHistoryTab("open"); fetchTradeHistory(); } }}
+            style={{ position: "absolute", top: 8, left: 8, zIndex: 6, background: showTradesPanel ? "rgba(245,166,35,0.15)" : "rgba(8,14,29,0.82)", border: `1px solid ${showTradesPanel ? "#f5a623" : "#1e2d50"}`, borderRadius: 7, padding: "5px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", backdropFilter: "blur(4px)" }}>
+            <BarChart2 size={12} color={showTradesPanel ? "#f5a623" : "#64748b"} />
+            <span style={{ color: showTradesPanel ? "#f5a623" : "#94a3b8", fontSize: 11, fontWeight: 700 }}>OPS</span>
+            {activeTrades.length > 0 && (
+              <span style={{ background: "#f5a623", color: "#0a0f1e", borderRadius: 10, fontSize: 9, fontWeight: 900, padding: "1px 5px" }}>{activeTrades.length}</span>
+            )}
+          </button>
+
+          {/* ── Zoom controls (bottom centre, over time axis) ── */}
+          <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", flexDirection: "row", gap: 4 }}>
+            <button onClick={() => { const ts = chartApiRef.current?.timeScale(); if (!ts) return; const cur = (ts.options() as any).barSpacing ?? 6; ts.applyOptions({ barSpacing: Math.max(cur - 2, 2) }); }}
+              style={{ width: 30, height: 24, background: "rgba(8,14,29,0.88)", border: "1px solid #1e2d50", borderRadius: 5, color: "#94a3b8", fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>−</button>
+            <button onClick={() => { const ts = chartApiRef.current?.timeScale(); if (!ts) return; const cur = (ts.options() as any).barSpacing ?? 6; ts.applyOptions({ barSpacing: Math.min(cur + 2, 30) }); }}
+              style={{ width: 30, height: 24, background: "rgba(8,14,29,0.88)", border: "1px solid #1e2d50", borderRadius: 5, color: "#94a3b8", fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>+</button>
+          </div>
         </div>
 
         {/* ── Trades panel — ABOVE chart ── */}
         {showTradesPanel && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, height: OPSPANEL_H, zIndex: 108, background: "#080e1d", borderBottom: "1px solid #1e2d50", display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H, zIndex: 108, background: "#080e1d", display: "flex", flexDirection: "column" }}>
             {/* Tabs */}
             <div style={{ display: "flex", borderBottom: "1px solid #1e2d50", flexShrink: 0 }}>
               {(["open", "history"] as const).map(tab => (
@@ -1675,115 +1660,87 @@ export default function TradePage() {
           }
 
           return (
-            <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1e2d50", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
 
-              {/* Row 1 — Asset + Payout % | Expiry selector */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px 0" }}>
+              {/* Row 1 — Asset + % + Pagamento | Expiry pills */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px 0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444" }} />
-                  <span style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>{selectedPair?.label}</span>
-                  <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontWeight: 900, fontSize: 12, borderRadius: 5, padding: "1px 6px" }}>{Math.round(currentPayout * 100)}%</span>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", boxShadow: priceUp ? "0 0 5px #22c55e" : "0 0 5px #ef4444" }} />
+                  <span style={{ color: "#fff", fontWeight: 800, fontSize: 12 }}>{selectedPair?.label}</span>
+                  <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontWeight: 900, fontSize: 11, borderRadius: 4, padding: "1px 5px" }}>{Math.round(currentPayout * 100)}%</span>
+                  <span style={{ color: "#334155", fontSize: 10 }}>·</span>
+                  <span style={{ color: "#f5a623", fontWeight: 700, fontSize: 11 }}>{formatKz(payoutAmt)}</span>
                 </div>
-                {/* Expiry pills */}
-                <div style={{ display: "flex", gap: 4 }}>
+                <div style={{ display: "flex", gap: 3 }}>
                   {EXPIRY_OPTIONS.map(opt => (
-                    <button key={opt.secs} onClick={() => setExpiry(opt)} disabled={hasActiveTrade} style={{ height: 24, padding: "0 8px", background: expiry.secs === opt.secs ? "#f5a623" : "#0d1526", color: expiry.secs === opt.secs ? "#0a0f1e" : "#64748b", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", opacity: hasActiveTrade ? 0.5 : 1 }}>
+                    <button key={opt.secs} onClick={() => setExpiry(opt)} disabled={hasActiveTrade}
+                      style={{ height: 22, padding: "0 7px", background: expiry.secs === opt.secs ? "#f5a623" : "#0b1220", color: expiry.secs === opt.secs ? "#0a0f1e" : "#64748b", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", opacity: hasActiveTrade ? 0.4 : 1 }}>
                       {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Row 2 — Cronómetro | Investimento */}
-              <div style={{ display: "flex", gap: 8, padding: "6px 12px" }}>
-                {/* Timer box — clicável para editar quando não há trade activo */}
+              {/* Row 2 — Tempo | Investimento */}
+              <div style={{ display: "flex", gap: 8, padding: "6px 12px 0" }}>
+                {/* Timer */}
                 <div onClick={() => { if (!hasActiveTrade && !timerEditing) { setTimerEditing(true); setTimerInput(String(Math.floor(expiry.secs / 60))); } }}
-                  style={{ flex: 1, background: "#0d1526", border: `1px solid ${hasActiveTrade ? timerColor + "44" : timerEditing ? "#f5a623" : "#1e2d50"}`, borderRadius: 8, padding: "5px 10px", transition: "border-color 0.3s", cursor: hasActiveTrade ? "default" : "pointer" }}>
-                  <div style={{ color: "#64748b", fontSize: 9, fontWeight: 600, letterSpacing: 0.5, marginBottom: 2 }}>
-                    CRONÓMETRO {!hasActiveTrade && !timerEditing && <span style={{ color: "#f5a623", fontSize: 8 }}>✎</span>}
+                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${hasActiveTrade ? timerColor + "55" : timerEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", cursor: hasActiveTrade ? "default" : "pointer", transition: "border-color 0.3s" }}>
+                  <div style={{ color: "#334155", fontSize: 9, fontWeight: 600, letterSpacing: 0.8, marginBottom: 1 }}>
+                    TEMPO {!hasActiveTrade && !timerEditing && <span style={{ color: "#f5a623" }}>✎</span>}
                   </div>
                   {timerEditing ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={e => e.stopPropagation()}>
-                      <input
-                        autoFocus
-                        type="number" min="1" max="60"
-                        value={timerInput}
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }} onClick={e => e.stopPropagation()}>
+                      <input autoFocus type="number" min="1" max="60" value={timerInput}
                         onChange={e => setTimerInput(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === "Enter") {
-                            const mins = Math.max(1, Math.min(60, parseInt(timerInput) || 1));
-                            setExpiry({ label: `${mins} min`, secs: mins * 60 });
-                            setTimerEditing(false);
-                          }
-                          if (e.key === "Escape") setTimerEditing(false);
-                        }}
-                        onBlur={() => {
-                          const mins = Math.max(1, Math.min(60, parseInt(timerInput) || 1));
-                          setExpiry({ label: `${mins} min`, secs: mins * 60 });
-                          setTimerEditing(false);
-                        }}
-                        style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 18, fontVariantNumeric: "tabular-nums" }}
-                        placeholder="min"
-                      />
-                      <span style={{ color: "#64748b", fontSize: 10 }}>min</span>
+                        onKeyDown={e => { if (e.key === "Enter") { const m = Math.max(1, Math.min(60, parseInt(timerInput)||1)); setExpiry({label:`${m} min`,secs:m*60}); setTimerEditing(false); } if (e.key === "Escape") setTimerEditing(false); }}
+                        onBlur={() => { const m = Math.max(1, Math.min(60, parseInt(timerInput)||1)); setExpiry({label:`${m} min`,secs:m*60}); setTimerEditing(false); }}
+                        style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 19, fontVariantNumeric: "tabular-nums" }} />
+                      <span style={{ color: "#4b5563", fontSize: 10 }}>min</span>
                     </div>
                   ) : (
-                    <div style={{ color: timerColor, fontWeight: 900, fontSize: 20, fontVariantNumeric: "tabular-nums", letterSpacing: 2, transition: "color 0.4s" }}>{timerDisplay}</div>
+                    <div style={{ color: timerColor, fontWeight: 900, fontSize: 19, fontVariantNumeric: "tabular-nums", letterSpacing: 1.5, transition: "color 0.4s" }}>{timerDisplay}</div>
                   )}
                 </div>
-                {/* Amount box — clicável para editar */}
-                <div style={{ flex: 2, background: "#0d1526", border: `1px solid ${amountEditing ? "#f5a623" : "#1e2d50"}`, borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "border-color 0.3s", cursor: hasActiveTrade ? "default" : "pointer" }}
-                  onClick={() => { if (!hasActiveTrade && !amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}>
+
+                {/* Amount */}
+                <div onClick={() => { if (!hasActiveTrade && !amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}
+                  style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: hasActiveTrade ? "default" : "pointer", transition: "border-color 0.3s" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: "#64748b", fontSize: 9, fontWeight: 600, letterSpacing: 0.5, marginBottom: 2 }}>
-                      INVESTIMENTO {!hasActiveTrade && !amountEditing && <span style={{ color: "#f5a623", fontSize: 8 }}>✎</span>}
+                    <div style={{ color: "#334155", fontSize: 9, fontWeight: 600, letterSpacing: 0.8, marginBottom: 1 }}>
+                      INVESTIMENTO {!hasActiveTrade && !amountEditing && <span style={{ color: "#f5a623" }}>✎</span>}
                     </div>
                     {amountEditing ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 3 }} onClick={e => e.stopPropagation()}>
-                        <input
-                          autoFocus
-                          type="number" min="1000" max="500000"
-                          value={amountInput}
+                        <input autoFocus type="number" min="1000" max="500000" value={amountInput}
                           onChange={e => setAmountInput(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === "Enter") {
-                              const val = Math.max(1000, Math.min(500000, parseInt(amountInput) || 1000));
-                              setAmount(val); setAmountEditing(false);
-                            }
-                            if (e.key === "Escape") setAmountEditing(false);
-                          }}
-                          onBlur={() => {
-                            const val = Math.max(1000, Math.min(500000, parseInt(amountInput) || 1000));
-                            setAmount(val); setAmountEditing(false);
-                          }}
-                          style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}
-                        />
-                        <span style={{ color: "#64748b", fontSize: 10, flexShrink: 0 }}>Kz</span>
+                          onKeyDown={e => { if (e.key === "Enter") { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); } if (e.key === "Escape") setAmountEditing(false); }}
+                          onBlur={() => { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); }}
+                          style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }} />
+                        <span style={{ color: "#4b5563", fontSize: 10, flexShrink: 0 }}>Kz</span>
                       </div>
                     ) : (
-                      <div style={{ color: "#fff", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
+                      <div style={{ color: "#fff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
                     )}
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => setAmount(a => Math.max(1000, a - 500))} disabled={hasActiveTrade} style={{ width: 30, height: 30, background: "#1e2d50", border: "none", borderRadius: 6, color: "#fff", fontSize: 20, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.4 : 1 }}>−</button>
-                    <button onClick={() => setAmount(a => a + 500)} disabled={hasActiveTrade} style={{ width: 30, height: 30, background: "#1e2d50", border: "none", borderRadius: 6, color: "#fff", fontSize: 20, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.4 : 1 }}>+</button>
+                  <div style={{ display: "flex", gap: 5, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setAmount(a => Math.max(1000, a - 500))} disabled={hasActiveTrade}
+                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.3 : 1 }}>−</button>
+                    <button onClick={() => setAmount(a => a + 500)} disabled={hasActiveTrade}
+                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.3 : 1 }}>+</button>
                   </div>
                 </div>
               </div>
 
-              {/* Row 3 — Pagamento */}
-              <div style={{ padding: "0 12px 5px", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: "#64748b", fontSize: 11, fontWeight: 600 }}>Pagamento:</span>
-                <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>{formatKz(payoutAmt)}</span>
-              </div>
-
-              {/* Row 4 — ALTA + BAIXA */}
-              <div style={{ display: "flex", gap: 8, padding: "0 12px 10px", flex: 1 }}>
-                <button onClick={() => openTrade("call")} disabled={btnDisabled} style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(135deg,#0d3320,#14532d)" : "linear-gradient(135deg,#16a34a,#22c55e)", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: btnDisabled ? "none" : "0 4px 20px rgba(34,197,94,0.4)", letterSpacing: 0.5, minHeight: 46 }}>
-                  {loading ? "..." : hasActiveTrade ? <><TrendingUp size={15} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
+              {/* Row 3 — ALTA + BAIXA */}
+              <div style={{ display: "flex", gap: 8, padding: "7px 12px 8px", flex: 1 }}>
+                <button onClick={() => openTrade("call")} disabled={btnDisabled}
+                  style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(150deg,#0a2218,#0f3d22)" : "linear-gradient(150deg,#15803d,#22c55e)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(34,197,94,0.3)", letterSpacing: 0.5 }}>
+                  {loading ? "..." : hasActiveTrade ? <><TrendingUp size={14} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingUp size={17} strokeWidth={2.5} /> ALTA</>}
                 </button>
-                <button onClick={() => openTrade("put")} disabled={btnDisabled} style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(135deg,#3b0a0a,#7f1d1d)" : "linear-gradient(135deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: btnDisabled ? "none" : "0 4px 20px rgba(239,68,68,0.4)", letterSpacing: 0.5, minHeight: 46 }}>
-                  {loading ? "..." : hasActiveTrade ? <><TrendingDown size={15} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
+                <button onClick={() => openTrade("put")} disabled={btnDisabled}
+                  style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(150deg,#2a0808,#5c1414)" : "linear-gradient(150deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(239,68,68,0.3)", letterSpacing: 0.5 }}>
+                  {loading ? "..." : hasActiveTrade ? <><TrendingDown size={14} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingDown size={17} strokeWidth={2.5} /> BAIXA</>}
                 </button>
               </div>
             </div>
