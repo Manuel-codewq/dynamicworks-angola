@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { RefreshCw, Download, Filter } from "lucide-react";
+import { exportCsv } from "@/lib/exportCsv";
 
 function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string) { return new Date(s).toLocaleString("pt-AO", { dateStyle: "short", timeStyle: "short" }); }
@@ -33,20 +34,16 @@ export default function AdminTradesPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  function exportCsv() {
-    const header = ["Utilizador","Email","Par","Direcção","Montante","Resultado","Lucro/Perda","Data"];
-    const rows = trades.map(t => [
-      t.user.name, t.user.email, t.asset, t.direction,
-      Math.floor(t.amount),
-      t.result,
-      t.result === "win" ? Math.floor(t.payout - t.amount) : t.result === "loss" ? -Math.floor(t.amount) : 0,
-      formatDate(t.createdAt),
-    ]);
-    const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-    const a = document.createElement("a");
-    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-    a.download = `trades_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
+  function handleExportCsv() {
+    exportCsv(`trades_${new Date().toISOString().slice(0,10)}.csv`,
+      ["Utilizador", "Email", "Par", "Direcção", "Montante (Kz)", "Resultado", "Lucro/Perda (Kz)", "Data"],
+      trades.map(t => [
+        t.user.name, t.user.email, t.asset, t.direction,
+        Math.floor(t.amount), t.result ?? "",
+        t.result === "win" ? Math.floor(t.payout - t.amount) : t.result === "loss" ? -Math.floor(t.amount) : 0,
+        formatDate(t.createdAt),
+      ])
+    );
   }
 
   const th: React.CSSProperties = { color: "#94a3b8", fontSize: 12, padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #1e2d50", fontWeight: 600, whiteSpace: "nowrap" };
@@ -70,8 +67,8 @@ export default function AdminTradesPage() {
           <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
             <RefreshCw size={14} /> Atualizar
           </button>
-          <button onClick={exportCsv} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, padding: "8px 14px", color: "#f5a623", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-            <Download size={14} /> Exportar CSV
+          <button onClick={handleExportCsv} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 14px", color: "#22c55e", cursor: "pointer", fontSize: 13 }}>
+            <Download size={14} /> CSV
           </button>
         </div>
       </div>

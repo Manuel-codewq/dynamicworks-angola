@@ -96,6 +96,7 @@ model Settings {
   maintenanceMode Boolean @default(false)
   winProbability  Json    @default("{}")
   payout          Json    @default("{}")
+  activePairs     Json    @default("[]")
   updatedAt       DateTime @updatedAt
 }
 
@@ -195,4 +196,41 @@ model TournamentParticipant {
 
   @@unique([tournamentId, userId])
   @@index([tournamentId, profit])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  adminName String
+  action    String
+  target    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([adminId])
+}
+
+model PromoCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        String   @default("balance")
+  value       Float
+  maxUses     Int      @default(1)
+  usedCount   Int      @default(0)
+  expiresAt   DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  redemptions PromoRedemption[]
+}
+
+model PromoRedemption {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  userId      String
+  redeemedAt  DateTime  @default(now())
+
+  @@unique([promoCodeId, userId])
+  @@index([userId])
 }

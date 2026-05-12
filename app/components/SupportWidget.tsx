@@ -9,7 +9,7 @@ const WA_NUMBER = "244921825299";
 const WA_MSG    = encodeURIComponent("Olá! Preciso de ajuda com a minha conta na Dynamics Works.");
 
 // Páginas onde o widget NÃO aparece (login, registo, kyc, suporte)
-const HIDDEN_PATHS = ["/login", "/register", "/kyc", "/support", "/verify-email", "/terms", "/maintenance"];
+const HIDDEN_PATHS = ["/login", "/register", "/kyc", "/support", "/verify-email", "/terms", "/maintenance", "/trade"];
 
 export default function SupportWidget() {
   const { status }  = useSession();

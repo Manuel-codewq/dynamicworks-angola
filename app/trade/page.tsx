@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy,
-  Clock, History,
+  Clock, History, Headphones, MessageCircle,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -17,6 +17,7 @@ import {
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
 import TradeResultOverlay from "@/app/components/TradeResultOverlay";
+import OnboardingTutorial from "@/app/components/OnboardingTutorial";
 import { calcSMA, calcEMA, calcBB, calcRSI, calcMACD, calcStochastic } from "@/lib/indicators";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ export default function TradePage() {
   const [sentiment,     setSentiment]     = useState(62);
   const [loading,       setLoading]       = useState(false);
   const [notification,  setNotification]  = useState<{ msg: string; type: "win" | "loss" | "info" } | null>(null);
-  const [mobileTab,     setMobileTab]     = useState<"chart" | "trade" | "wallet" | "account">("chart");
+  const [mobileTab,     setMobileTab]     = useState<"chart" | "trade" | "wallet" | "account" | "markets">("chart");
   const [tradeDrawer,   setTradeDrawer]   = useState(false);
   const [timeframe,      setTimeframe]      = useState("1m");
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
@@ -160,6 +161,8 @@ export default function TradePage() {
   const [timerInput,      setTimerInput]      = useState("");
   const [amountEditing,   setAmountEditing]   = useState(false);
   const [amountInput,     setAmountInput]     = useState("");
+  const [walletData,      setWalletData]      = useState<{ balance: number; demoBalance: number; transactions: any[] } | null>(null);
+  const [walletLoading,   setWalletLoading]   = useState(false);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const chartRef           = useRef<HTMLDivElement>(null);
@@ -783,12 +786,12 @@ export default function TradePage() {
     if (!selectedPair) return;
     if (isMobile && windowHeight === 0) return;
 
-    const TOPBAR_H     = 52;
-    const TICKER_H     = 28;
-    const TF_H         = 38;
+    const TOPBAR_H     = 48;
+    const TF_H         = 36;
     const TRADEPANEL_H = 162;
+    const BOTTOMNAV_H  = 52;
     const chartHeight  = isMobile
-      ? windowHeight - TOPBAR_H - TICKER_H - TF_H - TRADEPANEL_H
+      ? windowHeight - TOPBAR_H - TF_H - TRADEPANEL_H - BOTTOMNAV_H
       : (chartRef.current?.clientHeight || 500);
 
     function initChart() {
@@ -947,6 +950,24 @@ export default function TradePage() {
       }
     };
   }, [selectedPair, isMobile, windowHeight]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch wallet data when mobile wallet tab opens ───────────────────────
+  useEffect(() => {
+    if (!isMobile || mobileTab !== "wallet") return;
+    if (walletData) return;
+    setWalletLoading(true);
+    Promise.all([
+      fetch("/api/balance").then(r => r.json()),
+      fetch("/api/transactions").then(r => r.json()),
+    ]).then(([bal, txs]) => {
+      setWalletData({
+        balance: bal.balance ?? 0,
+        demoBalance: bal.demoBalance ?? 0,
+        transactions: Array.isArray(txs) ? txs.slice(0, 8) : [],
+      });
+      setWalletLoading(false);
+    }).catch(() => setWalletLoading(false));
+  }, [mobileTab, isMobile, walletData]);
 
   // ── Poll active trades / notify result ───────────────────────────────────
   useEffect(() => {
@@ -1747,16 +1768,18 @@ export default function TradePage() {
   // ── MOBILE RENDER ─────────────────────────────────────────────────────────
   if (isMobile) {
     const TOPBAR_H      = 48;
-    const TICKER_H      = 26;
     const TF_H          = 36;
     const TRADEPANEL_H  = 162;
+    const BOTTOMNAV_H   = 52;
     const OPSPANEL_H    = 230;
-    const CONTENT_TOP   = TOPBAR_H + TICKER_H + TF_H;
+    const CONTENT_TOP   = TOPBAR_H + TF_H;
     const chartTop      = CONTENT_TOP;
-    const chartH        = windowHeight > 0 ? windowHeight - CONTENT_TOP - TRADEPANEL_H : 400;
+    const chartH        = windowHeight > 0 ? windowHeight - CONTENT_TOP - TRADEPANEL_H - BOTTOMNAV_H : 360;
 
     return (
       <div style={{ height: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif", overflow: "hidden" }}>
+
+        <OnboardingTutorial />
 
         {/* Win/loss overlay */}
         {notification && (
@@ -1776,7 +1799,9 @@ export default function TradePage() {
             <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>Dynamics</span>
           </div>
 
-          {renderAssetDropdown(true)}
+          <button onClick={() => setMobileTab("markets")} style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "5px 10px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700 }}>
+            {selectedPair?.label ?? "…"} <ChevronDown size={12} color="#94a3b8" />
+          </button>
           <div style={{ flex: 1 }} />
 
           {isDemo && demoBalance < 5000 && (
@@ -1793,63 +1818,10 @@ export default function TradePage() {
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
             <span style={{ background: isDemo ? "#f5a623" : "#22c55e", color: "#0a0f1e", borderRadius: 3, fontSize: 8, padding: "1px 4px", fontWeight: 900 }}>{isDemo ? "D" : "R"}</span>
           </button>
-
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <button onClick={() => setUserMenuOpen(!userMenuOpen)}
-              style={{ width: 26, height: 26, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 8px rgba(245,166,35,0.3)" }}>
-              <User size={13} color="#0a0f1e" />
-            </button>
-            {userMenuOpen && (
-              <div style={{ position: "absolute", top: "110%", right: 0, background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, minWidth: 172, zIndex: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
-                <div style={{ padding: "12px 14px", borderBottom: "1px solid #1e2d50" }}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{session?.user?.name}</div>
-                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{session?.user?.email}</div>
-                </div>
-                {[
-                  { href: "/profile",   icon: <User size={13} />,     label: "Perfil"     },
-                  { href: "/dashboard", icon: <BarChart2 size={13} />, label: "Dashboard"  },
-                  { href: "/ranking",   icon: <Trophy size={13} />,    label: "Ranking & Torneios" },
-                  { href: "/history",   icon: <History size={13} />,   label: "Histórico"  },
-                  { href: "/wallet",    icon: <Wallet size={13} />,    label: "Carteira"   },
-                ].map(({ href, icon, label }) => (
-                  <a key={href} href={href} onClick={() => setUserMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}>{icon}{label}</a>
-                ))}
-                <button onClick={() => signOut({ callbackUrl: "/login" })}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
-                  <LogOut size={13} /> Sair
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Ticker bar ── */}
-        <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TICKER_H, zIndex: 109, background: "#060c1a", borderBottom: "1px solid #1a2540", overflow: "hidden", display: "flex", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 20, padding: "0 12px", animation: "ticker 24s linear infinite", whiteSpace: "nowrap" }}>
-            {[...pairs, ...pairs].map((p, i) => {
-              const price = tickerPrices[p.symbol] ?? 0;
-              const seed  = SEED_PRICES[p.symbol] ?? 1;
-              const isUp  = price >= seed;
-              const pct   = seed > 0 && price > 0 ? ((price - seed) / seed * 100) : 0;
-              return (
-                <span key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ color: "#64748b", fontWeight: 600, fontSize: 10 }}>{p.label}</span>
-                  <span style={{ color: isUp ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 10, fontVariantNumeric: "tabular-nums" }}>
-                    {price > 0 ? price.toFixed(p.decimals) : "—"}
-                  </span>
-                  {price > 0 && (
-                    <span style={{ color: isUp ? "#22c55e" : "#ef4444", fontSize: 9, opacity: 0.7 }}>
-                      {isUp ? "▲" : "▼"}{Math.abs(pct).toFixed(2)}%
-                    </span>
-                  )}
-                </span>
-              );
-            })}
-          </div>
         </div>
 
         {/* ── Timeframe strip ── */}
-        <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
+        <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
           {["1m", "5m", "15m", "1h", "1D"].map(tf => (
             <button key={tf} onClick={() => setTimeframe(tf)} style={{ height: 24, padding: "0 9px", background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#0a0f1e" : "#64748b", border: `1px solid ${timeframe === tf ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {tf}
@@ -1868,14 +1840,14 @@ export default function TradePage() {
 
         {/* ── Indicator panel (mobile overlay) ── */}
         {showIndicators && (
-          <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H + TF_H, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
             {renderIndicatorPanel(true)}
           </div>
         )}
 
         {/* ── Drawing tools panel (mobile overlay) ── */}
         {showTools && (
-          <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H + TF_H, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
             {renderDrawingToolsPanel(true)}
           </div>
         )}
@@ -1888,15 +1860,6 @@ export default function TradePage() {
             <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
           </div>
 
-          {/* ── OPS button (top-left of chart) ── */}
-          <button onClick={() => { setShowTradesPanel(v => !v); if (!showTradesPanel) { setTradeHistoryTab("open"); fetchTradeHistory(); } }}
-            style={{ position: "absolute", top: 8, left: 8, zIndex: 6, background: showTradesPanel ? "rgba(245,166,35,0.15)" : "rgba(8,14,29,0.82)", border: `1px solid ${showTradesPanel ? "#f5a623" : "#1e2d50"}`, borderRadius: 7, padding: "5px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", backdropFilter: "blur(4px)" }}>
-            <BarChart2 size={12} color={showTradesPanel ? "#f5a623" : "#64748b"} />
-            <span style={{ color: showTradesPanel ? "#f5a623" : "#94a3b8", fontSize: 11, fontWeight: 700 }}>OPS</span>
-            {activeTrades.length > 0 && (
-              <span style={{ background: "#f5a623", color: "#0a0f1e", borderRadius: 10, fontSize: 9, fontWeight: 900, padding: "1px 5px" }}>{activeTrades.length}</span>
-            )}
-          </button>
 
           {/* ── Zoom controls (bottom centre, over time axis) ── */}
           <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", flexDirection: "row", gap: 4 }}>
@@ -1909,7 +1872,7 @@ export default function TradePage() {
 
         {/* ── Trades panel — ABOVE chart ── */}
         {showTradesPanel && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H, zIndex: 108, background: "#080e1d", display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 108, background: "#080e1d", display: "flex", flexDirection: "column" }}>
             {/* Tabs */}
             <div style={{ display: "flex", borderBottom: "1px solid #1e2d50", flexShrink: 0 }}>
               {(["open", "history"] as const).map(tab => (
@@ -2002,7 +1965,7 @@ export default function TradePage() {
           }
 
           return (
-            <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column" }}>
 
               {/* Row 1 — Asset + % + Pagamento | Expiry pills */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px 0" }}>
@@ -2088,6 +2051,243 @@ export default function TradePage() {
             </div>
           );
         })()}
+
+        {/* ── Markets overlay ── */}
+        {mobileTab === "markets" && (
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 115, background: "#080e1d", display: "flex", flexDirection: "column" }}>
+            {/* Header */}
+            <div style={{ padding: "12px 14px 8px", flexShrink: 0, borderBottom: "1px solid #1a2540" }}>
+              <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Mercados</span>
+            </div>
+            {/* Pairs list */}
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {(() => {
+                const groups: Record<string, DerivPair[]> = {};
+                pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
+                const catOrder  = ["Forex", "Cripto", "Metal", "Índices"];
+                const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d", Índices: "#22c55e" };
+                return catOrder.filter(cat => groups[cat]).map(cat => (
+                  <div key={cat}>
+                    <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>
+                      {cat}
+                    </div>
+                    {groups[cat].map(p => {
+                      const price   = tickerPrices[p.symbol] ?? 0;
+                      const seed    = SEED_PRICES[p.symbol] ?? 1;
+                      const isUp    = price >= seed;
+                      const pct     = seed > 0 && price > 0 ? ((price - seed) / seed * 100) : 0;
+                      const isActive = selectedPair?.symbol === p.symbol;
+                      return (
+                        <button key={p.symbol} onClick={() => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
+                          style={{ width: "100%", background: isActive ? "rgba(245,166,35,0.07)" : "transparent", border: "none", borderBottom: "1px solid #0d1526", padding: "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {isActive && <div style={{ width: 3, height: 28, background: "#f5a623", borderRadius: 2, position: "absolute", left: 0 }} />}
+                            <div style={{ textAlign: "left" }}>
+                              <div style={{ color: isActive ? "#f5a623" : "#fff", fontWeight: 700, fontSize: 14 }}>{p.label}</div>
+                              <div style={{ color: "#334155", fontSize: 11, marginTop: 1 }}>{p.category}</div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ color: price > 0 ? (isUp ? "#22c55e" : "#ef4444") : "#334155", fontWeight: 800, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
+                              {price > 0 ? price.toFixed(p.decimals) : "—"}
+                            </div>
+                            {price > 0 && (
+                              <div style={{ color: isUp ? "#22c55e" : "#ef4444", fontSize: 11, marginTop: 1 }}>
+                                {isUp ? "▲" : "▼"} {Math.abs(pct).toFixed(2)}%
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* ── Wallet overlay ── */}
+        {mobileTab === "wallet" && (
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 115, background: "#080e1d", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+            <div style={{ padding: "14px 14px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Carteira</span>
+              <button onClick={() => setWalletData(null)} style={{ background: "none", border: "none", color: "#f5a623", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px" }}>↺ Actualizar</button>
+            </div>
+
+            {walletLoading ? (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color: "#f5a623", fontSize: 13 }}>A carregar...</span>
+              </div>
+            ) : walletData ? (
+              <div style={{ padding: "12px 14px", flex: 1 }}>
+                {/* Balance cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                  <div style={{ background: "linear-gradient(135deg,#0d1f12,#142a1a)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, marginBottom: 4 }}>SALDO REAL</div>
+                    <div style={{ color: "#22c55e", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.balance))}</div>
+                  </div>
+                  <div style={{ background: "linear-gradient(135deg,#1a1206,#261b08)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, marginBottom: 4 }}>SALDO DEMO</div>
+                    <div style={{ color: "#f5a623", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.demoBalance))}</div>
+                  </div>
+                </div>
+
+                {/* Deposit / Withdraw buttons */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                  <a href="/wallet?tab=deposit" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 10, padding: "10px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                    <span style={{ fontSize: 18 }}>↓</span>
+                    <span style={{ color: "#22c55e", fontSize: 12, fontWeight: 700 }}>Depositar</span>
+                  </a>
+                  <a href="/wallet?tab=withdraw" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "10px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                    <span style={{ fontSize: 18, color: "#ef4444" }}>↑</span>
+                    <span style={{ color: "#ef4444", fontSize: 12, fontWeight: 700 }}>Levantar</span>
+                  </a>
+                </div>
+
+                {/* Recent transactions */}
+                <div style={{ color: "#64748b", fontSize: 11, fontWeight: 600, letterSpacing: 0.8, marginBottom: 8 }}>MOVIMENTOS RECENTES</div>
+                {walletData.transactions.length === 0 ? (
+                  <div style={{ color: "#334155", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Sem movimentos ainda</div>
+                ) : walletData.transactions.map((tx: any) => {
+                  const isDeposit = tx.type === "deposit";
+                  const statusColor = tx.status === "completed" ? "#22c55e" : tx.status === "rejected" ? "#ef4444" : "#f5a623";
+                  return (
+                    <div key={tx.id} style={{ background: "#0d1526", borderRadius: 10, padding: "10px 12px", marginBottom: 7, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: isDeposit ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+                          {isDeposit ? "↓" : "↑"}
+                        </div>
+                        <div>
+                          <div style={{ color: "#fff", fontWeight: 700, fontSize: 12 }}>{isDeposit ? "Depósito" : "Levantamento"}</div>
+                          <div style={{ color: statusColor, fontSize: 10, fontWeight: 600 }}>{tx.status === "completed" ? "Concluído" : tx.status === "rejected" ? "Rejeitado" : "Pendente"}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ color: isDeposit ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 13 }}>{isDeposit ? "+" : "−"}{formatKz(tx.amount)}</div>
+                        <div style={{ color: "#334155", fontSize: 10 }}>{new Date(tx.createdAt).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* ── Account overlay ── */}
+        {mobileTab === "account" && (
+          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 115, background: "#080e1d", overflowY: "auto" }}>
+            <div style={{ padding: "16px 14px" }}>
+              {/* Avatar + name */}
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, padding: "14px", background: "#0d1526", borderRadius: 14, border: "1px solid #1a2540" }}>
+                <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg,#f5a623,#e8940f)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, color: "#0a0f1e", flexShrink: 0 }}>
+                  {session?.user?.name?.split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{session?.user?.name}</div>
+                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{session?.user?.email}</div>
+                </div>
+              </div>
+
+              {/* Demo / Real toggle */}
+              <div style={{ background: "#0d1526", border: "1px solid #1a2540", borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Modo de conta</div>
+                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{isDemo ? "A negociar com saldo demo" : "A negociar com saldo real"}</div>
+                </div>
+                <button onClick={toggleAccount} style={{ background: isDemo ? "rgba(245,166,35,0.15)" : "rgba(34,197,94,0.15)", border: `1px solid ${isDemo ? "rgba(245,166,35,0.4)" : "rgba(34,197,94,0.4)"}`, borderRadius: 8, padding: "6px 14px", color: isDemo ? "#f5a623" : "#22c55e", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                  {isDemo ? "DEMO" : "REAL"}
+                </button>
+              </div>
+
+              {/* Nav links */}
+              {[
+                { href: "/profile",   icon: <User size={16} color="#f5a623" />,       label: "Perfil",             desc: "Editar dados pessoais" },
+                { href: "/dashboard", icon: <BarChart2 size={16} color="#f5a623" />,   label: "Dashboard",          desc: "Estatísticas das operações" },
+                { href: "/history",   icon: <History size={16} color="#f5a623" />,     label: "Histórico",          desc: "Todas as operações fechadas" },
+                { href: "/ranking",   icon: <Trophy size={16} color="#f5a623" />,      label: "Ranking & Torneios", desc: "Competir com outros traders" },
+                { href: "/wallet",    icon: <Wallet size={16} color="#f5a623" />,      label: "Carteira completa",  desc: "Depósitos e levantamentos" },
+              ].map(({ href, icon, label, desc }) => (
+                <a key={href} href={href} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "#0d1526", border: "1px solid #1a2540", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
+                  <div style={{ width: 32, height: 32, background: "rgba(245,166,35,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{label}</div>
+                    <div style={{ color: "#64748b", fontSize: 11, marginTop: 1 }}>{desc}</div>
+                  </div>
+                  <span style={{ color: "#334155", fontSize: 16 }}>›</span>
+                </a>
+              ))}
+
+              {/* Suporte — ticket interno */}
+              <a href="/support" style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
+                <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Headphones size={16} color="#0a0f1e" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Suporte</div>
+                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 1 }}>Abrir ticket de suporte</div>
+                </div>
+                <span style={{ color: "#334155", fontSize: 16 }}>›</span>
+              </a>
+
+              {/* Suporte — WhatsApp */}
+              <a href={`https://wa.me/244921825299?text=${encodeURIComponent("Olá! Preciso de ajuda com a minha conta na Dynamics Works.")}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.2)", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
+                <div style={{ width: 32, height: 32, background: "#25D366", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <MessageCircle size={16} color="#fff" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>WhatsApp</div>
+                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 1 }}>Resposta rápida</div>
+                </div>
+                <span style={{ color: "#334155", fontSize: 16 }}>›</span>
+              </a>
+
+              {/* Logout */}
+              <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 14px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, color: "#ef4444", fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 4 }}>
+                <LogOut size={15} /> Sair da conta
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Bottom navigation bar ── */}
+        {(() => {
+          const NAV = [
+            { id: "chart",   icon: <TrendingUp size={19} />, label: "Operar"   },
+            { id: "markets", icon: <BarChart2 size={19} />,  label: "Mercados" },
+            { id: "trade",   icon: <Clock size={19} />,      label: "Posições" },
+            { id: "wallet",  icon: <Wallet size={19} />,     label: "Carteira" },
+            { id: "account", icon: <User size={19} />,       label: "Conta"    },
+          ] as const;
+          return (
+            <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 120, background: "#060c1a", borderTop: "1px solid #1a2540", display: "flex", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+              {NAV.map(({ id, icon, label }) => {
+                const active = mobileTab === id || (id === "trade" && showTradesPanel && mobileTab === "chart");
+                return (
+                  <button key={id} onClick={() => {
+                    if (id === "trade") {
+                      setMobileTab("chart");
+                      setShowTradesPanel(v => { if (!v) { setTradeHistoryTab("open"); fetchTradeHistory(); } return !v; });
+                    } else {
+                      setMobileTab(id);
+                      if (id !== "wallet") setWalletData(null);
+                      setShowTradesPanel(false);
+                    }
+                  }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer", color: active ? "#f5a623" : "#334155", transition: "color 0.2s" }}>
+                    {icon}
+                    <span style={{ fontSize: 9, fontWeight: active ? 800 : 600, letterSpacing: 0.3 }}>{label}</span>
+                    {active && <div style={{ position: "absolute", bottom: "env(safe-area-inset-bottom, 0px)", width: 28, height: 2, background: "#f5a623", borderRadius: 2 }} />}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
+
       </div>
     );
   }

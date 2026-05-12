@@ -4,7 +4,8 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
-  Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace, Trophy, MessageCircle,
+  Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
+  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart,
 } from "lucide-react";
 
 type NavItem = {
@@ -15,14 +16,18 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { href: "/ao/admin/dashboard",    label: "Dashboard",    Icon: LayoutDashboard },
-  { href: "/ao/admin/users",        label: "Utilizadores", Icon: Users },
-  { href: "/ao/admin/kyc",          label: "KYC",          Icon: ScanFace,       badgeKey: "kyc" },
-  { href: "/ao/admin/transactions", label: "Transações",   Icon: ArrowLeftRight, badgeKey: "txn" },
-  { href: "/ao/admin/trades",        label: "Operações",    Icon: BarChart2 },
-  { href: "/ao/admin/tournaments",   label: "Torneios",     Icon: Trophy },
-  { href: "/ao/admin/support",       label: "Suporte",      Icon: MessageCircle, badgeKey: "support" },
-  { href: "/ao/admin/settings",      label: "Configurações",Icon: Settings },
+  { href: "/ao/admin/dashboard",      label: "Dashboard",      Icon: LayoutDashboard },
+  { href: "/ao/admin/reports",        label: "Relatórios",     Icon: LineChart },
+  { href: "/ao/admin/users",          label: "Utilizadores",   Icon: Users },
+  { href: "/ao/admin/kyc",            label: "KYC",            Icon: ScanFace,       badgeKey: "kyc" },
+  { href: "/ao/admin/transactions",   label: "Transações",     Icon: ArrowLeftRight, badgeKey: "txn" },
+  { href: "/ao/admin/trades",         label: "Operações",      Icon: BarChart2 },
+  { href: "/ao/admin/tournaments",    label: "Torneios",       Icon: Trophy },
+  { href: "/ao/admin/notifications",  label: "Notificações",   Icon: Bell },
+  { href: "/ao/admin/bonuses",        label: "Bónus",          Icon: Gift },
+  { href: "/ao/admin/audit",          label: "Auditoria",      Icon: ShieldCheck },
+  { href: "/ao/admin/support",        label: "Suporte",        Icon: MessageCircle, badgeKey: "support" },
+  { href: "/ao/admin/settings",       label: "Configurações",  Icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

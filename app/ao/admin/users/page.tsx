@@ -2,8 +2,9 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   RefreshCw, CheckCircle, XCircle, Shield, ScanFace,
-  Search, Users, UserCheck, UserX, Clock,
+  Search, Users, UserCheck, UserX, Clock, Download,
 } from "lucide-react";
+import { exportCsv } from "@/lib/exportCsv";
 
 function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string) {
@@ -93,9 +94,17 @@ export default function AdminUsersPage() {
           </h1>
           <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 0" }}>Gestão de contas e permissões</p>
         </div>
-        <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
-          <RefreshCw size={14} /> Atualizar
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => exportCsv("utilizadores.csv",
+            ["ID", "Nome", "Email", "Telefone", "Província", "Saldo (Kz)", "Role", "Estado", "KYC", "Operações", "Registo"],
+            users.map(u => [u.id, u.name, u.email, u.phone ?? "", u.province ?? "", Math.floor(u.balance), u.role, u.status, u.kycStatus, u._count.trades, formatDate(u.createdAt)])
+          )} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 14px", color: "#22c55e", cursor: "pointer", fontSize: 13 }}>
+            <Download size={14} /> CSV
+          </button>
+          <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
+            <RefreshCw size={14} /> Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

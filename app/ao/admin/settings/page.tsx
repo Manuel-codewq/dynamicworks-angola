@@ -1,11 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
-import { RefreshCw, Save } from "lucide-react";
+import { RefreshCw, Save, ToggleLeft, ToggleRight } from "lucide-react";
+
+const ALL_PAIRS = [
+  "EUR/USD","GBP/USD","USD/JPY","AUD/USD","USD/CAD","EUR/GBP","USD/CHF","NZD/USD",
+  "EUR/JPY","GBP/JPY","EUR/CAD","AUD/JPY","GBP/AUD","EUR/CHF",
+  "BTC/USD","ETH/USD","XAU/USD","XAG/USD",
+  "DW Index 10","DW Index 25","DW Index 50","DW Index 75","DW Index 100",
+];
 
 interface Settings {
-  payout:          Record<string, number>;   // 0.50 – 0.95
-  winProbability:  Record<string, number>;   // 0.30 – 0.60
+  payout:          Record<string, number>;
+  winProbability:  Record<string, number>;
   maintenanceMode: boolean;
+  activePairs:     string[];
 }
 
 // UI works in whole-number percentages; API uses fractions
@@ -92,6 +100,29 @@ export default function AdminSettingsPage() {
             </button>
           </div>
 
+        </div>
+      </div>
+
+      {/* Active pairs */}
+      <div style={card}>
+        <p style={sectionTitle}>Ativos Disponíveis</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+          {ALL_PAIRS.map(pair => {
+            const active = draft.activePairs?.includes(pair) ?? true;
+            return (
+              <button key={pair} onClick={() => setDraft(d => {
+                if (!d) return d;
+                const cur = d.activePairs ?? ALL_PAIRS;
+                return { ...d, activePairs: active ? cur.filter(p => p !== pair) : [...cur, pair] };
+              })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "10px 14px", border: `1px solid ${active ? "rgba(34,197,94,0.3)" : "#1e2d50"}`, cursor: "pointer" }}>
+                <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{pair}</span>
+                {active
+                  ? <ToggleRight size={20} color="#22c55e" />
+                  : <ToggleLeft  size={20} color="#334155" />
+                }
+              </button>
+            );
+          })}
         </div>
       </div>
 
