@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { sendVerificationEmail } from "@/lib/email";
 import { randomInt } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/getClientIp";
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -14,9 +15,7 @@ const PROVINCES = [
 export async function POST(req: NextRequest) {
   try {
     // 5 registos por IP por hora
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
-            || req.headers.get("x-real-ip")
-            || "unknown";
+    const ip = getClientIp(req);
 
     if (!await checkRateLimit("register", ip, 5, 60 * 60_000)) {
       return NextResponse.json({ error: "Demasiados pedidos. Tente mais tarde." }, { status: 429 });
@@ -32,6 +31,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nome demasiado longo" }, { status: 400 });
     }
     if (String(email).length > 254) {
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
       return NextResponse.json({ error: "Email inválido" }, { status: 400 });
     }
     if (password.length < 8) {

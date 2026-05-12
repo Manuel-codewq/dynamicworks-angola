@@ -63,17 +63,17 @@ export async function resolveExpiredTrade(
   // Via lenta: tenta PriceCandle DB ou Deriv WS no servidor (fallback se cliente não enviou).
   let resolvedPrice: number | null = null;
 
-  if (clientPrice && clientPrice > 0) {
-    // Aceita o preço do browser apenas se estiver dentro de ±10% do entryPrice.
-    // Desvios maiores indicam manipulação — descarta e tenta o servidor.
+  // Sempre tenta o preço do servidor primeiro; clientPrice só é usado se o servidor
+  // não tiver preço disponível (mercado fechado, falha de rede, etc.)
+  resolvedPrice = await getClosePriceForAsset(trade.asset);
+
+  if (!resolvedPrice && clientPrice && clientPrice > 0) {
+    // Fallback: preço do browser apenas quando o servidor não tem dados.
+    // Valida desvio máximo de ±5% para limitar margem de manipulação.
     const deviation = Math.abs(clientPrice - trade.entryPrice) / trade.entryPrice;
-    if (deviation <= 0.10) {
+    if (deviation <= 0.05) {
       resolvedPrice = clientPrice;
-    } else {
-      resolvedPrice = await getClosePriceForAsset(trade.asset);
     }
-  } else {
-    resolvedPrice = await getClosePriceForAsset(trade.asset);
   }
 
   const expiredForMs = Date.now() - expiresAt.getTime();

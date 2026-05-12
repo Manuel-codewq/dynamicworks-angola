@@ -110,8 +110,8 @@ export default function ProfilePage() {
     Promise.all([
       fetch("/api/profile").then(r => r.json()),
       fetch("/api/profile/kyc").then(r => r.json()),
-      fetch("/api/trade").then(r => r.json()),
-    ]).then(([profile, kyc, trades]) => {
+      fetch("/api/trade?limit=500&page=1").then(r => r.json()),
+    ]).then(([profile, kyc, tradeData]) => {
       setName(profile.name ?? "");
       setEmail(profile.email ?? "");
       setPhone(profile.phone ?? "");
@@ -129,16 +129,18 @@ export default function ProfilePage() {
       else if (kyc.kycAttempts > 0)          setKycStatus("pending");
       else                                   setKycStatus("unsubmitted");
 
-      if (Array.isArray(trades)) {
-        const closed = trades.filter((t: { status: string }) => t.status === "closed");
-        const w = closed.filter((t: { result: string }) => t.result === "win");
-        const profit = closed.reduce((s: number, t: { profit?: number }) => s + (t.profit ?? 0), 0);
-        setTotalTrades(trades.length);
-        setWins(w.length);
-        setTotalProfit(profit);
-      }
+      // API returns { trades: [...], total, page, ... } — filter real trades only
+      const allTrades: any[] = Array.isArray(tradeData) ? tradeData : (tradeData.trades ?? []);
+      const realTrades = allTrades.filter((t: any) => !t.isDemo);
+      const closed = realTrades.filter((t: any) => t.status === "closed");
+      const w = closed.filter((t: any) => t.result === "win");
+      const profit = closed.reduce((s: number, t: any) => s + (t.profit ?? 0), 0);
+      setTotalTrades(closed.length);
+      setWins(w.length);
+      setTotalProfit(profit);
+
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [status]);
 
   // OTP countdown
@@ -177,18 +179,14 @@ export default function ProfilePage() {
         reader.readAsDataURL(file);
       });
 
-      // 2. Upload directo para Cloudinary (exactamente igual ao KYC — garante que funciona em produção)
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-      const preset    = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-      const fd = new FormData();
-      fd.append("file",          b64);
-      fd.append("upload_preset", preset!);
-      const up = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        { method: "POST", body: fd }
-      );
+      // 2. Upload via servidor (signed) — as credenciais Cloudinary nunca são expostas ao browser
+      const up = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: b64, folder: "avatars" }),
+      });
       if (!up.ok) throw new Error("Cloudinary upload failed");
-      const { secure_url } = await up.json();
+      const { url: secure_url } = await up.json();
 
       // 3. Guardar URL na DB via API
       const res = await fetch("/api/profile/avatar", {

@@ -27,13 +27,15 @@ export default function DashboardPage() {
     if (status !== "authenticated") return;
     Promise.all([
       fetch("/api/balance").then(r => r.json()),
-      fetch("/api/trade").then(r => r.json()),
+      fetch("/api/trade?limit=500&page=1").then(r => r.json()),
     ]).then(([bal, tr]) => {
-      setBalance(bal.balance);
-      setDemoBalance(bal.demoBalance);
-      if (Array.isArray(tr)) setTrades(tr);
+      setBalance(bal.balance ?? 0);
+      setDemoBalance(bal.demoBalance ?? 0);
+      // API returns { trades: [...], total, page, ... }
+      const list = Array.isArray(tr) ? tr : (tr.trades ?? []);
+      setTrades(list);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [status]);
 
   const closedTrades = trades.filter(t => t.status === "closed");

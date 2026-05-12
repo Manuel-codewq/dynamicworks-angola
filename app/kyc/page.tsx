@@ -155,18 +155,15 @@ export default function KYCVerificationPage() {
   };
 
   const uploadToCloud = async (b64: string): Promise<string> => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-    const fd = new FormData();
-    fd.append('file', b64);
-    fd.append('upload_preset', preset!);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    // Upload via servidor (signed) — as credenciais Cloudinary nunca são expostas ao browser
+    const res = await fetch('/api/upload', {
       method: 'POST',
-      body: fd,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: b64, folder: 'kyc' }),
     });
     if (!res.ok) throw new Error('Falha no upload para Cloudinary');
     const data = await res.json();
-    return data.secure_url as string;
+    return data.url as string;
   };
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {

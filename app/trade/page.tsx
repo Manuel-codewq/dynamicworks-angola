@@ -180,6 +180,33 @@ export default function TradePage() {
   useEffect(() => { selectedPairRef.current = selectedPair; }, [selectedPair]);
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
 
+  // ── Drawing tools ─────────────────────────────────────────────────────────
+  type DrawingTool = "hline" | "trendline" | "fibonacci" | null;
+  interface HLineDrawing  { id: string; type: "hline";     price: number;    color: string; lineWidth: number; lineStyle: number; label: string; }
+  interface TrendDrawing  { id: string; type: "trendline"; p1Time: number; p1Price: number; p2Time: number; p2Price: number; color: string; lineWidth: number; lineStyle: number; }
+  interface FibDrawing    { id: string; type: "fibonacci"; highPrice: number; lowPrice: number; color: string; }
+  type Drawing = HLineDrawing | TrendDrawing | FibDrawing;
+
+  const TOOL_COLORS = ["#f5a623","#3b82f6","#22c55e","#ef4444","#a78bfa","#22d3ee","#e2e8f0"];
+  const FIB_LEVELS  = [
+    { ratio: 0,     label: "0%",    color: "#94a3b8" },
+    { ratio: 0.236, label: "23.6%", color: "#38bdf8" },
+    { ratio: 0.382, label: "38.2%", color: "#22c55e" },
+    { ratio: 0.5,   label: "50%",   color: "#f5a623" },
+    { ratio: 0.618, label: "61.8%", color: "#f97316" },
+    { ratio: 0.786, label: "78.6%", color: "#ef4444" },
+    { ratio: 1,     label: "100%",  color: "#94a3b8" },
+  ];
+
+  const [activeTool,     setActiveTool]     = useState<DrawingTool>(null);
+  const [drawings,       setDrawings]       = useState<Drawing[]>([]);
+  const [showTools,      setShowTools]      = useState(false);
+  const [toolColor,      setToolColor]      = useState("#f5a623");
+  const [toolLineStyle,  setToolLineStyle]  = useState(0);
+  const [toolLineWidth,  setToolLineWidth]  = useState(1);
+  const [toolLabel,      setToolLabel]      = useState("");
+  const [pendingPoint,   setPendingPoint]   = useState<{ time: number; price: number } | null>(null);
+
   // ── Indicator state + refs ───────────────────────────────────────────────
   const [showIndicators, setShowIndicators] = useState(false);
 
@@ -282,6 +309,17 @@ export default function TradePage() {
   const sessionTradeIdsRef = useRef(new Set<string>());
   // setTimeout IDs para trades desta sessão — garante expiração exacta como o demo HTML
   const tradeTimersRef     = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // Drawing tool refs
+  const activeToolRef    = useRef<DrawingTool>(null);
+  const pendingPointRef  = useRef<{ time: number; price: number } | null>(null);
+  const drawingsRef      = useRef<Drawing[]>([]);
+  const toolColorRef     = useRef("#f5a623");
+  const toolLineStyleRef = useRef(0);
+  const toolLineWidthRef = useRef(1);
+  const toolLabelRef     = useRef("");
+  const hlineRefsMap     = useRef<Map<string, any>>(new Map());
+  const trendSeriesMap   = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
+  const fibLinesMap      = useRef<Map<string, any[]>>(new Map());
 
 
   // ── Candle countdown timer — pure UTC alignment ──────────────────────────
@@ -301,6 +339,115 @@ export default function TradePage() {
 
   useEffect(() => { indicatorsRef.current = indicators; }, [indicators]);
 
+  // Drawing refs sync
+  useEffect(() => { activeToolRef.current    = activeTool; },    [activeTool]);
+  useEffect(() => { pendingPointRef.current  = pendingPoint; },  [pendingPoint]);
+  useEffect(() => { drawingsRef.current      = drawings; },      [drawings]);
+  useEffect(() => { toolColorRef.current     = toolColor; },     [toolColor]);
+  useEffect(() => { toolLineStyleRef.current = toolLineStyle; }, [toolLineStyle]);
+  useEffect(() => { toolLineWidthRef.current = toolLineWidth; }, [toolLineWidth]);
+  useEffect(() => { toolLabelRef.current     = toolLabel; },     [toolLabel]);
+
+  // Escape key cancels pending point
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setPendingPoint(null); pendingPointRef.current = null; setActiveTool(null); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // ── Drawing functions ────────────────────────────────────────────────────
+  function applyHLine(d: HLineDrawing) {
+    if (!candleSeriesRef.current) return;
+    const ref = candleSeriesRef.current.createPriceLine({
+      price: d.price, color: d.color, lineWidth: d.lineWidth as any,
+      lineStyle: d.lineStyle, axisLabelVisible: true, title: d.label || "",
+    });
+    hlineRefsMap.current.set(d.id, ref);
+  }
+  function removeHLine(id: string) {
+    const ref = hlineRefsMap.current.get(id);
+    if (ref && candleSeriesRef.current) { try { candleSeriesRef.current.removePriceLine(ref); } catch {} }
+    hlineRefsMap.current.delete(id);
+  }
+
+  function applyTrendLine(d: TrendDrawing) {
+    if (!chartApiRef.current) return;
+    const dt = d.p2Time - d.p1Time;
+    if (dt === 0) return;
+    const slope = (d.p2Price - d.p1Price) / dt;
+    const now = Math.floor(Date.now() / 1000);
+    const tStart = now - 5 * 365 * 24 * 3600;
+    const tEnd   = now + 5 * 365 * 24 * 3600;
+    const series = chartApiRef.current.addSeries(LineSeries, {
+      color: d.color, lineWidth: d.lineWidth as any, lineStyle: d.lineStyle,
+      priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+    });
+    series.setData([
+      { time: tStart as Time, value: d.p1Price + slope * (tStart - d.p1Time) },
+      { time: tEnd   as Time, value: d.p1Price + slope * (tEnd   - d.p1Time) },
+    ]);
+    trendSeriesMap.current.set(d.id, series);
+  }
+  function removeTrendLine(id: string) {
+    const series = trendSeriesMap.current.get(id);
+    if (series && chartApiRef.current) { try { chartApiRef.current.removeSeries(series); } catch {} }
+    trendSeriesMap.current.delete(id);
+  }
+
+  function applyFib(d: FibDrawing) {
+    if (!candleSeriesRef.current) return;
+    const range = d.highPrice - d.lowPrice;
+    const lines: any[] = FIB_LEVELS.map(lvl => {
+      return candleSeriesRef.current!.createPriceLine({
+        price: d.lowPrice + lvl.ratio * range, color: lvl.color,
+        lineWidth: 1 as any, lineStyle: 2, axisLabelVisible: true, title: `Fib ${lvl.label}`,
+      });
+    });
+    fibLinesMap.current.set(d.id, lines);
+  }
+  function removeFib(id: string) {
+    const lines = fibLinesMap.current.get(id) ?? [];
+    if (candleSeriesRef.current) lines.forEach(l => { try { candleSeriesRef.current!.removePriceLine(l); } catch {} });
+    fibLinesMap.current.delete(id);
+  }
+
+  function addDrawing(d: Drawing) {
+    setDrawings(prev => [...prev, d]);
+    drawingsRef.current = [...drawingsRef.current, d];
+    if (d.type === "hline")     applyHLine(d);
+    if (d.type === "trendline") applyTrendLine(d);
+    if (d.type === "fibonacci") applyFib(d);
+  }
+  function removeDrawing(id: string) {
+    const d = drawingsRef.current.find(x => x.id === id);
+    if (!d) return;
+    if (d.type === "hline")     removeHLine(id);
+    if (d.type === "trendline") removeTrendLine(id);
+    if (d.type === "fibonacci") removeFib(id);
+    setDrawings(prev => prev.filter(x => x.id !== id));
+    drawingsRef.current = drawingsRef.current.filter(x => x.id !== id);
+  }
+  function clearAllDrawings() {
+    drawingsRef.current.forEach(d => {
+      if (d.type === "hline")     removeHLine(d.id);
+      if (d.type === "trendline") removeTrendLine(d.id);
+      if (d.type === "fibonacci") removeFib(d.id);
+    });
+    setDrawings([]);
+    drawingsRef.current = [];
+  }
+  function reapplyDrawings() {
+    hlineRefsMap.current.clear();
+    trendSeriesMap.current.clear();
+    fibLinesMap.current.clear();
+    drawingsRef.current.forEach(d => {
+      if (d.type === "hline")     applyHLine(d);
+      if (d.type === "trendline") applyTrendLine(d);
+      if (d.type === "fibonacci") applyFib(d);
+    });
+  }
 
   // ── Indicator recalc — rebuilds all indicator series from candleDataRef ──
   // Defined as a standalone function (not useCallback) so it always captures
@@ -749,6 +896,39 @@ export default function TradePage() {
       // Start with empty chart — real candles arrive via WS within ~1 second
       series.setData([]);
       currentCandleRef.current = null;
+
+      // Re-apply drawings after chart reinit (refs were invalidated by chart.remove())
+      reapplyDrawings();
+
+      // Chart click → place drawing
+      chart.subscribeClick((param) => {
+        const tool = activeToolRef.current;
+        if (!tool || !candleSeriesRef.current || !param.point || !param.time) return;
+        const price = candleSeriesRef.current.coordinateToPrice(param.point.y);
+        const time  = param.time as number;
+        if (!price) return;
+        const id   = `${tool}_${Date.now()}`;
+        const base = { id, color: toolColorRef.current, lineWidth: toolLineWidthRef.current, lineStyle: toolLineStyleRef.current };
+        if (tool === "hline") {
+          addDrawing({ ...base, type: "hline", price, label: toolLabelRef.current });
+        } else if (tool === "trendline" || tool === "fibonacci") {
+          const pending = pendingPointRef.current;
+          if (!pending) {
+            pendingPointRef.current = { time, price };
+            setPendingPoint({ time, price });
+          } else {
+            if (tool === "trendline") {
+              addDrawing({ ...base, type: "trendline", p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
+            } else {
+              const high = Math.max(pending.price, price);
+              const low  = Math.min(pending.price, price);
+              addDrawing({ ...base, type: "fibonacci", highPrice: high, lowPrice: low });
+            }
+            pendingPointRef.current = null;
+            setPendingPoint(null);
+          }
+        }
+      });
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) chartApiRef.current.applyOptions({ width: el.clientWidth });
@@ -1385,6 +1565,177 @@ export default function TradePage() {
     );
   }
 
+  // ── Drawing tools panel ───────────────────────────────────────────────────
+  function renderDrawingToolsPanel(compact = false) {
+    const toolBtn = (id: DrawingTool, icon: string, label: string) => {
+      const active = activeTool === id;
+      return (
+        <button key={id ?? "none"} onClick={() => {
+          if (active) { setActiveTool(null); setPendingPoint(null); pendingPointRef.current = null; }
+          else { setActiveTool(id); setPendingPoint(null); pendingPointRef.current = null; }
+        }} title={label} style={{
+          display: "flex", alignItems: "center", gap: 4,
+          background: active ? "rgba(245,166,35,0.15)" : "transparent",
+          color: active ? "#f5a623" : "#64748b",
+          border: `1px solid ${active ? "rgba(245,166,35,0.5)" : "#1e2d50"}`,
+          borderRadius: 7, padding: compact ? "3px 8px" : "4px 10px",
+          fontSize: compact ? 10 : 11, fontWeight: 700, cursor: "pointer",
+          boxShadow: active ? "0 0 8px rgba(245,166,35,0.3)" : "none",
+          transition: "all 0.13s", whiteSpace: "nowrap", flexShrink: 0,
+        }}>
+          <span style={{ fontSize: compact ? 11 : 13 }}>{icon}</span>
+          {!compact && <span>{label}</span>}
+        </button>
+      );
+    };
+
+    const dec = selectedPair?.decimals ?? 5;
+
+    return (
+      <div style={{ background: "#06091a", borderBottom: "1px solid #1e2d50", padding: compact ? "5px 8px" : "7px 14px", display: "flex", flexDirection: "column", gap: compact ? 4 : 6 }}>
+
+        {/* Row 1: Tools + colour + style */}
+        <div style={{ display: "flex", gap: compact ? 4 : 6, alignItems: "center", flexWrap: "nowrap", overflowX: "auto" }}>
+
+          {/* Tool buttons */}
+          {toolBtn("hline",     "─",  "Linha Horizontal")}
+          {toolBtn("trendline", "╱",  "Linha de Tendência")}
+          {toolBtn("fibonacci", "𝜑",  "Fibonacci")}
+
+          {/* Pending point indicator */}
+          {pendingPoint && (
+            <span style={{ fontSize: 10, color: "#f5a623", background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 6, padding: "2px 7px", flexShrink: 0 }}>
+              1º ponto: {pendingPoint.price.toFixed(dec)} — clique no 2º ponto (Esc cancela)
+            </span>
+          )}
+
+          <div style={{ flex: 1 }} />
+
+          {/* Colour palette */}
+          <div style={{ display: "flex", gap: 3, alignItems: "center", flexShrink: 0 }}>
+            {TOOL_COLORS.map(c => (
+              <button key={c} onClick={() => setToolColor(c)} style={{
+                width: compact ? 14 : 16, height: compact ? 14 : 16, borderRadius: "50%", background: c, border: toolColor === c ? "2px solid #fff" : "2px solid transparent",
+                cursor: "pointer", padding: 0, flexShrink: 0,
+              }} />
+            ))}
+          </div>
+
+          <div style={{ width: 1, height: 18, background: "#1e2d50", flexShrink: 0 }} />
+
+          {/* Line style */}
+          {[0, 1, 2].map(s => (
+            <button key={s} onClick={() => setToolLineStyle(s)} style={{
+              background: toolLineStyle === s ? "rgba(255,255,255,0.1)" : "transparent",
+              color: toolLineStyle === s ? "#e2e8f0" : "#4b5563",
+              border: `1px solid ${toolLineStyle === s ? "#4b5563" : "#1e2d50"}`,
+              borderRadius: 5, padding: "2px 7px", fontSize: 9, fontWeight: 700, cursor: "pointer", flexShrink: 0,
+            }}>{["───","---","···"][s]}</button>
+          ))}
+
+          {/* Line width */}
+          {[1, 2, 3].map(w => (
+            <button key={w} onClick={() => setToolLineWidth(w)} style={{
+              background: toolLineWidth === w ? "rgba(255,255,255,0.1)" : "transparent",
+              color: toolLineWidth === w ? "#e2e8f0" : "#4b5563",
+              border: `1px solid ${toolLineWidth === w ? "#4b5563" : "#1e2d50"}`,
+              borderRadius: 5, padding: "2px 7px", fontSize: 9, fontWeight: 700, cursor: "pointer", flexShrink: 0,
+              borderBottom: `${w + 1}px solid ${toolLineWidth === w ? "#e2e8f0" : "#4b5563"}`,
+            }}>{w}</button>
+          ))}
+
+          {/* Label input (only for hline) */}
+          {activeTool === "hline" && (
+            <input value={toolLabel} onChange={e => setToolLabel(e.target.value)} placeholder="Etiqueta…"
+              style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 5, color: "#e2e8f0", fontSize: 10, padding: "2px 7px", width: 90, outline: "none", flexShrink: 0 }} />
+          )}
+
+          {/* Clear all */}
+          {drawings.length > 0 && (
+            <button onClick={clearAllDrawings} title="Apagar tudo" style={{
+              background: "transparent", color: "#ef4444", border: "1px solid #ef444440",
+              borderRadius: 5, padding: compact ? "2px 6px" : "3px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer", flexShrink: 0,
+            }}>✕ Tudo</button>
+          )}
+        </div>
+
+        {/* Row 2: Quick indicator toggles */}
+        <div style={{ display: "flex", gap: compact ? 4 : 5, alignItems: "center", flexWrap: "nowrap", overflowX: "auto" }}>
+          <span style={{ color: "#475569", fontSize: 9, fontWeight: 700, flexShrink: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>Indicadores:</span>
+          {([
+            { key: "ma",   label: "MA",    color: "#f5a623", toggle: () => setIndicators(p => ({ ...p, ma:   { ...p.ma,   enabled: !p.ma.enabled   } })) },
+            { key: "ema",  label: "EMA",   color: "#a78bfa", toggle: () => setIndicators(p => ({ ...p, ema:  { ...p.ema,  enabled: !p.ema.enabled  } })) },
+            { key: "bb",   label: "BB",    color: "#38bdf8", toggle: () => setIndicators(p => ({ ...p, bb:   { ...p.bb,   enabled: !p.bb.enabled   } })) },
+            { key: "rsi",  label: "RSI",   color: "#f97316", toggle: () => setIndicators(p => ({ ...p, rsi:  { ...p.rsi,  enabled: !p.rsi.enabled  } })) },
+            { key: "macd", label: "MACD",  color: "#22c55e", toggle: () => setIndicators(p => ({ ...p, macd: { ...p.macd, enabled: !p.macd.enabled } })) },
+            { key: "stoch",label: "Stoch", color: "#fb923c", toggle: () => setIndicators(p => ({ ...p, stoch:{ ...p.stoch,enabled: !p.stoch.enabled} })) },
+          ] as const).map(ind => {
+            const active = indicators[ind.key as keyof typeof indicators].enabled;
+            return (
+              <button key={ind.key} onClick={ind.toggle} style={{
+                display: "flex", alignItems: "center", gap: 3,
+                background: active ? `${ind.color}22` : "transparent",
+                color: active ? ind.color : "#4b5563",
+                border: `1px solid ${active ? ind.color : "#1e2d50"}`,
+                borderRadius: 14, padding: compact ? "2px 8px" : "3px 9px",
+                fontSize: compact ? 9 : 10, fontWeight: 700, cursor: "pointer",
+                boxShadow: active ? `0 0 6px ${ind.color}44` : "none",
+                transition: "all 0.13s", flexShrink: 0,
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: active ? ind.color : "#374151", flexShrink: 0 }} />
+                {ind.label}
+              </button>
+            );
+          })}
+          {indicators.ma.enabled && ([9, 20, 50] as const).map(p => (
+            <button key={`ma${p}`} onClick={() => setIndicators(prev => {
+              const has = prev.ma.periods.includes(p);
+              const periods = has ? prev.ma.periods.filter(x => x !== p) : [...prev.ma.periods, p];
+              return { ...prev, ma: { ...prev.ma, periods: periods.length ? periods : [p] } };
+            })} style={{
+              background: indicators.ma.periods.includes(p) ? "#f5a62333" : "transparent",
+              color: indicators.ma.periods.includes(p) ? "#f5a623" : "#4b5563",
+              border: `1px solid ${indicators.ma.periods.includes(p) ? "#f5a623" : "#1e2d50"}`,
+              borderRadius: 10, padding: "2px 6px", fontSize: 9, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+            }}>{p}</button>
+          ))}
+          {indicators.ema.enabled && ([9, 20, 50] as const).map(p => (
+            <button key={`ema${p}`} onClick={() => setIndicators(prev => {
+              const has = prev.ema.periods.includes(p);
+              const periods = has ? prev.ema.periods.filter(x => x !== p) : [...prev.ema.periods, p];
+              return { ...prev, ema: { ...prev.ema, periods: periods.length ? periods : [p] } };
+            })} style={{
+              background: indicators.ema.periods.includes(p) ? "#a78bfa33" : "transparent",
+              color: indicators.ema.periods.includes(p) ? "#a78bfa" : "#4b5563",
+              border: `1px solid ${indicators.ema.periods.includes(p) ? "#a78bfa" : "#1e2d50"}`,
+              borderRadius: 10, padding: "2px 6px", fontSize: 9, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+            }}>{p}</button>
+          ))}
+        </div>
+
+        {/* Row 3: Drawing list (only if there are drawings) */}
+        {!compact && drawings.length > 0 && (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+            {drawings.map(d => {
+              const label = d.type === "hline"
+                ? `H: ${(d as HLineDrawing).price.toFixed(dec)}${(d as HLineDrawing).label ? ` (${(d as HLineDrawing).label})` : ""}`
+                : d.type === "trendline"
+                ? `Tendência`
+                : `Fib ${(d as FibDrawing).lowPrice.toFixed(dec)}–${(d as FibDrawing).highPrice.toFixed(dec)}`;
+              return (
+                <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 4, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 5, padding: "2px 6px" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+                  <span style={{ color: "#94a3b8", fontSize: 10 }}>{label}</span>
+                  <button onClick={() => removeDrawing(d.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 11, padding: 0, lineHeight: 1 }}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (status === "loading" || !selectedPair) {
     return (
       <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1506,8 +1857,11 @@ export default function TradePage() {
           ))}
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
             {candleTimer && <span style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontVariantNumeric: "tabular-nums" }}>{candleTimer}</span>}
-            <button onClick={() => setShowIndicators(v => !v)} style={{ height: 24, padding: "0 8px", background: showIndicators ? "rgba(245,166,35,0.12)" : "transparent", color: showIndicators ? "#f5a623" : "#4b5563", border: `1px solid ${showIndicators ? "rgba(245,166,35,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={() => { setShowTools(false); setShowIndicators(v => !v); }} style={{ height: 24, padding: "0 8px", background: showIndicators ? "rgba(245,166,35,0.12)" : "transparent", color: showIndicators ? "#f5a623" : "#4b5563", border: `1px solid ${showIndicators ? "rgba(245,166,35,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
               IND
+            </button>
+            <button onClick={() => { setShowIndicators(false); setShowTools(v => !v); if (showTools) { setActiveTool(null); setPendingPoint(null); } }} style={{ height: 24, padding: "0 8px", background: showTools ? "rgba(34,197,94,0.1)" : "transparent", color: showTools ? "#22c55e" : "#4b5563", border: `1px solid ${showTools ? "rgba(34,197,94,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+              TOOLS
             </button>
           </div>
         </div>
@@ -1519,9 +1873,16 @@ export default function TradePage() {
           </div>
         )}
 
+        {/* ── Drawing tools panel (mobile overlay) ── */}
+        {showTools && (
+          <div style={{ position: "fixed", top: TOPBAR_H + TICKER_H + TF_H, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
+            {renderDrawingToolsPanel(true)}
+          </div>
+        )}
+
         {/* ── Chart ── */}
         <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
-          <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
+          <div ref={chartRef} style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : "default" }} />
           {renderLegend()}
           <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
@@ -1861,10 +2222,18 @@ export default function TradePage() {
               borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
               transition: "all 0.12s",
             }}>Indicadores</button>
+            <button onClick={() => { setShowTools(v => !v); if (showTools) { setActiveTool(null); setPendingPoint(null); } }} style={{
+              background: showTools ? "rgba(34,197,94,0.1)" : "transparent",
+              color: showTools ? "#22c55e" : "#4b5563",
+              border: `1px solid ${showTools ? "rgba(34,197,94,0.4)" : "#1e2d50"}`,
+              borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              transition: "all 0.12s",
+            }}>Ferramentas</button>
           </div>
           {showIndicators && renderIndicatorPanel()}
+          {showTools && renderDrawingToolsPanel()}
           <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
-            <div ref={chartRef} style={{ width: "100%", height: "100%" }} />
+            <div ref={chartRef} style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : "default" }} />
             {renderLegend()}
             <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
               <span style={{ fontSize: 52, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 4, userSelect: "none" }}>{selectedPair?.label}</span>

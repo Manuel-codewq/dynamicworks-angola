@@ -1,5 +1,9 @@
 import { prisma } from "./prisma";
 
+// Operações que devem falhar FECHADO quando a BD está indisponível.
+// Para estas, um erro de DB resulta em "bloqueado" para proteger o sistema.
+const FAIL_CLOSED_STORES = new Set(["login", "register", "otp"]);
+
 /**
  * Rate limiting persistente via DB — funciona em ambientes serverless/multi-instância.
  *
@@ -42,7 +46,8 @@ export async function checkRateLimit(
 
     return result;
   } catch {
-    // Em caso de falha de DB, falha aberta para não bloquear utilizadores legítimos
-    return true;
+    // Operações sensíveis falham fechado (bloqueadas) em caso de erro de BD.
+    // Operações menos críticas (ex: trade) falham abertas para não prejudicar utilizadores legítimos.
+    return !FAIL_CLOSED_STORES.has(name);
   }
 }

@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import { checkRateLimit } from "./rateLimit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
@@ -22,6 +23,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!credentials?.email || !credentials?.password) return null;
 
           const normalizedEmail = (credentials.email as string).toLowerCase().trim();
+
+          // 10 tentativas por email por 15 minutos — protecção contra brute-force
+          if (!await checkRateLimit("login", normalizedEmail, 10, 15 * 60_000)) {
+            return null;
+          }
 
           const user = await prisma.user.findUnique({
             where: { email: normalizedEmail },
