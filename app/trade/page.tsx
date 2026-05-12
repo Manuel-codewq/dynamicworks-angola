@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
-  CandlestickSeries, LineSeries, HistogramSeries,
+  CandlestickSeries, LineSeries, HistogramSeries, AreaSeries, BarSeries,
 } from "lightweight-charts";
 import {
   derivWS, GRANULARITY, getAvailablePairs, isRealMarketOpen,
@@ -226,6 +226,16 @@ export default function TradePage() {
 
   // ── Indicator state + refs ───────────────────────────────────────────────
   const [showIndicators, setShowIndicators] = useState(false);
+  // Quotex-style left panel
+  type LeftPanel = "indicators" | "drawings" | null;
+  const [leftPanel,    setLeftPanel]    = useState<LeftPanel>(null);
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [pendingCfg,   setPendingCfg]   = useState<Record<string, any>>({});
+  // Chart type
+  type ChartType = "candle" | "line" | "area" | "bar";
+  const [chartType, setChartType] = useState<ChartType>("candle");
+  const chartTypeRef = useRef<ChartType>("candle");
+  useEffect(() => { chartTypeRef.current = chartType; }, [chartType]);
 
   const DEFAULT_INDICATORS = {
     ma:         { enabled: false, periods: [20] as number[] },
@@ -979,7 +989,12 @@ export default function TradePage() {
       const candles = toChartCandles(raw);
       if (candles.length === 0) return;
 
-      candleSeriesRef.current.setData(candles);
+      const ct2 = chartTypeRef.current;
+      if (ct2 === "line" || ct2 === "area") {
+        candleSeriesRef.current.setData(candles.map(c => ({ time: c.time, value: c.close })) as any);
+      } else {
+        candleSeriesRef.current.setData(candles);
+      }
       candleDataRef.current = candles;
       recalcRef.current();
       currentCandleRef.current = candles[candles.length - 1];
@@ -1131,24 +1146,24 @@ export default function TradePage() {
       });
 
       const dec = selectedPair?.decimals ?? 5;
-      const series = chart.addSeries(CandlestickSeries, {
-        upColor:       "#22c55e", downColor:       "#ef4444",
-        borderUpColor: "#22c55e", borderDownColor: "#ef4444",
-        wickUpColor:   "#22c55e", wickDownColor:   "#ef4444",
-        lastValueVisible: false,
-        priceFormat: { type: "price", precision: dec, minMove: Math.pow(10, -dec) },
-      });
+      const priceFormat = { type: "price" as const, precision: dec, minMove: Math.pow(10, -dec) };
+      const ct = chartTypeRef.current;
+      let series: ISeriesApi<any>;
+      if (ct === "line") {
+        series = chart.addSeries(LineSeries, { color: "#f5a623", lineWidth: 2, priceFormat, lastValueVisible: false, priceLineVisible: false });
+      } else if (ct === "area") {
+        series = chart.addSeries(AreaSeries, { lineColor: "#f5a623", topColor: "rgba(245,166,35,0.3)", bottomColor: "rgba(245,166,35,0.0)", lineWidth: 2, priceFormat, lastValueVisible: false, priceLineVisible: false });
+      } else if (ct === "bar") {
+        series = chart.addSeries(BarSeries, { upColor: "#22c55e", downColor: "#ef4444", priceFormat, lastValueVisible: false });
+      } else {
+        series = chart.addSeries(CandlestickSeries, { upColor: "#22c55e", downColor: "#ef4444", borderUpColor: "#22c55e", borderDownColor: "#ef4444", wickUpColor: "#22c55e", wickDownColor: "#ef4444", lastValueVisible: false, priceFormat });
+      }
       candleSeriesRef.current  = series;
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
-      livePriceLineRef.current = series.createPriceLine({
-        price: SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1,
-        color: "#22c55e",
-        lineWidth: 1,
-        lineStyle: 0,
-        axisLabelVisible: true,
-        title: "",
-      });
+      if (ct === "candle" || ct === "bar") {
+        livePriceLineRef.current = series.createPriceLine({ price: SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1, color: "#22c55e", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "" });
+      }
       // Null indicator refs — chart.remove() invalidated them
       maSeriesRefs.current.clear(); emaSeriesRefs.current.clear();
       bbUpperRef.current  = null; bbMiddleRef.current  = null; bbLowerRef.current = null;
@@ -1247,7 +1262,7 @@ export default function TradePage() {
         delete (chartApiRef as any)._roDisconnect;
       }
     };
-  }, [selectedPair, isMobile, windowHeight]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPair, isMobile, windowHeight, chartType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch wallet data when mobile wallet tab opens ───────────────────────
   useEffect(() => {
@@ -1957,6 +1972,319 @@ export default function TradePage() {
               );
             })}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Left sidebar + Quotex-style slide-in panel ──────────────────────────────
+
+  function renderLeftSidebar() {
+    const CHART_TYPES: { id: ChartType; icon: string; label: string }[] = [
+      { id: "candle", icon: "🕯️", label: "Candlestick" },
+      { id: "line",   icon: "📈", label: "Linha" },
+      { id: "area",   icon: "🏔️", label: "Área" },
+      { id: "bar",    icon: "📊", label: "Barra" },
+    ];
+    const [showChartMenu, setShowChartMenu] = [false, (_: any) => {}]; // static placeholder
+    const sBtn = (active: boolean, onClick: () => void, icon: string, label: string) => (
+      <button title={label} onClick={onClick} style={{
+        width: 36, height: 36, background: active ? "rgba(245,166,35,0.15)" : "transparent",
+        border: active ? "1px solid rgba(245,166,35,0.4)" : "1px solid transparent",
+        borderRadius: 8, color: active ? "#f5a623" : "#64748b", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 15, transition: "all 0.15s",
+      }}>{icon}</button>
+    );
+    return (
+      <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 44, zIndex: 30, background: "#070d1c", borderRight: "1px solid #1a2540", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, paddingBottom: 10, gap: 4 }}>
+
+        {/* Drawings */}
+        {sBtn(leftPanel === "drawings", () => setLeftPanel(p => p === "drawings" ? null : "drawings"), "✏️", "Ferramentas de Desenho")}
+
+        <div style={{ width: 24, height: 1, background: "#1a2540", margin: "4px 0" }} />
+
+        {/* Chart type */}
+        <div style={{ position: "relative" }}>
+          <button title="Tipo de Gráfico" onClick={() => setExpandedItem(p => p === "__charttype" ? null : "__charttype")} style={{
+            width: 36, height: 36, background: expandedItem === "__charttype" ? "rgba(245,166,35,0.15)" : "transparent",
+            border: expandedItem === "__charttype" ? "1px solid rgba(245,166,35,0.4)" : "1px solid transparent",
+            borderRadius: 8, color: expandedItem === "__charttype" ? "#f5a623" : "#64748b", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, transition: "all 0.15s",
+          }}>{CHART_TYPES.find(t => t.id === chartType)?.icon ?? "🕯️"}</button>
+          {expandedItem === "__charttype" && (
+            <div style={{ position: "absolute", left: 42, top: 0, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: 6, display: "flex", flexDirection: "column", gap: 4, zIndex: 200, minWidth: 140, boxShadow: "4px 4px 20px rgba(0,0,0,0.5)" }}>
+              {CHART_TYPES.map(ct => (
+                <button key={ct.id} onClick={() => { setChartType(ct.id); setExpandedItem(null); }} style={{
+                  background: chartType === ct.id ? "rgba(245,166,35,0.12)" : "transparent",
+                  color: chartType === ct.id ? "#f5a623" : "#94a3b8",
+                  border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer",
+                  fontSize: 12, fontWeight: chartType === ct.id ? 700 : 400, textAlign: "left",
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  <span>{ct.icon}</span>{ct.label}
+                  {chartType === ct.id && <span style={{ marginLeft: "auto", color: "#f5a623" }}>✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ width: 24, height: 1, background: "#1a2540", margin: "4px 0" }} />
+
+        {/* Indicators */}
+        {sBtn(leftPanel === "indicators", () => setLeftPanel(p => p === "indicators" ? null : "indicators"), "📊", "Indicadores")}
+
+        <div style={{ flex: 1 }} />
+
+        {/* Fullscreen */}
+        {sBtn(false, () => {
+          const el = document.documentElement;
+          if (!document.fullscreenElement) el.requestFullscreen?.();
+          else document.exitFullscreen?.();
+        }, "⛶", "Ecrã inteiro")}
+      </div>
+    );
+  }
+
+  function renderSlideInPanel() {
+    if (!leftPanel) return null;
+
+    const INDICATOR_LIST = [
+      { section: "TENDÊNCIA", items: [
+        { key: "ma",        label: "Média Móvel (MA/EMA/WMA)" },
+        { key: "bb",        label: "Bollinger Bands" },
+        { key: "alligator", label: "Alligator" },
+        { key: "donchian",  label: "Donchian Channel" },
+        { key: "keltner",   label: "Keltner Channel" },
+        { key: "sar",       label: "Parabolic SAR" },
+        { key: "ichimoku",  label: "Ichimoku Cloud", soon: true },
+        { key: "supertrend",label: "Supertrend",     soon: true },
+        { key: "fractal",   label: "Fractal",        soon: true },
+        { key: "zigzag",    label: "Zig Zag",        soon: true },
+      ]},
+      { section: "OSCILADORES", items: [
+        { key: "rsi",        label: "RSI" },
+        { key: "macd",       label: "MACD" },
+        { key: "stoch",      label: "Stochastic" },
+        { key: "atr",        label: "ATR" },
+        { key: "cci",        label: "CCI" },
+        { key: "adx",        label: "ADX" },
+        { key: "willr",      label: "Williams %R" },
+        { key: "momentum",   label: "Momentum" },
+        { key: "ao",         label: "Awesome Oscillator" },
+        { key: "bearsbulls", label: "Bears/Bulls Power" },
+        { key: "aroon",      label: "Aroon",          soon: true },
+        { key: "roc",        label: "Rate of Change", soon: true },
+        { key: "stc",        label: "Schaff Trend",   soon: true },
+        { key: "vortex",     label: "Vortex",         soon: true },
+        { key: "demarker",   label: "DeMarker",       soon: true },
+        { key: "volume_osc", label: "Volume Oscillator", soon: true },
+        { key: "weis",       label: "Weis Waves",     soon: true },
+      ]},
+    ];
+
+    const DRAWING_LIST = [
+      { section: "DESENHOS", items: [
+        { key: "hline",     label: "Linha Horizontal" },
+        { key: "trendline", label: "Linha de Tendência" },
+        { key: "fibonacci", label: "Fibonacci Retracement" },
+        { key: "rectangle", label: "Rectângulo" },
+        { key: "vline",     label: "Linha Vertical", soon: true },
+        { key: "ray",       label: "Ray",           soon: true },
+        { key: "extline",   label: "Extended Line", soon: true },
+        { key: "channel",   label: "Parallel Channel", soon: true },
+        { key: "pitchfork", label: "Pitchfork",     soon: true },
+        { key: "fibfan",    label: "Fibonacci Fan", soon: true },
+        { key: "gannbox",   label: "Gann Box",      soon: true },
+        { key: "triangle",  label: "Triangle",      soon: true },
+        { key: "arc",       label: "Arc",           soon: true },
+        { key: "daterange", label: "Date Range",    soon: true },
+        { key: "pricerange",label: "Price Range",   soon: true },
+      ]},
+    ];
+
+    const isIndOn = (key: string) => key in indicators ? (indicators[key as keyof typeof indicators] as any).enabled : false;
+    const toggleInd = (key: string) => {
+      if (key in indicators) setIndicators(p => ({ ...p, [key]: { ...(p[key as keyof typeof indicators] as any), enabled: !(p[key as keyof typeof indicators] as any).enabled } }));
+    };
+
+    const list = leftPanel === "indicators" ? INDICATOR_LIST : DRAWING_LIST;
+    const title = leftPanel === "indicators" ? "Indicadores" : "Ferramentas";
+
+    const activeInds = leftPanel === "indicators" ? Object.keys(indicators).filter(k => (indicators[k as keyof typeof indicators] as any).enabled) : drawings.map(d => d.id);
+    const activeCount = activeInds.length;
+
+    // Render settings fields for an indicator
+    const renderIndSettings = (key: string) => {
+      const cfg = pendingCfg[key] ?? {};
+      const field = (label: string, fkey: string, placeholder: string, type = "number") => (
+        <label key={fkey} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</span>
+          <input type={type} placeholder={placeholder} value={cfg[fkey] ?? ""} onChange={e => setPendingCfg(p => ({ ...p, [key]: { ...(p[key] ?? {}), [fkey]: e.target.value } }))}
+            style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 6, color: "#e2e8f0", fontSize: 12, padding: "5px 9px", outline: "none", width: "100%" }} />
+        </label>
+      );
+      const colorField = (label: string, fkey: string, def: string) => (
+        <label key={fkey} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</span>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <input type="color" value={cfg[fkey] ?? def} onChange={e => setPendingCfg(p => ({ ...p, [key]: { ...(p[key] ?? {}), [fkey]: e.target.value } }))}
+              style={{ width: 28, height: 24, border: "none", borderRadius: 4, cursor: "pointer", background: "transparent" }} />
+            <span style={{ color: "#64748b", fontSize: 11 }}>{cfg[fkey] ?? def}</span>
+          </div>
+        </label>
+      );
+      const applyBtn = (onApply: () => void) => (
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <button onClick={onApply} style={{ flex: 1, background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 7, color: "#f5a623", fontSize: 11, fontWeight: 700, padding: "6px 0", cursor: "pointer" }}>Aplicar</button>
+          <button onClick={() => setPendingCfg(p => ({ ...p, [key]: {} }))} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid #1e2d50", borderRadius: 7, color: "#64748b", fontSize: 11, padding: "6px 10px", cursor: "pointer" }}>Reset</button>
+        </div>
+      );
+
+      const fields: Record<string, React.ReactElement[]> = {
+        ma: [field("Período", "period", "ex: 20"), field("Tipo", "type", "SMA/EMA/WMA", "text"), colorField("Cor", "color", "#f5a623")],
+        bb: [field("Período", "period", "ex: 20"), field("Desvio padrão", "mult", "ex: 2"), colorField("Cor superior", "colorUp", "#38bdf8"), colorField("Cor inferior", "colorDn", "#38bdf8")],
+        alligator: [field("Período Jaw", "jaw", "ex: 13"), field("Período Teeth", "teeth", "ex: 8"), field("Período Lips", "lips", "ex: 5"), colorField("Cor Jaw", "colorJaw", "#3b82f6"), colorField("Cor Teeth", "colorTeeth", "#ef4444"), colorField("Cor Lips", "colorLips", "#22c55e")],
+        donchian: [field("Período", "period", "ex: 20"), colorField("Cor superior", "colorUp", "#fbbf24"), colorField("Cor inferior", "colorDn", "#fbbf24")],
+        keltner: [field("Período", "period", "ex: 20"), field("Multiplicador", "mult", "ex: 2"), colorField("Cor", "color", "#c084fc")],
+        sar: [field("Step", "step", "ex: 0.02"), field("Maximum", "max", "ex: 0.2"), colorField("Cor", "color", "#f97316")],
+        rsi: [field("Período", "period", "ex: 14"), field("Sobrecompra", "ob", "ex: 70"), field("Sobrevenda", "os", "ex: 30"), colorField("Cor", "color", "#f97316")],
+        macd: [field("Fast", "fast", "ex: 12"), field("Slow", "slow", "ex: 26"), field("Signal", "signal", "ex: 9"), colorField("Cor MACD", "colorMacd", "#22c55e"), colorField("Cor Signal", "colorSig", "#ef4444")],
+        stoch: [field("Período K", "kp", "ex: 14"), field("Período D", "dp", "ex: 3"), field("Sobrecompra", "ob", "ex: 80"), field("Sobrevenda", "os", "ex: 20"), colorField("Cor K", "colorK", "#22d3ee"), colorField("Cor D", "colorD", "#f59e0b")],
+        atr: [field("Período", "period", "ex: 14"), colorField("Cor", "color", "#fb923c")],
+        cci: [field("Período", "period", "ex: 20"), field("Sobrecompra", "ob", "ex: 100"), field("Sobrevenda", "os", "ex: -100"), colorField("Cor", "color", "#f43f5e")],
+        adx: [field("Período", "period", "ex: 14"), field("Nível ref.", "level", "ex: 25"), colorField("Cor ADX", "colorAdx", "#f5a623"), colorField("Cor +DI", "colorPlus", "#22c55e"), colorField("Cor -DI", "colorMinus", "#ef4444")],
+        willr: [field("Período", "period", "ex: 14"), field("Sobrecompra", "ob", "ex: -20"), field("Sobrevenda", "os", "ex: -80"), colorField("Cor", "color", "#818cf8")],
+        momentum: [field("Período", "period", "ex: 10"), colorField("Cor", "color", "#2dd4bf")],
+        ao: [colorField("Cor positiva", "colorPos", "#22c55e"), colorField("Cor negativa", "colorNeg", "#ef4444")],
+        bearsbulls: [field("Período", "period", "ex: 13"), colorField("Bears", "colorBear", "#ef4444"), colorField("Bulls", "colorBull", "#22c55e")],
+      };
+
+      const getApply = (k: string) => () => {
+        const c = pendingCfg[k] ?? {};
+        const num = (v: any, def: number) => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : def; };
+        const updates: Partial<typeof indicators> = {};
+        if (k === "ma" || k === "ema") {
+          const period = num(c.period, 20);
+          (updates as any)[k] = { ...indicators[k as "ma"], enabled: true, periods: [period] };
+        } else if (k === "bb") (updates as any).bb = { ...indicators.bb, enabled: true, period: num(c.period, 20), mult: num(c.mult, 2) };
+        else if (k === "donchian") (updates as any).donchian = { ...indicators.donchian, enabled: true, period: num(c.period, 20) };
+        else if (k === "keltner") (updates as any).keltner = { ...indicators.keltner, enabled: true, period: num(c.period, 20), mult: num(c.mult, 2) };
+        else if (k === "sar") (updates as any).sar = { ...indicators.sar, enabled: true, step: num(c.step, 0.02), max: num(c.max, 0.2) };
+        else if (k === "rsi") (updates as any).rsi = { ...indicators.rsi, enabled: true, period: num(c.period, 14) };
+        else if (k === "macd") (updates as any).macd = { ...indicators.macd, enabled: true, fast: num(c.fast, 12), slow: num(c.slow, 26), signal: num(c.signal, 9) };
+        else if (k === "stoch") (updates as any).stoch = { ...indicators.stoch, enabled: true, kPeriod: num(c.kp, 14), dPeriod: num(c.dp, 3) };
+        else if (k === "atr") (updates as any).atr = { ...indicators.atr, enabled: true, period: num(c.period, 14) };
+        else if (k === "cci") (updates as any).cci = { ...indicators.cci, enabled: true, period: num(c.period, 20) };
+        else if (k === "adx") (updates as any).adx = { ...indicators.adx, enabled: true, period: num(c.period, 14) };
+        else if (k === "willr") (updates as any).willr = { ...indicators.willr, enabled: true, period: num(c.period, 14) };
+        else if (k === "momentum") (updates as any).momentum = { ...indicators.momentum, enabled: true, period: num(c.period, 10) };
+        else if (k === "alligator" || k === "ao" || k === "bearsbulls") (updates as any)[k] = { ...(indicators[k as keyof typeof indicators] as any), enabled: true };
+        setIndicators(p => ({ ...p, ...updates }));
+        setExpandedItem(null);
+      };
+
+      const fList = fields[key];
+      if (!fList) return null;
+      return (
+        <div style={{ padding: "10px 16px 14px", background: "#070d1c", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>{fList}</div>
+          {applyBtn(getApply(key))}
+        </div>
+      );
+    };
+
+    // Render settings for a drawing tool
+    const renderDrawingSettings = (key: string) => {
+      const cfg = pendingCfg[`draw_${key}`] ?? {};
+      const setD = (f: string, v: any) => setPendingCfg(p => ({ ...p, [`draw_${key}`]: { ...(p[`draw_${key}`] ?? {}), [f]: v } }));
+      return (
+        <div style={{ padding: "10px 16px 14px", background: "#070d1c", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>Cor</span>
+              <input type="color" value={cfg.color ?? toolColor} onChange={e => { setD("color", e.target.value); setToolColor(e.target.value); }}
+                style={{ width: "100%", height: 26, border: "none", borderRadius: 5, cursor: "pointer", background: "transparent" }} />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>Espessura</span>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[1,2,3].map(w => <button key={w} onClick={() => { setD("width", w); setToolLineWidth(w); }} style={{ flex: 1, background: toolLineWidth === w ? "rgba(245,166,35,0.15)" : "#0d1526", border: `1px solid ${toolLineWidth === w ? "#f5a623" : "#1e2d50"}`, borderRadius: 5, color: toolLineWidth === w ? "#f5a623" : "#64748b", fontSize: 11, padding: "4px 0", cursor: "pointer" }}>{w}px</button>)}
+              </div>
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>Estilo</span>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[["───",0],["---",1],["···",2]].map(([l,s]) => <button key={s} onClick={() => { setD("style", s); setToolLineStyle(s as number); }} style={{ flex: 1, background: toolLineStyle === s ? "rgba(245,166,35,0.15)" : "#0d1526", border: `1px solid ${toolLineStyle === s ? "#f5a623" : "#1e2d50"}`, borderRadius: 5, color: toolLineStyle === s ? "#f5a623" : "#64748b", fontSize: 9, padding: "4px 0", cursor: "pointer" }}>{l}</button>)}
+              </div>
+            </label>
+          </div>
+          <button onClick={() => { setActiveTool(key as DrawingTool); setPendingPoint(null); pendingPointRef.current = null; setExpandedItem(null); }} style={{ background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 7, color: "#f5a623", fontSize: 11, fontWeight: 700, padding: "7px 0", cursor: "pointer" }}>
+            ✏️ Selecionar ferramenta
+          </button>
+        </div>
+      );
+    };
+
+    return (
+      <div style={{ position: "absolute", top: 0, left: 44, width: 320, height: "100%", zIndex: 25, background: "#0a0f1e", borderRight: "1px solid #1e2d50", display: "flex", flexDirection: "column", boxShadow: "4px 0 24px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #1e2d50", flexShrink: 0, background: "#080e1d" }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{title}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {activeCount > 0 && <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{activeCount}</span>}
+            <button onClick={() => setLeftPanel(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 6, width: 26, height: 26, color: "#94a3b8", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          </div>
+        </div>
+
+        {/* Scrollable list */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {list.map(section => (
+            <div key={section.section}>
+              <div style={{ padding: "10px 16px 6px", fontSize: 10, fontWeight: 700, color: "#334155", letterSpacing: 1.2, textTransform: "uppercase" }}>{section.section}</div>
+              {section.items.map((item: any) => {
+                const isActive = leftPanel === "indicators" ? isIndOn(item.key) : activeTool === item.key;
+                const isExp = expandedItem === item.key;
+                return (
+                  <div key={item.key} style={{ borderBottom: "1px solid #0d1526" }}>
+                    <button onClick={() => {
+                      if (item.soon) return;
+                      setExpandedItem(p => p === item.key ? null : item.key);
+                      if (leftPanel === "drawings" && !isExp) {
+                        setActiveTool(item.key as DrawingTool);
+                        setPendingPoint(null); pendingPointRef.current = null;
+                      }
+                    }} style={{ width: "100%", display: "flex", alignItems: "center", padding: "11px 16px", background: isActive ? "rgba(245,166,35,0.04)" : "transparent", border: "none", cursor: item.soon ? "default" : "pointer", textAlign: "left", gap: 10 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: isActive ? "#f5a623" : "#1e2d50", flexShrink: 0 }} />
+                      <span style={{ flex: 1, color: isActive ? "#fff" : item.soon ? "#334155" : "#94a3b8", fontSize: 13, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
+                      {item.soon && <span style={{ background: "rgba(100,116,139,0.1)", color: "#334155", borderRadius: 4, padding: "1px 6px", fontSize: 9, fontWeight: 600 }}>EM BREVE</span>}
+                      {isActive && leftPanel === "indicators" && !item.soon && (
+                        <button onClick={e => { e.stopPropagation(); setIndicators(p => ({ ...p, [item.key]: { ...(p[item.key as keyof typeof indicators] as any), enabled: false } })); }} style={{ background: "rgba(239,68,68,0.1)", border: "none", borderRadius: 4, color: "#ef4444", fontSize: 10, cursor: "pointer", padding: "2px 6px", flexShrink: 0 }}>✕</button>
+                      )}
+                      {!item.soon && <span style={{ color: "#334155", fontSize: 12 }}>{isExp ? "⌃" : "⌄"}</span>}
+                    </button>
+                    {isExp && !item.soon && (
+                      leftPanel === "indicators" ? renderIndSettings(item.key) : renderDrawingSettings(item.key)
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {/* Delete all */}
+          {activeCount > 0 && (
+            <div style={{ padding: 14 }}>
+              <button onClick={() => {
+                if (leftPanel === "indicators") setIndicators(DEFAULT_INDICATORS);
+                else clearAllDrawings();
+              }} style={{ width: "100%", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#ef4444", fontSize: 12, fontWeight: 700, padding: "9px 0", cursor: "pointer" }}>
+                🗑️ Apagar tudo
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -2812,26 +3140,14 @@ export default function TradePage() {
                 {candleTimer}
               </span>
             )}
-            <button onClick={() => setShowIndicators(v => !v)} style={{
-              background: showIndicators ? "rgba(245,166,35,0.12)" : "transparent",
-              color: showIndicators ? "#f5a623" : "#4b5563",
-              border: `1px solid ${showIndicators ? "rgba(245,166,35,0.4)" : "#1e2d50"}`,
-              borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
-              transition: "all 0.12s",
-            }}>Indicadores</button>
-            <button onClick={() => { setShowTools(v => !v); if (showTools) { setActiveTool(null); setPendingPoint(null); } }} style={{
-              background: showTools ? "rgba(34,197,94,0.1)" : "transparent",
-              color: showTools ? "#22c55e" : "#4b5563",
-              border: `1px solid ${showTools ? "rgba(34,197,94,0.4)" : "#1e2d50"}`,
-              borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
-              transition: "all 0.12s",
-            }}>Ferramentas</button>
           </div>
-          {showIndicators && renderIndicatorPanel()}
-          {showTools && renderDrawingToolsPanel()}
-          <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+          <div style={{ flex: 1, minHeight: 0, position: "relative" }} onClick={() => { if (expandedItem === "__charttype") setExpandedItem(null); }}>
+            {/* Left sidebar */}
+            {renderLeftSidebar()}
+            {/* Slide-in panel */}
+            {renderSlideInPanel()}
             <div ref={chartRef}
-            style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
             onMouseDown={e => onChartPointerDown(e.clientY)}
             onMouseMove={e => onChartPointerMove(e.clientY)}
             onMouseUp={onChartPointerUp}
@@ -2841,9 +3157,6 @@ export default function TradePage() {
             onTouchEnd={onChartPointerUp}
           />
             {renderLegend()}
-            <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-              <span style={{ fontSize: 52, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 4, userSelect: "none" }}>{selectedPair?.label}</span>
-            </div>
             {/* Zoom controls — bottom centre, over time axis */}
             <div style={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", gap: 4 }}>
               <button onClick={() => { const ts = chartApiRef.current?.timeScale(); if (!ts) return; const cur = (ts.options() as any).barSpacing ?? 6; ts.applyOptions({ barSpacing: Math.max(cur - 2, 2) }); }}
