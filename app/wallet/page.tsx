@@ -55,6 +55,9 @@ export default function WalletPage() {
   const [otpLoading,    setOtpLoading]    = useState(false);
   const [pendingType,   setPendingType]   = useState<"deposit" | "withdrawal" | null>(null);
   const [kycStatus,     setKycStatus]     = useState<string>("pending");
+  const [promoCode,     setPromoCode]     = useState("");
+  const [promoLoading,  setPromoLoading]  = useState(false);
+  const [promoMsg,      setPromoMsg]      = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -121,6 +124,24 @@ export default function WalletPage() {
       fetch("/api/transactions").then(r => r.json()).then(d => { if (Array.isArray(d)) setTransactions(d); });
     } else {
       setMsg({ text: d.error, ok: false });
+    }
+  }
+
+  async function redeemPromo() {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true); setPromoMsg(null);
+    const res = await fetch("/api/promo/redeem", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: promoCode }),
+    });
+    const d = await res.json();
+    setPromoLoading(false);
+    if (res.ok) {
+      setPromoMsg({ text: `🎉 Código aplicado! + ${formatKz(d.value)} adicionados à tua conta real.`, ok: true });
+      setPromoCode("");
+      fetch("/api/balance").then(r => r.json()).then(b => { setBalance(b.balance); });
+    } else {
+      setPromoMsg({ text: d.error ?? "Código inválido", ok: false });
     }
   }
 
@@ -328,6 +349,49 @@ export default function WalletPage() {
             )}
           </div>
         )}
+
+        {/* ── Código Promocional ── */}
+        <div style={{ background: "#111827", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 14, padding: 20, marginTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <div style={{ width: 34, height: 34, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 16 }}>🎁</span>
+            </div>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Código Promocional</div>
+              <div style={{ color: "#64748b", fontSize: 12 }}>Introduz um código para receber bónus</div>
+            </div>
+          </div>
+
+          {promoMsg && (
+            <div style={{
+              background: promoMsg.ok ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+              border: `1px solid ${promoMsg.ok ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
+              borderRadius: 8, padding: "10px 14px", marginBottom: 14,
+              color: promoMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13,
+            }}>{promoMsg.text}</div>
+          )}
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              value={promoCode}
+              onChange={e => setPromoCode(e.target.value.toUpperCase())}
+              placeholder="Ex: BONUS2025"
+              style={{ ...inputStyle, flex: 1, letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" }}
+            />
+            <button
+              onClick={redeemPromo}
+              disabled={promoLoading || !promoCode.trim()}
+              style={{
+                background: "linear-gradient(135deg,#f5a623,#e8940f)", color: "#000",
+                border: "none", borderRadius: 8, padding: "0 18px", fontWeight: 800,
+                fontSize: 13, cursor: promoLoading || !promoCode.trim() ? "not-allowed" : "pointer",
+                opacity: promoLoading || !promoCode.trim() ? 0.5 : 1, whiteSpace: "nowrap",
+              }}>
+              {promoLoading ? "..." : "Aplicar"}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── Modal OTP ── */}

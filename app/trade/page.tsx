@@ -1783,6 +1783,7 @@ export default function TradePage() {
     const BOTTOMNAV_H   = 52;
     const OPSPANEL_H    = 230;
     const CONTENT_TOP   = TOPBAR_H + TF_H;
+    const OVERLAY_TOP   = 0;
     const chartTop      = CONTENT_TOP;
     const chartH        = windowHeight > 0 ? windowHeight - CONTENT_TOP - TRADEPANEL_H - BOTTOMNAV_H : 360;
 
@@ -1800,8 +1801,8 @@ export default function TradePage() {
           />
         )}
 
-        {/* ── Topbar ── */}
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
+        {/* ── Topbar (chart tab only) ── */}
+        {mobileTab === "chart" && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <div style={{ width: 24, height: 24, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 10px rgba(245,166,35,0.35)" }}>
               <TrendingUp size={12} color="#0a0f1e" strokeWidth={2.5} />
@@ -1828,10 +1829,10 @@ export default function TradePage() {
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
             <span style={{ background: isDemo ? "#f5a623" : "#22c55e", color: "#0a0f1e", borderRadius: 3, fontSize: 8, padding: "1px 4px", fontWeight: 900 }}>{isDemo ? "D" : "R"}</span>
           </button>
-        </div>
+        </div>}
 
         {/* ── Timeframe strip ── */}
-        <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
+        {mobileTab === "chart" && <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
           {["1m", "5m", "15m", "1h", "1D"].map(tf => (
             <button key={tf} onClick={() => setTimeframe(tf)} style={{ height: 24, padding: "0 9px", background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#0a0f1e" : "#64748b", border: `1px solid ${timeframe === tf ? "#f5a623" : "#1e2d50"}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {tf}
@@ -1846,7 +1847,7 @@ export default function TradePage() {
               TOOLS
             </button>
           </div>
-        </div>
+        </div>}
 
         {/* ── Indicator panel (mobile overlay) ── */}
         {showIndicators && (
@@ -1968,8 +1969,8 @@ export default function TradePage() {
           </div>
         )}
 
-        {/* ── Bottom trade panel (always visible, QX Broker style) ── */}
-        {(() => {
+        {/* ── Bottom trade panel (only visible on chart tab) ── */}
+        {mobileTab === "chart" && (() => {
           const btnDisabled = loading || currentPrice === 0;
           const currentPayout = payoutMap[selectedPair?.symbol ?? ""] ?? 0.74;
           const payoutAmt = Math.round(amount * currentPayout);
@@ -2073,7 +2074,7 @@ export default function TradePage() {
 
         {/* ── Markets overlay ── */}
         {mobileTab === "markets" && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 115, background: "#080e1d", display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#080e1d", display: "flex", flexDirection: "column" }}>
             {/* Header */}
             <div style={{ padding: "12px 14px 8px", flexShrink: 0, borderBottom: "1px solid #1a2540" }}>
               <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Mercados</span>
@@ -2128,7 +2129,7 @@ export default function TradePage() {
 
         {/* ── Wallet overlay ── */}
         {mobileTab === "wallet" && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 115, background: "#080e1d", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#080e1d", display: "flex", flexDirection: "column", overflowY: "auto" }}>
             <div style={{ padding: "14px 14px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Carteira</span>
               <button onClick={() => setWalletData(null)} style={{ background: "none", border: "none", color: "#f5a623", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px" }}>↺ Actualizar</button>
@@ -2196,7 +2197,7 @@ export default function TradePage() {
 
         {/* ── Account overlay ── */}
         {mobileTab === "account" && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 115, background: "#080e1d", overflowY: "auto" }}>
+          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#080e1d", overflowY: "auto" }}>
             <div style={{ padding: "16px 14px" }}>
               {/* Avatar + name */}
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, padding: "14px", background: "#0d1526", borderRadius: 14, border: "1px solid #1a2540" }}>

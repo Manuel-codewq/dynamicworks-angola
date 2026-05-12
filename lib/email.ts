@@ -307,3 +307,76 @@ export async function sendWithdrawalRejectedEmail(to: string, name: string, amou
     console.error("[email] Erro ao enviar withdrawal rejected email:", err);
   }
 }
+
+export async function sendTradeWinEmail(to: string, name: string, asset: string, amount: number, profit: number, returnAmount: number) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p(`A tua operação em <strong style="color:#fff;">${asset}</strong> foi encerrada com <strong style="color:#22c55e;">ganho</strong>! 🎉`)}
+    <div style="background:#0a0f1e;border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:20px 24px;margin:16px 0 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-bottom:10px;">
+            <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Investimento</span><br>
+            <span style="color:#fff;font-size:18px;font-weight:800;">${formatKz(Math.floor(amount))}</span>
+          </td>
+          <td style="padding-bottom:10px;text-align:right;">
+            <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Lucro</span><br>
+            <span style="color:#22c55e;font-size:22px;font-weight:900;">+ ${formatKz(Math.floor(profit))}</span>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="border-top:1px solid #1e2d50;padding-top:10px;">
+            <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total recebido</span><br>
+            <span style="color:#f5a623;font-size:20px;font-weight:900;">${formatKz(Math.floor(returnAmount))}</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+    ${p("O valor foi creditado automaticamente na tua conta. Continua a operar!")}
+    ${divider()}
+    ${btn("Operar novamente →", "https://dynamicsworks.ao/trade")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: `✅ Ganho de ${formatKz(Math.floor(profit))} em ${asset}`,
+      html:    baseTemplate("Operação ganha!", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar trade win email:", err);
+  }
+}
+
+export async function sendTradeLossEmail(to: string, name: string, asset: string, amount: number) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p(`A tua operação em <strong style="color:#fff;">${asset}</strong> foi encerrada com <strong style="color:#ef4444;">perda</strong>.`)}
+    <div style="background:#0a0f1e;border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:20px 24px;margin:16px 0 20px;">
+      <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Valor perdido</span><br>
+      <span style="color:#ef4444;font-size:24px;font-weight:900;">− ${formatKz(Math.floor(amount))}</span>
+    </div>
+    ${p("Faz parte do trading. Analisa o mercado, ajusta a tua estratégia e volta mais forte.")}
+    ${p("Lembra-te: só opera o que estás disposto(a) a perder e mantém sempre a gestão de risco.", "#64748b")}
+    ${divider()}
+    ${btn("Tentar novamente →", "https://dynamicsworks.ao/trade")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: `Operação encerrada — ${asset}`,
+      html:    baseTemplate("Operação encerrada", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar trade loss email:", err);
+  }
+}

@@ -205,6 +205,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NotificationToast />
         </SessionProvider>
 
+        {/* PWA Service Worker */}
+        <Script id="sw-register" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+            }
+          `}
+        </Script>
+
         {/* Google Analytics 4 — carrega após interacção para não penalizar performance */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}

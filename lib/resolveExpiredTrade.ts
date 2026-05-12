@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDerivPrice } from "@/lib/derivPrice";
+import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 
 // Tenta o preço mais recente da tabela PriceCandle (gravado pelo price-recorder).
 // Se não existir ou for demasiado antigo (> 90s), vai buscar ao Deriv via WS.
@@ -30,7 +31,7 @@ export type TradeToResolve = {
   expiresAt:  Date | null;
   status:     string;
   createdAt:  Date;
-  user:       { id: string; isDemo: boolean };
+  user:       { id: string; isDemo: boolean; email: string; name: string | null };
 };
 
 export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss";
@@ -138,6 +139,39 @@ export async function resolveExpiredTrade(
         });
       }
     } catch { /* silent — never fail trade resolution */ }
+  }
+
+  // Email throttle: só envia 1 email de resultado por utilizador a cada 4 horas
+  if (resolved && !trade.user.isDemo) {
+    try {
+      const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+      const recentEmail = await prisma.notification.findFirst({
+        where: {
+          userId: trade.userId,
+          type:   "trade_email_sent",
+          createdAt: { gte: fourHoursAgo },
+        },
+        select: { id: true },
+      });
+
+      if (!recentEmail) {
+        await prisma.notification.create({
+          data: {
+            userId:  trade.userId,
+            type:    "trade_email_sent",
+            title:   "Email de resultado enviado",
+            message: `Resultado: ${result}`,
+            read:    true,
+          },
+        });
+        const userName = trade.user.name ?? "Trader";
+        if (result === "win") {
+          sendTradeWinEmail(trade.user.email, userName, trade.asset, trade.amount, profit, returnAmount).catch(() => {});
+        } else {
+          sendTradeLossEmail(trade.user.email, userName, trade.asset, trade.amount).catch(() => {});
+        }
+      }
+    } catch { /* silent — nunca falhar a resolução de trade por causa do email */ }
   }
 
   return resolved ? result : "already_closed";

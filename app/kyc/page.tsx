@@ -401,62 +401,71 @@ export default function KYCVerificationPage() {
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
     *{box-sizing:border-box;margin:0;padding:0}
-    :root{--gold:#f5a623;--gold2:#e8950f;--dark:#070d1a;--card:#0f1825;--card2:#141e2e;--border:rgba(245,166,35,.15);--text:#e2e8f0;--muted:#64748b;--green:#22c55e;--red:#ef4444}
-    .kb{min-height:100vh;background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 80px;position:relative;overflow:hidden}
-    .kb::before{content:'';position:fixed;top:-40%;left:-20%;width:80%;height:80%;background:radial-gradient(ellipse,rgba(245,166,35,.06) 0%,transparent 70%);pointer-events:none}
-    .brand{font-family:'Syne',sans-serif;color:var(--gold);font-weight:800;font-size:18px;letter-spacing:3px;text-transform:uppercase;margin-bottom:32px;text-align:center}
-    .footer{position:fixed;bottom:16px;left:0;width:100%;text-align:center;font-size:11px;color:var(--muted);pointer-events:none;z-index:100}
-    .footer b{color:var(--gold)}
-    .view{display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;animation:rise .35s cubic-bezier(.22,1,.36,1) forwards}
-    @keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 22px;width:100%;text-align:center}
-    .icon-wrap{width:68px;height:68px;border-radius:50%;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);display:flex;align-items:center;justify-content:center;color:var(--gold);margin:0 auto 20px}
-    .h1{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:-.3px}
-    .sub{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:22px}
-    .tips{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.04);border-radius:14px;padding:14px;margin-bottom:22px;text-align:left}
-    .tip{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--text);margin-bottom:10px}
+    :root{--gold:#f5a623;--gold2:#e8950f;--dark:#070d1a;--card:#0d1626;--card2:#111e30;--border:rgba(245,166,35,.15);--border2:rgba(255,255,255,.06);--text:#e2e8f0;--muted:#64748b;--green:#22c55e;--red:#ef4444}
+    .kb{min-height:100vh;background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:0 16px 80px;position:relative;overflow-x:hidden}
+    .kb::before{content:'';position:fixed;top:-30%;left:-10%;width:70%;height:70%;background:radial-gradient(ellipse,rgba(245,166,35,.05) 0%,transparent 65%);pointer-events:none;z-index:0}
+    .topbar{width:100%;max-width:460px;display:flex;align-items:center;justify-content:space-between;padding:20px 0 24px;position:relative;z-index:1}
+    .topbar-logo{display:flex;align-items:center;gap:9px}
+    .topbar-logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#f5a623,#e8940f);border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(245,166,35,.3)}
+    .topbar-logo span{color:#f5a623;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;letter-spacing:.5px}
+    .back-btn{background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:9px;padding:7px 14px;color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+    .back-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
+    .view{display:flex;flex-direction:column;align-items:center;width:100%;max-width:440px;position:relative;z-index:1;animation:rise .35s cubic-bezier(.22,1,.36,1) forwards}
+    @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+    .card{background:var(--card);border:1px solid var(--border2);border-radius:22px;padding:28px 24px;width:100%;text-align:center;box-shadow:0 4px 40px rgba(0,0,0,.35)}
+    .icon-wrap{width:64px;height:64px;border-radius:50%;background:rgba(245,166,35,.07);border:1.5px solid rgba(245,166,35,.2);display:flex;align-items:center;justify-content:center;color:var(--gold);margin:0 auto 18px;box-shadow:0 0 20px rgba(245,166,35,.1)}
+    .h1{font-family:'Syne',sans-serif;font-size:21px;font-weight:700;margin-bottom:7px;letter-spacing:-.3px}
+    .sub{color:var(--muted);font-size:13.5px;line-height:1.65;margin-bottom:20px}
+    .steps-list{margin-bottom:22px;text-align:left;display:flex;flex-direction:column;gap:10px}
+    .step-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.025);border:1px solid var(--border2);border-radius:12px;padding:11px 14px}
+    .step-num{width:26px;height:26px;border-radius:50%;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.25);color:var(--gold);font-family:'Syne',sans-serif;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .step-text{font-size:13.5px;color:var(--text)}
+    .step-text small{display:block;color:var(--muted);font-size:11.5px;margin-top:1px}
+    .tips{background:rgba(0,0,0,.25);border:1px solid var(--border2);border-radius:14px;padding:13px 14px;margin-bottom:22px;text-align:left}
+    .tip{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);margin-bottom:9px}
     .tip:last-child{margin-bottom:0}
     .tip svg{color:var(--gold);flex-shrink:0}
-    .btn{width:100%;padding:15px;font-size:15px;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.3px;border:none;border-radius:14px;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:9px;transition:all .18s;margin-bottom:10px}
+    .btn{width:100%;padding:14px;font-size:14.5px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.2px;border:none;border-radius:13px;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:9px;transition:all .15s;margin-bottom:10px}
     .btn:last-child{margin-bottom:0}
     .btn:active{transform:scale(.97)}
-    .btn:disabled{opacity:.45;pointer-events:none}
-    .btn-gold{background:var(--gold);color:#000}
-    .btn-out{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.15)}
-    .btn-green{background:var(--green);color:#fff}
+    .btn:disabled{opacity:.4;pointer-events:none}
+    .btn-gold{background:linear-gradient(135deg,#f5a623,#e8940f);color:#000;box-shadow:0 4px 18px rgba(245,166,35,.25)}
+    .btn-out{background:transparent;color:var(--text);border:1px solid var(--border2)}
+    .btn-green{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 4px 18px rgba(34,197,94,.2)}
     .progress{display:flex;gap:6px;justify-content:center;margin-bottom:20px}
-    .pdot{width:28px;height:4px;border-radius:4px;background:rgba(255,255,255,.12);transition:all .3s}
-    .pdot.active{background:var(--gold);width:36px}
+    .pdot{width:26px;height:3.5px;border-radius:4px;background:rgba(255,255,255,.1);transition:all .3s}
+    .pdot.active{background:var(--gold);width:34px}
     .pdot.done{background:var(--green)}
-    .face-preview{position:relative;width:100%;aspect-ratio:1;border-radius:16px;overflow:hidden;margin-bottom:16px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+    .face-preview{position:relative;width:100%;aspect-ratio:1;border-radius:16px;overflow:hidden;margin-bottom:16px;background:var(--card2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
     .face-preview img{width:100%;height:100%;object-fit:cover}
-    .oval-guide{width:140px;height:190px;border:2.5px dashed rgba(245,166,35,.7);border-radius:50%;animation:pulse-border 2s ease-in-out infinite}
-    @keyframes pulse-border{0%,100%{border-color:rgba(245,166,35,.4)}50%{border-color:rgba(245,166,35,1)}}
-    .step-label{color:var(--gold);font-family:'Syne',sans-serif;font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase}
-    .step-hint{color:rgba(255,255,255,.6);font-size:12px;text-align:center;padding:0 20px}
-    .captured-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-bottom:20px}
-    .cap-item{background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-    .cap-label{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600;letter-spacing:.5px;padding:6px 8px 0}
+    .oval-guide{width:130px;height:178px;border:2.5px dashed rgba(245,166,35,.65);border-radius:50%;animation:pulse-border 2s ease-in-out infinite}
+    @keyframes pulse-border{0%,100%{border-color:rgba(245,166,35,.35)}50%{border-color:rgba(245,166,35,.9)}}
+    .step-label{color:var(--gold);font-family:'Syne',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.2px;text-transform:uppercase}
+    .step-hint{color:rgba(255,255,255,.5);font-size:11.5px;text-align:center;padding:0 20px}
+    .captured-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;margin-bottom:20px}
+    .cap-item{background:var(--card2);border:1px solid var(--border2);border-radius:12px;overflow:hidden}
+    .cap-label{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600;letter-spacing:.5px;padding:6px 8px 4px}
     .cap-item img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
-    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--green);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:18px}
-    .bi-guide{width:100%;aspect-ratio:16/10;background:var(--card2);border:1px solid var(--border);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden}
-    .bi-rect{width:82%;height:78%;border:2.5px dashed rgba(245,166,35,.7);border-radius:10px;display:flex;align-items:center;justify-content:center;animation:pulse-border 2s ease-in-out infinite}
-    .bi-rect span{color:rgba(255,255,255,.4);font-size:12px}
-    .error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px;text-align:left}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:var(--green);padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:600;margin-bottom:16px}
+    .bi-guide{width:100%;aspect-ratio:16/10;background:var(--card2);border:1px solid var(--border2);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden}
+    .bi-rect{width:82%;height:78%;border:2px dashed rgba(245,166,35,.6);border-radius:10px;display:flex;align-items:center;justify-content:center;animation:pulse-border 2s ease-in-out infinite}
+    .bi-rect span{color:rgba(255,255,255,.35);font-size:12px}
+    .error-box{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:13px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px;text-align:left}
     .error-box svg{color:var(--red);flex-shrink:0;margin-top:1px}
     .error-box p{color:#fca5a5;font-size:13px;line-height:1.5}
-    .validating-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:30px}
+    .validating-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px}
     .validating-overlay p{color:var(--muted);font-size:13px}
-    .loading-bar{width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin-top:4px}
+    .loading-bar{width:100%;height:3px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;margin-top:4px}
     .loading-bar-inner{height:100%;background:var(--gold);border-radius:4px;animation:loading 1.5s ease-in-out infinite}
     @keyframes loading{0%{width:0%;margin-left:0}50%{width:70%;margin-left:15%}100%{width:0%;margin-left:100%}}
-    .model-loading{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px 0}
+    .model-loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 0}
     .attempts-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:16px;width:fit-content;align-self:center}
-    .attempts-ok{background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2)}
-    .attempts-warn{background:rgba(245,166,35,0.1);color:#f5a623;border:1px solid rgba(245,166,35,0.2)}
-    .blocked-card{text-align:center;padding:32px 24px}
-    .blocked-icon{width:72px;height:72px;border-radius:50%;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);display:flex;align-items:center;justify-content:center;color:#ef4444;margin:0 auto 20px}
-    .countdown{font-size:36px;font-family:'Syne',sans-serif;font-weight:800;color:var(--gold);letter-spacing:2px;margin:16px 0}
+    .attempts-ok{background:rgba(34,197,94,0.08);color:#22c55e;border:1px solid rgba(34,197,94,0.2)}
+    .attempts-warn{background:rgba(245,166,35,0.08);color:#f5a623;border:1px solid rgba(245,166,35,0.25)}
+    .blocked-card{text-align:center;padding:32px 20px}
+    .blocked-icon{width:70px;height:70px;border-radius:50%;background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.2);display:flex;align-items:center;justify-content:center;color:#ef4444;margin:0 auto 18px}
+    .countdown{font-size:34px;font-family:'Syne',sans-serif;font-weight:800;color:var(--gold);letter-spacing:2px;margin:14px 0;font-variant-numeric:tabular-nums}
+    .divider{border-top:1px solid var(--border2);margin:18px 0}
     input[type=file]{display:none}
   `;
 
@@ -464,7 +473,20 @@ export default function KYCVerificationPage() {
     <>
       <style>{css}</style>
       <div className="kb">
-        <div className="brand">Dynamics Works</div>
+
+        {/* Topbar */}
+        <div className="topbar">
+          <div className="topbar-logo">
+            <div className="topbar-logo-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0f1e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <span>Dynamics Works</span>
+          </div>
+          <button className="back-btn" onClick={() => router.back()}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+        </div>
 
         <input ref={faceInputRef} type="file" accept="image/*" capture="user" onChange={handleFaceCapture} />
         <input ref={biInputRef} type="file" accept="image/*" capture="environment" onChange={handleBICapture} />
@@ -473,11 +495,22 @@ export default function KYCVerificationPage() {
         {currentView === 'blocked' && (
           <div className="view">
             <div className="card blocked-card">
-              <div className="blocked-icon"><Lock size={32} /></div>
-              <h2 className="h1" style={{ color: 'var(--red)' }}>Acesso Bloqueado</h2>
-              <p className="sub">Atingiu o limite de tentativas de verificação KYC.</p>
-              <div className="countdown"><Clock size={20} style={{ display: 'inline', marginRight: 8 }} />{countdown || '...'}</div>
-              <p style={{ color: 'var(--muted)', fontSize: 13 }}>O acesso é restabelecido automaticamente quando o contador chegar a zero. Se precisar de ajuda, contacte o suporte.</p>
+              <div className="blocked-icon"><Lock size={28} /></div>
+              <h2 className="h1" style={{ color: 'var(--red)' }}>Verificação Bloqueada</h2>
+              <p className="sub">Atingiste o limite de tentativas. Aguarda o tempo indicado para poderes tentar novamente.</p>
+              <div className="countdown">{countdown || '...'}</div>
+              <div className="divider" />
+              <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.6 }}>
+                O bloqueio é levantado automaticamente. Se acreditas que se trata de um erro, contacta o <strong style={{ color: 'var(--gold)' }}>suporte</strong>.
+              </p>
+              <div style={{ marginTop: 18 }}>
+                <button className="btn btn-out" onClick={() => router.push('/support')}>
+                  Contactar Suporte
+                </button>
+                <button className="btn btn-out" onClick={() => router.push('/profile')}>
+                  Voltar ao Perfil
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -486,16 +519,42 @@ export default function KYCVerificationPage() {
         {currentView === 'intro' && (
           <div className="view">
             <div className="card">
-              <div className="icon-wrap"><ScanFace size={32} /></div>
-              <h2 className="h1">Verificação KYC</h2>
-              <p className="sub">Vamos confirmar a sua identidade. A IA verifica automaticamente cada foto.</p>
+              <div className="icon-wrap"><ScanFace size={30} /></div>
+              <h2 className="h1">Verificação de Identidade</h2>
+              <p className="sub">Confirma a tua identidade em 3 passos simples. Todo o processo é automático e seguro.</p>
+
               <div className={`attempts-badge ${attemptsLeft > 1 ? 'attempts-ok' : 'attempts-warn'}`}>
-                <Clock size={13} /> {attemptsLeft} tentativa{attemptsLeft !== 1 ? 's' : ''} disponível{attemptsLeft !== 1 ? 'is' : ''}
+                <Clock size={12} /> {attemptsLeft} tentativa{attemptsLeft !== 1 ? 's' : ''} restante{attemptsLeft !== 1 ? 's' : ''}
               </div>
+
+              <div className="steps-list">
+                <div className="step-row">
+                  <div className="step-num">1</div>
+                  <div className="step-text">
+                    Verificação facial
+                    <small>3 fotos do rosto — frente, direita e esquerda</small>
+                  </div>
+                </div>
+                <div className="step-row">
+                  <div className="step-num">2</div>
+                  <div className="step-text">
+                    Documento de identidade
+                    <small>Frente e verso do Bilhete de Identidade</small>
+                  </div>
+                </div>
+                <div className="step-row">
+                  <div className="step-num">3</div>
+                  <div className="step-text">
+                    Revisão e envio
+                    <small>Confirma as fotos e submete para análise</small>
+                  </div>
+                </div>
+              </div>
+
               <div className="tips">
-                <div className="tip"><Sun size={16} />Ambiente bem iluminado</div>
-                <div className="tip"><User size={16} />Remova óculos e chapéus</div>
-                <div className="tip"><Camera size={16} />Tenha o B.I. à mão</div>
+                <div className="tip"><Sun size={15} />Boa iluminação — evita sombras no rosto</div>
+                <div className="tip"><User size={15} />Remove óculos, boné ou chapéu</div>
+                <div className="tip"><Camera size={15} />Mantém o B.I. à mão antes de começar</div>
               </div>
 
               {!modelLoaded ? (
@@ -505,7 +564,7 @@ export default function KYCVerificationPage() {
                 </div>
               ) : (
                 <button className="btn btn-gold" onClick={startFaceCapture}>
-                  <Camera size={18} /> Começar Verificação
+                  <Camera size={17} /> Começar Verificação
                 </button>
               )}
             </div>
@@ -653,7 +712,6 @@ export default function KYCVerificationPage() {
           </div>
         )}
 
-        <div className="footer">Desenvolvido pela <b>DIGIKAP</b></div>
       </div>
     </>
   );

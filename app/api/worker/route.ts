@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const activeTrades = await prisma.trade.findMany({
     where:   { status: "active" },
-    include: { user: { select: { id: true, isDemo: true } } },
+    include: { user: { select: { id: true, isDemo: true, email: true, name: true } } },
   });
 
   if (activeTrades.length === 0) {
