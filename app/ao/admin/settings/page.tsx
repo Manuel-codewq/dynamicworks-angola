@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { RefreshCw, Save, ToggleLeft, ToggleRight } from "lucide-react";
+import { RefreshCw, Save, ToggleLeft, ToggleRight, RotateCcw } from "lucide-react";
 
 const ALL_PAIRS = [
   "EUR/USD","GBP/USD","USD/JPY","AUD/USD","USD/CAD","EUR/GBP","USD/CHF","NZD/USD",
@@ -21,16 +21,36 @@ function toPercent(v: number)   { return Math.round(v * 100); }
 function toFraction(v: number)  { return v / 100; }
 
 export default function AdminSettingsPage() {
-  const [draft,   setDraft]   = useState<Settings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [draft,         setDraft]         = useState<Settings | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [saving,        setSaving]        = useState(false);
+  const [saved,         setSaved]         = useState(false);
+  const [resetting,     setResetting]     = useState(false);
+  const [resetDone,     setResetDone]     = useState(false);
+  const [rankingResetAt, setRankingResetAt] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
     const res = await fetch("/api/admin/settings");
-    if (res.ok) setDraft(await res.json());
+    if (res.ok) {
+      const d = await res.json();
+      setDraft(d);
+      setRankingResetAt(d.rankingResetAt ?? null);
+    }
     setLoading(false);
+  }
+
+  async function resetRanking() {
+    if (!confirm("Tens a certeza? O ranking será zerado para todos os traders. Esta acção não pode ser desfeita.")) return;
+    setResetting(true);
+    const res = await fetch("/api/admin/ranking/reset", { method: "POST" });
+    if (res.ok) {
+      const d = await res.json();
+      setRankingResetAt(d.resetAt);
+      setResetDone(true);
+      setTimeout(() => setResetDone(false), 3000);
+    }
+    setResetting(false);
   }
 
   useEffect(() => { load(); }, []);
@@ -87,6 +107,22 @@ export default function AdminSettingsPage() {
       <div style={card}>
         <p style={sectionTitle}>Controlos da Plataforma</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
+
+          {/* Reset ranking */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#0a0f1e", borderRadius: 10, padding: "14px 18px", flex: 1, minWidth: 220 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Zerar ranking</div>
+              <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
+                {rankingResetAt
+                  ? `Último reset: ${new Date(rankingResetAt).toLocaleString("pt-AO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                  : "Nunca foi zerado"}
+              </div>
+            </div>
+            <button onClick={resetRanking} disabled={resetting}
+              style={{ background: resetDone ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.1)", border: `1px solid ${resetDone ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "7px 14px", color: resetDone ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 12, cursor: resetting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6, opacity: resetting ? 0.6 : 1, flexShrink: 0 }}>
+              <RotateCcw size={13} /> {resetDone ? "Zerado!" : resetting ? "..." : "Zerar"}
+            </button>
+          </div>
 
           {/* Maintenance mode */}
           <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#0a0f1e", borderRadius: 10, padding: "14px 18px", flex: 1, minWidth: 220 }}>

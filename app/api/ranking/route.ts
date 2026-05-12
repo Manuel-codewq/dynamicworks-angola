@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSettings } from "@/lib/settings";
 
 export async function GET() {
   const session = await auth();
@@ -16,12 +17,15 @@ export async function GET() {
 
   if (eligibleUserIds.length === 0) return NextResponse.json([]);
 
+  const { rankingResetAt } = await getSettings();
+
   const trades = await prisma.trade.findMany({
     where: {
       status: "closed",
       isDemo: false,
       userId: { in: eligibleUserIds },
       user:   { isDemo: false },
+      ...(rankingResetAt ? { createdAt: { gte: rankingResetAt } } : {}),
     },
     select: { userId: true, result: true, profit: true, amount: true, user: { select: { name: true, avatar: true } } },
   });

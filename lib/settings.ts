@@ -15,6 +15,7 @@ const ALL_PAIRS = [
 
 export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));
 export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.47]));
+export const DEFAULT_RANKING_RESET: Date | null = null;
 
 export const ALL_PAIR_KEYS = ALL_PAIRS as unknown as string[];
 
@@ -23,6 +24,7 @@ export interface PlatformSettings {
   winProbability:  Record<string, number>;
   maintenanceMode: boolean;
   activePairs:     string[];
+  rankingResetAt:  Date | null;
 }
 
 // In-memory cache with 15s TTL — keeps DB load low while reflecting admin changes quickly
@@ -35,7 +37,7 @@ export async function getSettings(): Promise<PlatformSettings> {
   try {
     const row = await prisma.settings.upsert({
       where:  { id: "singleton" },
-      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS] },
+      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null },
       update: {},
     }) as any;
     const savedPairs = Array.isArray(row.activePairs) ? row.activePairs as string[] : [];
@@ -44,11 +46,12 @@ export async function getSettings(): Promise<PlatformSettings> {
       payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
       activePairs:     savedPairs.length > 0 ? savedPairs : [...ALL_PAIRS],
+      rankingResetAt:  row.rankingResetAt ? new Date(row.rankingResetAt) : null,
     };
     cacheAt = Date.now();
     return cache;
   } catch {
-    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS] };
+    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null };
   }
 }
 
@@ -69,11 +72,12 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
   }
   if (typeof patch.maintenanceMode === "boolean") current.maintenanceMode = patch.maintenanceMode;
   if (Array.isArray(patch.activePairs)) current.activePairs = patch.activePairs;
+  if (patch.rankingResetAt instanceof Date || patch.rankingResetAt === null) current.rankingResetAt = patch.rankingResetAt;
 
   await (prisma.settings.upsert as any)({
     where:  { id: "singleton" },
     create: { id: "singleton", ...current },
-    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs },
+    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, rankingResetAt: current.rankingResetAt },
   });
 
   cache = current;
@@ -82,5 +86,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS] };
+export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null };
 export async function loadSettings() { settings = await getSettings(); return settings; }
