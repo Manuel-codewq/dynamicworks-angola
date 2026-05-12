@@ -16,7 +16,6 @@ const ALLOWED_ASSETS = [
   "XAU/USD", "XAG/USD",
   // Sintéticos DW (24/7)
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
-  "DW Subida 300", "DW Queda 300", "DW Subida 500", "DW Queda 500",
 ];
 
 async function fetchServerEntryPrice(asset: string): Promise<number | null> {

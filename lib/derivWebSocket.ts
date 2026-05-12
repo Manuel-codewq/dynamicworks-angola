@@ -36,38 +36,36 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
-// Índices sintéticos 24/7 — nomes internos Dynamics Works (não expõem o fornecedor)
-export const SYNTHETIC_PAIRS: DerivPair[] = [
-  { symbol: "R_10",      label: "DW Index 10",   category: "Sintético", decimals: 3 },
-  { symbol: "R_25",      label: "DW Index 25",   category: "Sintético", decimals: 3 },
-  { symbol: "R_50",      label: "DW Index 50",   category: "Sintético", decimals: 4 },
-  { symbol: "R_75",      label: "DW Index 75",   category: "Sintético", decimals: 4 },
-  { symbol: "R_100",     label: "DW Index 100",  category: "Sintético", decimals: 2 },
-  { symbol: "BOOM300N",  label: "DW Subida 300", category: "Sintético", decimals: 2 },
-  { symbol: "CRASH300N", label: "DW Queda 300",  category: "Sintético", decimals: 2 },
-  { symbol: "BOOM500",   label: "DW Subida 500", category: "Sintético", decimals: 2 },
-  { symbol: "CRASH500",  label: "DW Queda 500",  category: "Sintético", decimals: 2 },
+// Pares 24/7 — DW Index + Cripto (disponíveis sempre, todos os dias)
+export const ALWAYS_PAIRS: DerivPair[] = [
+  { symbol: "R_10",      label: "DW Index 10",  category: "Sintético", decimals: 3 },
+  { symbol: "R_25",      label: "DW Index 25",  category: "Sintético", decimals: 3 },
+  { symbol: "R_50",      label: "DW Index 50",  category: "Sintético", decimals: 4 },
+  { symbol: "R_75",      label: "DW Index 75",  category: "Sintético", decimals: 4 },
+  { symbol: "R_100",     label: "DW Index 100", category: "Sintético", decimals: 2 },
+  { symbol: "cryBTCUSD", label: "BTC/USD",      category: "Cripto",    decimals: 2 },
+  { symbol: "cryETHUSD", label: "ETH/USD",      category: "Cripto",    decimals: 2 },
 ];
 
 // Angola = WAT (UTC+1). Mercado real: Seg-Sex 07h-18h WAT (06h-17h UTC)
 export function isRealMarketOpen(): boolean {
   if (typeof window === "undefined") return true;
   const now    = new Date();
-  const utcDay = now.getUTCDay();   // 0=Dom, 6=Sab
+  const utcDay = now.getUTCDay();
   const utcH   = now.getUTCHours();
-  const isWeekday = utcDay >= 1 && utcDay <= 5;
-  return isWeekday && utcH >= 6 && utcH < 17; // 07h–18h WAT
+  return utcDay >= 1 && utcDay <= 5 && utcH >= 6 && utcH < 17;
 }
 
 export function getAvailablePairs(): DerivPair[] {
   if (typeof window === "undefined") {
-    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS, ...SYNTHETIC_PAIRS];
+    return [...FOREX_PAIRS, ...COMMODITY_PAIRS, ...ALWAYS_PAIRS];
   }
   if (isRealMarketOpen()) {
-    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+    // Horário de mercado: Forex + Metais + pares 24/7
+    return [...FOREX_PAIRS, ...COMMODITY_PAIRS, ...ALWAYS_PAIRS];
   }
-  // Fora de horário (após 18h WAT ou fim de semana) → só sintéticos 24/7
-  return [...SYNTHETIC_PAIRS];
+  // Fora de horário (após 18h WAT ou fim de semana): só os 24/7
+  return [...ALWAYS_PAIRS];
 }
 
 export const GRANULARITY: Record<string, number> = {

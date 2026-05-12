@@ -27,15 +27,11 @@ const ALWAYS_ON_PAIRS = [
   { asset: "XAU/USD",       symbol: "frxXAUUSD"  },
   { asset: "XAG/USD",       symbol: "frxXAGUSD"  },
   // Sintéticos DW (24/7)
-  { asset: "DW Index 10",   symbol: "R_10"       },
-  { asset: "DW Index 25",   symbol: "R_25"       },
-  { asset: "DW Index 50",   symbol: "R_50"       },
-  { asset: "DW Index 75",   symbol: "R_75"       },
-  { asset: "DW Index 100",  symbol: "R_100"      },
-  { asset: "DW Subida 300", symbol: "BOOM300N"   },
-  { asset: "DW Queda 300",  symbol: "CRASH300N"  },
-  { asset: "DW Subida 500", symbol: "BOOM500"    },
-  { asset: "DW Queda 500",  symbol: "CRASH500"   },
+  { asset: "DW Index 10",  symbol: "R_10"  },
+  { asset: "DW Index 25",  symbol: "R_25"  },
+  { asset: "DW Index 50",  symbol: "R_50"  },
+  { asset: "DW Index 75",  symbol: "R_75"  },
+  { asset: "DW Index 100", symbol: "R_100" },
 ];
 
 const TIMEFRAMES = [

@@ -43,10 +43,6 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "DW Index 50":    "R_50",
   "DW Index 75":    "R_75",
   "DW Index 100":   "R_100",
-  "DW Subida 300":  "BOOM300N",
-  "DW Queda 300":   "CRASH300N",
-  "DW Subida 500":  "BOOM500",
-  "DW Queda 500":   "CRASH500",
   // aliases antigos (manter compatibilidade com trades existentes)
   "Vol. 10":        "R_10",
   "Vol. 25":        "R_25",
@@ -55,6 +51,10 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "Vol. 100":       "R_100",
   "Boom 300":       "BOOM300N",
   "Crash 300":      "CRASH300N",
+  "DW Subida 300":  "BOOM300N",
+  "DW Queda 300":   "CRASH300N",
+  "DW Subida 500":  "BOOM500",
+  "DW Queda 500":   "CRASH500",
 };
 
 // Busca o último preço disponível para o ativo via Deriv WS.
