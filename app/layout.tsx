@@ -3,6 +3,7 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import Script from "next/script";
 import SupportWidget from "./components/SupportWidget";
+import NotificationToast from "./components/NotificationToast";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
@@ -199,6 +200,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SessionProvider>
           {children}
           <SupportWidget />
+          <NotificationToast />
         </SessionProvider>
 
         {/* Google Analytics 4 — carrega após interacção para não penalizar performance */}
