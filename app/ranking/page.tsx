@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TrendingUp, ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight, BarChart2 } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
+function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(d: string) { return new Date(d).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" }); }
 function daysLeft(end: string) { return Math.max(0, Math.ceil((new Date(end).getTime() - Date.now()) / 86400000)); }
 
@@ -231,7 +231,7 @@ function TournamentCard({ t, router }: { t: any; router: any }) {
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           {prizes.slice(0, 3).map((p: any, i: number) => (
             <div key={i} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 6, padding: "3px 9px", fontSize: 11, color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#b45309", fontWeight: 700 }}>
-              {i + 1}º {(p.amount as number).toLocaleString("pt-AO")} Kz
+              {i + 1}º {(p.amount as number).toLocaleString("pt-PT")} Kz
             </div>
           ))}
         </div>

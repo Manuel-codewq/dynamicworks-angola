@@ -11,7 +11,7 @@ function getClient(): Resend | null {
 }
 
 function formatKz(n: number) {
-  return n.toLocaleString("pt-AO") + " Kz";
+  return n.toLocaleString("pt-PT") + " Kz";
 }
 
 // ── Base template ─────────────────────────────────────────────────────────────

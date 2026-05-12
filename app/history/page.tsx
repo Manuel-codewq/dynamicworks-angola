@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 function formatKz(n: number) {
-  return n.toLocaleString("pt-AO") + " Kz";
+  return n.toLocaleString("pt-PT") + " Kz";
 }
 
 function formatDate(d: string) {
@@ -133,7 +133,7 @@ export default function HistoryPage() {
           <span style={{ color: "#94a3b8", fontSize: 12, marginRight: 4 }}>Resultado:</span>
           {(["all", "win", "loss", "draw", "active"] as FilterResult[]).map(f => (
             <button key={f} style={btnStyle(filterResult === f)} onClick={() => setFilterResult(f)}>
-              {f === "all" ? "Todos" : f === "win" ? "Ganhou" : f === "loss" ? "Perdeu" : f === "draw" ? "Empate" : "Ativo"}
+              {f === "all" ? "Todos" : f === "win" ? "Win" : f === "loss" ? "Loss" : f === "draw" ? "Empate" : "Ativo"}
             </button>
           ))}
           <div style={{ width: 1, height: 20, background: "#1e2d50", margin: "0 4px" }} />
@@ -205,10 +205,10 @@ export default function HistoryPage() {
                           {isActive
                             ? <span style={{ color: "#f5a623", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><Clock size={12} /> Ativo</span>
                             : isWin
-                              ? <span style={{ color: "#22c55e", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><CheckCircle size={12} /> Ganhou</span>
+                              ? <span style={{ color: "#22c55e", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><CheckCircle size={12} /> Win</span>
                               : isDraw
                                 ? <span style={{ color: "#94a3b8", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>— Empate</span>
-                                : <span style={{ color: "#ef4444", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><XCircle size={12} /> Perdeu</span>
+                                : <span style={{ color: "#ef4444", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><XCircle size={12} /> Loss</span>
                           }
                         </td>
                         {/* Lucro */}

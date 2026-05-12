@@ -49,7 +49,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
       data:  { balance: { decrement: tournament.entryFee } },
     });
     if (deducted.count === 0) {
-      return NextResponse.json({ error: `Saldo insuficiente. É necessário ${tournament.entryFee.toLocaleString("pt-AO")} Kz para participar.`, insufficientFunds: true }, { status: 400 });
+      return NextResponse.json({ error: `Saldo insuficiente. É necessário ${tournament.entryFee.toLocaleString("pt-PT")} Kz para participar.`, insufficientFunds: true }, { status: 400 });
     }
     // Register the payment as a transaction
     await prisma.transaction.create({
@@ -153,7 +153,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             userId:  winner.userId,
             type:    "info",
             title:   `🏆 Prémio recebido — ${position}º lugar!`,
-            message: `Parabéns! Ficaste em ${position}º lugar no torneio "${tournament.name}" e recebeste ${prizeAmount.toLocaleString("pt-AO")} Kz no teu saldo real.`,
+            message: `Parabéns! Ficaste em ${position}º lugar no torneio "${tournament.name}" e recebeste ${prizeAmount.toLocaleString("pt-PT")} Kz no teu saldo real.`,
           },
         });
       } catch (err) {

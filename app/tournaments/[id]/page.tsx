@@ -8,7 +8,7 @@ import {
   ClipboardList, BarChart2,
 } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
+function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   upcoming: { label: "Próximo",     color: "#f5a623", bg: "rgba(245,166,35,0.12)" },

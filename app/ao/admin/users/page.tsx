@@ -5,7 +5,7 @@ import {
   Search, Users, UserCheck, UserX, Clock,
 } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
+function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" });
 }

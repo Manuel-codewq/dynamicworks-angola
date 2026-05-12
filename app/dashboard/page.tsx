@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 function formatKz(n: number) {
-  return n.toLocaleString("pt-AO") + " Kz";
+  return n.toLocaleString("pt-PT") + " Kz";
 }
 
 export default function DashboardPage() {
@@ -136,8 +136,8 @@ export default function DashboardPage() {
                         {t.status === "active"
                           ? <span style={{ color: "#f5a623", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><Clock size={12} /> Ativo</span>
                           : t.result === "win"
-                            ? <span style={{ color: "#22c55e", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><CheckCircle size={12} /> Ganhou</span>
-                            : <span style={{ color: "#ef4444", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><XCircle size={12} /> Perdeu</span>
+                            ? <span style={{ color: "#22c55e", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><CheckCircle size={12} /> Win</span>
+                            : <span style={{ color: "#ef4444", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><XCircle size={12} /> Loss</span>
                         }
                       </td>
                       <td style={{ padding: "10px", borderBottom: "1px solid rgba(30,45,80,0.5)", color: t.profit && t.profit > 0 ? "#22c55e" : t.profit && t.profit < 0 ? "#ef4444" : "#94a3b8", fontSize: 13, fontWeight: 600 }}>

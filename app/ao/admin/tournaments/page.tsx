@@ -8,7 +8,7 @@ import {
   Clock, Eye, Medal, Wand2,
 } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
+function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("pt-AO", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }

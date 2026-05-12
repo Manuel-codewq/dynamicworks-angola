@@ -151,7 +151,7 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
             fontWeight: 900, fontSize: 11, letterSpacing: 4,
             textTransform: "uppercase", marginBottom: 12,
           }}>
-            {isWin ? "🏆 Ganhou!" : "Perdeu"}
+            {isWin ? "🏆 Win!" : "Loss"}
           </div>
 
           {/* Amount */}

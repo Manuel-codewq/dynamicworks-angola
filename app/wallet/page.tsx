@@ -13,7 +13,7 @@ const DEPOSIT_METHODS = [
 ];
 
 function formatKz(n: number) {
-  return n.toLocaleString("pt-AO") + " Kz";
+  return n.toLocaleString("pt-PT") + " Kz";
 }
 
 function StatusBadge({ status }: { status: string }) {

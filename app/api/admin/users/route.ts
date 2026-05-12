@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Saldo inválido" }, { status: 400 });
     }
     if (newBalance > MAX_BALANCE) {
-      return NextResponse.json({ error: `Saldo máximo permitido: ${MAX_BALANCE.toLocaleString("pt-AO")} Kz` }, { status: 400 });
+      return NextResponse.json({ error: `Saldo máximo permitido: ${MAX_BALANCE.toLocaleString("pt-PT")} Kz` }, { status: 400 });
     }
     await prisma.user.update({ where: { id: userId }, data: { balance: newBalance } });
 

@@ -7,7 +7,7 @@ function formatKz(n: number) {
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + " Mil M Kz";
   if (n >= 1_000_000)     return (n / 1_000_000).toFixed(1) + " M Kz";
   if (n >= 1_000)         return (n / 1_000).toFixed(0) + " mil Kz";
-  return n.toLocaleString("pt-AO") + " Kz";
+  return n.toLocaleString("pt-PT") + " Kz";
 }
 
 export default function LandingPage() {
@@ -102,8 +102,8 @@ export default function LandingPage() {
       <section style={{ background: "#111827", borderTop: "1px solid #1e2d50", borderBottom: "1px solid #1e2d50" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
           {[
-            { label: "Utilizadores Registados", value: loaded ? stats.users.toLocaleString("pt-AO") : "—" },
-            { label: "Operações Concluídas",    value: loaded ? stats.trades.toLocaleString("pt-AO") : "—" },
+            { label: "Utilizadores Registados", value: loaded ? stats.users.toLocaleString("pt-PT") : "—" },
+            { label: "Operações Concluídas",    value: loaded ? stats.trades.toLocaleString("pt-PT") : "—" },
             { label: "Volume Negociado",         value: loaded ? formatKz(stats.volume) : "—" },
           ].map((s, i) => (
             <div key={i} style={{ textAlign: "center", padding: "8px 16px", borderRight: i < 2 ? "1px solid #1e2d50" : "none" }}>

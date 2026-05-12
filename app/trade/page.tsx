@@ -50,7 +50,7 @@ const SEED_PRICES: Record<string, number> = {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatKz(n: number) {
-  return n.toLocaleString("pt-AO") + " Kz";
+  return n.toLocaleString("pt-PT") + " Kz";
 }
 
 // Placeholder candles — shown while WS data loads (correct OHLC invariants)
@@ -973,7 +973,7 @@ export default function TradePage() {
         notifiedTradesRef.current.add(unnotified.id);
         const isWin = unnotified.result === "win";
         setNotification({
-          msg:  isWin ? `Ganhou +${formatKz(Math.round(unnotified.profit))}` : `Perdeu ${formatKz(unnotified.amount)}`,
+          msg:  isWin ? `Win +${formatKz(Math.round(unnotified.profit))}` : `Loss ${formatKz(unnotified.amount)}`,
           type: isWin ? "win" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);
@@ -1084,7 +1084,7 @@ export default function TradePage() {
         notifiedTradesRef.current.add(t.id);
         const isWin = t.result === "win";
         setNotification({
-          msg:  isWin ? `Ganhou +${formatKz(Math.round(t.profit ?? 0))}` : `Perdeu ${formatKz(t.amount)}`,
+          msg:  isWin ? `Win +${formatKz(Math.round(t.profit ?? 0))}` : `Loss ${formatKz(t.amount)}`,
           type: isWin ? "win" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);

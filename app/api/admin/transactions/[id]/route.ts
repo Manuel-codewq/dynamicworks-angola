@@ -66,7 +66,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Erro interno ao processar transação" }, { status: 500 });
   }
 
-  const amt = tx.amount.toLocaleString("pt-AO");
+  const amt = tx.amount.toLocaleString("pt-PT");
   const notifMap: Record<string, Record<string, { title: string; message: string }>> = {
     deposit: {
       completed: { title: "Depósito aprovado", message: `O seu depósito de ${amt} Kz foi aprovado e adicionado ao saldo.` },

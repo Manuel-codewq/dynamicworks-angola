@@ -16,7 +16,7 @@ const PROVINCES = [
   "Lunda Sul","Malanje","Moxico","Namibe","Uíge","Zaire",
 ];
 
-function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
+function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString("pt-AO", { year: "numeric", month: "long", day: "numeric" });
 }

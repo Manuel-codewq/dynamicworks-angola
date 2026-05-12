@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Users, Wallet, BarChart2, TrendingDown, Trophy, RefreshCw } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
+function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 
 interface Stats {
   totalUsers: number; totalBalance: number; todayTradesCount: number;

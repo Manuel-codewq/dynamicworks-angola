@@ -37,7 +37,7 @@ export async function generateMetadata(
   }
 
   const url         = `${BASE_URL}/tournaments/${id}`;
-  const prizeStr    = t.prizePool > 0 ? `${t.prizePool.toLocaleString("pt-AO")} Kz em prémios` : "entrada gratuita";
+  const prizeStr    = t.prizePool > 0 ? `${t.prizePool.toLocaleString("pt-PT")} Kz em prémios` : "entrada gratuita";
   const statusLabel = { active: "A decorrer", upcoming: "Em breve", finished: "Terminado" }[t.status] ?? "";
   const startFmt    = t.startDate.toLocaleDateString("pt-AO", { day: "2-digit", month: "long", year: "numeric" });
   const endFmt      = t.endDate.toLocaleDateString("pt-AO",   { day: "2-digit", month: "long", year: "numeric" });
@@ -129,7 +129,7 @@ export default async function TournamentDetailLayout({
         "@type":       "Event",
         "@id":         `${url}#event`,
         name:          t.name,
-        description:   t.description ?? `Torneio de opções binárias Angola com ${t.prizePool.toLocaleString("pt-AO")} Kz em prémios.`,
+        description:   t.description ?? `Torneio de opções binárias Angola com ${t.prizePool.toLocaleString("pt-PT")} Kz em prémios.`,
         url,
         startDate:     t.startDate.toISOString(),
         endDate:       t.endDate.toISOString(),
@@ -156,7 +156,7 @@ export default async function TournamentDetailLayout({
           url,
         },
         ...(t.prizePool > 0 ? {
-          prize: `${t.prizePool.toLocaleString("pt-AO")} Kz`,
+          prize: `${t.prizePool.toLocaleString("pt-PT")} Kz`,
         } : {}),
       },
     ],
