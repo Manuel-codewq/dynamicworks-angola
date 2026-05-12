@@ -5,6 +5,13 @@ import { createHash } from "crypto";
 const ALLOWED_FOLDERS = ["avatars", "kyc"] as const;
 type UploadFolder = typeof ALLOWED_FOLDERS[number];
 
+const ALLOWED_MIME_PREFIXES = [
+  "data:image/jpeg;base64,",
+  "data:image/png;base64,",
+  "data:image/webp;base64,",
+  "data:image/gif;base64,",
+];
+
 function buildSignature(params: Record<string, string>, apiSecret: string): string {
   const sorted = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join("&");
   return createHash("sha256").update(sorted + apiSecret).digest("hex");
@@ -38,6 +45,11 @@ export async function POST(req: NextRequest) {
   }
   if (!ALLOWED_FOLDERS.includes(folder as UploadFolder)) {
     return NextResponse.json({ error: "Pasta inválida" }, { status: 400 });
+  }
+
+  // Apenas imagens JPEG, PNG, WebP ou GIF
+  if (!ALLOWED_MIME_PREFIXES.some(prefix => file.startsWith(prefix))) {
+    return NextResponse.json({ error: "Tipo de ficheiro não permitido. Use JPEG, PNG, WebP ou GIF." }, { status: 415 });
   }
 
   // Limite de ~2MB em base64

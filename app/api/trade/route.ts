@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { getDerivPrice } from "@/lib/derivPrice";
 
 const ALLOWED_ASSETS = [
   // Forex
@@ -15,11 +16,20 @@ const ALLOWED_ASSETS = [
   "XAU/USD", "XAG/USD",
 ];
 
-// Entry price is supplied by the client (from the live Deriv WS tick).
-// The server uses it for record-keeping only; outcome is determined server-side.
-function sanitizeEntryPrice(raw: unknown): number {
-  const n = parseFloat(String(raw));
-  return isFinite(n) && n > 0 ? n : 1.0;
+async function fetchServerEntryPrice(asset: string): Promise<number | null> {
+  // 1. Try PriceCandle DB (recorded in the last 30s by price-recorder)
+  try {
+    const cutoff = new Date(Date.now() - 30_000);
+    const candle = await prisma.priceCandle.findFirst({
+      where:   { asset, timestamp: { gte: cutoff } },
+      orderBy: { timestamp: "desc" },
+      select:  { close: true },
+    });
+    if (candle?.close && candle.close > 0) return candle.close;
+  } catch { /* DB unavailable — fall through to WS */ }
+
+  // 2. Fallback: live Deriv WS tick
+  return getDerivPrice(asset);
 }
 
 
@@ -45,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { asset, direction, amount, expirySecs, entryPrice: rawEntryPrice } = body ?? {};
+  const { asset, direction, amount, expirySecs } = body ?? {};
 
   if (!ALLOWED_ASSETS.includes(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
@@ -96,7 +106,15 @@ export async function POST(req: NextRequest) {
   // Obter payout das definições (com fallback)
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
-  const entryPrice = sanitizeEntryPrice(rawEntryPrice);
+
+  // Entry price: sempre do servidor — nunca aceitar valor do cliente
+  const entryPrice = await fetchServerEntryPrice(asset);
+  if (!entryPrice) {
+    return NextResponse.json(
+      { error: "Preço de mercado indisponível. Tente novamente em instantes." },
+      { status: 503 },
+    );
+  }
 
   // Débito atómico: WHERE garante que saldo não ficou negativo entre a verificação e o débito
   let deducted: any;

@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import Script from "next/script";
 import SupportWidget from "./components/SupportWidget";
 import NotificationToast from "./components/NotificationToast";
+import HeartbeatTracker from "./components/HeartbeatTracker";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
@@ -199,6 +200,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ margin: 0, padding: 0, background: "#0a0f1e" }}>
         <SessionProvider>
           {children}
+          <HeartbeatTracker />
           <SupportWidget />
           <NotificationToast />
         </SessionProvider>

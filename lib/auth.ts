@@ -61,14 +61,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id   = user.id;
-        token.role = (user as any).role;
+        token.id          = user.id;
+        token.role        = (user as any).role;
+        token.refreshedAt = Date.now();
       }
+
+      // Refresh role + status from DB every 5 minutes
+      const age = Date.now() - ((token.refreshedAt as number) ?? 0);
+      if (age > 5 * 60_000) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where:  { id: token.id as string },
+            select: { role: true, status: true },
+          });
+          // Blocked or deleted user → invalidate JWT immediately
+          if (!dbUser || dbUser.status === "blocked") return null as any;
+          token.role        = dbUser.role;
+          token.refreshedAt = Date.now();
+        } catch { /* DB unavailable — keep existing token */ }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id          = token.id as string;
+        session.user.id            = token.id as string;
         (session.user as any).role = token.role;
       }
       return session;

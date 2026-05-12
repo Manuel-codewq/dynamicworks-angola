@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
   const wins = await prisma.trade.findMany({
     where:   { result: "win", status: "closed", isDemo: false, user: { isDemo: false } },
     orderBy: { closedAt: "desc" },

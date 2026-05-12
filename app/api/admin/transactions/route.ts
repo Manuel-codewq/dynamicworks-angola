@@ -12,6 +12,9 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status");
   const type   = searchParams.get("type");
   const search = searchParams.get("search")?.trim();
+  const page   = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
+  const limit  = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "50")));
+  const skip   = (page - 1) * limit;
 
   const where: any = {};
 
@@ -30,11 +33,16 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  const transactions = await prisma.transaction.findMany({
-    where,
-    include: { user: { select: { name: true, email: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const [transactions, total] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      include: { user: { select: { name: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.transaction.count({ where }),
+  ]);
 
-  return NextResponse.json(transactions);
+  return NextResponse.json({ transactions, total, page, totalPages: Math.ceil(total / limit) });
 }

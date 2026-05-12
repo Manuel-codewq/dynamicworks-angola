@@ -54,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         ]);
         if (txnRes.ok) {
           const d = await txnRes.json();
-          setTxnCount(Array.isArray(d) ? d.length : 0);
+          setTxnCount(typeof d?.total === "number" ? d.total : 0);
         }
         if (kycRes.ok) {
           const d: { user: { kycStatus: string } }[] = await kycRes.json();
