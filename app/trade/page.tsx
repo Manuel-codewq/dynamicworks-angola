@@ -18,7 +18,11 @@ import {
 import NotificationBell from "@/app/components/NotificationBell";
 import TradeResultOverlay from "@/app/components/TradeResultOverlay";
 import OnboardingTutorial from "@/app/components/OnboardingTutorial";
-import { calcSMA, calcEMA, calcBB, calcRSI, calcMACD, calcStochastic } from "@/lib/indicators";
+import {
+  calcSMA, calcEMA, calcBB, calcRSI, calcMACD, calcStochastic,
+  calcATR, calcCCI, calcWilliamsR, calcMomentum, calcAO, calcADX,
+  calcAlligator, calcDonchian, calcKeltner, calcParabolicSAR, calcBearsBulls,
+} from "@/lib/indicators";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -203,7 +207,7 @@ export default function TradePage() {
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
 
   // ── Drawing tools ─────────────────────────────────────────────────────────
-  type DrawingTool = "hline" | "trendline" | null;
+  type DrawingTool = "hline" | "trendline" | "fibonacci" | "rectangle" | null;
   interface HLineDrawing  { id: string; type: "hline";     price: number;    color: string; lineWidth: number; lineStyle: number; label: string; }
   interface TrendDrawing  { id: string; type: "trendline"; p1Time: number; p1Price: number; p2Time: number; p2Price: number; color: string; lineWidth: number; lineStyle: number; }
   type Drawing = HLineDrawing | TrendDrawing;
@@ -224,12 +228,23 @@ export default function TradePage() {
   const [showIndicators, setShowIndicators] = useState(false);
 
   const DEFAULT_INDICATORS = {
-    ma:    { enabled: false, periods: [20] as number[] },
-    ema:   { enabled: false, periods: [20] as number[] },
-    bb:    { enabled: false, period: 20 },
-    rsi:   { enabled: false, period: 14 },
-    macd:  { enabled: false, fast: 12, slow: 26, signal: 9 },
-    stoch: { enabled: false, kPeriod: 14, dPeriod: 3 },
+    ma:         { enabled: false, periods: [20] as number[] },
+    ema:        { enabled: false, periods: [20] as number[] },
+    bb:         { enabled: false, period: 20 },
+    rsi:        { enabled: false, period: 14 },
+    macd:       { enabled: false, fast: 12, slow: 26, signal: 9 },
+    stoch:      { enabled: false, kPeriod: 14, dPeriod: 3 },
+    alligator:  { enabled: false },
+    donchian:   { enabled: false, period: 20 },
+    keltner:    { enabled: false, period: 20, mult: 2 },
+    sar:        { enabled: false, step: 0.02, max: 0.2 },
+    atr:        { enabled: false, period: 14 },
+    cci:        { enabled: false, period: 20 },
+    willr:      { enabled: false, period: 14 },
+    momentum:   { enabled: false, period: 10 },
+    ao:         { enabled: false },
+    adx:        { enabled: false, period: 14 },
+    bearsbulls: { enabled: false, period: 13 },
   };
   type IndicatorState = typeof DEFAULT_INDICATORS;
   function loadIndicators(): IndicatorState {
@@ -244,12 +259,23 @@ export default function TradePage() {
           return { ...DEFAULT_INDICATORS[key], ...s, periods };
         };
         return {
-          ma:    migrateMA("ma"),
-          ema:   migrateMA("ema"),
-          bb:    { ...DEFAULT_INDICATORS.bb,    ...(p.bb    ?? {}) },
-          rsi:   { ...DEFAULT_INDICATORS.rsi,   ...(p.rsi   ?? {}) },
-          macd:  { ...DEFAULT_INDICATORS.macd,  ...(p.macd  ?? {}) },
-          stoch: { ...DEFAULT_INDICATORS.stoch, ...(p.stoch ?? {}) },
+          ma:         migrateMA("ma"),
+          ema:        migrateMA("ema"),
+          bb:         { ...DEFAULT_INDICATORS.bb,         ...(p.bb         ?? {}) },
+          rsi:        { ...DEFAULT_INDICATORS.rsi,        ...(p.rsi        ?? {}) },
+          macd:       { ...DEFAULT_INDICATORS.macd,       ...(p.macd       ?? {}) },
+          stoch:      { ...DEFAULT_INDICATORS.stoch,      ...(p.stoch      ?? {}) },
+          alligator:  { ...DEFAULT_INDICATORS.alligator,  ...(p.alligator  ?? {}) },
+          donchian:   { ...DEFAULT_INDICATORS.donchian,   ...(p.donchian   ?? {}) },
+          keltner:    { ...DEFAULT_INDICATORS.keltner,    ...(p.keltner    ?? {}) },
+          sar:        { ...DEFAULT_INDICATORS.sar,        ...(p.sar        ?? {}) },
+          atr:        { ...DEFAULT_INDICATORS.atr,        ...(p.atr        ?? {}) },
+          cci:        { ...DEFAULT_INDICATORS.cci,        ...(p.cci        ?? {}) },
+          willr:      { ...DEFAULT_INDICATORS.willr,      ...(p.willr      ?? {}) },
+          momentum:   { ...DEFAULT_INDICATORS.momentum,   ...(p.momentum   ?? {}) },
+          ao:         { ...DEFAULT_INDICATORS.ao,         ...(p.ao         ?? {}) },
+          adx:        { ...DEFAULT_INDICATORS.adx,        ...(p.adx        ?? {}) },
+          bearsbulls: { ...DEFAULT_INDICATORS.bearsbulls, ...(p.bearsbulls ?? {}) },
         };
       }
     } catch {}
@@ -272,12 +298,23 @@ export default function TradePage() {
         if (!d?.indicatorPrefs) return;
         const p = d.indicatorPrefs as Partial<IndicatorState>;
         setIndicators({
-          ma:    { ...DEFAULT_INDICATORS.ma,    ...(p.ma    ?? {}) },
-          ema:   { ...DEFAULT_INDICATORS.ema,   ...(p.ema   ?? {}) },
-          bb:    { ...DEFAULT_INDICATORS.bb,    ...(p.bb    ?? {}) },
-          rsi:   { ...DEFAULT_INDICATORS.rsi,   ...(p.rsi   ?? {}) },
-          macd:  { ...DEFAULT_INDICATORS.macd,  ...(p.macd  ?? {}) },
-          stoch: { ...DEFAULT_INDICATORS.stoch, ...(p.stoch ?? {}) },
+          ma:         { ...DEFAULT_INDICATORS.ma,         ...(p.ma         ?? {}) },
+          ema:        { ...DEFAULT_INDICATORS.ema,        ...(p.ema        ?? {}) },
+          bb:         { ...DEFAULT_INDICATORS.bb,         ...(p.bb         ?? {}) },
+          rsi:        { ...DEFAULT_INDICATORS.rsi,        ...(p.rsi        ?? {}) },
+          macd:       { ...DEFAULT_INDICATORS.macd,       ...(p.macd       ?? {}) },
+          stoch:      { ...DEFAULT_INDICATORS.stoch,      ...(p.stoch      ?? {}) },
+          alligator:  { ...DEFAULT_INDICATORS.alligator,  ...(p.alligator  ?? {}) },
+          donchian:   { ...DEFAULT_INDICATORS.donchian,   ...(p.donchian   ?? {}) },
+          keltner:    { ...DEFAULT_INDICATORS.keltner,    ...(p.keltner    ?? {}) },
+          sar:        { ...DEFAULT_INDICATORS.sar,        ...(p.sar        ?? {}) },
+          atr:        { ...DEFAULT_INDICATORS.atr,        ...(p.atr        ?? {}) },
+          cci:        { ...DEFAULT_INDICATORS.cci,        ...(p.cci        ?? {}) },
+          willr:      { ...DEFAULT_INDICATORS.willr,      ...(p.willr      ?? {}) },
+          momentum:   { ...DEFAULT_INDICATORS.momentum,   ...(p.momentum   ?? {}) },
+          ao:         { ...DEFAULT_INDICATORS.ao,         ...(p.ao         ?? {}) },
+          adx:        { ...DEFAULT_INDICATORS.adx,        ...(p.adx        ?? {}) },
+          bearsbulls: { ...DEFAULT_INDICATORS.bearsbulls, ...(p.bearsbulls ?? {}) },
         });
       })
       .catch(() => {});
@@ -311,6 +348,34 @@ export default function TradePage() {
   const stochKRef      = useRef<ISeriesApi<"Line"> | null>(null);
   const stochDRef      = useRef<ISeriesApi<"Line"> | null>(null);
   const stochPaneRef   = useRef<any>(null);
+  // New indicator refs
+  const alligatorJawRef   = useRef<ISeriesApi<"Line"> | null>(null);
+  const alligatorTeethRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const alligatorLipsRef  = useRef<ISeriesApi<"Line"> | null>(null);
+  const donchianHighRef   = useRef<ISeriesApi<"Line"> | null>(null);
+  const donchianMidRef    = useRef<ISeriesApi<"Line"> | null>(null);
+  const donchianLowRef    = useRef<ISeriesApi<"Line"> | null>(null);
+  const keltnerHighRef    = useRef<ISeriesApi<"Line"> | null>(null);
+  const keltnerMidRef     = useRef<ISeriesApi<"Line"> | null>(null);
+  const keltnerLowRef     = useRef<ISeriesApi<"Line"> | null>(null);
+  const sarSeriesRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const atrSeriesRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const atrPaneRef        = useRef<any>(null);
+  const cciSeriesRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const cciPaneRef        = useRef<any>(null);
+  const willrSeriesRef    = useRef<ISeriesApi<"Line"> | null>(null);
+  const willrPaneRef      = useRef<any>(null);
+  const momentumSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const momentumPaneRef   = useRef<any>(null);
+  const aoSeriesRef       = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const aoPaneRef         = useRef<any>(null);
+  const adxSeriesRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const adxPlusRef        = useRef<ISeriesApi<"Line"> | null>(null);
+  const adxMinusRef       = useRef<ISeriesApi<"Line"> | null>(null);
+  const adxPaneRef        = useRef<any>(null);
+  const bearsSeriesRef    = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const bullsSeriesRef    = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const bearsbullsPaneRef = useRef<any>(null);
   const recalcRef          = useRef<() => void>(() => {});
   const [legend, setLegend] = useState<{ label: string; value: string; color: string }[]>([]);
   const lastLegendRef      = useRef<{ label: string; value: string; color: string }[]>([]);
@@ -642,6 +707,162 @@ export default function TradePage() {
       }
     }
 
+    // ── Alligator ──
+    const oLine = { priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false } as const;
+    if (cfg.alligator.enabled) {
+      const al = calcAlligator(data);
+      if (!alligatorJawRef.current) {
+        alligatorJawRef.current   = chart.addSeries(LineSeries, { ...oLine, color: "#3b82f6", lineWidth: 2 });
+        alligatorTeethRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#ef4444", lineWidth: 2 });
+        alligatorLipsRef.current  = chart.addSeries(LineSeries, { ...oLine, color: "#22c55e", lineWidth: 2 });
+      }
+      alligatorJawRef.current.setData(al.jaw);
+      alligatorTeethRef.current!.setData(al.teeth);
+      alligatorLipsRef.current!.setData(al.lips);
+    } else if (alligatorJawRef.current) {
+      [alligatorJawRef, alligatorTeethRef, alligatorLipsRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+    }
+
+    // ── Donchian ──
+    if (cfg.donchian.enabled) {
+      const dc = calcDonchian(data, cfg.donchian.period);
+      if (!donchianHighRef.current) {
+        donchianHighRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#fbbf24", lineWidth: 1 });
+        donchianMidRef.current  = chart.addSeries(LineSeries, { ...oLine, color: "#fbbf2460", lineWidth: 1, lineStyle: 2 });
+        donchianLowRef.current  = chart.addSeries(LineSeries, { ...oLine, color: "#fbbf24", lineWidth: 1 });
+      }
+      donchianHighRef.current.setData(dc.high);
+      donchianMidRef.current!.setData(dc.mid);
+      donchianLowRef.current!.setData(dc.low);
+    } else if (donchianHighRef.current) {
+      [donchianHighRef, donchianMidRef, donchianLowRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+    }
+
+    // ── Keltner ──
+    if (cfg.keltner.enabled) {
+      const kc = calcKeltner(data, cfg.keltner.period, cfg.keltner.mult);
+      if (!keltnerHighRef.current) {
+        keltnerHighRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#c084fc", lineWidth: 1 });
+        keltnerMidRef.current  = chart.addSeries(LineSeries, { ...oLine, color: "#c084fc60", lineWidth: 1, lineStyle: 2 });
+        keltnerLowRef.current  = chart.addSeries(LineSeries, { ...oLine, color: "#c084fc", lineWidth: 1 });
+      }
+      keltnerHighRef.current.setData(kc.upper);
+      keltnerMidRef.current!.setData(kc.mid);
+      keltnerLowRef.current!.setData(kc.lower);
+    } else if (keltnerHighRef.current) {
+      [keltnerHighRef, keltnerMidRef, keltnerLowRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+    }
+
+    // ── Parabolic SAR ──
+    if (cfg.sar.enabled) {
+      if (!sarSeriesRef.current) sarSeriesRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#f97316", lineWidth: 1, lineStyle: 4 });
+      sarSeriesRef.current.setData(calcParabolicSAR(data, cfg.sar.step, cfg.sar.max));
+    } else if (sarSeriesRef.current) { chart.removeSeries(sarSeriesRef.current); sarSeriesRef.current = null; }
+
+    // Helper to remove a pane
+    const removePane = (ref: React.MutableRefObject<any>) => {
+      if (ref.current) { const idx = chart.panes().indexOf(ref.current); if (idx > 0) try { chart.removePane(idx); } catch {} ref.current = null; }
+    };
+
+    // ── ATR (pane) ──
+    if (cfg.atr.enabled) {
+      if (!atrSeriesRef.current) {
+        const pi = chart.panes().length;
+        atrSeriesRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#fb923c", lineWidth: 2 }, pi);
+        atrPaneRef.current   = chart.panes()[pi];
+      }
+      const d = calcATR(data, cfg.atr.period);
+      atrSeriesRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `ATR ${cfg.atr.period}`, value: d[d.length-1].value.toFixed(dec), color: "#fb923c" });
+    } else if (atrSeriesRef.current) { chart.removeSeries(atrSeriesRef.current); atrSeriesRef.current = null; removePane(atrPaneRef); }
+
+    // ── CCI (pane) ──
+    if (cfg.cci.enabled) {
+      if (!cciSeriesRef.current) {
+        const pi = chart.panes().length;
+        cciSeriesRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#f43f5e", lineWidth: 2 }, pi);
+        cciPaneRef.current   = chart.panes()[pi];
+        cciSeriesRef.current.createPriceLine({ price:  100, color: "#ef444470", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "100" });
+        cciSeriesRef.current.createPriceLine({ price: -100, color: "#22c55e70", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "-100" });
+      }
+      const d = calcCCI(data, cfg.cci.period);
+      cciSeriesRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `CCI ${cfg.cci.period}`, value: d[d.length-1].value.toFixed(1), color: "#f43f5e" });
+    } else if (cciSeriesRef.current) { chart.removeSeries(cciSeriesRef.current); cciSeriesRef.current = null; removePane(cciPaneRef); }
+
+    // ── Williams %R (pane) ──
+    if (cfg.willr.enabled) {
+      if (!willrSeriesRef.current) {
+        const pi = chart.panes().length;
+        willrSeriesRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#818cf8", lineWidth: 2 }, pi);
+        willrPaneRef.current   = chart.panes()[pi];
+        willrSeriesRef.current.createPriceLine({ price: -20, color: "#ef444470", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "-20" });
+        willrSeriesRef.current.createPriceLine({ price: -80, color: "#22c55e70", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "-80" });
+      }
+      const d = calcWilliamsR(data, cfg.willr.period);
+      willrSeriesRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `%R ${cfg.willr.period}`, value: d[d.length-1].value.toFixed(1), color: "#818cf8" });
+    } else if (willrSeriesRef.current) { chart.removeSeries(willrSeriesRef.current); willrSeriesRef.current = null; removePane(willrPaneRef); }
+
+    // ── Momentum (pane) ──
+    if (cfg.momentum.enabled) {
+      if (!momentumSeriesRef.current) {
+        const pi = chart.panes().length;
+        momentumSeriesRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#2dd4bf", lineWidth: 2 }, pi);
+        momentumPaneRef.current   = chart.panes()[pi];
+        momentumSeriesRef.current.createPriceLine({ price: 0, color: "#64748b", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "0" });
+      }
+      const d = calcMomentum(data, cfg.momentum.period);
+      momentumSeriesRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `MOM ${cfg.momentum.period}`, value: d[d.length-1].value.toFixed(dec), color: "#2dd4bf" });
+    } else if (momentumSeriesRef.current) { chart.removeSeries(momentumSeriesRef.current); momentumSeriesRef.current = null; removePane(momentumPaneRef); }
+
+    // ── Awesome Oscillator (pane) ──
+    if (cfg.ao.enabled) {
+      if (!aoSeriesRef.current) {
+        const pi = chart.panes().length;
+        aoSeriesRef.current = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pi);
+        aoPaneRef.current   = chart.panes()[pi];
+      }
+      aoSeriesRef.current.setData(calcAO(data));
+    } else if (aoSeriesRef.current) { chart.removeSeries(aoSeriesRef.current); aoSeriesRef.current = null; removePane(aoPaneRef); }
+
+    // ── ADX (pane) ──
+    if (cfg.adx.enabled) {
+      if (!adxSeriesRef.current) {
+        const pi = chart.panes().length;
+        adxSeriesRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#f5a623", lineWidth: 2 }, pi);
+        adxPlusRef.current    = chart.addSeries(LineSeries, { ...lineOpts, color: "#22c55e",  lineWidth: 1, lastValueVisible: false }, pi);
+        adxMinusRef.current   = chart.addSeries(LineSeries, { ...lineOpts, color: "#ef4444",  lineWidth: 1, lastValueVisible: false }, pi);
+        adxPaneRef.current    = chart.panes()[pi];
+        adxSeriesRef.current.createPriceLine({ price: 25, color: "#64748b70", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "25" });
+      }
+      const adxData = calcADX(data, cfg.adx.period);
+      adxSeriesRef.current.setData(adxData.adx);
+      adxPlusRef.current!.setData(adxData.diPlus);
+      adxMinusRef.current!.setData(adxData.diMinus);
+      if (adxData.adx.length > 0) leg.push({ label: `ADX`, value: adxData.adx[adxData.adx.length-1].value.toFixed(1), color: "#f5a623" });
+    } else if (adxSeriesRef.current) {
+      [adxSeriesRef, adxPlusRef, adxMinusRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+      removePane(adxPaneRef);
+    }
+
+    // ── Bears/Bulls Power (pane) ──
+    if (cfg.bearsbulls.enabled) {
+      if (!bearsSeriesRef.current) {
+        const pi = chart.panes().length;
+        bearsSeriesRef.current   = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false, color: "#ef4444" }, pi);
+        bullsSeriesRef.current   = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false, color: "#22c55e" }, pi);
+        bearsbullsPaneRef.current = chart.panes()[pi];
+      }
+      const bb2 = calcBearsBulls(data, cfg.bearsbulls.period);
+      bearsSeriesRef.current.setData(bb2.bears.map(v => ({ ...v, color: "#ef444480" })));
+      bullsSeriesRef.current!.setData(bb2.bulls.map(v => ({ ...v, color: "#22c55e80" })));
+    } else if (bearsSeriesRef.current) {
+      [bearsSeriesRef, bullsSeriesRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+      removePane(bearsbullsPaneRef);
+    }
+
     if (visibleRange) try { chart.timeScale().setVisibleRange(visibleRange); } catch {}
     lastLegendRef.current = leg;
     setLegend(leg);
@@ -931,6 +1152,16 @@ export default function TradePage() {
       // Null indicator refs — chart.remove() invalidated them
       maSeriesRefs.current.clear(); emaSeriesRefs.current.clear();
       bbUpperRef.current  = null; bbMiddleRef.current  = null; bbLowerRef.current = null;
+      alligatorJawRef.current = null; alligatorTeethRef.current = null; alligatorLipsRef.current = null;
+      donchianHighRef.current = null; donchianMidRef.current = null; donchianLowRef.current = null;
+      keltnerHighRef.current = null; keltnerMidRef.current = null; keltnerLowRef.current = null;
+      sarSeriesRef.current = null; atrSeriesRef.current = null; atrPaneRef.current = null;
+      cciSeriesRef.current = null; cciPaneRef.current = null;
+      willrSeriesRef.current = null; willrPaneRef.current = null;
+      momentumSeriesRef.current = null; momentumPaneRef.current = null;
+      aoSeriesRef.current = null; aoPaneRef.current = null;
+      adxSeriesRef.current = null; adxPlusRef.current = null; adxMinusRef.current = null; adxPaneRef.current = null;
+      bearsSeriesRef.current = null; bullsSeriesRef.current = null; bearsbullsPaneRef.current = null;
       rsiSeriesRef.current = null;  rsiPaneRef.current  = null;
       macdLineRef.current = null; macdSignalRef.current = null; macdHistRef.current = null; macdPaneRef.current = null;
       stochKRef.current = null; stochDRef.current = null; stochPaneRef.current = null;
@@ -960,6 +1191,37 @@ export default function TradePage() {
             setPendingPoint({ time, price });
           } else {
             addDrawing({ ...base, type: "trendline", p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
+            pendingPointRef.current = null;
+            setPendingPoint(null);
+          }
+        } else if (tool === "fibonacci") {
+          const pending = pendingPointRef.current;
+          if (!pending) {
+            pendingPointRef.current = { time, price };
+            setPendingPoint({ time, price });
+          } else {
+            // Draw Fibonacci levels as price lines
+            const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+            const colors  = ["#ef4444","#f97316","#f5a623","#22c55e","#38bdf8","#818cf8","#ef4444"];
+            const diff = pending.price - price;
+            levels.forEach((lvl, i) => {
+              const p = price + diff * lvl;
+              addDrawing({ ...base, id: `fib_${Date.now()}_${i}`, type: "hline", price: p, label: `${Math.round(lvl*1000)/10}%`, color: colors[i], lineWidth: 1, lineStyle: 2 });
+            });
+            pendingPointRef.current = null;
+            setPendingPoint(null);
+          }
+        } else if (tool === "rectangle") {
+          const pending = pendingPointRef.current;
+          if (!pending) {
+            pendingPointRef.current = { time, price };
+            setPendingPoint({ time, price });
+          } else {
+            // Draw rectangle as 2 horizontal lines (top + bottom)
+            const topPrice = Math.max(pending.price, price);
+            const botPrice = Math.min(pending.price, price);
+            addDrawing({ ...base, id: `rect_top_${Date.now()}`, type: "hline", price: topPrice, label: "▲", lineStyle: 0 });
+            addDrawing({ ...base, id: `rect_bot_${Date.now()}`, type: "hline", price: botPrice, label: "▼", lineStyle: 0 });
             pendingPointRef.current = null;
             setPendingPoint(null);
           }
@@ -1522,91 +1784,180 @@ export default function TradePage() {
   }
 
   // ── Indicator panel ───────────────────────────────────────────────────────
+  const [indSearch, setIndSearch] = useState("");
+  const [indCategory, setIndCategory] = useState<"all"|"trend"|"oscillator">("all");
+
   function renderIndicatorPanel(compact = false) {
-    const maOn    = indicators.ma.enabled;
-    const emaOn   = indicators.ema.enabled;
-    const bbOn    = indicators.bb.enabled;
-    const rsiOn   = indicators.rsi.enabled;
-    const macdOn  = indicators.macd.enabled;
-    const stochOn = indicators.stoch.enabled;
+    const toggle = (key: keyof typeof indicators) =>
+      setIndicators(p => ({ ...p, [key]: { ...(p[key] as any), enabled: !(p[key] as any).enabled } }));
+    const isOn = (key: keyof typeof indicators) => (indicators[key] as any).enabled;
 
-    const chip = (label: string, color: string, active: boolean, onClick: () => void, sub?: string) => (
-      <button onClick={onClick} style={{
-        display: "flex", alignItems: "center", gap: 4,
-        background: active ? `${color}22` : "transparent",
-        color: active ? color : "#64748b",
-        border: `1px solid ${active ? color : "#1e2d50"}`,
-        borderRadius: 20, padding: compact ? "3px 10px" : "4px 12px",
-        fontSize: compact ? 10 : 11, fontWeight: 700, cursor: "pointer",
-        boxShadow: active ? `0 0 8px ${color}44` : "none",
-        transition: "all 0.15s", whiteSpace: "nowrap",
-      }}>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? color : "#374151", flexShrink: 0 }} />
-        {label}
-        {sub && active && <span style={{ color: "#64748b", fontSize: 9, fontWeight: 400 }}>{sub}</span>}
-      </button>
+    const INDS: { key: keyof typeof indicators; label: string; color: string; cat: "trend"|"oscillator"; sub?: string }[] = [
+      { key: "ma",         label: "Média Móvel (MA)",        color: "#f5a623", cat: "trend",      sub: `Períodos: ${indicators.ma.periods.join(", ")}` },
+      { key: "ema",        label: "EMA",                     color: "#a78bfa", cat: "trend",      sub: `Períodos: ${indicators.ema.periods.join(", ")}` },
+      { key: "bb",         label: "Bollinger Bands",         color: "#38bdf8", cat: "trend",      sub: `Período ${indicators.bb.period}` },
+      { key: "alligator",  label: "Alligator",               color: "#22c55e", cat: "trend" },
+      { key: "donchian",   label: "Donchian Channel",        color: "#fbbf24", cat: "trend",      sub: `Período ${indicators.donchian.period}` },
+      { key: "keltner",    label: "Keltner Channel",         color: "#c084fc", cat: "trend",      sub: `Período ${indicators.keltner.period}` },
+      { key: "sar",        label: "Parabolic SAR",           color: "#f97316", cat: "trend",      sub: `Step ${indicators.sar.step}` },
+      { key: "rsi",        label: "RSI",                     color: "#f97316", cat: "oscillator", sub: `Período ${indicators.rsi.period}` },
+      { key: "macd",       label: "MACD",                    color: "#22c55e", cat: "oscillator", sub: `${indicators.macd.fast}/${indicators.macd.slow}/${indicators.macd.signal}` },
+      { key: "stoch",      label: "Stochastic",              color: "#fb923c", cat: "oscillator", sub: `K${indicators.stoch.kPeriod}/D${indicators.stoch.dPeriod}` },
+      { key: "atr",        label: "ATR",                     color: "#fb923c", cat: "oscillator", sub: `Período ${indicators.atr.period}` },
+      { key: "cci",        label: "CCI",                     color: "#f43f5e", cat: "oscillator", sub: `Período ${indicators.cci.period}` },
+      { key: "willr",      label: "Williams %R",             color: "#818cf8", cat: "oscillator", sub: `Período ${indicators.willr.period}` },
+      { key: "momentum",   label: "Momentum",                color: "#2dd4bf", cat: "oscillator", sub: `Período ${indicators.momentum.period}` },
+      { key: "ao",         label: "Awesome Oscillator",      color: "#22c55e", cat: "oscillator" },
+      { key: "adx",        label: "ADX",                     color: "#f5a623", cat: "oscillator", sub: `Período ${indicators.adx.period}` },
+      { key: "bearsbulls", label: "Bears/Bulls Power",       color: "#ef4444", cat: "oscillator", sub: `Período ${indicators.bearsbulls.period}` },
+    ];
+
+    const q = indSearch.toLowerCase();
+    const filtered = INDS.filter(ind =>
+      (indCategory === "all" || ind.cat === indCategory) &&
+      (!q || ind.label.toLowerCase().includes(q))
     );
 
-    const periodPill = (p: number, color: string, active: boolean, onClick: () => void) => (
-      <button key={p} onClick={onClick} style={{
-        background: active ? color : "#0a0f1e",
-        color: active ? "#0a0f1e" : "#94a3b8",
-        border: `1px solid ${active ? color : "#1e2d50"}`,
-        borderRadius: 12, padding: compact ? "2px 7px" : "3px 8px",
-        fontSize: compact ? 9 : 10, fontWeight: 800, cursor: "pointer",
-        transition: "all 0.12s",
-      }}>{p}</button>
-    );
+    const activeCount = INDS.filter(i => isOn(i.key)).length;
 
+    // Compact mode: horizontal chip strip (used in timeframe bar)
+    if (compact) {
+      return (
+        <div style={{ background: "#080e1d", borderBottom: "1px solid #1e2d50", padding: "5px 10px", display: "flex", gap: 5, alignItems: "center", overflowX: "auto" }}>
+          {INDS.filter(i => isOn(i.key)).map(ind => (
+            <button key={ind.key} onClick={() => toggle(ind.key)} style={{
+              background: `${ind.color}22`, color: ind.color, border: `1px solid ${ind.color}`,
+              borderRadius: 20, padding: "2px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+            }}>✕ {ind.label.split(" ")[0]}</button>
+          ))}
+          {activeCount === 0 && <span style={{ color: "#334155", fontSize: 10 }}>Nenhum indicador activo</span>}
+        </div>
+      );
+    }
+
+    // Full modal
     return (
-      <div style={{
-        background: "#080e1d",
-        borderBottom: "1px solid #1e2d50",
-        padding: compact ? "5px 10px" : "6px 14px",
-        display: "flex", gap: compact ? 6 : 8, alignItems: "center",
-        overflowX: "auto", flexWrap: compact ? "nowrap" : "wrap",
-      }}>
-        <style>{`.ind-bar::-webkit-scrollbar{display:none}`}</style>
+      <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "flex-end" }}
+        onClick={e => { if (e.target === e.currentTarget) setShowIndicators(false); }}>
+        <div style={{ width: "min(420px, 100vw)", height: "100vh", background: "#0a0f1e", borderLeft: "1px solid #1e2d50", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.6)" }}>
 
-        {/* MA */}
-        <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-          {chip("MA", "#f5a623", maOn, () => setIndicators(prev => ({ ...prev, ma: { ...prev.ma, enabled: !prev.ma.enabled } })))}
-          {maOn && ([9, 20, 50] as const).map(p => periodPill(p, MA_COLORS[p], indicators.ma.periods.includes(p),
-            () => setIndicators(prev => {
-              const has = prev.ma.periods.includes(p);
-              const periods = has ? prev.ma.periods.filter(x => x !== p) : [...prev.ma.periods, p];
-              return { ...prev, ma: { ...prev.ma, periods: periods.length ? periods : [p] } };
-            })
-          ))}
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: "1px solid #1e2d50", flexShrink: 0 }}>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Indicadores</div>
+              {activeCount > 0 && <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{activeCount} activo{activeCount !== 1 ? "s" : ""}</div>}
+            </div>
+            <button onClick={() => setShowIndicators(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, color: "#94a3b8", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          </div>
+
+          {/* Search */}
+          <div style={{ padding: "10px 18px", borderBottom: "1px solid #1a2540", flexShrink: 0 }}>
+            <div style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 9, display: "flex", alignItems: "center", gap: 8, padding: "7px 12px" }}>
+              <span style={{ color: "#334155", fontSize: 13 }}>🔍</span>
+              <input value={indSearch} onChange={e => setIndSearch(e.target.value)} placeholder="Pesquisar indicador..."
+                style={{ background: "none", border: "none", outline: "none", color: "#e2e8f0", fontSize: 13, width: "100%" }} />
+            </div>
+          </div>
+
+          {/* Category tabs */}
+          <div style={{ display: "flex", padding: "8px 18px", gap: 6, borderBottom: "1px solid #1a2540", flexShrink: 0 }}>
+            {(["all", "trend", "oscillator"] as const).map(cat => (
+              <button key={cat} onClick={() => setIndCategory(cat)} style={{
+                background: indCategory === cat ? "rgba(245,166,35,0.12)" : "transparent",
+                color: indCategory === cat ? "#f5a623" : "#64748b",
+                border: `1px solid ${indCategory === cat ? "rgba(245,166,35,0.35)" : "#1e2d50"}`,
+                borderRadius: 7, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              }}>{{ all: "Todos", trend: "Tendência", oscillator: "Osciladores" }[cat]}</button>
+            ))}
+          </div>
+
+          {/* Active indicators summary */}
+          {activeCount > 0 && (
+            <div style={{ padding: "8px 18px", borderBottom: "1px solid #1a2540", display: "flex", flexWrap: "wrap", gap: 5, flexShrink: 0 }}>
+              {INDS.filter(i => isOn(i.key)).map(ind => (
+                <div key={ind.key} style={{ background: `${ind.color}18`, border: `1px solid ${ind.color}50`, borderRadius: 14, padding: "3px 10px", display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ color: ind.color, fontSize: 11, fontWeight: 700 }}>{ind.label.split(" ")[0]}</span>
+                  <button onClick={() => toggle(ind.key)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 11, padding: 0, lineHeight: 1 }}>✕</button>
+                </div>
+              ))}
+              <button onClick={() => setIndicators(DEFAULT_INDICATORS)} style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 14, padding: "3px 10px", color: "#ef4444", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Limpar tudo</button>
+            </div>
+          )}
+
+          {/* Indicator list */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {filtered.map(ind => {
+              const on = isOn(ind.key);
+              return (
+                <div key={ind.key} style={{ borderBottom: "1px solid #0d1526" }}>
+                  <div style={{ display: "flex", alignItems: "center", padding: "12px 18px", gap: 12 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: `${ind.color}18`, border: `1px solid ${ind.color}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span style={{ width: 14, height: 3, borderRadius: 2, background: ind.color, display: "block" }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: on ? "#fff" : "#94a3b8", fontWeight: on ? 700 : 500, fontSize: 13 }}>{ind.label}</div>
+                      {on && ind.sub && <div style={{ color: "#64748b", fontSize: 11, marginTop: 1 }}>{ind.sub}</div>}
+                    </div>
+                    {/* Toggle */}
+                    <button onClick={() => toggle(ind.key)} style={{
+                      width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer", position: "relative", flexShrink: 0,
+                      background: on ? "#f5a623" : "#1e2d50", transition: "background 0.2s",
+                    }}>
+                      <span style={{ position: "absolute", top: 3, left: on ? 21 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+                    </button>
+                  </div>
+
+                  {/* Inline settings when active */}
+                  {on && (
+                    <div style={{ padding: "0 18px 12px", display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {ind.key === "ma" && ([9, 20, 50] as const).map(p => (
+                        <button key={p} onClick={() => setIndicators(prev => {
+                          const has = prev.ma.periods.includes(p);
+                          const periods = has ? prev.ma.periods.filter(x => x !== p) : [...prev.ma.periods, p];
+                          return { ...prev, ma: { ...prev.ma, periods: periods.length ? periods : [p] } };
+                        })} style={{ background: indicators.ma.periods.includes(p) ? `${MA_COLORS[p]}30` : "#0d1526", color: indicators.ma.periods.includes(p) ? MA_COLORS[p] : "#64748b", border: `1px solid ${indicators.ma.periods.includes(p) ? MA_COLORS[p] : "#1e2d50"}`, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          MA {p}
+                        </button>
+                      ))}
+                      {ind.key === "ema" && ([9, 20, 50] as const).map(p => (
+                        <button key={p} onClick={() => setIndicators(prev => {
+                          const has = prev.ema.periods.includes(p);
+                          const periods = has ? prev.ema.periods.filter(x => x !== p) : [...prev.ema.periods, p];
+                          return { ...prev, ema: { ...prev.ema, periods: periods.length ? periods : [p] } };
+                        })} style={{ background: indicators.ema.periods.includes(p) ? `${EMA_COLORS[p]}30` : "#0d1526", color: indicators.ema.periods.includes(p) ? EMA_COLORS[p] : "#64748b", border: `1px solid ${indicators.ema.periods.includes(p) ? EMA_COLORS[p] : "#1e2d50"}`, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          EMA {p}
+                        </button>
+                      ))}
+                      {(["bb", "donchian", "atr", "cci", "willr", "momentum"] as const).includes(ind.key as any) && (
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#64748b", fontSize: 11 }}>
+                          Período
+                          <input type="number" min={2} max={200}
+                            value={(indicators[ind.key] as any).period}
+                            onChange={e => setIndicators(p => ({ ...p, [ind.key]: { ...(p[ind.key] as any), period: Math.max(2, parseInt(e.target.value)||14) } }))}
+                            style={{ width: 52, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 7px", outline: "none", textAlign: "center" }} />
+                        </label>
+                      )}
+                      {ind.key === "stoch" && (<>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>K <input type="number" min={2} max={50} value={indicators.stoch.kPeriod} onChange={e => setIndicators(p => ({ ...p, stoch: { ...p.stoch, kPeriod: Math.max(2, parseInt(e.target.value)||14) } }))} style={{ width: 44, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>D <input type="number" min={2} max={20} value={indicators.stoch.dPeriod} onChange={e => setIndicators(p => ({ ...p, stoch: { ...p.stoch, dPeriod: Math.max(2, parseInt(e.target.value)||3) } }))} style={{ width: 44, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                      </>)}
+                      {ind.key === "macd" && (<>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>Fast <input type="number" min={2} value={indicators.macd.fast} onChange={e => setIndicators(p => ({ ...p, macd: { ...p.macd, fast: Math.max(2, parseInt(e.target.value)||12) } }))} style={{ width: 44, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>Slow <input type="number" min={2} value={indicators.macd.slow} onChange={e => setIndicators(p => ({ ...p, macd: { ...p.macd, slow: Math.max(2, parseInt(e.target.value)||26) } }))} style={{ width: 44, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                      </>)}
+                      {ind.key === "rsi" && (
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#64748b", fontSize: 11 }}>
+                          Período
+                          <input type="number" min={2} max={100} value={indicators.rsi.period} onChange={e => setIndicators(p => ({ ...p, rsi: { ...p.rsi, period: Math.max(2, parseInt(e.target.value)||14) } }))} style={{ width: 52, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 7px", outline: "none", textAlign: "center" }} />
+                        </label>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-
-        <div style={{ width: 1, height: 18, background: "#1e2d50", flexShrink: 0 }} />
-
-        {/* EMA */}
-        <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-          {chip("EMA", "#a78bfa", emaOn, () => setIndicators(prev => ({ ...prev, ema: { ...prev.ema, enabled: !prev.ema.enabled } })))}
-          {emaOn && ([9, 20, 50] as const).map(p => periodPill(p, EMA_COLORS[p], indicators.ema.periods.includes(p),
-            () => setIndicators(prev => {
-              const has = prev.ema.periods.includes(p);
-              const periods = has ? prev.ema.periods.filter(x => x !== p) : [...prev.ema.periods, p];
-              return { ...prev, ema: { ...prev.ema, periods: periods.length ? periods : [p] } };
-            })
-          ))}
-        </div>
-
-        <div style={{ width: 1, height: 18, background: "#1e2d50", flexShrink: 0 }} />
-
-        {/* BB */}
-        {chip("BB", "#38bdf8", bbOn, () => setIndicators(prev => ({ ...prev, bb: { ...prev.bb, enabled: !prev.bb.enabled } })), bbOn ? `(${indicators.bb.period})` : undefined)}
-
-        {/* RSI */}
-        {chip("RSI", "#f97316", rsiOn, () => setIndicators(prev => ({ ...prev, rsi: { ...prev.rsi, enabled: !prev.rsi.enabled } })), rsiOn ? `(${indicators.rsi.period})` : undefined)}
-
-        {/* MACD */}
-        {chip("MACD", "#22c55e", macdOn, () => setIndicators(prev => ({ ...prev, macd: { ...prev.macd, enabled: !prev.macd.enabled } })), macdOn ? `${indicators.macd.fast}/${indicators.macd.slow}` : undefined)}
-
-        {/* Stochastic */}
-        {chip("Stoch", "#fb923c", stochOn, () => setIndicators(prev => ({ ...prev, stoch: { ...prev.stoch, enabled: !prev.stoch.enabled } })), stochOn ? `${indicators.stoch.kPeriod}/${indicators.stoch.dPeriod}` : undefined)}
       </div>
     );
   }
@@ -1661,6 +2012,8 @@ export default function TradePage() {
           {/* Tool buttons */}
           {toolBtn("hline",     "─",  "Linha Horizontal")}
           {toolBtn("trendline", "╱",  "Linha de Tendência")}
+          {toolBtn("fibonacci", "φ",  "Fibonacci")}
+          {toolBtn("rectangle", "▭",  "Rectângulo")}
 
           {/* Pending point indicator */}
           {pendingPoint && (
