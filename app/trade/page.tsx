@@ -114,8 +114,16 @@ export default function TradePage() {
   const [isMobile, setIsMobile]       = useState(false);
   const [windowHeight, setWindowHeight] = useState(0);
   useEffect(() => {
-    const check = () => { setIsMobile(window.innerWidth < 768); setWindowHeight(window.innerHeight); };
-    check();
+    let prevW = window.innerWidth;
+    const check = () => {
+      const w = window.innerWidth;
+      setIsMobile(w < 768);
+      // Só atualiza a altura em mudanças de largura (rotação do ecrã),
+      // nunca por abertura do teclado virtual (que só muda a altura)
+      if (w !== prevW) { setWindowHeight(window.innerHeight); prevW = w; }
+    };
+    setIsMobile(window.innerWidth < 768);
+    setWindowHeight(window.innerHeight);
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
@@ -799,41 +807,46 @@ export default function TradePage() {
   // ── Chart init / reinit ─────────────────────────────────────────────────
   useEffect(() => {
     if (!selectedPair) return;
-    if (isMobile && windowHeight === 0) return;
+    if (isMobile && typeof window === "undefined") return;
 
     const TOPBAR_H     = 48;
     const TF_H         = 36;
     const TRADEPANEL_H = 162;
     const BOTTOMNAV_H  = 52;
-    const chartHeight  = isMobile
-      ? windowHeight - TOPBAR_H - TF_H - TRADEPANEL_H - BOTTOMNAV_H
-      : (chartRef.current?.clientHeight || 500);
 
     function initChart() {
       const el = chartRef.current;
       if (!el) return;
       if (chartApiRef.current) { chartApiRef.current.remove(); chartApiRef.current = null; }
 
-      const w = el.clientWidth || window.innerWidth;
-      const h = chartHeight;
+      const w = el.clientWidth  || window.innerWidth;
+      // Lê a altura do elemento (definida por CSS bottom:) em vez de calcular via windowHeight
+      const h = el.clientHeight || (isMobile
+        ? window.innerHeight - TOPBAR_H - TF_H - TRADEPANEL_H - BOTTOMNAV_H
+        : (chartRef.current?.clientHeight || 500));
       if (w === 0 || h === 0) return;
 
       const chart = createChart(el, {
         layout: { background: { color: "#0a0f1e" }, textColor: "#94a3b8", attributionLogo: false },
         grid:   { vertLines: { color: "#1e2d50" }, horzLines: { color: "#1e2d50" } },
-        crosshair:       { mode: 1 },
-        rightPriceScale: {
-          borderColor: "#1e2d50",
-          autoScale:   true,
-          scaleMargins: { top: 0.1, bottom: 0.1 },
-        },
+        crosshair: { mode: 1 },
         timeScale: {
           borderColor: "#1e2d50", timeVisible: true,
-          rightOffset: 8,
-          barSpacing: 6,
+          rightOffset: isMobile ? 5 : 8,
+          barSpacing: isMobile ? 10 : 6,
           fixLeftEdge: false,
           lockVisibleTimeRangeOnResize: false,
           shiftVisibleRangeOnNewBar: true,
+          tickMarkFormatter: isMobile ? (time: number) => {
+            const d = new Date(time * 1000);
+            return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+          } : undefined,
+        },
+        rightPriceScale: {
+          borderColor: "#1e2d50",
+          autoScale:   true,
+          scaleMargins: { top: isMobile ? 0.08 : 0.1, bottom: isMobile ? 0.08 : 0.1 },
+          minimumWidth: isMobile ? 58 : undefined,
         },
         width: w, height: h,
       });
@@ -943,7 +956,9 @@ export default function TradePage() {
       });
 
       const ro = new ResizeObserver(() => {
-        if (el && chartApiRef.current) chartApiRef.current.applyOptions({ width: el.clientWidth });
+        if (el && chartApiRef.current) {
+          chartApiRef.current.applyOptions({ width: el.clientWidth, height: el.clientHeight });
+        }
       });
       ro.observe(el);
       (chartApiRef as any)._roDisconnect = () => ro.disconnect();
@@ -958,7 +973,7 @@ export default function TradePage() {
         delete (chartApiRef as any)._roDisconnect;
       }
     };
-  }, [selectedPair, isMobile, windowHeight]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPair, isMobile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch wallet data when mobile wallet tab opens ───────────────────────
   useEffect(() => {
@@ -1864,7 +1879,7 @@ export default function TradePage() {
         )}
 
         {/* ── Chart ── */}
-        <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
+        <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, background: "#070d1c", overflow: "hidden" }}>
           <div ref={chartRef}
             style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
             onMouseDown={e => onChartPointerDown(e.clientY)}
@@ -1876,9 +1891,6 @@ export default function TradePage() {
             onTouchEnd={onChartPointerUp}
           />
           {renderLegend()}
-          <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-            <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
-          </div>
 
 
           {/* ── Zoom controls (bottom centre, over time axis) ── */}
