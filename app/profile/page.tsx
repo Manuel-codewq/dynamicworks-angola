@@ -155,7 +155,7 @@ export default function ProfilePage() {
     setAvatarLoading(true);
     setProfileMsg(null);
     try {
-      // Compress to max 400px, quality 0.82
+      // Compress to max 400px square, JPEG 0.82
       const b64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -177,32 +177,21 @@ export default function ProfilePage() {
         reader.readAsDataURL(file);
       });
 
-      // Upload to Cloudinary
-      const fd = new FormData();
-      fd.append("file", b64);
-      fd.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-      const up = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: "POST", body: fd }
-      );
-      if (!up.ok) throw new Error("Falha no upload");
-      const { secure_url } = await up.json();
-
-      // Save URL to DB
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
+      // Upload via server API (sem necessidade de NEXT_PUBLIC vars em produção)
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, province, avatar: secure_url }),
+        body: JSON.stringify({ image: b64 }),
       });
+      const d = await res.json();
       if (res.ok) {
-        setAvatar(secure_url);
+        setAvatar(d.avatar);
         setProfileMsg({ text: "Foto de perfil actualizada!", ok: true });
       } else {
-        const d = await res.json();
-        setProfileMsg({ text: d.error ?? "Erro ao guardar foto.", ok: false });
+        setProfileMsg({ text: d.error ?? "Erro ao fazer upload.", ok: false });
       }
     } catch {
-      setProfileMsg({ text: "Erro ao fazer upload. Tente novamente.", ok: false });
+      setProfileMsg({ text: "Erro de rede. Tente novamente.", ok: false });
     }
     setAvatarLoading(false);
   }
