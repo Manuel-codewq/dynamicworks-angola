@@ -605,6 +605,9 @@ export default function TradePage() {
     // Reset sync refs so the timer re-anchors to the first real tick of this pair/timeframe
     currentCandleEpochRef.current = 0;
 
+    // Pause tick → candle updates until new candles arrive (prevents erratic movement during TF switch)
+    reconnectingRef.current = true;
+
     // Clear stale candles so no fake spike appears before real data arrives
     if (candleSeriesRef.current) {
       candleSeriesRef.current.setData([]);
