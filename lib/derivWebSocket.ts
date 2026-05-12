@@ -36,15 +36,38 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
+// Índices sintéticos Deriv — disponíveis 24/7, usados após horário de mercado
+export const SYNTHETIC_PAIRS: DerivPair[] = [
+  { symbol: "1HZ10V",   label: "Volatility 10",  category: "Sintético", decimals: 3 },
+  { symbol: "1HZ25V",   label: "Volatility 25",  category: "Sintético", decimals: 3 },
+  { symbol: "1HZ50V",   label: "Volatility 50",  category: "Sintético", decimals: 4 },
+  { symbol: "1HZ75V",   label: "Volatility 75",  category: "Sintético", decimals: 4 },
+  { symbol: "1HZ100V",  label: "Volatility 100", category: "Sintético", decimals: 2 },
+  { symbol: "BOOM300N", label: "Boom 300",        category: "Sintético", decimals: 2 },
+  { symbol: "CRASH300N",label: "Crash 300",       category: "Sintético", decimals: 2 },
+  { symbol: "BOOM500",  label: "Boom 500",        category: "Sintético", decimals: 2 },
+  { symbol: "CRASH500", label: "Crash 500",       category: "Sintético", decimals: 2 },
+];
+
+// Angola = WAT (UTC+1). Mercado real: Seg-Sex 07h-18h WAT (06h-17h UTC)
+export function isRealMarketOpen(): boolean {
+  if (typeof window === "undefined") return true;
+  const now    = new Date();
+  const utcDay = now.getUTCDay();   // 0=Dom, 6=Sab
+  const utcH   = now.getUTCHours();
+  const isWeekday = utcDay >= 1 && utcDay <= 5;
+  return isWeekday && utcH >= 6 && utcH < 17; // 07h–18h WAT
+}
+
 export function getAvailablePairs(): DerivPair[] {
   if (typeof window === "undefined") {
+    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS, ...SYNTHETIC_PAIRS];
+  }
+  if (isRealMarketOpen()) {
     return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
   }
-  const day = new Date().getUTCDay(); // 0=Dom, 6=Sab
-  const isWeekend = day === 0 || day === 6;
-  // Ao fim de semana só cripto tem dados reais (forex e commodities fechados)
-  if (isWeekend) return [...CRYPTO_PAIRS];
-  return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+  // Fora de horário (após 18h WAT ou fim de semana) → só sintéticos 24/7
+  return [...SYNTHETIC_PAIRS];
 }
 
 export const GRANULARITY: Record<string, number> = {

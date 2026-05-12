@@ -12,7 +12,7 @@ import {
   CandlestickSeries, LineSeries, HistogramSeries,
 } from "lightweight-charts";
 import {
-  derivWS, GRANULARITY, getAvailablePairs,
+  derivWS, GRANULARITY, getAvailablePairs, isRealMarketOpen,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -43,9 +43,11 @@ const SEED_PRICES: Record<string, number> = {
   cryBTCUSD: 60000,  cryETHUSD: 3200,
   // Commodities
   frxXAUUSD: 2350,   frxXAGUSD: 27.5,
-  // Synthetic indices
-  R_10: 6300, R_25: 5800, R_50: 4500, R_75: 3700, R_100: 9800,
-  BOOM300: 7800, CRASH300: 7800,
+  // Synthetic indices (símbolos reais Deriv)
+  "1HZ10V": 6300,  "1HZ25V": 5800,  "1HZ50V": 4500,
+  "1HZ75V": 3700,  "1HZ100V": 9800,
+  BOOM300N: 7800,  CRASH300N: 7800,
+  BOOM500: 8200,   CRASH500: 8200,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,9 +135,19 @@ export default function TradePage() {
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
 
   useEffect(() => {
-    const list = getAvailablePairs();
-    setPairs(list);
-    setSelectedPair(list[0]);
+    function refreshPairs() {
+      const list = getAvailablePairs();
+      setPairs(list);
+      setSelectedPair(prev => {
+        // Mantém o par selecionado se ainda estiver disponível; caso contrário troca para o primeiro
+        if (prev && list.some(p => p.symbol === prev.symbol)) return prev;
+        return list[0];
+      });
+    }
+    refreshPairs();
+    // Verifica a cada 60s se o horário de mercado mudou (troca real ↔ sintético às 18h)
+    const id = setInterval(refreshPairs, 60_000);
+    return () => clearInterval(id);
   }, []); // eslint-disable-line
 
   // ── UI state ─────────────────────────────────────────────────────────────
