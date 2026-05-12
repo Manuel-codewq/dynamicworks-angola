@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell, X, CheckCircle, XCircle, Wallet, ArrowUpCircle, ScanFace, Megaphone, Info } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -11,14 +11,18 @@ interface Notification {
   createdAt: string;
 }
 
-const TYPE_ICON: Record<string, string> = {
-  deposit_completed:    "💰",
-  deposit_rejected:     "❌",
-  withdrawal_completed: "💸",
-  withdrawal_rejected:  "❌",
-  kyc_approved:         "✅",
-  kyc_rejected:         "⚠️",
-};
+function TypeIcon({ type }: { type: string }) {
+  const props = { size: 18 };
+  if (type === "deposit_completed")    return <CheckCircle  {...props} color="#22c55e" />;
+  if (type === "deposit_rejected")     return <XCircle      {...props} color="#ef4444" />;
+  if (type === "withdrawal_completed") return <ArrowUpCircle {...props} color="#22c55e" />;
+  if (type === "withdrawal_rejected")  return <XCircle      {...props} color="#ef4444" />;
+  if (type === "kyc_approved")         return <ScanFace     {...props} color="#22c55e" />;
+  if (type === "kyc_rejected")         return <ScanFace     {...props} color="#ef4444" />;
+  if (type === "broadcast")            return <Megaphone    {...props} color="#f5a623" />;
+  if (type === "admin")                return <Info         {...props} color="#38bdf8" />;
+  return <Bell {...props} color="#94a3b8" />;
+}
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -95,8 +99,8 @@ export default function NotificationBell() {
   const NotifList = () => (
     <>
       {notifications.length === 0 ? (
-        <div style={{ padding: "32px 16px", textAlign: "center", color: "#475569", fontSize: 13 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🔔</div>
+        <div style={{ padding: "32px 16px", textAlign: "center", color: "#475569", fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <Bell size={32} color="#1e2d50" />
           Sem notificações
         </div>
       ) : (
@@ -108,8 +112,8 @@ export default function NotificationBell() {
               background: n.read ? "transparent" : "rgba(245,166,35,0.05)",
               cursor: n.read ? "default" : "pointer",
             }}>
-            <div style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>
-              {TYPE_ICON[n.type] ?? "🔔"}
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <TypeIcon type={n.type} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
