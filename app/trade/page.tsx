@@ -1972,7 +1972,7 @@ export default function TradePage() {
         {/* ── Bottom trade panel (only visible on chart tab) ── */}
         {mobileTab === "chart" && (() => {
           const btnDisabled = loading || currentPrice === 0;
-          const currentPayout = payoutMap[selectedPair?.symbol ?? ""] ?? 0.74;
+          const currentPayout = payoutMap[selectedPair?.label ?? ""] ?? 0.74;
           const payoutAmt = Math.round(amount * currentPayout);
 
           // Cronómetro: countdown ao trade activo, ou duração seleccionada em repouso
