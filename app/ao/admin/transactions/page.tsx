@@ -42,7 +42,10 @@ export default function AdminTransactionsPage() {
     if (type)   params.set("type",   type);
     if (search) params.set("search", search);
     const res = await fetch("/api/admin/transactions?" + params);
-    if (res.ok) setTransactions(await res.json());
+    if (res.ok) {
+      const d = await res.json();
+      setTransactions(Array.isArray(d) ? d : (d.transactions ?? d.data ?? []));
+    }
     setLoading(false);
   }, [status, type, search]);
 
@@ -59,7 +62,7 @@ export default function AdminTransactionsPage() {
     load();
   }
 
-  const pending = transactions.filter(t => t.status === "pending").length;
+  const pending = Array.isArray(transactions) ? transactions.filter(t => t.status === "pending").length : 0;
 
   const th: React.CSSProperties = {
     color: "#94a3b8", fontSize: 12, padding: "8px 12px",
