@@ -7,11 +7,23 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
-  // Only include trades from users currently on real account (isDemo: false)
-  // This avoids false positives from old trades that defaulted to isDemo=false
+  // Só utilizadores com pelo menos 1 depósito aprovado podem aparecer no ranking
+  const eligibleUserIds = await prisma.transaction.findMany({
+    where:  { type: "deposit", status: "completed" },
+    select: { userId: true },
+    distinct: ["userId"],
+  }).then(r => r.map(x => x.userId));
+
+  if (eligibleUserIds.length === 0) return NextResponse.json([]);
+
   const trades = await prisma.trade.findMany({
-    where:   { status: "closed", isDemo: false, user: { isDemo: false } },
-    select:  { userId: true, result: true, profit: true, amount: true, user: { select: { name: true, avatar: true } } },
+    where: {
+      status: "closed",
+      isDemo: false,
+      userId: { in: eligibleUserIds },
+      user:   { isDemo: false },
+    },
+    select: { userId: true, result: true, profit: true, amount: true, user: { select: { name: true, avatar: true } } },
   });
 
   const map = new Map<string, { name: string; avatar: string | null; profit: number; wins: number; total: number }>();

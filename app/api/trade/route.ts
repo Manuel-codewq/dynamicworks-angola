@@ -74,6 +74,19 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   if (user.status === "blocked") return NextResponse.json({ error: "Conta bloqueada" }, { status: 403 });
 
+  // Conta real exige pelo menos 1 depósito aprovado
+  if (!user.isDemo) {
+    const hasDeposit = await prisma.transaction.findFirst({
+      where: { userId: user.id, type: "deposit", status: "completed" },
+      select: { id: true },
+    });
+    if (!hasDeposit) {
+      return NextResponse.json({
+        error: "Para operar em conta real é necessário efectuar um depósito primeiro.",
+      }, { status: 403 });
+    }
+  }
+
   const balanceField = user.isDemo ? "demoBalance" : "balance";
   const currentBalance: number = user[balanceField] ?? 0;
   if (currentBalance < amountNum) {
