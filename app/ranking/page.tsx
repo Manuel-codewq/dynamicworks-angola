@@ -8,7 +8,25 @@ function formatKz(n: number) { return n.toLocaleString("pt-AO") + " Kz"; }
 function formatDate(d: string) { return new Date(d).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" }); }
 function daysLeft(end: string) { return Math.max(0, Math.ceil((new Date(end).getTime() - Date.now()) / 86400000)); }
 
-interface RankEntry { position: number; name: string; profit: number; wins: number; total: number; winRate: number; }
+interface RankEntry { position: number; name: string; avatar: string | null; profit: number; wins: number; total: number; winRate: number; }
+
+function AvatarCircle({ entry, size = 34, medal, crown }: { entry: RankEntry; size?: number; medal?: string; crown?: boolean }) {
+  const border = medal ? `2.5px solid ${medal}` : "2px solid #1e2d50";
+  const glow   = medal ? `0 0 12px ${medal}55` : "none";
+  return (
+    <div style={{ position: "relative", width: size, height: size, margin: "0 auto 8px" }}>
+      {entry.avatar
+        ? <img src={entry.avatar} alt={entry.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border, boxShadow: glow }} />
+        : <div style={{ width: size, height: size, borderRadius: "50%", background: "#1e2d50", border, boxShadow: glow, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#f5a623", fontWeight: 800, fontSize: Math.round(size * 0.38) }}>{entry.name.charAt(0).toUpperCase()}</span>
+          </div>
+      }
+      {crown && (
+        <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", fontSize: 16 }}>👑</div>
+      )}
+    </div>
+  );
+}
 
 const MEDAL: Record<number, { icon: React.ReactNode; color: string }> = {
   1: { icon: <Trophy size={18} />, color: "#f5a623" },
@@ -115,21 +133,24 @@ export default function RankingPage() {
           <div>
             {ranking.length >= 3 && (
               <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "flex-end" }}>
+                {/* 2nd */}
                 <div style={{ flex: 1, background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
-                  <Medal size={22} color="#94a3b8" style={{ marginBottom: 6 }} />
-                  <div style={{ color: "#94a3b8", fontWeight: 800, fontSize: 12, marginBottom: 4 }}>2º</div>
+                  <AvatarCircle entry={ranking[1]} size={44} medal="#94a3b8" />
+                  <div style={{ color: "#94a3b8", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>2º</div>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[1].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 13 }}>+{formatKz(ranking[1].profit)}</div>
                 </div>
+                {/* 1st */}
                 <div style={{ flex: 1, background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "20px 12px", textAlign: "center" }}>
-                  <Trophy size={26} color="#f5a623" style={{ marginBottom: 6 }} />
-                  <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 12, marginBottom: 4 }}>1º</div>
+                  <AvatarCircle entry={ranking[0]} size={54} medal="#f5a623" crown />
+                  <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>1º</div>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{ranking[0].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 14 }}>+{formatKz(ranking[0].profit)}</div>
                 </div>
+                {/* 3rd */}
                 <div style={{ flex: 1, background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
-                  <Medal size={22} color="#cd7f32" style={{ marginBottom: 6 }} />
-                  <div style={{ color: "#cd7f32", fontWeight: 800, fontSize: 12, marginBottom: 4 }}>3º</div>
+                  <AvatarCircle entry={ranking[2]} size={44} medal="#cd7f32" />
+                  <div style={{ color: "#cd7f32", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>3º</div>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[2].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 13 }}>+{formatKz(ranking[2].profit)}</div>
                 </div>
@@ -150,8 +171,8 @@ export default function RankingPage() {
                     <div style={{ width: 32, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {medal ? <span style={{ color: medal.color }}>{medal.icon}</span> : <span style={{ color: "#4b5563", fontSize: 13, fontWeight: 700 }}>{e.position}</span>}
                     </div>
-                    <div style={{ width: 34, height: 34, background: "#1e2d50", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 10, flexShrink: 0 }}>
-                      <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>{e.name.charAt(0).toUpperCase()}</span>
+                    <div style={{ marginRight: 10, flexShrink: 0 }}>
+                      <AvatarCircle entry={e} size={34} />
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{e.name}</div>

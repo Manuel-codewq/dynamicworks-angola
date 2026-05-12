@@ -13,6 +13,7 @@ model User {
   password     String
   phone        String?
   province     String?
+  avatar       String?
   biNumber     String?
   balance      Float         @default(0)
   demoBalance  Float         @default(10000)

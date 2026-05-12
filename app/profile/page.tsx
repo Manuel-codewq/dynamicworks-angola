@@ -1,12 +1,13 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+"use client";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft, User, Shield, BarChart2, Lock,
   CheckCircle, Clock, XCircle, Save, ScanFace,
   TrendingUp, TrendingDown, Edit3, AlertTriangle,
-  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound,
+  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2,
 } from "lucide-react";
 
 const PROVINCES = [
@@ -89,6 +90,10 @@ export default function ProfilePage() {
   const [wins,        setWins]        = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
 
+  const [avatar,        setAvatar]        = useState<string>("");
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
   const [profileBusy,  setProfileBusy]  = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [sendingOtp,   setSendingOtp]   = useState(false);
@@ -113,6 +118,7 @@ export default function ProfilePage() {
       setProvince(profile.province ?? "");
       setBalance(profile.balance ?? 0);
       setCreatedAt(profile.createdAt ?? "");
+      setAvatar(profile.avatar ?? "");
 
       if (kyc.kycBlockedUntil && new Date(kyc.kycBlockedUntil) > new Date()) {
         setBlockedUntil(new Date(kyc.kycBlockedUntil));
@@ -141,6 +147,66 @@ export default function ProfilePage() {
     const id = setInterval(() => setOtpTimer(t => t - 1), 1000);
     return () => clearInterval(id);
   }, [otpTimer]);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (e.target) e.target.value = "";
+    setAvatarLoading(true);
+    setProfileMsg(null);
+    try {
+      // Compress to max 400px, quality 0.82
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX = 400;
+            let w = img.width, h = img.height;
+            if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+            if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", 0.82));
+          };
+          img.onerror = reject;
+          img.src = reader.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Upload to Cloudinary
+      const fd = new FormData();
+      fd.append("file", b64);
+      fd.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+      fd.append("folder", "avatars");
+      const up = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: fd }
+      );
+      if (!up.ok) throw new Error("Falha no upload");
+      const { secure_url } = await up.json();
+
+      // Save URL to DB
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, province, avatar: secure_url }),
+      });
+      if (res.ok) {
+        setAvatar(secure_url);
+        setProfileMsg({ text: "Foto de perfil actualizada!", ok: true });
+      } else {
+        const d = await res.json();
+        setProfileMsg({ text: d.error ?? "Erro ao guardar foto.", ok: false });
+      }
+    } catch {
+      setProfileMsg({ text: "Erro ao fazer upload. Tente novamente.", ok: false });
+    }
+    setAvatarLoading(false);
+  }
 
   async function saveProfile() {
     setProfileBusy(true); setProfileMsg(null);
@@ -250,8 +316,26 @@ export default function ProfilePage() {
           <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, background: "radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
 
           {/* Avatar */}
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg, #f5a623, #e8950f)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 28, fontWeight: 800, color: "#000", boxShadow: "0 0 0 4px rgba(245,166,35,0.2)" }}>
-            {initials(name) || "?"}
+          <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarChange} />
+          <div
+            onClick={() => !avatarLoading && avatarInputRef.current?.click()}
+            title="Clica para alterar a foto"
+            style={{ position: "relative", width: 84, height: 84, borderRadius: "50%", margin: "0 auto 14px", cursor: avatarLoading ? "default" : "pointer" }}>
+            {/* Photo or initials */}
+            {avatar
+              ? <img src={avatar} alt="avatar" style={{ width: 84, height: 84, borderRadius: "50%", objectFit: "cover", boxShadow: "0 0 0 4px rgba(245,166,35,0.3)" }} />
+              : <div style={{ width: 84, height: 84, borderRadius: "50%", background: "linear-gradient(135deg,#f5a623,#e8950f)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800, color: "#000", boxShadow: "0 0 0 4px rgba(245,166,35,0.2)" }}>
+                  {initials(name) || "?"}
+                </div>
+            }
+            {/* Camera overlay */}
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 26, height: 26, borderRadius: "50%", background: avatarLoading ? "#1e2d50" : "#f5a623", border: "2px solid #070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {avatarLoading
+                ? <Loader2 size={12} color="#94a3b8" style={{ animation: "spin .8s linear infinite" }} />
+                : <Camera size={13} color="#0a0f1e" strokeWidth={2.5} />
+              }
+            </div>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
 
           {/* Nome + badge verificado */}

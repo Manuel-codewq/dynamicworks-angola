@@ -11,13 +11,13 @@ export async function GET() {
   // This avoids false positives from old trades that defaulted to isDemo=false
   const trades = await prisma.trade.findMany({
     where:   { status: "closed", isDemo: false, user: { isDemo: false } },
-    select:  { userId: true, result: true, profit: true, amount: true, user: { select: { name: true } } },
+    select:  { userId: true, result: true, profit: true, amount: true, user: { select: { name: true, avatar: true } } },
   });
 
-  const map = new Map<string, { name: string; profit: number; wins: number; total: number }>();
+  const map = new Map<string, { name: string; avatar: string | null; profit: number; wins: number; total: number }>();
 
   for (const t of trades) {
-    const entry = map.get(t.userId) ?? { name: t.user.name, profit: 0, wins: 0, total: 0 };
+    const entry = map.get(t.userId) ?? { name: t.user.name, avatar: t.user.avatar ?? null, profit: 0, wins: 0, total: 0 };
     entry.profit += t.profit ?? 0;
     entry.total  += 1;
     if (t.result === "win") entry.wins += 1;
@@ -36,6 +36,7 @@ export async function GET() {
       return {
         position: i + 1,
         name:     masked,
+        avatar:   e.avatar ?? null,
         profit:   Math.round(e.profit),
         wins:     e.wins,
         total:    e.total,
