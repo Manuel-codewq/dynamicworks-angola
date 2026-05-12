@@ -38,11 +38,11 @@ export const COMMODITY_PAIRS: DerivPair[] = [
 
 // Índices sintéticos 24/7 — nomes internos Dynamics Works (não expõem o fornecedor)
 export const SYNTHETIC_PAIRS: DerivPair[] = [
-  { symbol: "1HZ10V",    label: "DW Index 10",   category: "Sintético", decimals: 3 },
-  { symbol: "1HZ25V",    label: "DW Index 25",   category: "Sintético", decimals: 3 },
-  { symbol: "1HZ50V",    label: "DW Index 50",   category: "Sintético", decimals: 4 },
-  { symbol: "1HZ75V",    label: "DW Index 75",   category: "Sintético", decimals: 4 },
-  { symbol: "1HZ100V",   label: "DW Index 100",  category: "Sintético", decimals: 2 },
+  { symbol: "R_10",      label: "DW Index 10",   category: "Sintético", decimals: 3 },
+  { symbol: "R_25",      label: "DW Index 25",   category: "Sintético", decimals: 3 },
+  { symbol: "R_50",      label: "DW Index 50",   category: "Sintético", decimals: 4 },
+  { symbol: "R_75",      label: "DW Index 75",   category: "Sintético", decimals: 4 },
+  { symbol: "R_100",     label: "DW Index 100",  category: "Sintético", decimals: 2 },
   { symbol: "BOOM300N",  label: "DW Subida 300", category: "Sintético", decimals: 2 },
   { symbol: "CRASH300N", label: "DW Queda 300",  category: "Sintético", decimals: 2 },
   { symbol: "BOOM500",   label: "DW Subida 500", category: "Sintético", decimals: 2 },

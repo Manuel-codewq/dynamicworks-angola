@@ -18,14 +18,24 @@ const FOREX_PAIRS = [
   { asset: "EUR/CHF", symbol: "frxEURCHF" },
 ];
 
-// Crypto e commodities — disponíveis 24/7
+// Crypto, commodities e sintéticos — disponíveis 24/7
 const ALWAYS_ON_PAIRS = [
-  { asset: "BTC/USD", symbol: "cryBTCUSD" },
-  { asset: "ETH/USD", symbol: "cryETHUSD" },
-  { asset: "XRP/USD", symbol: "cryXRPUSD" },
-  { asset: "LTC/USD", symbol: "cryLTCUSD" },
-  { asset: "XAU/USD", symbol: "frxXAUUSD" },
-  { asset: "XAG/USD", symbol: "frxXAGUSD" },
+  { asset: "BTC/USD",       symbol: "cryBTCUSD"  },
+  { asset: "ETH/USD",       symbol: "cryETHUSD"  },
+  { asset: "XRP/USD",       symbol: "cryXRPUSD"  },
+  { asset: "LTC/USD",       symbol: "cryLTCUSD"  },
+  { asset: "XAU/USD",       symbol: "frxXAUUSD"  },
+  { asset: "XAG/USD",       symbol: "frxXAGUSD"  },
+  // Sintéticos DW (24/7)
+  { asset: "DW Index 10",   symbol: "R_10"       },
+  { asset: "DW Index 25",   symbol: "R_25"       },
+  { asset: "DW Index 50",   symbol: "R_50"       },
+  { asset: "DW Index 75",   symbol: "R_75"       },
+  { asset: "DW Index 100",  symbol: "R_100"      },
+  { asset: "DW Subida 300", symbol: "BOOM300N"   },
+  { asset: "DW Queda 300",  symbol: "CRASH300N"  },
+  { asset: "DW Subida 500", symbol: "BOOM500"    },
+  { asset: "DW Queda 500",  symbol: "CRASH500"   },
 ];
 
 const TIMEFRAMES = [

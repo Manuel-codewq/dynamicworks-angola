@@ -43,11 +43,10 @@ const SEED_PRICES: Record<string, number> = {
   cryBTCUSD: 60000,  cryETHUSD: 3200,
   // Commodities
   frxXAUUSD: 2350,   frxXAGUSD: 27.5,
-  // Synthetic indices (símbolos reais Deriv)
-  "1HZ10V": 6300,  "1HZ25V": 5800,  "1HZ50V": 4500,
-  "1HZ75V": 3700,  "1HZ100V": 9800,
+  // Sintéticos DW
+  R_10: 6300,  R_25: 5800,  R_50: 4500,  R_75: 3700,  R_100: 9800,
   BOOM300N: 7800,  CRASH300N: 7800,
-  BOOM500: 8200,   CRASH500: 8200,
+  BOOM500:  8200,  CRASH500:  8200,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

@@ -37,20 +37,24 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   // Commodities
   "XAU/USD":        "frxXAUUSD",
   "XAG/USD":        "frxXAGUSD",
-  // Sintéticos — nomes usados na UI (derivWebSocket.ts labels)
+  // Sintéticos DW (24/7)
   "DW Index 10":    "R_10",
   "DW Index 25":    "R_25",
   "DW Index 50":    "R_50",
   "DW Index 75":    "R_75",
   "DW Index 100":   "R_100",
+  "DW Subida 300":  "BOOM300N",
+  "DW Queda 300":   "CRASH300N",
+  "DW Subida 500":  "BOOM500",
+  "DW Queda 500":   "CRASH500",
   // aliases antigos (manter compatibilidade com trades existentes)
   "Vol. 10":        "R_10",
   "Vol. 25":        "R_25",
   "Vol. 50":        "R_50",
   "Vol. 75":        "R_75",
   "Vol. 100":       "R_100",
-  "Boom 300":       "BOOM300",
-  "Crash 300":      "CRASH300",
+  "Boom 300":       "BOOM300N",
+  "Crash 300":      "CRASH300N",
 };
 
 // Busca o último preço disponível para o ativo via Deriv WS.
