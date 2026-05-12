@@ -36,17 +36,17 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXAGUSD", label: "XAG/USD", category: "Metal", decimals: 3 },
 ];
 
-// Índices sintéticos Deriv — disponíveis 24/7, usados após horário de mercado
+// Índices sintéticos 24/7 — nomes internos Dynamics Works (não expõem o fornecedor)
 export const SYNTHETIC_PAIRS: DerivPair[] = [
-  { symbol: "1HZ10V",   label: "Volatility 10",  category: "Sintético", decimals: 3 },
-  { symbol: "1HZ25V",   label: "Volatility 25",  category: "Sintético", decimals: 3 },
-  { symbol: "1HZ50V",   label: "Volatility 50",  category: "Sintético", decimals: 4 },
-  { symbol: "1HZ75V",   label: "Volatility 75",  category: "Sintético", decimals: 4 },
-  { symbol: "1HZ100V",  label: "Volatility 100", category: "Sintético", decimals: 2 },
-  { symbol: "BOOM300N", label: "Boom 300",        category: "Sintético", decimals: 2 },
-  { symbol: "CRASH300N",label: "Crash 300",       category: "Sintético", decimals: 2 },
-  { symbol: "BOOM500",  label: "Boom 500",        category: "Sintético", decimals: 2 },
-  { symbol: "CRASH500", label: "Crash 500",       category: "Sintético", decimals: 2 },
+  { symbol: "1HZ10V",    label: "DW Index 10",   category: "Sintético", decimals: 3 },
+  { symbol: "1HZ25V",    label: "DW Index 25",   category: "Sintético", decimals: 3 },
+  { symbol: "1HZ50V",    label: "DW Index 50",   category: "Sintético", decimals: 4 },
+  { symbol: "1HZ75V",    label: "DW Index 75",   category: "Sintético", decimals: 4 },
+  { symbol: "1HZ100V",   label: "DW Index 100",  category: "Sintético", decimals: 2 },
+  { symbol: "BOOM300N",  label: "DW Subida 300", category: "Sintético", decimals: 2 },
+  { symbol: "CRASH300N", label: "DW Queda 300",  category: "Sintético", decimals: 2 },
+  { symbol: "BOOM500",   label: "DW Subida 500", category: "Sintético", decimals: 2 },
+  { symbol: "CRASH500",  label: "DW Queda 500",  category: "Sintético", decimals: 2 },
 ];
 
 // Angola = WAT (UTC+1). Mercado real: Seg-Sex 07h-18h WAT (06h-17h UTC)

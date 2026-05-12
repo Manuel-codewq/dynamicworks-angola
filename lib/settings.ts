@@ -9,8 +9,9 @@ const ALL_PAIRS = [
   "BTC/USD", "ETH/USD",
   // Commodities
   "XAU/USD", "XAG/USD",
-  // Índices DW (24/7)
+  // Sintéticos DW (24/7)
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
+  "DW Subida 300", "DW Queda 300", "DW Subida 500", "DW Queda 500",
 ] as const;
 
 export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));

@@ -1489,8 +1489,8 @@ export default function TradePage() {
   function renderAssetDropdown(mobile = false) {
     const groups: Record<string, DerivPair[]> = {};
     pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-    const catOrder  = ["Forex", "Cripto", "Metal", "Índices"];
-    const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d", Índices: "#22c55e" };
+    const catOrder  = ["Forex", "Cripto", "Metal", "Índices", "Sintético"];
+    const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d", Índices: "#22c55e", Sintético: "#38bdf8" };
     return (
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}
@@ -2109,8 +2109,8 @@ export default function TradePage() {
               {(() => {
                 const groups: Record<string, DerivPair[]> = {};
                 pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-                const catOrder  = ["Forex", "Cripto", "Metal", "Índices"];
-                const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d", Índices: "#22c55e" };
+                const catOrder  = ["Forex", "Cripto", "Metal", "Índices", "Sintético"];
+                const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d", Índices: "#22c55e", Sintético: "#38bdf8" };
                 return catOrder.filter(cat => groups[cat]).map(cat => (
                   <div key={cat}>
                     <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>
