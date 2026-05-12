@@ -788,13 +788,10 @@ export default function TradePage() {
       );
       if (unnotified) {
         notifiedTradesRef.current.add(unnotified.id);
-        const isDraw = unnotified.result === "draw";
-        const isWin  = unnotified.result === "win";
+        const isWin = unnotified.result === "win";
         setNotification({
-          msg:  isWin  ? `Ganhou +${formatKz(Math.round(unnotified.profit))}`
-              : isDraw ? `Empate — aposta devolvida`
-              :          `Perdeu ${formatKz(unnotified.amount)}`,
-          type: isWin ? "win" : isDraw ? "info" : "loss",
+          msg:  isWin ? `Ganhou +${formatKz(Math.round(unnotified.profit))}` : `Perdeu ${formatKz(unnotified.amount)}`,
+          type: isWin ? "win" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);
         fetchBalance();
@@ -902,13 +899,10 @@ export default function TradePage() {
       // Só notifica trades desta sessão — trades antigos fecham silenciosamente
       if (t?.status === "closed" && !notifiedTradesRef.current.has(t.id) && sessionTradeIdsRef.current.has(tradeId)) {
         notifiedTradesRef.current.add(t.id);
-        const isDraw = t.result === "draw";
-        const isWin  = t.result === "win";
+        const isWin = t.result === "win";
         setNotification({
-          msg:  isWin  ? `Ganhou +${formatKz(Math.round(t.profit ?? 0))}`
-              : isDraw ? `Empate — aposta devolvida`
-              :          `Perdeu ${formatKz(t.amount)}`,
-          type: isWin ? "win" : isDraw ? "info" : "loss",
+          msg:  isWin ? `Ganhou +${formatKz(Math.round(t.profit ?? 0))}` : `Perdeu ${formatKz(t.amount)}`,
+          type: isWin ? "win" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);
         fetchBalance();

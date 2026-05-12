@@ -16,8 +16,7 @@ async function getClosePriceForAsset(asset: string): Promise<number | null> {
   return getDerivPrice(asset);
 }
 
-// Margem mínima de movimento para não ser considerado empate (5 pips / 5 cents)
-const DRAW_THRESHOLD = 0.00005;
+// Empates removidos — qualquer movimento determina win ou loss
 
 export type TradeToResolve = {
   id:         string;
@@ -34,7 +33,7 @@ export type TradeToResolve = {
   user:       { id: string; isDemo: boolean };
 };
 
-export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss" | "draw";
+export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss";
 
 /**
  * Resolve uma operação expirada.
@@ -80,31 +79,22 @@ export async function resolveExpiredTrade(
   const expiredForMs = Date.now() - expiresAt.getTime();
 
   if (!resolvedPrice) {
-    if (expiredForMs <= 15_000) return "pending";
-    // Sem preço após 15s: empate — devolve a aposta
-    result       = "draw";
+    if (expiredForMs <= 30_000) return "pending";
+    // Sem preço após 30s: loss (não existe empate)
+    result       = "loss";
     closePrice   = trade.entryPrice;
-    profit       = 0;
-    returnAmount = trade.amount;
+    profit       = -trade.amount;
+    returnAmount = 0;
   } else {
-    closePrice      = resolvedPrice;
-    const diff      = closePrice - trade.entryPrice;
-    const absDiff   = Math.abs(diff);
-    const threshold = trade.entryPrice * DRAW_THRESHOLD;
+    closePrice = resolvedPrice;
+    const diff = closePrice - trade.entryPrice;
 
-    if (absDiff <= threshold) {
-      result = "draw";
-    } else {
-      const priceWon = trade.direction === "call" ? diff > 0 : diff < 0;
-      result = priceWon ? "win" : "loss";
-    }
+    // Qualquer movimento — mesmo mínimo — determina win ou loss; sem empates
+    const priceWon = trade.direction === "call" ? diff > 0 : diff < 0;
+    result = priceWon ? "win" : "loss";
 
-    profit       = result === "win"  ? trade.amount * trade.payout
-                 : result === "loss" ? -trade.amount
-                 : 0;
-    returnAmount = result === "win"  ? trade.amount + trade.amount * trade.payout
-                 : result === "draw" ? trade.amount
-                 : 0;
+    profit       = result === "win" ? trade.amount * trade.payout : -trade.amount;
+    returnAmount = result === "win" ? trade.amount + trade.amount * trade.payout : 0;
   }
 
   let resolved = false;

@@ -14,10 +14,10 @@ export async function GET(req: NextRequest) {
   });
 
   if (activeTrades.length === 0) {
-    return NextResponse.json({ processed: 0, wins: 0, losses: 0, draws: 0 });
+    return NextResponse.json({ processed: 0, wins: 0, losses: 0 });
   }
 
-  let wins = 0, losses = 0, draws = 0, processed = 0;
+  let wins = 0, losses = 0, processed = 0;
 
   await Promise.all(activeTrades.map(async (trade) => {
     const expiresAt = trade.expiresAt ?? new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
@@ -29,8 +29,7 @@ export async function GET(req: NextRequest) {
     processed++;
     if (outcome === "win")  wins++;
     if (outcome === "loss") losses++;
-    if (outcome === "draw") draws++;
   }));
 
-  return NextResponse.json({ processed, wins, losses, draws });
+  return NextResponse.json({ processed, wins, losses });
 }
