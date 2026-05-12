@@ -155,7 +155,7 @@ export default function ProfilePage() {
     setAvatarLoading(true);
     setProfileMsg(null);
     try {
-      // Compress to max 400px square, JPEG 0.82
+      // 1. Comprimir imagem (igual ao KYC)
       const b64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -177,21 +177,34 @@ export default function ProfilePage() {
         reader.readAsDataURL(file);
       });
 
-      // Upload via server API (sem necessidade de NEXT_PUBLIC vars em produção)
+      // 2. Upload directo para Cloudinary (exactamente igual ao KYC — garante que funciona em produção)
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      const preset    = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+      const fd = new FormData();
+      fd.append("file",          b64);
+      fd.append("upload_preset", preset!);
+      const up = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: "POST", body: fd }
+      );
+      if (!up.ok) throw new Error("Cloudinary upload failed");
+      const { secure_url } = await up.json();
+
+      // 3. Guardar URL na DB via API
       const res = await fetch("/api/profile/avatar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: b64 }),
+        body: JSON.stringify({ avatarUrl: secure_url }),
       });
       const d = await res.json();
       if (res.ok) {
         setAvatar(d.avatar);
         setProfileMsg({ text: "Foto de perfil actualizada!", ok: true });
       } else {
-        setProfileMsg({ text: d.error ?? "Erro ao fazer upload.", ok: false });
+        setProfileMsg({ text: d.error ?? "Erro ao guardar foto.", ok: false });
       }
     } catch {
-      setProfileMsg({ text: "Erro de rede. Tente novamente.", ok: false });
+      setProfileMsg({ text: "Erro ao fazer upload. Tente novamente.", ok: false });
     }
     setAvatarLoading(false);
   }
