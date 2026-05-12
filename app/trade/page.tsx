@@ -979,9 +979,9 @@ export default function TradePage() {
       console.error("[openTrade]", err);
       setNotification({ msg: `Erro: ${err?.message ?? "ligação falhou"}`, type: "info" });
     }
-    // Enforce minimum 2s to prevent accidental double-submit
+    // Prevent accidental double-submit (500ms)
     const elapsed = Date.now() - started;
-    if (elapsed < 2000) await new Promise(r => setTimeout(r, 2000 - elapsed));
+    if (elapsed < 500) await new Promise(r => setTimeout(r, 500 - elapsed));
     setTimeout(() => setNotification(null), 3000);
     setLoading(false);
   }
@@ -1135,16 +1135,12 @@ export default function TradePage() {
 
       {/* ── CALL / PUT buttons ── */}
       {(() => {
-        // Só bloqueia se há um trade DESTA SESSÃO activo — ignora trades antigos da DB
-        const sessionActiveTrade = activeTrades.find(t => sessionTradeIdsRef.current.has(t.id));
-        const hasActiveTrade = !!sessionActiveTrade;
-        const btnDisabled = loading || currentPrice === 0 || hasActiveTrade;
-        const activeCountdown = hasActiveTrade ? getCountdown(sessionActiveTrade!) : null;
+        const btnDisabled = loading || currentPrice === 0;
       return (
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={() => openTrade("call")} disabled={btnDisabled} style={{
           flex: 1, height: compact ? 52 : 60,
-          background: hasActiveTrade ? "linear-gradient(135deg,#0d3320 0%,#14532d 100%)" : "linear-gradient(135deg,#16a34a 0%,#22c55e 100%)",
+          background: "linear-gradient(135deg,#16a34a 0%,#22c55e 100%)",
           color: "#fff", border: "none", borderRadius: 12,
           fontSize: compact ? 14 : 15, fontWeight: 900,
           cursor: btnDisabled ? "not-allowed" : "pointer",
@@ -1154,11 +1150,11 @@ export default function TradePage() {
           transition: "opacity 0.15s, box-shadow 0.15s",
           letterSpacing: 0.5,
         }}>
-          {loading ? "..." : hasActiveTrade ? <><TrendingUp size={16} strokeWidth={2.5} /> {activeCountdown}</> : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
+          {loading ? "..." : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
         </button>
         <button onClick={() => openTrade("put")} disabled={btnDisabled} style={{
           flex: 1, height: compact ? 52 : 60,
-          background: hasActiveTrade ? "linear-gradient(135deg,#3b0a0a 0%,#7f1d1d 100%)" : "linear-gradient(135deg,#b91c1c 0%,#ef4444 100%)",
+          background: "linear-gradient(135deg,#b91c1c 0%,#ef4444 100%)",
           color: "#fff", border: "none", borderRadius: 12,
           fontSize: compact ? 14 : 15, fontWeight: 900,
           cursor: btnDisabled ? "not-allowed" : "pointer",
@@ -1168,7 +1164,7 @@ export default function TradePage() {
           transition: "opacity 0.15s, box-shadow 0.15s",
           letterSpacing: 0.5,
         }}>
-          {loading ? "..." : hasActiveTrade ? <><TrendingDown size={16} strokeWidth={2.5} /> {activeCountdown}</> : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
+          {loading ? "..." : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
         </button>
       </div>
       ); })()}
@@ -1628,29 +1624,14 @@ export default function TradePage() {
 
         {/* ── Bottom trade panel (always visible, QX Broker style) ── */}
         {(() => {
-          const sessionActiveTrade = activeTrades.find(t => sessionTradeIdsRef.current.has(t.id));
-          const hasActiveTrade = !!sessionActiveTrade;
-          const btnDisabled = loading || currentPrice === 0 || hasActiveTrade;
+          const btnDisabled = loading || currentPrice === 0;
           const currentPayout = payoutMap[selectedPair?.symbol ?? ""] ?? 0.74;
           const payoutAmt = Math.round(amount * currentPayout);
 
           // Cronómetro: countdown ao trade activo, ou duração seleccionada em repouso
           let timerDisplay: string;
           let timerColor = "#fff";
-          if (hasActiveTrade) {
-            const remMs = sessionActiveTrade!.expiresAt - Date.now();
-            if (remMs <= 0) {
-              timerDisplay = "00:00";
-            } else {
-              const rem = Math.ceil(remMs / 1000);
-              const mm  = String(Math.floor(rem / 60)).padStart(2, "0");
-              const ss  = String(rem % 60).padStart(2, "0");
-              timerDisplay = `${mm}:${ss}`;
-            }
-            // vai ficando vermelho conforme o tempo passa
-            const pct = hasActiveTrade ? Math.max(0, (sessionActiveTrade!.expiresAt - Date.now()) / (sessionActiveTrade!.expirySecs * 1000)) : 1;
-            timerColor = pct < 0.25 ? "#ef4444" : pct < 0.5 ? "#f5a623" : "#22c55e";
-          } else {
+          {
             const mm = String(Math.floor(expiry.secs / 60)).padStart(2, "0");
             const ss = String(expiry.secs % 60).padStart(2, "0");
             timerDisplay = `${mm}:${ss}`;
@@ -1670,8 +1651,8 @@ export default function TradePage() {
                 </div>
                 <div style={{ display: "flex", gap: 3 }}>
                   {EXPIRY_OPTIONS.map(opt => (
-                    <button key={opt.secs} onClick={() => setExpiry(opt)} disabled={hasActiveTrade}
-                      style={{ height: 22, padding: "0 7px", background: expiry.secs === opt.secs ? "#f5a623" : "#0b1220", color: expiry.secs === opt.secs ? "#0a0f1e" : "#64748b", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", opacity: hasActiveTrade ? 0.4 : 1 }}>
+                    <button key={opt.secs} onClick={() => setExpiry(opt)}
+                      style={{ height: 22, padding: "0 7px", background: expiry.secs === opt.secs ? "#f5a623" : "#0b1220", color: expiry.secs === opt.secs ? "#0a0f1e" : "#64748b", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
                       {opt.label}
                     </button>
                   ))}
@@ -1681,10 +1662,10 @@ export default function TradePage() {
               {/* Row 2 — Tempo | Investimento */}
               <div style={{ display: "flex", gap: 8, padding: "6px 12px 0" }}>
                 {/* Timer */}
-                <div onClick={() => { if (!hasActiveTrade && !timerEditing) { setTimerEditing(true); setTimerInput(String(Math.floor(expiry.secs / 60))); } }}
-                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${hasActiveTrade ? timerColor + "55" : timerEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", cursor: hasActiveTrade ? "default" : "pointer", transition: "border-color 0.3s" }}>
+                <div onClick={() => { if (!timerEditing) { setTimerEditing(true); setTimerInput(String(Math.floor(expiry.secs / 60))); } }}
+                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${timerEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", cursor: "pointer", transition: "border-color 0.3s" }}>
                   <div style={{ color: "#334155", fontSize: 9, fontWeight: 600, letterSpacing: 0.8, marginBottom: 1 }}>
-                    TEMPO {!hasActiveTrade && !timerEditing && <span style={{ color: "#f5a623" }}>✎</span>}
+                    TEMPO {!timerEditing && <span style={{ color: "#f5a623" }}>✎</span>}
                   </div>
                   {timerEditing ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }} onClick={e => e.stopPropagation()}>
@@ -1701,11 +1682,11 @@ export default function TradePage() {
                 </div>
 
                 {/* Amount */}
-                <div onClick={() => { if (!hasActiveTrade && !amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}
-                  style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: hasActiveTrade ? "default" : "pointer", transition: "border-color 0.3s" }}>
+                <div onClick={() => { if (!amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}
+                  style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", transition: "border-color 0.3s" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: "#334155", fontSize: 9, fontWeight: 600, letterSpacing: 0.8, marginBottom: 1 }}>
-                      INVESTIMENTO {!hasActiveTrade && !amountEditing && <span style={{ color: "#f5a623" }}>✎</span>}
+                      INVESTIMENTO {!amountEditing && <span style={{ color: "#f5a623" }}>✎</span>}
                     </div>
                     {amountEditing ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 3 }} onClick={e => e.stopPropagation()}>
@@ -1721,10 +1702,10 @@ export default function TradePage() {
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 5, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => setAmount(a => Math.max(1000, a - 500))} disabled={hasActiveTrade}
-                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.3 : 1 }}>−</button>
-                    <button onClick={() => setAmount(a => a + 500)} disabled={hasActiveTrade}
-                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: hasActiveTrade ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: hasActiveTrade ? 0.3 : 1 }}>+</button>
+                    <button onClick={() => setAmount(a => Math.max(1000, a - 500))}
+                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <button onClick={() => setAmount(a => a + 500)}
+                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                   </div>
                 </div>
               </div>
@@ -1732,12 +1713,12 @@ export default function TradePage() {
               {/* Row 3 — ALTA + BAIXA */}
               <div style={{ display: "flex", gap: 8, padding: "7px 12px 8px", flex: 1 }}>
                 <button onClick={() => openTrade("call")} disabled={btnDisabled}
-                  style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(150deg,#0a2218,#0f3d22)" : "linear-gradient(150deg,#15803d,#22c55e)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(34,197,94,0.3)", letterSpacing: 0.5 }}>
-                  {loading ? "..." : hasActiveTrade ? <><TrendingUp size={14} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingUp size={17} strokeWidth={2.5} /> ALTA</>}
+                  style={{ flex: 1, background: "linear-gradient(150deg,#15803d,#22c55e)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(34,197,94,0.3)", letterSpacing: 0.5 }}>
+                  {loading ? "..." : <><TrendingUp size={17} strokeWidth={2.5} /> ALTA</>}
                 </button>
                 <button onClick={() => openTrade("put")} disabled={btnDisabled}
-                  style={{ flex: 1, background: hasActiveTrade ? "linear-gradient(150deg,#2a0808,#5c1414)" : "linear-gradient(150deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(239,68,68,0.3)", letterSpacing: 0.5 }}>
-                  {loading ? "..." : hasActiveTrade ? <><TrendingDown size={14} strokeWidth={2.5} /> {timerDisplay}</> : <><TrendingDown size={17} strokeWidth={2.5} /> BAIXA</>}
+                  style={{ flex: 1, background: "linear-gradient(150deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(239,68,68,0.3)", letterSpacing: 0.5 }}>
+                  {loading ? "..." : <><TrendingDown size={17} strokeWidth={2.5} /> BAIXA</>}
                 </button>
               </div>
             </div>
