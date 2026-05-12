@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Zap, ShieldCheck, TrendingUp, Banknote } from "lucide-react";
 
 function formatKz(n: number) {
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + " Mil M Kz";
@@ -22,26 +23,10 @@ export default function LandingPage() {
   }, []);
 
   const features = [
-    {
-      icon: "⚡",
-      title: "Execução Instantânea",
-      desc: "As suas ordens são executadas em milissegundos com preços em tempo real via Deriv.",
-    },
-    {
-      icon: "🔒",
-      title: "Conta Segura",
-      desc: "Verificação KYC obrigatória, autenticação por OTP e encriptação de dados.",
-    },
-    {
-      icon: "📈",
-      title: "16+ Ativos",
-      desc: "Forex, criptomoedas e metais preciosos disponíveis 24/7 para negociar.",
-    },
-    {
-      icon: "💰",
-      title: "Pagamentos em Kwanza",
-      desc: "Depósitos e levantamentos em AOA via Multicaixa Express, sem conversão cambial.",
-    },
+    { Icon: Zap,         color: "#f5a623", title: "Execução Instantânea",  desc: "As suas ordens são executadas em milissegundos com preços em tempo real via Deriv." },
+    { Icon: ShieldCheck, color: "#22c55e", title: "Conta Segura",          desc: "Verificação KYC obrigatória, autenticação por OTP e encriptação de dados." },
+    { Icon: TrendingUp,  color: "#3b82f6", title: "16+ Ativos",            desc: "Forex, criptomoedas e metais preciosos disponíveis 24/7 para negociar." },
+    { Icon: Banknote,    color: "#a78bfa", title: "Pagamentos em Kwanza",  desc: "Depósitos e levantamentos em AOA via Multicaixa Express, sem conversão cambial." },
   ];
 
   const assets = [
@@ -150,7 +135,9 @@ export default function LandingPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
           {features.map((f, i) => (
             <div key={i} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "24px 20px" }}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: `${f.color}18`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                <f.Icon size={22} color={f.color} strokeWidth={2} />
+              </div>
               <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{f.title}</div>
               <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6 }}>{f.desc}</div>
             </div>
