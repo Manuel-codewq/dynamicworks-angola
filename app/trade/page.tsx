@@ -184,22 +184,12 @@ export default function TradePage() {
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
 
   // ── Drawing tools ─────────────────────────────────────────────────────────
-  type DrawingTool = "hline" | "trendline" | "fibonacci" | null;
+  type DrawingTool = "hline" | "trendline" | null;
   interface HLineDrawing  { id: string; type: "hline";     price: number;    color: string; lineWidth: number; lineStyle: number; label: string; }
   interface TrendDrawing  { id: string; type: "trendline"; p1Time: number; p1Price: number; p2Time: number; p2Price: number; color: string; lineWidth: number; lineStyle: number; }
-  interface FibDrawing    { id: string; type: "fibonacci"; highPrice: number; lowPrice: number; color: string; }
-  type Drawing = HLineDrawing | TrendDrawing | FibDrawing;
+  type Drawing = HLineDrawing | TrendDrawing;
 
   const TOOL_COLORS = ["#f5a623","#3b82f6","#22c55e","#ef4444","#a78bfa","#22d3ee","#e2e8f0"];
-  const FIB_LEVELS  = [
-    { ratio: 0,     label: "0%",    color: "#94a3b8" },
-    { ratio: 0.236, label: "23.6%", color: "#38bdf8" },
-    { ratio: 0.382, label: "38.2%", color: "#22c55e" },
-    { ratio: 0.5,   label: "50%",   color: "#f5a623" },
-    { ratio: 0.618, label: "61.8%", color: "#f97316" },
-    { ratio: 0.786, label: "78.6%", color: "#ef4444" },
-    { ratio: 1,     label: "100%",  color: "#94a3b8" },
-  ];
 
   const [activeTool,     setActiveTool]     = useState<DrawingTool>(null);
   const [drawings,       setDrawings]       = useState<Drawing[]>([]);
@@ -209,6 +199,7 @@ export default function TradePage() {
   const [toolLineWidth,  setToolLineWidth]  = useState(1);
   const [toolLabel,      setToolLabel]      = useState("");
   const [pendingPoint,   setPendingPoint]   = useState<{ time: number; price: number } | null>(null);
+  const draggingHLine = useRef<string | null>(null);
 
   // ── Indicator state + refs ───────────────────────────────────────────────
   const [showIndicators, setShowIndicators] = useState(false);
@@ -322,7 +313,6 @@ export default function TradePage() {
   const toolLabelRef     = useRef("");
   const hlineRefsMap     = useRef<Map<string, any>>(new Map());
   const trendSeriesMap   = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
-  const fibLinesMap      = useRef<Map<string, any[]>>(new Map());
 
 
   // ── Candle countdown timer — pure UTC alignment ──────────────────────────
@@ -380,9 +370,16 @@ export default function TradePage() {
     const dt = d.p2Time - d.p1Time;
     if (dt === 0) return;
     const slope = (d.p2Price - d.p1Price) / dt;
-    const now = Math.floor(Date.now() / 1000);
-    const tStart = now - 5 * 365 * 24 * 3600;
-    const tEnd   = now + 5 * 365 * 24 * 3600;
+
+    // Extend only 300 bars beyond the clicked points to avoid auto-zoom
+    const granSecs = GRANULARITY[timeframeRef.current] ?? 60;
+    const pad = 300 * granSecs;
+    const tStart = Math.min(d.p1Time, d.p2Time) - pad;
+    const tEnd   = Math.max(d.p1Time, d.p2Time) + pad;
+
+    // Save visible range before adding series so the chart doesn't zoom out
+    const visibleRange = chartApiRef.current.timeScale().getVisibleRange();
+
     const series = chartApiRef.current.addSeries(LineSeries, {
       color: d.color, lineWidth: d.lineWidth as any, lineStyle: d.lineStyle,
       priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
@@ -391,6 +388,14 @@ export default function TradePage() {
       { time: tStart as Time, value: d.p1Price + slope * (tStart - d.p1Time) },
       { time: tEnd   as Time, value: d.p1Price + slope * (tEnd   - d.p1Time) },
     ]);
+
+    // Restore visible range so chart stays where it was
+    if (visibleRange) {
+      requestAnimationFrame(() => {
+        chartApiRef.current?.timeScale().setVisibleRange(visibleRange);
+      });
+    }
+
     trendSeriesMap.current.set(d.id, series);
   }
   function removeTrendLine(id: string) {
@@ -399,36 +404,17 @@ export default function TradePage() {
     trendSeriesMap.current.delete(id);
   }
 
-  function applyFib(d: FibDrawing) {
-    if (!candleSeriesRef.current) return;
-    const range = d.highPrice - d.lowPrice;
-    const lines: any[] = FIB_LEVELS.map(lvl => {
-      return candleSeriesRef.current!.createPriceLine({
-        price: d.lowPrice + lvl.ratio * range, color: lvl.color,
-        lineWidth: 1 as any, lineStyle: 2, axisLabelVisible: true, title: `Fib ${lvl.label}`,
-      });
-    });
-    fibLinesMap.current.set(d.id, lines);
-  }
-  function removeFib(id: string) {
-    const lines = fibLinesMap.current.get(id) ?? [];
-    if (candleSeriesRef.current) lines.forEach(l => { try { candleSeriesRef.current!.removePriceLine(l); } catch {} });
-    fibLinesMap.current.delete(id);
-  }
-
   function addDrawing(d: Drawing) {
     setDrawings(prev => [...prev, d]);
     drawingsRef.current = [...drawingsRef.current, d];
     if (d.type === "hline")     applyHLine(d);
     if (d.type === "trendline") applyTrendLine(d);
-    if (d.type === "fibonacci") applyFib(d);
   }
   function removeDrawing(id: string) {
     const d = drawingsRef.current.find(x => x.id === id);
     if (!d) return;
     if (d.type === "hline")     removeHLine(id);
     if (d.type === "trendline") removeTrendLine(id);
-    if (d.type === "fibonacci") removeFib(id);
     setDrawings(prev => prev.filter(x => x.id !== id));
     drawingsRef.current = drawingsRef.current.filter(x => x.id !== id);
   }
@@ -436,7 +422,6 @@ export default function TradePage() {
     drawingsRef.current.forEach(d => {
       if (d.type === "hline")     removeHLine(d.id);
       if (d.type === "trendline") removeTrendLine(d.id);
-      if (d.type === "fibonacci") removeFib(d.id);
     });
     setDrawings([]);
     drawingsRef.current = [];
@@ -444,13 +429,43 @@ export default function TradePage() {
   function reapplyDrawings() {
     hlineRefsMap.current.clear();
     trendSeriesMap.current.clear();
-    fibLinesMap.current.clear();
     drawingsRef.current.forEach(d => {
       if (d.type === "hline")     applyHLine(d);
       if (d.type === "trendline") applyTrendLine(d);
-      if (d.type === "fibonacci") applyFib(d);
     });
   }
+
+  // ── HLine drag handlers ──────────────────────────────────────────────────
+  function onChartPointerDown(clientY: number) {
+    if (activeTool || !candleSeriesRef.current || !chartRef.current) return;
+    const rect = chartRef.current.getBoundingClientRect();
+    const y = clientY - rect.top;
+    for (const d of drawingsRef.current) {
+      if (d.type !== "hline") continue;
+      const coord = candleSeriesRef.current.priceToCoordinate((d as HLineDrawing).price);
+      if (coord !== null && Math.abs(coord - y) < 10) {
+        draggingHLine.current = d.id;
+        break;
+      }
+    }
+  }
+  function onChartPointerMove(clientY: number) {
+    if (!draggingHLine.current || !candleSeriesRef.current || !chartRef.current) return;
+    const rect = chartRef.current.getBoundingClientRect();
+    const y = clientY - rect.top;
+    const newPrice = candleSeriesRef.current.coordinateToPrice(y);
+    if (!newPrice) return;
+    const id = draggingHLine.current;
+    const ref = hlineRefsMap.current.get(id);
+    if (ref) ref.applyOptions({ price: newPrice });
+    drawingsRef.current = drawingsRef.current.map(x =>
+      x.id === id && x.type === "hline" ? { ...x as HLineDrawing, price: newPrice } : x
+    );
+    setDrawings(prev => prev.map(x =>
+      x.id === id && x.type === "hline" ? { ...x as HLineDrawing, price: newPrice } : x
+    ));
+  }
+  function onChartPointerUp() { draggingHLine.current = null; }
 
   // ── Indicator recalc — rebuilds all indicator series from candleDataRef ──
   // Defined as a standalone function (not useCallback) so it always captures
@@ -914,19 +929,13 @@ export default function TradePage() {
         const base = { id, color: toolColorRef.current, lineWidth: toolLineWidthRef.current, lineStyle: toolLineStyleRef.current };
         if (tool === "hline") {
           addDrawing({ ...base, type: "hline", price, label: toolLabelRef.current });
-        } else if (tool === "trendline" || tool === "fibonacci") {
+        } else if (tool === "trendline") {
           const pending = pendingPointRef.current;
           if (!pending) {
             pendingPointRef.current = { time, price };
             setPendingPoint({ time, price });
           } else {
-            if (tool === "trendline") {
-              addDrawing({ ...base, type: "trendline", p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
-            } else {
-              const high = Math.max(pending.price, price);
-              const low  = Math.min(pending.price, price);
-              addDrawing({ ...base, type: "fibonacci", highPrice: high, lowPrice: low });
-            }
+            addDrawing({ ...base, type: "trendline", p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
             pendingPointRef.current = null;
             setPendingPoint(null);
           }
@@ -1019,13 +1028,17 @@ export default function TradePage() {
     activeTrades.filter(t => t.asset === selectedPair?.label).forEach(t => {
       const win   = t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice;
       const color = win ? "#22c55e" : "#ef4444";
-      const title = `${t.direction === "call" ? "▲" : "▼"} ${formatKz(t.amount)}`;
+      const title = `${t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}  ${formatKz(t.amount)}`;
       if (tradePriceLinesRef.current.has(t.id)) {
         tradePriceLinesRef.current.get(t.id).applyOptions({ color, title });
       } else if (candleSeriesRef.current) {
         const line = candleSeriesRef.current.createPriceLine({
-          price: t.entryPrice, color, lineWidth: 1, lineStyle: 2,
-          axisLabelVisible: false, title,
+          price: t.entryPrice,
+          color,
+          lineWidth: 2,
+          lineStyle: 1,
+          axisLabelVisible: true,
+          title,
         });
         tradePriceLinesRef.current.set(t.id, line);
       }
@@ -1038,7 +1051,7 @@ export default function TradePage() {
       const trade = activeTradesRef.current.find(t => t.id === id);
       if (!trade) return;
       const win = trade.direction === "call" ? currentPrice > trade.entryPrice : currentPrice < trade.entryPrice;
-      line.applyOptions({ color: win ? "#22c55e" : "#ef4444" });
+      line.applyOptions({ color: win ? "#22c55e" : "#ef4444", lineWidth: 2, lineStyle: 1 });
     });
   }, [currentPrice]);
 
@@ -1621,7 +1634,6 @@ export default function TradePage() {
           {/* Tool buttons */}
           {toolBtn("hline",     "─",  "Linha Horizontal")}
           {toolBtn("trendline", "╱",  "Linha de Tendência")}
-          {toolBtn("fibonacci", "𝜑",  "Fibonacci")}
 
           {/* Pending point indicator */}
           {pendingPoint && (
@@ -1740,9 +1752,7 @@ export default function TradePage() {
             {drawings.map(d => {
               const label = d.type === "hline"
                 ? `H: ${(d as HLineDrawing).price.toFixed(dec)}${(d as HLineDrawing).label ? ` (${(d as HLineDrawing).label})` : ""}`
-                : d.type === "trendline"
-                ? `Tendência`
-                : `Fib ${(d as FibDrawing).lowPrice.toFixed(dec)}–${(d as FibDrawing).highPrice.toFixed(dec)}`;
+                : `Tendência`;
               return (
                 <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 4, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 5, padding: "2px 6px" }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
@@ -1854,7 +1864,16 @@ export default function TradePage() {
 
         {/* ── Chart ── */}
         <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
-          <div ref={chartRef} style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : "default" }} />
+          <div ref={chartRef}
+            style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
+            onMouseDown={e => onChartPointerDown(e.clientY)}
+            onMouseMove={e => onChartPointerMove(e.clientY)}
+            onMouseUp={onChartPointerUp}
+            onMouseLeave={onChartPointerUp}
+            onTouchStart={e => onChartPointerDown(e.touches[0].clientY)}
+            onTouchMove={e => { e.preventDefault(); onChartPointerMove(e.touches[0].clientY); }}
+            onTouchEnd={onChartPointerUp}
+          />
           {renderLegend()}
           <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <span style={{ fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 3, userSelect: "none" }}>{selectedPair?.label}</span>
@@ -2433,7 +2452,16 @@ export default function TradePage() {
           {showIndicators && renderIndicatorPanel()}
           {showTools && renderDrawingToolsPanel()}
           <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
-            <div ref={chartRef} style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : "default" }} />
+            <div ref={chartRef}
+            style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
+            onMouseDown={e => onChartPointerDown(e.clientY)}
+            onMouseMove={e => onChartPointerMove(e.clientY)}
+            onMouseUp={onChartPointerUp}
+            onMouseLeave={onChartPointerUp}
+            onTouchStart={e => onChartPointerDown(e.touches[0].clientY)}
+            onTouchMove={e => { e.preventDefault(); onChartPointerMove(e.touches[0].clientY); }}
+            onTouchEnd={onChartPointerUp}
+          />
             {renderLegend()}
             <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
               <span style={{ fontSize: 52, fontWeight: 900, color: "rgba(255,255,255,0.08)", letterSpacing: 4, userSelect: "none" }}>{selectedPair?.label}</span>
