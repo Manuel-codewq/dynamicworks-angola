@@ -957,7 +957,8 @@ export default function TradePage() {
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) {
-          chartApiRef.current.applyOptions({ width: el.clientWidth, height: el.clientHeight });
+          // Só atualiza largura — altura é fixada no init e nunca muda por teclado ou inputs
+          chartApiRef.current.applyOptions({ width: el.clientWidth });
         }
       });
       ro.observe(el);
@@ -973,7 +974,7 @@ export default function TradePage() {
         delete (chartApiRef as any)._roDisconnect;
       }
     };
-  }, [selectedPair, isMobile]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPair, isMobile, windowHeight]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch wallet data when mobile wallet tab opens ───────────────────────
   useEffect(() => {
@@ -1879,7 +1880,7 @@ export default function TradePage() {
         )}
 
         {/* ── Chart ── */}
-        <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, background: "#070d1c", overflow: "hidden" }}>
+        <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
           <div ref={chartRef}
             style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
             onMouseDown={e => onChartPointerDown(e.clientY)}
