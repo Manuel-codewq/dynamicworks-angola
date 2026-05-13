@@ -5,6 +5,7 @@ import Script from "next/script";
 import SupportWidget from "./components/SupportWidget";
 import NotificationToast from "./components/NotificationToast";
 import HeartbeatTracker from "./components/HeartbeatTracker";
+import PushManager from "./components/PushManager";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
@@ -203,6 +204,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <HeartbeatTracker />
           <SupportWidget />
           <NotificationToast />
+          <PushManager />
         </SessionProvider>
 
         {/* PWA Service Worker */}

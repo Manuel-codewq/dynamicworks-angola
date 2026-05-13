@@ -31,12 +31,23 @@ model User {
   indicatorPrefs Json?
   lastSeenAt     DateTime?
   createdAt      DateTime      @default(now())
-  trades        Trade[]
-  transactions  Transaction[]
+  trades           Trade[]
+  transactions     Transaction[]
   notifications    Notification[]
   kycSubmission    KycSubmission?
   tournaments      TournamentParticipant[]
   supportTickets   SupportTicket[]
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 

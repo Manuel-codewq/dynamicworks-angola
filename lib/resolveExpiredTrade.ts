@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getDerivPrice } from "@/lib/derivPrice";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
+import { sendPushToUser } from "@/lib/webPush";
 
 // Tenta o preço mais recente da tabela PriceCandle (gravado pelo price-recorder).
 // Se não existir ou for demasiado antigo (> 90s), vai buscar ao Deriv via WS.
@@ -167,8 +168,20 @@ export async function resolveExpiredTrade(
         const userName = trade.user.name ?? "Trader";
         if (result === "win") {
           sendTradeWinEmail(trade.user.email, userName, trade.asset, trade.amount, profit, returnAmount).catch(() => {});
+          sendPushToUser(trade.userId, {
+            title: `✅ Ganhou ${Math.floor(profit).toLocaleString("pt-PT")} Kz`,
+            body:  `${trade.asset} • A operação foi resolvida a seu favor.`,
+            url:   "/trade",
+            tag:   "trade-result",
+          }).catch(() => {});
         } else {
           sendTradeLossEmail(trade.user.email, userName, trade.asset, trade.amount).catch(() => {});
+          sendPushToUser(trade.userId, {
+            title: `❌ Operação encerrada — ${trade.asset}`,
+            body:  `Perdeu ${Math.floor(trade.amount).toLocaleString("pt-PT")} Kz. Continue a tentar!`,
+            url:   "/trade",
+            tag:   "trade-result",
+          }).catch(() => {});
         }
       }
     } catch { /* silent — nunca falhar a resolução de trade por causa do email */ }
