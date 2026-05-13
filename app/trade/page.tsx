@@ -3046,7 +3046,7 @@ export default function TradePage() {
               </a>
 
               {/* Suporte — WhatsApp */}
-              <a href={`https://wa.me/244921825299?text=${encodeURIComponent("Olá! Preciso de ajuda com a minha conta na Dynamics Works.")}`} target="_blank" rel="noopener noreferrer"
+              <a href={`https://wa.me/244946621503?text=${encodeURIComponent("Olá! Preciso de ajuda com a minha conta na Dynamics Works.")}`} target="_blank" rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.2)", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
                 <div style={{ width: 32, height: 32, background: "#25D366", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <MessageCircle size={16} color="#fff" />
