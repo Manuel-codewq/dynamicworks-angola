@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET() {
   const session = await auth();
@@ -19,15 +20,24 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
+  // 5 pedidos de transação por utilizador a cada 10 minutos — trava spam de pendentes
+  if (!await checkRateLimit("transaction", session.user.id, 5, 10 * 60_000)) {
+    return NextResponse.json(
+      { error: "Demasiados pedidos. Aguarde alguns minutos." },
+      { status: 429 },
+    );
+  }
+
   const { type, amount, method, reference, otp } = await req.json();
 
   if (!["deposit", "withdrawal"].includes(type)) {
     return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
   }
-  if (!amount || amount < 1000) {
+  const amountNum = Number(amount);
+  if (!Number.isFinite(amountNum) || amountNum < 1000) {
     return NextResponse.json({ error: "Valor mínimo: 1.000 Kz" }, { status: 400 });
   }
-  if (amount > 5_000_000) {
+  if (amountNum > 5_000_000) {
     return NextResponse.json({ error: "Valor máximo por transação: 5.000.000 Kz" }, { status: 400 });
   }
   if (!otp || typeof otp !== "string" || !/^\d{6}$/.test(otp.trim())) {
@@ -43,6 +53,13 @@ export async function POST(req: NextRequest) {
       { error: "Verificação de identidade (KYC) obrigatória para efectuar levantamentos.", kycRequired: true },
       { status: 403 }
     );
+  }
+
+  // Levantamento: validar saldo na origem para não permitir pedidos abusivos.
+  // O débito atómico real acontece na aprovação admin — esta verificação evita
+  // que utilizadores encham a fila com pedidos impossíveis.
+  if (type === "withdrawal" && user.balance < amountNum) {
+    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
   }
 
   // Validar OTP no campo dedicado (otpCode) — separado do verifyCode de email
@@ -65,7 +82,7 @@ export async function POST(req: NextRequest) {
     data: {
       userId: session.user.id,
       type,
-      amount,
+      amount: amountNum,
       method:    method ? String(method).slice(0, 100) : null,
       reference: reference ? String(reference).slice(0, 200) : null,
       status: "pending",

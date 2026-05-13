@@ -42,8 +42,7 @@ export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss";
  * Ordem de prioridade para o preço de fecho:
  *   1. PriceCandle DB (gravado pelo price-recorder, < 90s)
  *   2. Deriv WS em tempo real
- *   3. clientPrice enviado pelo browser (fallback quando servidor não tem acesso ao mercado)
- *   4. Empate após 15s sem nenhuma fonte de preço
+ *   3. Loss automático após 30s sem preço (sem aceitar clientPrice — manipulável)
  */
 export async function resolveExpiredTrade(
   trade: TradeToResolve,
@@ -61,22 +60,12 @@ export async function resolveExpiredTrade(
   let profit:       number;
   let returnAmount: number;
 
-  // Via rápida: o browser já tem ligação Deriv WS activa — usa o preço que ele envia.
-  // Via lenta: tenta PriceCandle DB ou Deriv WS no servidor (fallback se cliente não enviou).
-  let resolvedPrice: number | null = null;
-
-  // Sempre tenta o preço do servidor primeiro; clientPrice só é usado se o servidor
-  // não tiver preço disponível (mercado fechado, falha de rede, etc.)
-  resolvedPrice = await getClosePriceForAsset(trade.asset);
-
-  if (!resolvedPrice && clientPrice && clientPrice > 0) {
-    // Fallback: preço do browser apenas quando o servidor não tem dados.
-    // Valida desvio máximo de ±5% para limitar margem de manipulação.
-    const deviation = Math.abs(clientPrice - trade.entryPrice) / trade.entryPrice;
-    if (deviation <= 0.05) {
-      resolvedPrice = clientPrice;
-    }
-  }
+  // Preço de fecho SÓ a partir de fontes do servidor (PriceCandle DB → Deriv WS).
+  // O parâmetro clientPrice é ignorado intencionalmente: aceitar preço do browser
+  // permitiria manipulação dentro de qualquer tolerância (mesmo 0.01% ganha numa
+  // opção binária com payout 85%).
+  void clientPrice;
+  const resolvedPrice: number | null = await getClosePriceForAsset(trade.asset);
 
   const expiredForMs = Date.now() - expiresAt.getTime();
 

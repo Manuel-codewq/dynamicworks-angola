@@ -12,6 +12,30 @@ const ALLOWED_MIME_PREFIXES = [
   "data:image/gif;base64,",
 ];
 
+// Magic numbers (primeiros bytes) — validam o conteúdo real, não confiando
+// apenas no prefixo MIME que o cliente escolheu colocar.
+function detectImageMime(buf: Buffer): "jpeg" | "png" | "webp" | "gif" | null {
+  if (buf.length < 12) return null;
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpeg";
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a
+  ) return "png";
+  // GIF: "GIF87a" ou "GIF89a"
+  if (
+    buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38 &&
+    (buf[4] === 0x37 || buf[4] === 0x39) && buf[5] === 0x61
+  ) return "gif";
+  // WebP: "RIFF" .... "WEBP"
+  if (
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) return "webp";
+  return null;
+}
+
 function buildSignature(params: Record<string, string>, apiSecret: string): string {
   const sorted = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join("&");
   return createHash("sha256").update(sorted + apiSecret).digest("hex");
@@ -47,14 +71,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pasta inválida" }, { status: 400 });
   }
 
-  // Apenas imagens JPEG, PNG, WebP ou GIF
-  if (!ALLOWED_MIME_PREFIXES.some(prefix => file.startsWith(prefix))) {
+  // Apenas imagens JPEG, PNG, WebP ou GIF (cheque do prefixo declarado)
+  const declaredPrefix = ALLOWED_MIME_PREFIXES.find(prefix => file.startsWith(prefix));
+  if (!declaredPrefix) {
     return NextResponse.json({ error: "Tipo de ficheiro não permitido. Use JPEG, PNG, WebP ou GIF." }, { status: 415 });
   }
 
-  // Limite de ~2MB em base64
+  // Limite de ~2MB em base64 (~2.1MB reais)
   if (file.length > 2_800_000) {
     return NextResponse.json({ error: "Ficheiro demasiado grande (máx 2MB)" }, { status: 413 });
+  }
+
+  // Valida o conteúdo real pelos magic numbers — não basta confiar no prefixo
+  // que o cliente colocou. Decodifica apenas os primeiros 16 bytes para isso.
+  const base64 = file.slice(declaredPrefix.length);
+  let header: Buffer;
+  try {
+    header = Buffer.from(base64.slice(0, 32), "base64");
+  } catch {
+    return NextResponse.json({ error: "Conteúdo inválido" }, { status: 400 });
+  }
+  const detected = detectImageMime(header);
+  if (!detected) {
+    return NextResponse.json({ error: "Conteúdo não corresponde a uma imagem válida" }, { status: 415 });
+  }
+  // O prefixo declarado tem de bater com o conteúdo real
+  if (!declaredPrefix.includes(`/${detected};`)) {
+    return NextResponse.json({ error: "Tipo declarado não corresponde ao conteúdo" }, { status: 415 });
   }
 
   const timestamp = String(Math.floor(Date.now() / 1000));
