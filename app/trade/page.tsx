@@ -2248,7 +2248,9 @@ export default function TradePage() {
     };
 
     return (
-      <div style={{ position: isMobile ? "relative" : "absolute", top: 0, left: isMobile ? 0 : 44, width: isMobile ? "100%" : 320, height: isMobile ? "100%" : "100%", zIndex: 25, background: "#0a0f1e", borderRight: isMobile ? "none" : "1px solid #1e2d50", display: "flex", flexDirection: "column", boxShadow: isMobile ? "none" : "4px 0 24px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+      <div style={isMobile
+        ? { position: "fixed", top: 0, left: 0, right: 0, bottom: 52, zIndex: 200, background: "#0a0f1e", display: "flex", flexDirection: "column", overflow: "hidden" }
+        : { position: "absolute", top: 0, left: 44, width: 320, height: "100%", zIndex: 25, background: "#0a0f1e", borderRight: "1px solid #1e2d50", display: "flex", flexDirection: "column", boxShadow: "4px 0 24px rgba(0,0,0,0.5)", overflow: "hidden" }}>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #1e2d50", flexShrink: 0, background: "#080e1d" }}>
@@ -2622,8 +2624,10 @@ export default function TradePage() {
               {tf}
             </button>
           ))}
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
             {candleTimer && <span style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontVariantNumeric: "tabular-nums" }}>{candleTimer}</span>}
+
+
             <button onClick={() => setLeftPanel(p => p === "indicators" ? null : "indicators")} style={{ height: 24, padding: "0 8px", background: leftPanel === "indicators" ? "rgba(245,166,35,0.12)" : "transparent", color: leftPanel === "indicators" ? "#f5a623" : "#4b5563", border: `1px solid ${leftPanel === "indicators" ? "rgba(245,166,35,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
               <Activity size={11} /> IND
             </button>
@@ -2634,11 +2638,7 @@ export default function TradePage() {
         </div>}
 
         {/* ── Painel mobile (indicadores / ferramentas) ── */}
-        {leftPanel && (
-          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 116, background: "#0a0f1e", display: "flex", flexDirection: "column", overflowY: "auto" }}>
-            {renderSlideInPanel()}
-          </div>
-        )}
+        {leftPanel && renderSlideInPanel()}
 
         {/* ── Chart ── */}
         <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
@@ -2654,6 +2654,24 @@ export default function TradePage() {
           />
           {renderLegend()}
 
+          {/* ── Tipo de gráfico (canto inferior esquerdo) ── */}
+          {(() => {
+            const CHART_ICONS: Record<ChartType, React.ReactNode> = {
+              candle: <CandlestickChart size={13} />,
+              line:   <LineChart size={13} />,
+              area:   <AreaChart size={13} />,
+              bar:    <BarChart size={13} />,
+            };
+            const nextType: Record<ChartType, ChartType> = { candle: "line", line: "area", area: "bar", bar: "candle" };
+            const labels: Record<ChartType, string> = { candle: "Candlestick", line: "Linha", area: "Área", bar: "Barra" };
+            return (
+              <button onClick={() => setChartType(t => nextType[t])} title={labels[chartType]}
+                style={{ position: "absolute", bottom: 32, left: 8, zIndex: 6, display: "flex", alignItems: "center", gap: 5, background: "rgba(8,14,29,0.88)", border: "1px solid #1e2d50", borderRadius: 7, padding: "5px 9px", color: "#94a3b8", cursor: "pointer", backdropFilter: "blur(4px)", fontSize: 10, fontWeight: 600 }}>
+                {CHART_ICONS[chartType]}
+                <span>{labels[chartType]}</span>
+              </button>
+            );
+          })()}
 
           {/* ── Zoom controls (bottom centre, over time axis) ── */}
           <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", flexDirection: "row", gap: 4 }}>
