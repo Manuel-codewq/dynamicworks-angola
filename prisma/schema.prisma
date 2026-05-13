@@ -165,6 +165,19 @@ model RateLimit {
   @@index([resetAt])
 }
 
+model WhatsappLog {
+  id        String   @id @default(cuid())
+  phone     String
+  direction String
+  body      String
+  status    String   @default("ok")
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+  @@index([createdAt])
+}
+
 model KycSubmission {
   id        String   @id @default(cuid())
   userId    String   @unique

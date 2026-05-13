@@ -5,9 +5,11 @@ import {
   sendWhatsApp,
   getOrCreateTicket,
   saveMessage,
+  escalateTicket,
+  logInbound,
 } from "@/lib/whatsapp";
 
-// ─── GET — health check (Z-API envia GET para verificar o webhook) ─────────────
+// ─── GET — health check ───────────────────────────────────────────────────────
 export async function GET() {
   return NextResponse.json({ status: "ok" });
 }
@@ -21,7 +23,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  // Responde imediatamente para o Z-API não fazer retry
   processMessage(body).catch((err) =>
     console.error("[whatsapp/webhook] processMessage error:", err)
   );
@@ -29,29 +30,90 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
+// ─── Anti-spam rate limit (in-memory) ─────────────────────────────────────────
+// Permite até 6 mensagens em 30s por número; depois ignora silenciosamente.
+const RATE_WINDOW_MS = 30_000;
+const RATE_MAX = 6;
+const rateMap = new Map<string, number[]>();
+
+function isRateLimited(phone: string): boolean {
+  const now = Date.now();
+  const arr = (rateMap.get(phone) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  arr.push(now);
+  rateMap.set(phone, arr);
+  return arr.length > RATE_MAX;
+}
+
+// ─── Detecção de tipo de mensagem ─────────────────────────────────────────────
+type ParsedMessage =
+  | { kind: "text"; text: string }
+  | { kind: "audio" }
+  | { kind: "media"; label: string }
+  | { kind: "unknown" };
+
+function parseIncoming(body: Record<string, unknown>): ParsedMessage {
+  const textObj = body.text as Record<string, unknown> | undefined;
+  const t = textObj?.message as string | undefined;
+  if (t && t.trim()) return { kind: "text", text: t.trim() };
+
+  if (body.audio) return { kind: "audio" };
+  if (body.image) return { kind: "media", label: "imagem" };
+  if (body.video) return { kind: "media", label: "vídeo" };
+  if (body.document) return { kind: "media", label: "documento" };
+  if (body.sticker) return { kind: "media", label: "sticker" };
+  if (body.location) return { kind: "media", label: "localização" };
+  if (body.contact) return { kind: "media", label: "contacto" };
+
+  return { kind: "unknown" };
+}
+
+// ─── Comandos rápidos ─────────────────────────────────────────────────────────
+const ESCALATE_TRIGGERS = /^\/(humano|agente|atendente)\b/i;
+
 // ─── processMessage ───────────────────────────────────────────────────────────
 async function processMessage(body: Record<string, unknown>) {
-  // 1. Ignora mensagens enviadas por nós (fromMe)
   if (body.fromMe === true) return;
 
-  // 2. Extrai número e texto (formato Z-API)
   const rawPhone = body.phone as string | undefined;
-  const textObj = body.text as Record<string, unknown> | undefined;
-  const messageText = textObj?.message as string | undefined;
+  if (!rawPhone) return;
 
-  if (!rawPhone || !messageText?.trim()) return;
-
-  // Normaliza número: remove + e garante formato limpo
   const phone = rawPhone.replace(/^\+/, "").trim();
 
-  console.log(`[whatsapp] Mensagem de ${phone}: ${messageText.slice(0, 80)}`);
+  if (isRateLimited(phone)) {
+    console.warn(`[whatsapp] rate-limit: ${phone}`);
+    return;
+  }
 
-  // 3. Tenta encontrar utilizador com diferentes formatos de telefone
-  // Ex: "244923456789", "0923456789", "+244923456789"
+  const parsed = parseIncoming(body);
+
+  // Logs e respostas para tipos não-texto
+  if (parsed.kind === "audio") {
+    await logInbound(phone, "[audio]");
+    await sendWhatsApp(
+      phone,
+      "Recebi o teu áudio, mas ainda não sei processá-lo. Por favor escreve a tua dúvida em texto que respondo já de seguida."
+    );
+    return;
+  }
+  if (parsed.kind === "media") {
+    await logInbound(phone, `[${parsed.label}]`);
+    await sendWhatsApp(
+      phone,
+      `Recebi o teu ${parsed.label}. Para te ajudar mais rápido, escreve a tua dúvida em texto se faz favor.`
+    );
+    return;
+  }
+  if (parsed.kind === "unknown") return;
+
+  const messageText = parsed.text;
+  console.log(`[whatsapp] Mensagem de ${phone}: ${messageText.slice(0, 80)}`);
+  await logInbound(phone, messageText);
+
+  // Procura utilizador por variantes de telefone
   const phoneVariants = [
-    phone,                                           // 244923456789
-    phone.startsWith("244") ? "0" + phone.slice(3) : phone, // 0923456789
-    "+" + phone,                                     // +244923456789
+    phone,
+    phone.startsWith("244") ? "0" + phone.slice(3) : phone,
+    "+" + phone,
   ];
 
   const user = await prisma.user.findFirst({
@@ -78,7 +140,25 @@ async function processMessage(body: Record<string, unknown>) {
     },
   });
 
-  // 4. Constrói contexto do utilizador
+  // Ticket (só para registados)
+  let ticketId: string | null = null;
+  if (user) ticketId = await getOrCreateTicket(user.id);
+
+  // Comando /humano, /agente, /atendente → escala e responde
+  if (ESCALATE_TRIGGERS.test(messageText)) {
+    const reply =
+      "Pronto, vou já passar isto à equipa humana. Um agente fala contigo aqui mesmo assim que possível.";
+    if (ticketId) {
+      await escalateTicket(ticketId);
+      await saveMessage(ticketId, messageText, false);
+      await saveMessage(ticketId, reply, true);
+    }
+    await sendWhatsApp(phone, reply);
+    console.log(`[whatsapp] /humano escalado para ${phone}`);
+    return;
+  }
+
+  // Contexto do utilizador para a IA
   let userContext = "";
   if (user) {
     const balanceLabel = user.isDemo
@@ -113,16 +193,9 @@ async function processMessage(body: Record<string, unknown>) {
     ].join("\n");
   }
 
-  // 5. Ticket de suporte (só para utilizadores registados)
-  let ticketId: string | null = null;
-  if (user) {
-    ticketId = await getOrCreateTicket(user.id);
-  }
-
-  // 6. Histórico de conversa (últimas 10 mensagens do ticket)
+  // Histórico
   type MessageParam = { role: "user" | "assistant"; content: string };
   let history: MessageParam[] = [];
-
   if (ticketId) {
     const msgs = await prisma.supportMessage.findMany({
       where: { ticketId },
@@ -136,17 +209,13 @@ async function processMessage(body: Record<string, unknown>) {
     }));
   }
 
-  // 7. Chama a IA
   const aiReply = await askAI(messageText, userContext, history);
 
-  // 8. Guarda mensagens no ticket (se utilizador registado)
   if (ticketId) {
-    await saveMessage(ticketId, messageText, false); // mensagem do user
-    await saveMessage(ticketId, aiReply, true);      // resposta da IA (admin)
+    await saveMessage(ticketId, messageText, false);
+    await saveMessage(ticketId, aiReply, true);
   }
 
-  // 9. Envia resposta via Z-API
   await sendWhatsApp(phone, aiReply);
-
   console.log(`[whatsapp] Resposta enviada para ${phone}`);
 }

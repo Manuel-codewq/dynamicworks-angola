@@ -7,31 +7,66 @@ const anthropic = new Anthropic({
 });
 
 // ─── System Prompt ───────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `És o assistente de suporte oficial da Dynamics Works Angola — uma plataforma de negociação de opções binárias.
+const SYSTEM_PROMPT = `És o "Suporte Dynamics Works" — assistente da corretora angolana Dynamics Works (desenvolvida pela DIGIKAP LDA).
 
-IDENTIDADE:
-- O teu nome é "Suporte Dynamics Works"
-- Trabalhas exclusivamente para a Dynamics Works Angola
-- Respondes sempre em Português de Angola, de forma cordial e profissional
-- A plataforma Dynamics Works foi desenvolvida pela empresa DIGIKAP LDA
-- Se alguém perguntar quem desenvolveu a plataforma ou a corretora, responde que foi a DIGIKAP LDA
+DOMÍNIO E CONTACTOS (CRÍTICO — usa SEMPRE estes valores exactos):
+- Site: https://dynamicworks.ao  (ATENÇÃO: é "dynamicworks" SEM "s" no meio. NUNCA escrevas "dynamicsworks.ao" — esse domínio NÃO existe e é erro grave.)
+- Email de suporte: suporte@dynamicworks.ao
+- WhatsApp humano: +244 921 825 299
+- O nome da marca tem "s" (Dynamic**s** Works) mas o domínio NÃO tem (dynamic**­**works.ao). Não confundas.
 
-CONHECIMENTO:
-- Depósitos: feitos via Multicaixa Express (EMIS), o saldo é creditado em até 5 minutos após confirmação
-- Saques/Levantamentos: processados em 24 horas úteis, valor mínimo de 5.000 AOA
-- Negociação: a plataforma oferece opções binárias com prazos de 30s a 5 minutos, payout de 85%
-- Conta Demo: todos os utilizadores têm 10.000 AOA de saldo demo para praticar sem risco
-- KYC (Verificação de Identidade): necessário para saques, feito com selfie e foto do B.I.
-- Problemas de senha: podem ser resolvidos via "Esqueci a senha" no ecrã de login
-- Suporte humano: disponível por email suporte@dynamicsworks.ao e whatsapp +244 921 825 299
+ESTILO:
+- Responde sempre em Português de Angola, informal mas claro (trata por "tu").
+- Curto e direto. Máximo 3-4 frases. Usa listas só quando ajuda mesmo.
+- Sem floreios ("Espero que estejas bem...", "Será um prazer..."). Vai ao ponto.
+- Quando tiveres dados do utilizador, personaliza ("Olá João, o teu saldo é...").
 
-REGRAS CRÍTICAS:
-- NUNCA prometeres lucros garantidos — o trading tem riscos
-- NUNCA pedires senhas, PINs ou dados bancários completos
-- NUNCA inventares informações que não sabes
-- Se não souberes responder, diz que vais encaminhar para a equipa humana
+CONHECIMENTO BASE:
+- Depósitos: Multicaixa Express (EMIS). Saldo creditado em até 5 minutos após confirmação.
+- Saques: 24 horas úteis. Mínimo 5.000 AOA. Requer KYC aprovado.
+- Negociação: opções binárias, prazos 30s a 5 minutos. Payout varia por activo — usa o valor de "FACTOS ATUAIS" se aparecer.
+- Conta Demo: 10.000 AOA grátis para praticar sem risco.
+- KYC: selfie + foto do BI. Sem KYC não há saques.
+- Senha esquecida: ecrã de login → "Esqueci a senha".
 
-Quando tiveres dados do utilizador, usa-os para personalizar a resposta (ex: "Olá João, o teu saldo é de 15.000 AOA...").`;
+ESCALONAMENTO (passar para humano):
+- Se o utilizador pedir "humano", "agente", "atendente", "pessoa" → confirma que já encaminhaste.
+- Se demonstrar frustração forte, reclamação grave, suspeita de fraude, ou problema com dinheiro real → encaminha.
+- Se não souberes responder com confiança → encaminha. NUNCA inventes.
+- Para encaminhar diz: "Vou já passar isto à equipa humana. Em breve um agente fala contigo aqui mesmo."
+
+PROIBIDO:
+- Prometer lucros ou ganhos garantidos. Trading tem risco — diz isso quando for relevante.
+- Pedir senhas, PINs, códigos OTP, ou número completo do cartão/conta.
+- Inventar valores, prazos, ou políticas que não estão aqui.`;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// Lê payout do Settings.payout (Json: { "EURUSD": 0.85, ... })
+async function getPayoutFacts(): Promise<string> {
+  try {
+    const s = await prisma.settings.findUnique({
+      where: { id: "singleton" },
+      select: { payout: true },
+    });
+    const map = (s?.payout as Record<string, number> | null) ?? null;
+    if (!map || Object.keys(map).length === 0) return "";
+
+    const lines = Object.entries(map)
+      .slice(0, 8)
+      .map(([asset, p]) => `  - ${asset}: ${Math.round(p * 100)}%`)
+      .join("\n");
+    return `FACTOS ATUAIS (payout por activo):\n${lines}`;
+  } catch {
+    return "";
+  }
+}
+
+// Valida número angolano em formato Z-API (244 + 9 dígitos começando por 9)
+export function isValidAoPhone(phone: string): boolean {
+  const clean = phone.replace(/\D/g, "");
+  return /^2449\d{8}$/.test(clean);
+}
 
 // ─── askAI ────────────────────────────────────────────────────────────────────
 type MessageParam = { role: "user" | "assistant"; content: string };
@@ -41,13 +76,13 @@ export async function askAI(
   userContext: string,
   history: MessageParam[]
 ): Promise<string> {
-  const systemWithContext = userContext
-    ? `${SYSTEM_PROMPT}\n\n--- DADOS DO UTILIZADOR ---\n${userContext}`
-    : SYSTEM_PROMPT;
+  const facts = await getPayoutFacts();
+  const parts = [SYSTEM_PROMPT];
+  if (facts) parts.push(`--- ${facts} ---`);
+  if (userContext) parts.push(`--- DADOS DO UTILIZADOR ---\n${userContext}`);
+  const systemWithContext = parts.join("\n\n");
 
-  // Garante que o histórico alterna corretamente (user/assistant)
-  const safeHistory: MessageParam[] = history.slice(-10); // últimas 10 mensagens
-
+  const safeHistory = history.slice(-10);
   const messages: MessageParam[] = [
     ...safeHistory,
     { role: "user", content: userMessage },
@@ -55,7 +90,7 @@ export async function askAI(
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5",
-    max_tokens: 500,
+    max_tokens: 350,
     system: systemWithContext,
     messages,
   });
@@ -65,46 +100,121 @@ export async function askAI(
   return "Desculpa, não consegui processar a tua mensagem. Tenta novamente.";
 }
 
-// ─── sendWhatsApp (Z-API) ─────────────────────────────────────────────────────
-export async function sendWhatsApp(to: string, text: string): Promise<void> {
+// ─── Z-API low-level ──────────────────────────────────────────────────────────
+
+function zapiUrl(path: string): string {
   const instanceId = process.env.ZAPI_INSTANCE_ID!;
   const token = process.env.ZAPI_TOKEN!;
+  return `https://api.z-api.io/instances/${instanceId}/token/${token}/${path}`;
+}
+
+function zapiHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   const clientToken = process.env.ZAPI_CLIENT_TOKEN;
+  if (clientToken) headers["Client-Token"] = clientToken;
+  return headers;
+}
 
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`;
+// Best-effort typing indicator. Não falha se Z-API não suportar.
+async function sendTyping(phone: string): Promise<void> {
+  try {
+    await fetch(zapiUrl("send-chat-state"), {
+      method: "POST",
+      headers: zapiHeaders(),
+      body: JSON.stringify({ phone, chatState: "composing" }),
+    });
+  } catch {
+    /* ignora — typing é cosmético */
+  }
+}
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (clientToken) {
-    headers["Client-Token"] = clientToken;
+// Quebra texto em pedaços ≤ maxLen, preferindo quebrar em parágrafo/frase
+function chunkText(text: string, maxLen = 900): string[] {
+  if (text.length <= maxLen) return [text];
+  const chunks: string[] = [];
+  let rest = text.trim();
+  while (rest.length > maxLen) {
+    let cut = rest.lastIndexOf("\n\n", maxLen);
+    if (cut < maxLen * 0.5) cut = rest.lastIndexOf("\n", maxLen);
+    if (cut < maxLen * 0.5) cut = rest.lastIndexOf(". ", maxLen);
+    if (cut < maxLen * 0.5) cut = maxLen;
+    chunks.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) chunks.push(rest);
+  return chunks;
+}
+
+async function logOutbound(
+  phone: string,
+  body: string,
+  status: "ok" | "error",
+  error?: string
+): Promise<void> {
+  try {
+    await prisma.whatsappLog.create({
+      data: { phone, direction: "out", body, status, error: error ?? null },
+    });
+  } catch (e) {
+    console.error("[whatsapp] logOutbound falhou:", e);
+  }
+}
+
+export async function logInbound(phone: string, body: string): Promise<void> {
+  try {
+    await prisma.whatsappLog.create({
+      data: { phone, direction: "in", body, status: "ok" },
+    });
+  } catch (e) {
+    console.error("[whatsapp] logInbound falhou:", e);
+  }
+}
+
+// ─── sendWhatsApp ─────────────────────────────────────────────────────────────
+export async function sendWhatsApp(to: string, text: string): Promise<void> {
+  if (!isValidAoPhone(to)) {
+    console.warn(`[sendWhatsApp] número inválido, ignorado: ${to}`);
+    await logOutbound(to, text, "error", "invalid_phone");
+    return;
   }
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ phone: to, message: text }),
-  });
+  const chunks = chunkText(text);
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    await sendTyping(to);
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    console.error(`[sendWhatsApp] Erro ${res.status}:`, body);
-    throw new Error(`Z-API error ${res.status}`);
+    const res = await fetch(zapiUrl("send-text"), {
+      method: "POST",
+      headers: zapiHeaders(),
+      body: JSON.stringify({ phone: to, message: chunk }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      console.error(`[sendWhatsApp] Erro ${res.status}:`, errBody);
+      await logOutbound(to, chunk, "error", `${res.status}:${errBody.slice(0, 200)}`);
+      throw new Error(`Z-API error ${res.status}`);
+    }
+
+    await logOutbound(to, chunk, "ok");
+
+    // pequena pausa entre chunks para chegarem ordenados
+    if (i < chunks.length - 1) {
+      await new Promise((r) => setTimeout(r, 600));
+    }
   }
 }
 
 // ─── getOrCreateTicket ────────────────────────────────────────────────────────
 export async function getOrCreateTicket(userId: string): Promise<string> {
-  // Procura ticket aberto de WhatsApp
   const existing = await prisma.supportTicket.findFirst({
-    where: { userId, category: "whatsapp", status: "open" },
+    where: { userId, category: "whatsapp", status: { in: ["open", "escalated"] } },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });
 
   if (existing) return existing.id;
 
-  // Cria novo ticket
   const ticket = await prisma.supportTicket.create({
     data: {
       userId,
@@ -128,9 +238,16 @@ export async function saveMessage(
     data: { ticketId, body, isAdmin },
   });
 
-  // Atualiza updatedAt do ticket
   await prisma.supportTicket.update({
     where: { id: ticketId },
     data: { updatedAt: new Date() },
+  });
+}
+
+// ─── escalateTicket ───────────────────────────────────────────────────────────
+export async function escalateTicket(ticketId: string): Promise<void> {
+  await prisma.supportTicket.update({
+    where: { id: ticketId },
+    data: { status: "escalated" },
   });
 }

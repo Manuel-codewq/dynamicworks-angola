@@ -44,7 +44,7 @@ npm start
 |---|---|
 | `DATABASE_URL` | URL de ligação PostgreSQL |
 | `NEXTAUTH_SECRET` | Segredo para JWT (`openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | URL público da aplicação (ex: `https://dynamicsworks.ao`) |
+| `NEXTAUTH_URL` | URL público da aplicação (ex: `https://dynamicworks.ao`) |
 
 ### Variáveis opcionais
 
