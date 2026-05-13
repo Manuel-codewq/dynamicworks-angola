@@ -110,7 +110,7 @@ export default function LandingPage() {
   const sub   = useTypewriter("A primeira corretora de opções binárias angolana com pagamentos em AOA via USDT, preços em tempo real e conta demo gratuita.", 20, 0, l2.done);
 
   const features = [
-    { Icon: Zap,         color: "#f5a623", title: "Execução Instantânea",  desc: "Ordens executadas em milissegundos com preços em tempo real via Deriv." },
+    { Icon: Zap,         color: "#f5a623", title: "Execução Instantânea",  desc: "Ordens executadas em milissegundos com preços em tempo real." },
     { Icon: ShieldCheck, color: "#22c55e", title: "Segurança Avançada",    desc: "KYC obrigatório, autenticação OTP e encriptação de ponta a ponta." },
     { Icon: TrendingUp,  color: "#3b82f6", title: "16+ Ativos",            desc: "Forex, criptomoedas e metais preciosos disponíveis 24/7." },
     { Icon: Banknote,    color: "#a78bfa", title: "Pagamentos em Kwanza",  desc: "Depósitos e saques rápidos em AOA via USDT (TRC-20), sem complicações." },
