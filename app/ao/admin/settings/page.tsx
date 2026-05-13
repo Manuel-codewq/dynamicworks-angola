@@ -14,6 +14,9 @@ interface Settings {
   winProbability:  Record<string, number>;
   maintenanceMode: boolean;
   activePairs:     string[];
+  usdtRateAoa:     number;
+  usdtWallet:      string | null;
+  usdtMinDeposit:  number;
 }
 
 // UI works in whole-number percentages; API uses fractions
@@ -159,6 +162,61 @@ export default function AdminSettingsPage() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* USDT TRC-20 */}
+      <div style={card}>
+        <p style={sectionTitle}>USDT TRC-20</p>
+        <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
+          Carteira para receber depósitos, taxa de conversão (Kz por 1 USDT) e mínimo aceite.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+          <div>
+            <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>
+              Endereço TRC-20 da plataforma
+            </label>
+            <input
+              type="text"
+              value={draft.usdtWallet ?? ""}
+              onChange={e => setDraft(d => d ? { ...d, usdtWallet: e.target.value.trim() || null } : d)}
+              placeholder="TXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              style={{ width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 14px", color: "#fff", fontFamily: "monospace", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>
+                Taxa (Kz por 1 USDT)
+              </label>
+              <input
+                type="number"
+                step="1"
+                value={draft.usdtRateAoa || ""}
+                onChange={e => setDraft(d => d ? { ...d, usdtRateAoa: Number(e.target.value) || 0 } : d)}
+                placeholder="ex: 920"
+                style={{ width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+            <div>
+              <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>
+                Mínimo (USDT)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={draft.usdtMinDeposit || ""}
+                onChange={e => setDraft(d => d ? { ...d, usdtMinDeposit: Number(e.target.value) || 0 } : d)}
+                placeholder="ex: 5"
+                style={{ width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+          </div>
+          {draft.usdtRateAoa > 0 && (
+            <div style={{ color: "#64748b", fontSize: 12 }}>
+              Exemplo: 10.000 Kz = {(10000 / draft.usdtRateAoa).toFixed(2)} USDT
+            </div>
+          )}
         </div>
       </div>
 

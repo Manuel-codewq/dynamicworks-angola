@@ -77,18 +77,23 @@ model Trade {
 }
 
 model Transaction {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  type      String
-  amount    Float
-  method    String?
-  status    String   @default("pending")
-  reference String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String
+  amount      Float
+  method      String?
+  status      String   @default("pending")
+  reference   String?
+  usdtTxid    String?  @unique
+  usdtAmount  Float?
+  usdtAddress String?
+  usdtRate    Float?
+  createdAt   DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+  @@index([method, status, createdAt])
 }
 
 model Notification {
@@ -112,6 +117,9 @@ model Settings {
   payout          Json      @default("{}")
   activePairs     Json      @default("[]")
   rankingResetAt  DateTime?
+  usdtRateAoa     Float     @default(0)
+  usdtWallet      String?
+  usdtMinDeposit  Float     @default(5)
   updatedAt       DateTime  @updatedAt
 }
 

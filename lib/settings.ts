@@ -25,6 +25,9 @@ export interface PlatformSettings {
   maintenanceMode: boolean;
   activePairs:     string[];
   rankingResetAt:  Date | null;
+  usdtRateAoa:     number;
+  usdtWallet:      string | null;
+  usdtMinDeposit:  number;
 }
 
 // In-memory cache with 15s TTL — keeps DB load low while reflecting admin changes quickly
@@ -47,11 +50,14 @@ export async function getSettings(): Promise<PlatformSettings> {
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
       activePairs:     savedPairs.length > 0 ? savedPairs : [...ALL_PAIRS],
       rankingResetAt:  row.rankingResetAt ? new Date(row.rankingResetAt) : null,
+      usdtRateAoa:     Number(row.usdtRateAoa ?? 0),
+      usdtWallet:      row.usdtWallet ?? null,
+      usdtMinDeposit:  Number(row.usdtMinDeposit ?? 5),
     };
     cacheAt = Date.now();
     return cache;
   } catch {
-    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null };
+    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 5 };
   }
 }
 
@@ -73,11 +79,14 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
   if (typeof patch.maintenanceMode === "boolean") current.maintenanceMode = patch.maintenanceMode;
   if (Array.isArray(patch.activePairs)) current.activePairs = patch.activePairs;
   if (patch.rankingResetAt instanceof Date || patch.rankingResetAt === null) current.rankingResetAt = patch.rankingResetAt;
+  if (typeof patch.usdtRateAoa === "number" && isFinite(patch.usdtRateAoa) && patch.usdtRateAoa >= 0) current.usdtRateAoa = patch.usdtRateAoa;
+  if (typeof patch.usdtWallet === "string" || patch.usdtWallet === null) current.usdtWallet = patch.usdtWallet || null;
+  if (typeof patch.usdtMinDeposit === "number" && isFinite(patch.usdtMinDeposit) && patch.usdtMinDeposit >= 0) current.usdtMinDeposit = patch.usdtMinDeposit;
 
   await (prisma.settings.upsert as any)({
     where:  { id: "singleton" },
     create: { id: "singleton", ...current },
-    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, rankingResetAt: current.rankingResetAt },
+    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, rankingResetAt: current.rankingResetAt, usdtRateAoa: current.usdtRateAoa, usdtWallet: current.usdtWallet, usdtMinDeposit: current.usdtMinDeposit },
   });
 
   cache = current;
@@ -86,5 +95,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null };
+export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 5 };
 export async function loadSettings() { settings = await getSettings(); return settings; }

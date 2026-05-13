@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, Wallet, ArrowDownCircle, ArrowUpCircle,
   CheckCircle, Clock, XCircle, ChevronLeft, ShieldCheck, Mail,
-  CreditCard, RefreshCw,
+  CreditCard, RefreshCw, Copy, Bitcoin,
 } from "lucide-react";
 
 const DEPOSIT_METHODS = [
@@ -58,6 +58,12 @@ export default function WalletPage() {
   const [promoCode,     setPromoCode]     = useState("");
   const [promoLoading,  setPromoLoading]  = useState(false);
   const [promoMsg,      setPromoMsg]      = useState<{ text: string; ok: boolean } | null>(null);
+  // USDT flow
+  const [payMethod,     setPayMethod]     = useState<"multicaixa" | "usdt">("multicaixa");
+  const [usdtAddress,   setUsdtAddress]   = useState("");
+  const [usdtDeposit,   setUsdtDeposit]   = useState<{ usdtAmount: number; usdtAddress: string; usdtRate: number; expiresAt: string } | null>(null);
+  const [usdtLoading,   setUsdtLoading]   = useState(false);
+  const [copied,        setCopied]        = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -108,14 +114,23 @@ export default function WalletPage() {
   async function confirmOtp() {
     if (!pendingType) return;
     setOtpLoading(true); setMsg(null);
-    const body: any = { type: pendingType, amount, method, otp: otpCode };
-    if (pendingType === "withdrawal") { body.reference = bankAccount; body.method = bankName || method; }
 
-    const res = await fetch("/api/transactions", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(body),
-    });
+    let res: Response;
+    if (pendingType === "withdrawal" && payMethod === "usdt") {
+      res = await fetch("/api/transactions/usdt/withdraw", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ amount, address: usdtAddress, otp: otpCode }),
+      });
+    } else {
+      const body: any = { type: pendingType, amount, method, otp: otpCode };
+      if (pendingType === "withdrawal") { body.reference = bankAccount; body.method = bankName || method; }
+      res = await fetch("/api/transactions", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(body),
+      });
+    }
     const d = await res.json();
     setOtpLoading(false);
     if (res.ok) {
@@ -125,6 +140,36 @@ export default function WalletPage() {
     } else {
       setMsg({ text: d.error, ok: false });
     }
+  }
+
+  async function requestUsdtDeposit() {
+    setUsdtLoading(true); setMsg(null); setUsdtDeposit(null);
+    const res = await fetch("/api/transactions/usdt/deposit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount }),
+    });
+    const d = await res.json();
+    setUsdtLoading(false);
+    if (res.ok) {
+      setUsdtDeposit({
+        usdtAmount: d.usdtAmount,
+        usdtAddress: d.usdtAddress,
+        usdtRate: d.usdtRate,
+        expiresAt: d.expiresAt,
+      });
+      fetch("/api/transactions").then(r => r.json()).then(d => { if (Array.isArray(d)) setTransactions(d); });
+    } else {
+      setMsg({ text: d.error ?? "Erro ao criar pedido USDT", ok: false });
+    }
+  }
+
+  async function copyToClipboard(value: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 1500);
+    } catch { /* silent */ }
   }
 
   async function redeemPromo() {
@@ -210,43 +255,159 @@ export default function WalletPage() {
         {/* Deposit tab */}
         {tab === "deposit" && (
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
-            {/* Multicaixa Express badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
-              <CreditCard size={26} color="#e74c3c" />
-              <div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Multicaixa Express</div>
-                <div style={{ color: "#94a3b8", fontSize: 12 }}>Pagamento instantâneo</div>
-              </div>
+            {/* Method selector */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button onClick={() => { setPayMethod("multicaixa"); setUsdtDeposit(null); }}
+                style={{
+                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                  background: payMethod === "multicaixa" ? "rgba(231,76,60,0.12)" : "#0a0f1e",
+                  border: `1px solid ${payMethod === "multicaixa" ? "rgba(231,76,60,0.5)" : "#1e2d50"}`,
+                  borderRadius: 10, cursor: "pointer",
+                }}>
+                <CreditCard size={22} color="#e74c3c" />
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Multicaixa</div>
+                  <div style={{ color: "#94a3b8", fontSize: 11 }}>Express</div>
+                </div>
+              </button>
+              <button onClick={() => setPayMethod("usdt")}
+                style={{
+                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                  background: payMethod === "usdt" ? "rgba(38,161,123,0.12)" : "#0a0f1e",
+                  border: `1px solid ${payMethod === "usdt" ? "rgba(38,161,123,0.5)" : "#1e2d50"}`,
+                  borderRadius: 10, cursor: "pointer",
+                }}>
+                <Bitcoin size={22} color="#26a17b" />
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>USDT</div>
+                  <div style={{ color: "#94a3b8", fontSize: 11 }}>TRC-20</div>
+                </div>
+              </button>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
-              <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
-                placeholder="5000" style={inputStyle} />
-            </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-              {[5000, 10000, 25000, 50000].map(v => (
-                <button key={v} onClick={() => setAmount(v)}
+            {payMethod === "multicaixa" && (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
+                  <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
+                    placeholder="5000" style={inputStyle} />
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                  {[5000, 10000, 25000, 50000].map(v => (
+                    <button key={v} onClick={() => setAmount(v)}
+                      style={{
+                        flex: 1, background: amount === v ? "#f5a623" : "#1e2d50",
+                        color: amount === v ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6,
+                        padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      }}>{(v / 1000)}k</button>
+                  ))}
+                </div>
+
+                <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
+                  <strong style={{ color: "#f5a623" }}>Instruções:</strong> Após clicar em &quot;Enviar pedido&quot;, um agente entrará em contacto via WhatsApp para confirmar o depósito via Multicaixa Express.
+                </div>
+
+                <button onClick={() => requestOtp("deposit")} disabled={loading}
                   style={{
-                    flex: 1, background: amount === v ? "#f5a623" : "#1e2d50",
-                    color: amount === v ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6,
-                    padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  }}>{(v / 1000)}k</button>
-              ))}
-            </div>
+                    width: "100%", background: "#f5a623", color: "#0a0f1e", border: "none",
+                    borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}>
+                  {loading ? "A enviar código..." : <><ShieldCheck size={16} /> {`Depositar ${formatKz(amount)}`}</>}
+                </button>
+              </>
+            )}
 
-            <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-              <strong style={{ color: "#f5a623" }}>Instruções:</strong> Após clicar em &quot;Enviar pedido&quot;, um agente entrará em contacto via WhatsApp para confirmar o depósito via Multicaixa Express.
-            </div>
+            {payMethod === "usdt" && (
+              <>
+                {kycStatus !== "approved" && (
+                  <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, color: "#94a3b8", fontSize: 13 }}>
+                    <strong style={{ color: "#ef4444" }}>KYC obrigatório</strong> — para depositar via USDT precisas de ter a verificação de identidade aprovada. <a href="/kyc" style={{ color: "#f5a623" }}>Verificar →</a>
+                  </div>
+                )}
 
-            <button onClick={() => requestOtp("deposit")} disabled={loading}
-              style={{
-                width: "100%", background: "#f5a623", color: "#0a0f1e", border: "none",
-                borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              }}>
-              {loading ? "A enviar código..." : <><ShieldCheck size={16} /> {`Depositar ${formatKz(amount)}`}</>}
-            </button>
+                {!usdtDeposit && (
+                  <>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
+                      <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
+                        placeholder="5000" style={inputStyle} />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                      {[5000, 10000, 25000, 50000].map(v => (
+                        <button key={v} onClick={() => setAmount(v)}
+                          style={{
+                            flex: 1, background: amount === v ? "#26a17b" : "#1e2d50",
+                            color: amount === v ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6,
+                            padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                          }}>{(v / 1000)}k</button>
+                      ))}
+                    </div>
+
+                    <div style={{ background: "rgba(38,161,123,0.08)", border: "1px solid rgba(38,161,123,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
+                      <strong style={{ color: "#26a17b" }}>Como funciona:</strong> Vamos gerar um endereço TRC-20 e um valor exato em USDT. Envias para esse endereço e o sistema credita automaticamente o teu saldo assim que a transferência confirmar.
+                    </div>
+
+                    <button onClick={requestUsdtDeposit} disabled={usdtLoading || kycStatus !== "approved"}
+                      style={{
+                        width: "100%", background: "#26a17b", color: "#fff", border: "none",
+                        borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15,
+                        cursor: usdtLoading || kycStatus !== "approved" ? "not-allowed" : "pointer",
+                        opacity: kycStatus !== "approved" ? 0.5 : 1,
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      }}>
+                      {usdtLoading ? "A criar pedido..." : <><Bitcoin size={16} /> Gerar endereço USDT</>}
+                    </button>
+                  </>
+                )}
+
+                {usdtDeposit && (
+                  <div>
+                    <div style={{ background: "rgba(38,161,123,0.08)", border: "1px solid rgba(38,161,123,0.3)", borderRadius: 10, padding: 16, marginBottom: 12 }}>
+                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Envia EXATAMENTE este valor</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <div style={{ color: "#26a17b", fontSize: 24, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                          {usdtDeposit.usdtAmount.toFixed(4)} USDT
+                        </div>
+                        <button onClick={() => copyToClipboard(usdtDeposit.usdtAmount.toFixed(4), "amount")}
+                          style={{ background: "#1e2d50", border: "none", borderRadius: 6, padding: "6px 10px", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
+                          <Copy size={12} /> {copied === "amount" ? "Copiado!" : "Copiar"}
+                        </button>
+                      </div>
+                      <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 6 }}>
+                        Equivalente a {formatKz(amount)} · taxa {usdtDeposit.usdtRate.toLocaleString("pt-PT")} Kz/USDT
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Endereço TRC-20</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <div style={{ color: "#fff", fontFamily: "monospace", fontSize: 13, wordBreak: "break-all" }}>
+                          {usdtDeposit.usdtAddress}
+                        </div>
+                        <button onClick={() => copyToClipboard(usdtDeposit.usdtAddress, "addr")}
+                          style={{ background: "#1e2d50", border: "none", borderRadius: 6, padding: "6px 10px", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12, flexShrink: 0 }}>
+                          <Copy size={12} /> {copied === "addr" ? "Copiado!" : "Copiar"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12, color: "#94a3b8" }}>
+                      ⚠️ Envia <strong style={{ color: "#fff" }}>exatamente</strong> {usdtDeposit.usdtAmount.toFixed(4)} USDT pela rede <strong style={{ color: "#fff" }}>TRC-20 (Tron)</strong>. Valores diferentes ou outra rede ficam por confirmar manualmente.
+                    </div>
+
+                    <div style={{ background: "rgba(245,166,35,0.05)", borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: "#64748b", textAlign: "center" }}>
+                      Janela válida: {new Date(usdtDeposit.expiresAt).toLocaleString("pt-AO", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
+                    </div>
+
+                    <button onClick={() => setUsdtDeposit(null)}
+                      style={{ width: "100%", background: "#1e2d50", color: "#94a3b8", border: "none", borderRadius: 8, padding: 12, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                      Criar novo pedido
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -273,20 +434,54 @@ export default function WalletPage() {
                 </div>
               </div>
             )}
-            {/* Multicaixa Express badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(231,76,60,0.08)", border: "1px solid rgba(231,76,60,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
-              <CreditCard size={26} color="#e74c3c" />
-              <div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Multicaixa Express</div>
-                <div style={{ color: "#94a3b8", fontSize: 12 }}>Levantamento para o teu número</div>
-              </div>
+            {/* Method selector */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button onClick={() => setPayMethod("multicaixa")}
+                style={{
+                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                  background: payMethod === "multicaixa" ? "rgba(231,76,60,0.12)" : "#0a0f1e",
+                  border: `1px solid ${payMethod === "multicaixa" ? "rgba(231,76,60,0.5)" : "#1e2d50"}`,
+                  borderRadius: 10, cursor: "pointer",
+                }}>
+                <CreditCard size={22} color="#e74c3c" />
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Multicaixa</div>
+                  <div style={{ color: "#94a3b8", fontSize: 11 }}>Express</div>
+                </div>
+              </button>
+              <button onClick={() => setPayMethod("usdt")}
+                style={{
+                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                  background: payMethod === "usdt" ? "rgba(38,161,123,0.12)" : "#0a0f1e",
+                  border: `1px solid ${payMethod === "usdt" ? "rgba(38,161,123,0.5)" : "#1e2d50"}`,
+                  borderRadius: 10, cursor: "pointer",
+                }}>
+                <Bitcoin size={22} color="#26a17b" />
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>USDT</div>
+                  <div style={{ color: "#94a3b8", fontSize: 11 }}>TRC-20</div>
+                </div>
+              </button>
             </div>
 
+            {payMethod === "multicaixa" && (
             <div style={{ marginBottom: 14 }}>
               <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Número de telefone (Multicaixa Express)</label>
               <input type="tel" value={bankAccount} onChange={e => setBankAccount(e.target.value)}
                 placeholder="9XX XXX XXX" style={inputStyle} />
             </div>
+            )}
+
+            {payMethod === "usdt" && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Endereço TRC-20 (Tron)</label>
+              <input type="text" value={usdtAddress} onChange={e => setUsdtAddress(e.target.value.trim())}
+                placeholder="TXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style={{ ...inputStyle, fontFamily: "monospace", fontSize: 13 }} />
+              <div style={{ color: "#64748b", fontSize: 11, marginTop: 4 }}>
+                Verifica bem o endereço — envios USDT são irreversíveis.
+              </div>
+            </div>
+            )}
             <div style={{ marginBottom: 20 }}>
               <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
               <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
@@ -301,12 +496,22 @@ export default function WalletPage() {
               </div>
             </div>
             <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-              Processamento em 1-3 dias úteis. Valor mínimo: 5.000 Kz.
+              {payMethod === "usdt"
+                ? "Processamento manual em 24h úteis. Mínimo 5.000 Kz. O envio USDT é feito pela equipa após validação."
+                : "Processamento em 1-3 dias úteis. Valor mínimo: 5.000 Kz."}
             </div>
-            <button onClick={() => requestOtp("withdrawal")} disabled={loading}
+            <button
+              onClick={() => requestOtp("withdrawal")}
+              disabled={
+                loading ||
+                (payMethod === "usdt" && !/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(usdtAddress))
+              }
               style={{
                 width: "100%", background: "#ef4444", color: "#fff", border: "none",
-                borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
+                borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity:
+                  (payMethod === "usdt" && !/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(usdtAddress)) ? 0.5 : 1,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}>
               {loading ? "A enviar código..." : <><ShieldCheck size={16} /> {`Solicitar levantamento de ${formatKz(amount)}`}</>}

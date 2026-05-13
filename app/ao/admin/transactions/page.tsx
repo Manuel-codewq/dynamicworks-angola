@@ -11,6 +11,9 @@ function formatDate(s: string) {
 interface AdminTransaction {
   id: string; type: string; amount: number; method: string | null;
   reference: string | null; status: string; createdAt: string;
+  usdtTxid?: string | null;
+  usdtAmount?: number | null;
+  usdtAddress?: string | null;
   user: { name: string; email: string };
 }
 
@@ -51,12 +54,30 @@ export default function AdminTransactionsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function act(id: string, newStatus: "completed" | "rejected") {
-    setBusyId(id);
-    await fetch(`/api/admin/transactions/${id}`, {
+  async function act(tx: AdminTransaction, newStatus: "completed" | "rejected") {
+    setBusyId(tx.id);
+    let usdtTxid: string | undefined;
+    if (
+      newStatus === "completed" &&
+      tx.type === "withdrawal" &&
+      tx.method === "usdt_trc20"
+    ) {
+      const input = window.prompt(
+        `Cola o TXID Tron do envio de ${tx.usdtAmount?.toFixed(4) ?? "?"} USDT para ${tx.usdtAddress ?? "?"}:`
+      );
+      if (!input) { setBusyId(null); return; }
+      const trimmed = input.trim();
+      if (!/^[A-Fa-f0-9]{64}$/.test(trimmed)) {
+        alert("TXID inválido — esperado hash hexadecimal de 64 caracteres.");
+        setBusyId(null);
+        return;
+      }
+      usdtTxid = trimmed;
+    }
+    await fetch(`/api/admin/transactions/${tx.id}`, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ status: newStatus }),
+      body:    JSON.stringify({ status: newStatus, ...(usdtTxid ? { usdtTxid } : {}) }),
     });
     setBusyId(null);
     load();
@@ -215,13 +236,13 @@ export default function AdminTransactionsPage() {
                     {tx.status === "pending" ? (
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
-                          onClick={() => act(tx.id, "completed")}
+                          onClick={() => act(tx, "completed")}
                           disabled={busyId === tx.id}
                           style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
                           <CheckCircle size={12} /> Aprovar
                         </button>
                         <button
-                          onClick={() => act(tx.id, "rejected")}
+                          onClick={() => act(tx, "rejected")}
                           disabled={busyId === tx.id}
                           style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
                           <XCircle size={12} /> Rejeitar

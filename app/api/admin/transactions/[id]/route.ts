@@ -17,10 +17,17 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const { status } = await req.json();
+  const { status, usdtTxid } = await req.json();
 
   if (!["completed", "rejected"].includes(status)) {
     return NextResponse.json({ error: "Status inválido" }, { status: 400 });
+  }
+
+  // Para saques USDT exige-se o TXID da transferência enviada manualmente
+  if (status === "completed" && typeof usdtTxid === "string" && usdtTxid.trim()) {
+    if (!/^[A-Fa-f0-9]{64}$/.test(usdtTxid.trim())) {
+      return NextResponse.json({ error: "TXID inválido (esperado hash de 64 chars)" }, { status: 400 });
+    }
   }
 
   const tx = await prisma.transaction.findUnique({ where: { id } });
@@ -54,7 +61,12 @@ export async function PATCH(
 
       return dbTx.transaction.update({
         where:   { id },
-        data:    { status },
+        data:    {
+          status,
+          ...(status === "completed" && typeof usdtTxid === "string" && usdtTxid.trim()
+            ? { usdtTxid: usdtTxid.trim() }
+            : {}),
+        },
         include: { user: { select: { name: true, email: true } } },
       });
     });
