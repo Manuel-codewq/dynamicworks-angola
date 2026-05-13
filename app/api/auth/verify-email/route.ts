@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +42,15 @@ export async function POST(req: NextRequest) {
       where: { id: user.id },
       data: { emailVerified: true, verifyCode: null, verifyExpires: null },
     });
+
+    // Limpar rate limit de login acumulado antes da verificação
+    // (o utilizador pode ter tentado entrar várias vezes enquanto aguardava o email)
+    await prisma.rateLimit.deleteMany({
+      where: { key: `login:${normalizedEmail}` },
+    }).catch(() => {});
+
+    // Enviar email de boas-vindas
+    sendWelcomeEmail(user.email, user.name).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch {

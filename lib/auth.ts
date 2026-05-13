@@ -24,11 +24,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const normalizedEmail = (credentials.email as string).toLowerCase().trim();
 
-          // 10 tentativas por email por 15 minutos — protecção contra brute-force
-          if (!await checkRateLimit("login", normalizedEmail, 10, 15 * 60_000)) {
-            return null;
-          }
-
+          // Verificar existência e estado do utilizador ANTES do rate limit
+          // para que tentativas bloqueadas (email não verificado, conta bloqueada)
+          // não consumam tokens — evita lockout acidental após verificação de email
           const user = await prisma.user.findUnique({
             where: { email: normalizedEmail },
           });
@@ -36,6 +34,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!user) return null;
           if (user.status === "blocked") return null;
           if (user.emailVerified === false) return null;
+
+          // Só aplica rate limit a utilizadores válidos com email verificado
+          if (!await checkRateLimit("login", normalizedEmail, 10, 15 * 60_000)) {
+            return null;
+          }
 
           const valid = await bcrypt.compare(
             credentials.password as string,
