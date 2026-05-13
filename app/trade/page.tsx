@@ -1192,9 +1192,18 @@ export default function TradePage() {
       macdLineRef.current = null; macdSignalRef.current = null; macdHistRef.current = null; macdPaneRef.current = null;
       stochKRef.current = null; stochDRef.current = null; stochPaneRef.current = null;
 
-      // Start with empty chart — real candles arrive via WS within ~1 second
-      series.setData([]);
-      currentCandleRef.current = null;
+      // Mostrar placeholder imediatamente enquanto os dados reais chegam via WS
+      const basePrice = SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1;
+      const gran = GRANULARITY[timeframeRef.current] ?? 60;
+      const placeholder = generatePlaceholder(basePrice, 120, gran);
+      const ct4 = chartTypeRef.current;
+      if (ct4 === "line" || ct4 === "area") {
+        series.setData(placeholder.map(c => ({ time: c.time, value: c.close })) as any);
+      } else {
+        series.setData(placeholder);
+      }
+      candleDataRef.current = placeholder;
+      currentCandleRef.current = placeholder[placeholder.length - 1] ?? null;
 
       // Re-apply drawings after chart reinit (refs were invalidated by chart.remove())
       reapplyDrawings();
@@ -2239,7 +2248,7 @@ export default function TradePage() {
     };
 
     return (
-      <div style={{ position: "absolute", top: 0, left: 44, width: 320, height: "100%", zIndex: 25, background: "#0a0f1e", borderRight: "1px solid #1e2d50", display: "flex", flexDirection: "column", boxShadow: "4px 0 24px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+      <div style={{ position: isMobile ? "relative" : "absolute", top: 0, left: isMobile ? 0 : 44, width: isMobile ? "100%" : 320, height: isMobile ? "100%" : "100%", zIndex: 25, background: "#0a0f1e", borderRight: isMobile ? "none" : "1px solid #1e2d50", display: "flex", flexDirection: "column", boxShadow: isMobile ? "none" : "4px 0 24px rgba(0,0,0,0.5)", overflow: "hidden" }}>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #1e2d50", flexShrink: 0, background: "#080e1d" }}>
@@ -2615,26 +2624,19 @@ export default function TradePage() {
           ))}
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
             {candleTimer && <span style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontVariantNumeric: "tabular-nums" }}>{candleTimer}</span>}
-            <button onClick={() => { setShowTools(false); setShowIndicators(v => !v); }} style={{ height: 24, padding: "0 8px", background: showIndicators ? "rgba(245,166,35,0.12)" : "transparent", color: showIndicators ? "#f5a623" : "#4b5563", border: `1px solid ${showIndicators ? "rgba(245,166,35,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-              IND
+            <button onClick={() => setLeftPanel(p => p === "indicators" ? null : "indicators")} style={{ height: 24, padding: "0 8px", background: leftPanel === "indicators" ? "rgba(245,166,35,0.12)" : "transparent", color: leftPanel === "indicators" ? "#f5a623" : "#4b5563", border: `1px solid ${leftPanel === "indicators" ? "rgba(245,166,35,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              <Activity size={11} /> IND
             </button>
-            <button onClick={() => { setShowIndicators(false); setShowTools(v => !v); if (showTools) { setActiveTool(null); setPendingPoint(null); } }} style={{ height: 24, padding: "0 8px", background: showTools ? "rgba(34,197,94,0.1)" : "transparent", color: showTools ? "#22c55e" : "#4b5563", border: `1px solid ${showTools ? "rgba(34,197,94,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-              TOOLS
+            <button onClick={() => { setLeftPanel(p => p === "drawings" ? null : "drawings"); if (leftPanel === "drawings") { setActiveTool(null); setPendingPoint(null); } }} style={{ height: 24, padding: "0 8px", background: leftPanel === "drawings" ? "rgba(34,197,94,0.1)" : "transparent", color: leftPanel === "drawings" ? "#22c55e" : "#4b5563", border: `1px solid ${leftPanel === "drawings" ? "rgba(34,197,94,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              <PenLine size={11} /> TOOLS
             </button>
           </div>
         </div>}
 
-        {/* ── Indicator panel (mobile overlay) ── */}
-        {showIndicators && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
-            {renderIndicatorPanel(true)}
-          </div>
-        )}
-
-        {/* ── Drawing tools panel (mobile overlay) ── */}
-        {showTools && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, zIndex: 107, boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
-            {renderDrawingToolsPanel(true)}
+        {/* ── Painel mobile (indicadores / ferramentas) ── */}
+        {leftPanel && (
+          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 116, background: "#0a0f1e", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+            {renderSlideInPanel()}
           </div>
         )}
 
