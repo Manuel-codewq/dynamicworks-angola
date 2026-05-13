@@ -26,8 +26,10 @@ model User {
   emailVerified  Boolean       @default(false)
   verifyCode     String?
   verifyExpires  DateTime?
-  otpCode        String?
+  otpCode        String?    // OTP de transação (depósito/levantamento)
   otpExpires     DateTime?
+  pwdOtpCode     String?    // OTP de alteração de senha (separado para não conflituar)
+  pwdOtpExpires  DateTime?
   indicatorPrefs Json?
   lastSeenAt     DateTime?
   createdAt      DateTime      @default(now())

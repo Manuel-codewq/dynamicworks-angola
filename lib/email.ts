@@ -236,7 +236,7 @@ export async function sendTransactionOtpEmail(to: string, name: string, code: st
       <p style="color:#64748b;font-size:12px;font-weight:600;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Código OTP</p>
       <p style="color:#f5a623;font-size:42px;font-weight:900;margin:0;letter-spacing:12px;font-variant-numeric:tabular-nums;">${code}</p>
     </div>
-    ${p("Este código é válido durante <strong style=\"color:#fff;\">10 minutos</strong>. Não o partilhes com ninguém.")}
+    ${p("Este código é válido durante <strong style=\"color:#fff;\">30 minutos</strong>. Não o partilhes com ninguém.")}
     ${p("Se não iniciaste esta operação, ignora este email. A tua conta está segura.", "#64748b")}
   `;
 
@@ -263,7 +263,7 @@ export async function sendPasswordOtpEmail(to: string, name: string, code: strin
       <p style="color:#64748b;font-size:12px;font-weight:600;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Código de segurança</p>
       <p style="color:#f5a623;font-size:42px;font-weight:900;margin:0;letter-spacing:12px;font-variant-numeric:tabular-nums;">${code}</p>
     </div>
-    ${p("Este código é válido durante <strong style=\"color:#fff;\">10 minutos</strong>. Não o partilhes com ninguém.")}
+    ${p("Este código é válido durante <strong style=\"color:#fff;\">30 minutos</strong>. Não o partilhes com ninguém.")}
     ${p("Se não solicitaste esta alteração, ignora este email. A tua senha não será alterada.", "#64748b")}
   `;
 

@@ -27,7 +27,7 @@ export async function POST(
 
   await prisma.user.update({
     where: { id },
-    data: { password: hashed, otpCode: null, otpExpires: null },
+    data: { password: hashed, otpCode: null, otpExpires: null, pwdOtpCode: null, pwdOtpExpires: null },
   });
 
   await prisma.auditLog.create({

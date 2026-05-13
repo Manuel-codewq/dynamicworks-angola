@@ -21,11 +21,11 @@ export async function POST() {
     if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
 
     const code    = String(randomInt(100000, 1000000));
-    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data:  { otpCode: code, otpExpires: expires },
+      data:  { pwdOtpCode: code, pwdOtpExpires: expires }, // campo separado do OTP de transação
     });
 
     await sendPasswordOtpEmail(user.email, user.name, code);

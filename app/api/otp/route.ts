@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   // Campo separado (otpCode) — não partilha com verifyCode de email
   const code    = String(randomInt(100000, 1000000));
-  const expires = new Date(Date.now() + 10 * 60 * 1000);
+  const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
 
   await prisma.user.update({
     where: { id: user.id },

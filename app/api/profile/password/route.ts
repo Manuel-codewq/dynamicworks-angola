@@ -28,24 +28,24 @@ export async function PATCH(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, otpCode: true, otpExpires: true },
+      select: { id: true, pwdOtpCode: true, pwdOtpExpires: true },
     });
     if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
 
-    if (!user.otpCode || !user.otpExpires) {
+    if (!user.pwdOtpCode || !user.pwdOtpExpires) {
       return NextResponse.json({ error: "Nenhum código enviado. Solicite um novo código." }, { status: 400 });
     }
-    if (new Date() > user.otpExpires) {
+    if (new Date() > user.pwdOtpExpires) {
       return NextResponse.json({ error: "Código expirado. Solicite um novo." }, { status: 400 });
     }
-    if (String(otpCode).trim() !== user.otpCode) {
+    if (String(otpCode).trim() !== user.pwdOtpCode) {
       return NextResponse.json({ error: "Código incorreto." }, { status: 400 });
     }
 
     const hashed = await bcrypt.hash(String(newPassword), 12);
     await prisma.user.update({
       where: { id: user.id },
-      data:  { password: hashed, otpCode: null, otpExpires: null },
+      data:  { password: hashed, pwdOtpCode: null, pwdOtpExpires: null },
     });
 
     return NextResponse.json({ ok: true });
