@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:       "Carteira — Depósitos e Levantamentos",
-  description: "Gere o teu saldo, faz depósitos via Multicaixa Express e solicita levantamentos em Kwanza na Dynamics Works.",
+  description: "Gere o teu saldo, faz depósitos e solicita levantamentos em Kwanza na Dynamics Works.",
   robots:      { index: false, follow: false },
 };
 

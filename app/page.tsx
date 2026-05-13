@@ -107,18 +107,18 @@ export default function LandingPage() {
   const badge = useTypewriter("Plataforma de Opções Binárias · Angola", 36, 0, ready);
   const l1    = useTypewriter("Negocie no Mercado Global", 48, 0, badge.done);
   const l2    = useTypewriter("em Kwanzas.", 55, 0, l1.done);
-  const sub   = useTypewriter("A primeira corretora de opções binárias angolana com pagamentos em AOA, preços em tempo real e conta demo gratuita.", 20, 0, l2.done);
+  const sub   = useTypewriter("A primeira corretora de opções binárias angolana com pagamentos em AOA via USDT, preços em tempo real e conta demo gratuita.", 20, 0, l2.done);
 
   const features = [
     { Icon: Zap,         color: "#f5a623", title: "Execução Instantânea",  desc: "Ordens executadas em milissegundos com preços em tempo real via Deriv." },
     { Icon: ShieldCheck, color: "#22c55e", title: "Segurança Avançada",    desc: "KYC obrigatório, autenticação OTP e encriptação de ponta a ponta." },
     { Icon: TrendingUp,  color: "#3b82f6", title: "16+ Ativos",            desc: "Forex, criptomoedas e metais preciosos disponíveis 24/7." },
-    { Icon: Banknote,    color: "#a78bfa", title: "Pagamentos em Kwanza",  desc: "Depósitos e saques em AOA via Multicaixa Express, sem conversão." },
+    { Icon: Banknote,    color: "#a78bfa", title: "Pagamentos em Kwanza",  desc: "Depósitos e saques rápidos em AOA via USDT (TRC-20), sem complicações." },
   ];
 
   const steps = [
     { n: "01", title: "Cria a tua conta",   desc: "Regista-te gratuitamente em menos de 2 minutos.", color: "#f5a623" },
-    { n: "02", title: "Faz o depósito",     desc: "Transfere via Multicaixa Express em Kwanza.",     color: "#3b82f6" },
+    { n: "02", title: "Faz o depósito",     desc: "Transfere via USDT (TRC-20) em Kwanza.",     color: "#3b82f6" },
     { n: "03", title: "Começa a negociar",  desc: "Escolhe o ativo, prevê a direção e ganha.",       color: "#22c55e" },
   ];
 

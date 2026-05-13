@@ -59,7 +59,7 @@ export default function WalletPage() {
   const [promoLoading,  setPromoLoading]  = useState(false);
   const [promoMsg,      setPromoMsg]      = useState<{ text: string; ok: boolean } | null>(null);
   // USDT flow
-  const [payMethod,     setPayMethod]     = useState<"multicaixa" | "usdt">("multicaixa");
+  const [payMethod,     setPayMethod]     = useState<"multicaixa" | "usdt">("usdt");
   const [usdtAddress,   setUsdtAddress]   = useState("");
   const [usdtDeposit,   setUsdtDeposit]   = useState<{ usdtAmount: number; usdtAddress: string; usdtRate: number; expiresAt: string } | null>(null);
   const [usdtLoading,   setUsdtLoading]   = useState(false);
@@ -257,7 +257,8 @@ export default function WalletPage() {
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
             {/* Method selector */}
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button onClick={() => { setPayMethod("multicaixa"); setUsdtDeposit(null); }}
+              {/* Multicaixa Express removido temporariamente */}
+              {/* <button onClick={() => { setPayMethod("multicaixa"); setUsdtDeposit(null); }}
                 style={{
                   flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
                   background: payMethod === "multicaixa" ? "rgba(231,76,60,0.12)" : "#0a0f1e",
@@ -269,7 +270,7 @@ export default function WalletPage() {
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Multicaixa</div>
                   <div style={{ color: "#94a3b8", fontSize: 11 }}>Express</div>
                 </div>
-              </button>
+              </button> */}
               <button onClick={() => setPayMethod("usdt")}
                 style={{
                   flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
@@ -436,17 +437,17 @@ export default function WalletPage() {
             )}
             {/* Method selector */}
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button onClick={() => setPayMethod("multicaixa")}
+              <button onClick={() => {}} 
                 style={{
                   flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-                  background: payMethod === "multicaixa" ? "rgba(231,76,60,0.12)" : "#0a0f1e",
-                  border: `1px solid ${payMethod === "multicaixa" ? "rgba(231,76,60,0.5)" : "#1e2d50"}`,
-                  borderRadius: 10, cursor: "pointer",
+                  background: "#0a0f1e",
+                  border: "1px solid #1e2d50",
+                  borderRadius: 10, cursor: "not-allowed", opacity: 0.6
                 }}>
-                <CreditCard size={22} color="#e74c3c" />
+                <CreditCard size={22} color="#94a3b8" />
                 <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Multicaixa</div>
-                  <div style={{ color: "#94a3b8", fontSize: 11 }}>Express</div>
+                  <div style={{ color: "#94a3b8", fontWeight: 700, fontSize: 13 }}>Multicaixa</div>
+                  <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 600 }}>Brevemente</div>
                 </div>
               </button>
               <button onClick={() => setPayMethod("usdt")}

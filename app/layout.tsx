@@ -9,7 +9,7 @@ import PushManager from "./components/PushManager";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
-const DESC     = "Negocia Forex, Cripto e Commodities em Kwanza (AOA) na plataforma de opções binárias líder em Angola. Depósitos via Multicaixa Express. Conta demo grátis com 10.000 Kz virtual.";
+const DESC     = "Negocia Forex, Cripto e Commodities em Kwanza (AOA) na plataforma de opções binárias líder em Angola. Depósitos rápidos via USDT. Conta demo grátis com 10.000 Kz virtual.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: DESC,
   keywords: [
     "trading Angola", "opções binárias Angola", "forex Angola",
-    "plataforma trading Kwanza", "investir Angola", "Multicaixa Express trading",
+    "plataforma trading Kwanza", "investir Angola", "USDT trading Angola",
     "broker Angola", "Dynamics Works", "trading AOA", "bitcoin Angola",
     "ouro Angola", "EUR USD Angola", "ganhar dinheiro Angola", "opções binárias",
     "corretora Angola", "trading online Angola", "Luanda trading",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   twitter: {
     card:        "summary_large_image",
     title:       "Dynamics Works — Trading em Angola",
-    description: "Plataforma de opções binárias em Kwanza. Forex, Cripto, Ouro. Depósitos via Multicaixa Express.",
+    description: "Plataforma de opções binárias em Kwanza. Forex, Cripto, Ouro. Depósitos rápidos via USDT (TRC-20).",
     images:      ["/og-image.png"],
   },
   icons: [
@@ -155,7 +155,7 @@ const jsonLd = {
           name:             "O que é a Dynamics Works?",
           acceptedAnswer: {
             "@type": "Answer",
-            text:    "A Dynamics Works é a primeira plataforma de opções binárias angolana, que permite negociar Forex, Criptomoedas e Metais Preciosos com pagamentos em Kwanza (AOA) via Multicaixa Express.",
+            text:    "A Dynamics Works é a primeira plataforma de opções binárias angolana, que permite negociar Forex, Criptomoedas e Metais Preciosos com pagamentos em Kwanza (AOA) via USDT.",
           },
         },
         {
@@ -163,7 +163,7 @@ const jsonLd = {
           name:             "Como faço um depósito?",
           acceptedAnswer: {
             "@type": "Answer",
-            text:    "Os depósitos são feitos em Kwanza angolano (AOA) via Multicaixa Express. O processo é simples e rápido, diretamente na secção Carteira da plataforma.",
+            text:    "Os depósitos são feitos em Kwanza angolano (AOA) via USDT (TRC-20). O processo é simples e rápido, diretamente na secção Carteira da plataforma.",
           },
         },
         {
