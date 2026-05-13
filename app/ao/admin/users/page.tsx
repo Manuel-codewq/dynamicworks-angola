@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import {
   RefreshCw, CheckCircle, XCircle, Shield, ScanFace,
   Search, Users, UserCheck, UserX, Clock, Download,
+  Trash2, KeyRound,
 } from "lucide-react";
 import { exportCsv } from "@/lib/exportCsv";
 
@@ -34,8 +35,11 @@ export default function AdminUsersPage() {
   const [busyId,    setBusyId]    = useState<string | null>(null);
   const [search,    setSearch]    = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [editBal,   setEditBal]   = useState<{ id: string; value: string } | null>(null);
-  const [selected,  setSelected]  = useState<AdminUser | null>(null);
+  const [editBal,      setEditBal]      = useState<{ id: string; value: string } | null>(null);
+  const [selected,     setSelected]     = useState<AdminUser | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
+  const [resetResult,   setResetResult]   = useState<{ name: string; email: string; tempPassword: string } | null>(null);
+  const [resetting,     setResetting]     = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -56,6 +60,25 @@ export default function AdminUsersPage() {
     setSelected(null);
     setEditBal(null);
     load();
+  }
+
+  async function deleteUser(u: AdminUser) {
+    setBusyId(u.id);
+    const res = await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
+    const d = await res.json().catch(() => ({}));
+    setBusyId(null);
+    setConfirmDelete(null);
+    if (!res.ok) { alert(d.error || "Erro ao eliminar."); return; }
+    load();
+  }
+
+  async function resetPassword(u: AdminUser) {
+    setResetting(u.id);
+    const res = await fetch(`/api/admin/users/${u.id}/reset-password`, { method: "POST" });
+    const d = await res.json().catch(() => ({}));
+    setResetting(null);
+    if (!res.ok) { alert(d.error || "Erro ao repor senha."); return; }
+    setResetResult({ name: u.name, email: u.email, tempPassword: d.tempPassword });
   }
 
   async function saveBalance() {
@@ -264,6 +287,18 @@ export default function AdminUsersPage() {
                               <ScanFace size={11} /> Ver KYC
                             </a>
                           )}
+                          {u.role !== "admin" && (
+                            <button onClick={() => resetPassword(u)} disabled={resetting === u.id || busy}
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(56,189,248,0.1)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              <KeyRound size={11} /> {resetting === u.id ? "..." : "Repor Senha"}
+                            </button>
+                          )}
+                          {u.role !== "admin" && (
+                            <button onClick={() => setConfirmDelete(u)} disabled={busy}
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              <Trash2 size={11} /> Eliminar
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -279,6 +314,68 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      {/* ── Modal: Confirmar Eliminação ── */}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 18, padding: 32, maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}>
+            <div style={{ width: 52, height: 52, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <Trash2 size={22} color="#ef4444" />
+            </div>
+            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 800, textAlign: "center", margin: "0 0 8px" }}>Eliminar utilizador?</h2>
+            <p style={{ color: "#94a3b8", fontSize: 13, textAlign: "center", margin: "0 0 6px", lineHeight: 1.5 }}>
+              Estás prestes a eliminar permanentemente a conta de:
+            </p>
+            <p style={{ color: "#fff", fontSize: 14, fontWeight: 700, textAlign: "center", margin: "0 0 6px" }}>{confirmDelete.name}</p>
+            <p style={{ color: "#64748b", fontSize: 12, textAlign: "center", margin: "0 0 24px" }}>{confirmDelete.email}</p>
+            <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "12px 14px", marginBottom: 24 }}>
+              <p style={{ color: "#fca5a5", fontSize: 12, margin: 0, lineHeight: 1.5 }}>
+                ⚠️ Esta ação é <strong>irreversível</strong>. Todos os dados (trades, transações, KYC, etc.) serão eliminados permanentemente.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDelete(null)}
+                style={{ flex: 1, background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, padding: "11px 0", color: "#94a3b8", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                Cancelar
+              </button>
+              <button onClick={() => deleteUser(confirmDelete)} disabled={busyId === confirmDelete.id}
+                style={{ flex: 1, background: "linear-gradient(135deg,#dc2626,#ef4444)", border: "none", borderRadius: 10, padding: "11px 0", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: busyId === confirmDelete.id ? 0.6 : 1 }}>
+                {busyId === confirmDelete.id ? "A eliminar..." : "Eliminar definitivamente"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Resultado de Reset de Senha ── */}
+      {resetResult && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 18, padding: 32, maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}>
+            <div style={{ width: 52, height: 52, background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <KeyRound size={22} color="#38bdf8" />
+            </div>
+            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 800, textAlign: "center", margin: "0 0 6px" }}>Senha reposta</h2>
+            <p style={{ color: "#64748b", fontSize: 12, textAlign: "center", margin: "0 0 24px" }}>
+              {resetResult.name} · {resetResult.email}
+            </p>
+            <div style={{ background: "#0a0f1e", border: "2px solid rgba(56,189,248,0.4)", borderRadius: 12, padding: "20px", marginBottom: 16, textAlign: "center" }}>
+              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 10px" }}>Senha temporária</p>
+              <p style={{ color: "#38bdf8", fontSize: 28, fontWeight: 900, letterSpacing: 4, margin: 0, fontFamily: "monospace" }}>{resetResult.tempPassword}</p>
+            </div>
+            <p style={{ color: "#64748b", fontSize: 12, textAlign: "center", margin: "0 0 20px", lineHeight: 1.5 }}>
+              Um email foi enviado para <strong style={{ color: "#94a3b8" }}>{resetResult.email}</strong> com esta senha temporária.
+            </p>
+            <button onClick={() => { navigator.clipboard.writeText(resetResult.tempPassword); }}
+              style={{ width: "100%", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: 10, padding: "10px 0", color: "#38bdf8", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 10 }}>
+              Copiar senha
+            </button>
+            <button onClick={() => setResetResult(null)}
+              style={{ width: "100%", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, padding: "10px 0", color: "#94a3b8", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
