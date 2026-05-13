@@ -6,6 +6,9 @@ import {
   TrendingUp, TrendingDown, ChevronDown, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy,
   Clock, History, Headphones, MessageCircle,
+  PenLine, CandlestickChart, LineChart, AreaChart,
+  Maximize2, Minimize2, Minus, Sliders, Trash2,
+  Square, GitFork, BarChart, Activity,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -955,8 +958,12 @@ export default function TradePage() {
         currentCandleEpochRef.current = candleTime as number;
         const newC: CandlestickData = { time: candleTime, open: q, high: q, low: q, close: q };
         currentCandleRef.current = newC;
-        candleSeriesRef.current.update(newC);
-        // Append new candle and recalc indicators on candle open
+        const ct3 = chartTypeRef.current;
+        if (ct3 === "line" || ct3 === "area") {
+          candleSeriesRef.current.update({ time: candleTime, value: q } as any);
+        } else {
+          candleSeriesRef.current.update(newC);
+        }
         candleDataRef.current = [...candleDataRef.current, newC];
         recalcRef.current();
       } else {
@@ -964,8 +971,12 @@ export default function TradePage() {
           ...c, high: Math.max(c.high, q), low: Math.min(c.low, q), close: q,
         };
         currentCandleRef.current = updated;
-        candleSeriesRef.current.update(updated);
-        // Keep last data point in sync (no recalc on every tick — only on candle open)
+        const ct3 = chartTypeRef.current;
+        if (ct3 === "line" || ct3 === "area") {
+          candleSeriesRef.current.update({ time: updated.time, value: q } as any);
+        } else {
+          candleSeriesRef.current.update(updated);
+        }
         const d = candleDataRef.current;
         if (d.length > 0) d[d.length - 1] = updated;
       }
@@ -1980,69 +1991,67 @@ export default function TradePage() {
   // ── Left sidebar + Quotex-style slide-in panel ──────────────────────────────
 
   function renderLeftSidebar() {
-    const CHART_TYPES: { id: ChartType; icon: string; label: string }[] = [
-      { id: "candle", icon: "🕯️", label: "Candlestick" },
-      { id: "line",   icon: "📈", label: "Linha" },
-      { id: "area",   icon: "🏔️", label: "Área" },
-      { id: "bar",    icon: "📊", label: "Barra" },
+    const CHART_TYPES: { id: ChartType; icon: React.ReactNode; label: string }[] = [
+      { id: "candle", icon: <CandlestickChart size={15} />, label: "Candlestick" },
+      { id: "line",   icon: <LineChart size={15} />,        label: "Linha" },
+      { id: "area",   icon: <AreaChart size={15} />,        label: "Área" },
+      { id: "bar",    icon: <BarChart size={15} />,         label: "Barra" },
     ];
-    const [showChartMenu, setShowChartMenu] = [false, (_: any) => {}]; // static placeholder
-    const sBtn = (active: boolean, onClick: () => void, icon: string, label: string) => (
+    const sBtn = (active: boolean, onClick: () => void, icon: React.ReactNode, label: string, badge?: number) => (
       <button title={label} onClick={onClick} style={{
-        width: 36, height: 36, background: active ? "rgba(245,166,35,0.15)" : "transparent",
+        position: "relative", width: 36, height: 36,
+        background: active ? "rgba(245,166,35,0.15)" : "transparent",
         border: active ? "1px solid rgba(245,166,35,0.4)" : "1px solid transparent",
         borderRadius: 8, color: active ? "#f5a623" : "#64748b", cursor: "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 15, transition: "all 0.15s",
-      }}>{icon}</button>
+        display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s",
+      }}>
+        {icon}
+        {badge != null && badge > 0 && (
+          <span style={{ position: "absolute", top: 2, right: 2, background: "#f5a623", color: "#0a0f1e", borderRadius: "50%", width: 13, height: 13, fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>{badge}</span>
+        )}
+      </button>
     );
+
+    const activeDrawings = drawings.length;
+    const activeInds = Object.values(indicators).filter((v: any) => v.enabled).length;
+
     return (
-      <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 44, zIndex: 30, background: "#070d1c", borderRight: "1px solid #1a2540", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, paddingBottom: 10, gap: 4 }}>
+      <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 44, zIndex: 30, background: "#070d1c", borderRight: "1px solid #1a2540", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, paddingBottom: 10, gap: 3 }}>
 
-        {/* Drawings */}
-        {sBtn(leftPanel === "drawings", () => setLeftPanel(p => p === "drawings" ? null : "drawings"), "✏️", "Ferramentas de Desenho")}
-
-        <div style={{ width: 24, height: 1, background: "#1a2540", margin: "4px 0" }} />
+        {sBtn(leftPanel === "drawings",    () => setLeftPanel(p => p === "drawings"    ? null : "drawings"),    <PenLine size={15} />,  "Ferramentas de Desenho", activeDrawings)}
+        <div style={{ width: 24, height: 1, background: "#1a2540", margin: "3px 0" }} />
+        {sBtn(leftPanel === "indicators",  () => setLeftPanel(p => p === "indicators"  ? null : "indicators"),  <Activity size={15} />, "Indicadores", activeInds)}
+        <div style={{ width: 24, height: 1, background: "#1a2540", margin: "3px 0" }} />
 
         {/* Chart type */}
         <div style={{ position: "relative" }}>
-          <button title="Tipo de Gráfico" onClick={() => setExpandedItem(p => p === "__charttype" ? null : "__charttype")} style={{
-            width: 36, height: 36, background: expandedItem === "__charttype" ? "rgba(245,166,35,0.15)" : "transparent",
-            border: expandedItem === "__charttype" ? "1px solid rgba(245,166,35,0.4)" : "1px solid transparent",
-            borderRadius: 8, color: expandedItem === "__charttype" ? "#f5a623" : "#64748b", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, transition: "all 0.15s",
-          }}>{CHART_TYPES.find(t => t.id === chartType)?.icon ?? "🕯️"}</button>
+          {sBtn(expandedItem === "__charttype", () => setExpandedItem(p => p === "__charttype" ? null : "__charttype"),
+            CHART_TYPES.find(t => t.id === chartType)?.icon ?? <CandlestickChart size={15} />, "Tipo de Gráfico")}
           {expandedItem === "__charttype" && (
-            <div style={{ position: "absolute", left: 42, top: 0, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: 6, display: "flex", flexDirection: "column", gap: 4, zIndex: 200, minWidth: 140, boxShadow: "4px 4px 20px rgba(0,0,0,0.5)" }}>
+            <div style={{ position: "absolute", left: 42, top: 0, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: 5, display: "flex", flexDirection: "column", gap: 2, zIndex: 200, minWidth: 148, boxShadow: "4px 4px 24px rgba(0,0,0,0.6)" }}>
               {CHART_TYPES.map(ct => (
                 <button key={ct.id} onClick={() => { setChartType(ct.id); setExpandedItem(null); }} style={{
                   background: chartType === ct.id ? "rgba(245,166,35,0.12)" : "transparent",
                   color: chartType === ct.id ? "#f5a623" : "#94a3b8",
                   border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer",
-                  fontSize: 12, fontWeight: chartType === ct.id ? 700 : 400, textAlign: "left",
+                  fontSize: 12, fontWeight: chartType === ct.id ? 700 : 400,
                   display: "flex", alignItems: "center", gap: 8,
                 }}>
-                  <span>{ct.icon}</span>{ct.label}
-                  {chartType === ct.id && <span style={{ marginLeft: "auto", color: "#f5a623" }}>✓</span>}
+                  <span style={{ color: chartType === ct.id ? "#f5a623" : "#64748b" }}>{ct.icon}</span>
+                  {ct.label}
+                  {chartType === ct.id && <span style={{ marginLeft: "auto", color: "#f5a623", fontSize: 13 }}>✓</span>}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div style={{ width: 24, height: 1, background: "#1a2540", margin: "4px 0" }} />
-
-        {/* Indicators */}
-        {sBtn(leftPanel === "indicators", () => setLeftPanel(p => p === "indicators" ? null : "indicators"), "📊", "Indicadores")}
-
         <div style={{ flex: 1 }} />
-
-        {/* Fullscreen */}
         {sBtn(false, () => {
           const el = document.documentElement;
           if (!document.fullscreenElement) el.requestFullscreen?.();
           else document.exitFullscreen?.();
-        }, "⛶", "Ecrã inteiro")}
+        }, <Maximize2 size={14} />, "Ecrã inteiro")}
       </div>
     );
   }
@@ -2050,57 +2059,59 @@ export default function TradePage() {
   function renderSlideInPanel() {
     if (!leftPanel) return null;
 
+    const IND_ICON = (color: string) => <div style={{ width: 14, height: 2, borderRadius: 2, background: color }} />;
+    const OSC_ICON = (color: string) => <BarChart2 size={13} style={{ color }} />;
     const INDICATOR_LIST = [
       { section: "TENDÊNCIA", items: [
-        { key: "ma",        label: "Média Móvel (MA/EMA/WMA)" },
-        { key: "bb",        label: "Bollinger Bands" },
-        { key: "alligator", label: "Alligator" },
-        { key: "donchian",  label: "Donchian Channel" },
-        { key: "keltner",   label: "Keltner Channel" },
-        { key: "sar",       label: "Parabolic SAR" },
-        { key: "ichimoku",  label: "Ichimoku Cloud", soon: true },
-        { key: "supertrend",label: "Supertrend",     soon: true },
-        { key: "fractal",   label: "Fractal",        soon: true },
-        { key: "zigzag",    label: "Zig Zag",        soon: true },
+        { key: "ma",        label: "Média Móvel (MA/EMA/WMA)", icon: IND_ICON("#f5a623") },
+        { key: "bb",        label: "Bollinger Bands",          icon: IND_ICON("#38bdf8") },
+        { key: "alligator", label: "Alligator",                icon: IND_ICON("#22c55e") },
+        { key: "donchian",  label: "Donchian Channel",         icon: IND_ICON("#fbbf24") },
+        { key: "keltner",   label: "Keltner Channel",          icon: IND_ICON("#c084fc") },
+        { key: "sar",       label: "Parabolic SAR",            icon: IND_ICON("#f97316") },
+        { key: "ichimoku",  label: "Ichimoku Cloud",  soon: true, icon: IND_ICON("#64748b") },
+        { key: "supertrend",label: "Supertrend",      soon: true, icon: IND_ICON("#64748b") },
+        { key: "fractal",   label: "Fractal",         soon: true, icon: IND_ICON("#64748b") },
+        { key: "zigzag",    label: "Zig Zag",         soon: true, icon: IND_ICON("#64748b") },
       ]},
       { section: "OSCILADORES", items: [
-        { key: "rsi",        label: "RSI" },
-        { key: "macd",       label: "MACD" },
-        { key: "stoch",      label: "Stochastic" },
-        { key: "atr",        label: "ATR" },
-        { key: "cci",        label: "CCI" },
-        { key: "adx",        label: "ADX" },
-        { key: "willr",      label: "Williams %R" },
-        { key: "momentum",   label: "Momentum" },
-        { key: "ao",         label: "Awesome Oscillator" },
-        { key: "bearsbulls", label: "Bears/Bulls Power" },
-        { key: "aroon",      label: "Aroon",          soon: true },
-        { key: "roc",        label: "Rate of Change", soon: true },
-        { key: "stc",        label: "Schaff Trend",   soon: true },
-        { key: "vortex",     label: "Vortex",         soon: true },
-        { key: "demarker",   label: "DeMarker",       soon: true },
-        { key: "volume_osc", label: "Volume Oscillator", soon: true },
-        { key: "weis",       label: "Weis Waves",     soon: true },
+        { key: "rsi",        label: "RSI",                icon: OSC_ICON("#f97316") },
+        { key: "macd",       label: "MACD",               icon: OSC_ICON("#22c55e") },
+        { key: "stoch",      label: "Stochastic",         icon: OSC_ICON("#fb923c") },
+        { key: "atr",        label: "ATR",                icon: OSC_ICON("#fb923c") },
+        { key: "cci",        label: "CCI",                icon: OSC_ICON("#f43f5e") },
+        { key: "adx",        label: "ADX",                icon: OSC_ICON("#f5a623") },
+        { key: "willr",      label: "Williams %R",        icon: OSC_ICON("#818cf8") },
+        { key: "momentum",   label: "Momentum",           icon: OSC_ICON("#2dd4bf") },
+        { key: "ao",         label: "Awesome Oscillator", icon: OSC_ICON("#22c55e") },
+        { key: "bearsbulls", label: "Bears/Bulls Power",  icon: OSC_ICON("#ef4444") },
+        { key: "aroon",      label: "Aroon",          soon: true, icon: OSC_ICON("#64748b") },
+        { key: "roc",        label: "Rate of Change", soon: true, icon: OSC_ICON("#64748b") },
+        { key: "stc",        label: "Schaff Trend",   soon: true, icon: OSC_ICON("#64748b") },
+        { key: "vortex",     label: "Vortex",         soon: true, icon: OSC_ICON("#64748b") },
+        { key: "demarker",   label: "DeMarker",       soon: true, icon: OSC_ICON("#64748b") },
+        { key: "volume_osc", label: "Volume Oscillator", soon: true, icon: OSC_ICON("#64748b") },
+        { key: "weis",       label: "Weis Waves",     soon: true, icon: OSC_ICON("#64748b") },
       ]},
     ];
 
     const DRAWING_LIST = [
-      { section: "DESENHOS", items: [
-        { key: "hline",     label: "Linha Horizontal" },
-        { key: "trendline", label: "Linha de Tendência" },
-        { key: "fibonacci", label: "Fibonacci Retracement" },
-        { key: "rectangle", label: "Rectângulo" },
-        { key: "vline",     label: "Linha Vertical", soon: true },
-        { key: "ray",       label: "Ray",           soon: true },
-        { key: "extline",   label: "Extended Line", soon: true },
-        { key: "channel",   label: "Parallel Channel", soon: true },
-        { key: "pitchfork", label: "Pitchfork",     soon: true },
-        { key: "fibfan",    label: "Fibonacci Fan", soon: true },
-        { key: "gannbox",   label: "Gann Box",      soon: true },
-        { key: "triangle",  label: "Triangle",      soon: true },
-        { key: "arc",       label: "Arc",           soon: true },
-        { key: "daterange", label: "Date Range",    soon: true },
-        { key: "pricerange",label: "Price Range",   soon: true },
+      { section: "FERRAMENTAS", items: [
+        { key: "hline",     label: "Linha Horizontal",       icon: <Minus size={13} /> },
+        { key: "trendline", label: "Linha de Tendência",     icon: <TrendingUp size={13} /> },
+        { key: "fibonacci", label: "Fibonacci Retracement",  icon: <GitFork size={13} /> },
+        { key: "rectangle", label: "Rectângulo",             icon: <Square size={13} /> },
+        { key: "vline",     label: "Linha Vertical",         icon: <Minus size={13} style={{ transform: "rotate(90deg)" }} />, soon: true },
+        { key: "ray",       label: "Ray",                    icon: <TrendingUp size={13} />, soon: true },
+        { key: "extline",   label: "Extended Line",          icon: <Activity size={13} />, soon: true },
+        { key: "channel",   label: "Parallel Channel",       icon: <Sliders size={13} />, soon: true },
+        { key: "pitchfork", label: "Pitchfork",              icon: <GitFork size={13} />, soon: true },
+        { key: "fibfan",    label: "Fibonacci Fan",          icon: <GitFork size={13} />, soon: true },
+        { key: "gannbox",   label: "Gann Box",               icon: <Square size={13} />, soon: true },
+        { key: "triangle",  label: "Triângulo",              icon: <Square size={13} />, soon: true },
+        { key: "arc",       label: "Arco",                   icon: <Activity size={13} />, soon: true },
+        { key: "daterange", label: "Date Range",             icon: <Clock size={13} />, soon: true },
+        { key: "pricerange",label: "Price Range",            icon: <BarChart2 size={13} />, soon: true },
       ]},
     ];
 
@@ -2220,9 +2231,9 @@ export default function TradePage() {
               </div>
             </label>
           </div>
-          <button onClick={() => { setActiveTool(key as DrawingTool); setPendingPoint(null); pendingPointRef.current = null; setExpandedItem(null); }} style={{ background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 7, color: "#f5a623", fontSize: 11, fontWeight: 700, padding: "7px 0", cursor: "pointer" }}>
-            ✏️ Selecionar ferramenta
-          </button>
+          <p style={{ color: "#334155", fontSize: 11, textAlign: "center" }}>
+            Clica no gráfico para começar a desenhar
+          </p>
         </div>
       );
     };
@@ -2239,25 +2250,81 @@ export default function TradePage() {
           </div>
         </div>
 
+        {/* Active drawings list (only in drawings panel) */}
+        {leftPanel === "drawings" && drawings.length > 0 && (
+          <div style={{ borderBottom: "1px solid #1a2540", flexShrink: 0 }}>
+            <div style={{ padding: "8px 16px 5px", fontSize: 10, fontWeight: 700, color: "#334155", letterSpacing: 1.2, textTransform: "uppercase" }}>NO GRÁFICO ({drawings.length})</div>
+            <div style={{ maxHeight: 160, overflowY: "auto" }}>
+              {/* Group fibonacci and rectangle sets */}
+              {(() => {
+                type Group = { ids: string[]; label: string; color: string; icon: React.ReactNode };
+                const groups: Group[] = [];
+                const used = new Set<string>();
+                drawings.forEach(d => {
+                  if (used.has(d.id)) return;
+                  if (d.id.startsWith("fib_")) {
+                    const prefix = d.id.replace(/_\d+$/, "").replace(/fib_(\d+)_\d+/, "fib_$1");
+                    const siblings = drawings.filter(x => x.id.startsWith(`fib_${d.id.split("_")[1]}`));
+                    siblings.forEach(s => used.add(s.id));
+                    groups.push({ ids: siblings.map(s => s.id), label: `Fibonacci (${siblings.length} níveis)`, color: (d as any).color ?? "#f5a623", icon: <GitFork size={11} /> });
+                  } else if (d.id.startsWith("rect_top_") || d.id.startsWith("rect_bot_")) {
+                    const ts = d.id.replace("rect_top_","").replace("rect_bot_","");
+                    const pair = drawings.filter(x => x.id === `rect_top_${ts}` || x.id === `rect_bot_${ts}`);
+                    pair.forEach(s => used.add(s.id));
+                    groups.push({ ids: pair.map(s => s.id), label: "Rectângulo", color: d.color, icon: <Square size={11} /> });
+                  } else if (d.type === "hline") {
+                    used.add(d.id);
+                    const hl = d as HLineDrawing;
+                    groups.push({ ids: [d.id], label: hl.label ? `Linha — ${hl.label}` : `Linha H ${hl.price.toFixed(4)}`, color: d.color, icon: <Minus size={11} /> });
+                  } else if (d.type === "trendline") {
+                    used.add(d.id);
+                    groups.push({ ids: [d.id], label: "Linha de Tendência", color: d.color, icon: <TrendingUp size={11} /> });
+                  }
+                });
+                return groups.map((g, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", padding: "7px 16px", borderBottom: "1px solid #0a0f18", gap: 9 }}>
+                    <span style={{ color: g.color, flexShrink: 0 }}>{g.icon}</span>
+                    <span style={{ flex: 1, color: "#94a3b8", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.label}</span>
+                    <button onClick={() => g.ids.forEach(id => removeDrawing(id))} title="Apagar" style={{ background: "none", border: "none", color: "#4b5563", cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center", flexShrink: 0, borderRadius: 4, transition: "color 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#ef4444")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "#4b5563")}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        )}
+
         {/* Scrollable list */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {list.map(section => (
             <div key={section.section}>
               <div style={{ padding: "10px 16px 6px", fontSize: 10, fontWeight: 700, color: "#334155", letterSpacing: 1.2, textTransform: "uppercase" }}>{section.section}</div>
               {section.items.map((item: any) => {
-                const isActive = leftPanel === "indicators" ? isIndOn(item.key) : activeTool === item.key;
+                const isActive = leftPanel === "indicators" ? isIndOn(item.key) : (activeTool === item.key);
                 const isExp = expandedItem === item.key;
                 return (
                   <div key={item.key} style={{ borderBottom: "1px solid #0d1526" }}>
                     <button onClick={() => {
                       if (item.soon) return;
-                      setExpandedItem(p => p === item.key ? null : item.key);
-                      if (leftPanel === "drawings" && !isExp) {
-                        setActiveTool(item.key as DrawingTool);
-                        setPendingPoint(null); pendingPointRef.current = null;
+                      if (leftPanel === "drawings") {
+                        // Toggle: if already active tool, deactivate; else activate immediately
+                        if (activeTool === item.key) {
+                          setActiveTool(null); setPendingPoint(null); pendingPointRef.current = null;
+                        } else {
+                          setActiveTool(item.key as DrawingTool);
+                          setPendingPoint(null); pendingPointRef.current = null;
+                        }
+                        setExpandedItem(p => p === item.key ? null : item.key);
+                      } else {
+                        setExpandedItem(p => p === item.key ? null : item.key);
                       }
                     }} style={{ width: "100%", display: "flex", alignItems: "center", padding: "11px 16px", background: isActive ? "rgba(245,166,35,0.04)" : "transparent", border: "none", cursor: item.soon ? "default" : "pointer", textAlign: "left", gap: 10 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: isActive ? "#f5a623" : "#1e2d50", flexShrink: 0 }} />
+                      <div style={{ width: 22, height: 22, borderRadius: 6, background: isActive ? "rgba(245,166,35,0.15)" : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", color: isActive ? "#f5a623" : "#64748b", flexShrink: 0 }}>
+                        {(item as any).icon ?? <div style={{ width: 6, height: 6, borderRadius: "50%", background: isActive ? "#f5a623" : "#1e2d50" }} />}
+                      </div>
                       <span style={{ flex: 1, color: isActive ? "#fff" : item.soon ? "#334155" : "#94a3b8", fontSize: 13, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
                       {item.soon && <span style={{ background: "rgba(100,116,139,0.1)", color: "#334155", borderRadius: 4, padding: "1px 6px", fontSize: 9, fontWeight: 600 }}>EM BREVE</span>}
                       {isActive && leftPanel === "indicators" && !item.soon && (
