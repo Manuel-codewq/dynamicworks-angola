@@ -27,7 +27,7 @@ const SECTIONS = [
   },
   {
     title: "7. Contacto e Suporte",
-    body: `Para questões relacionadas com a sua conta, depósitos, levantamentos ou qualquer outro assunto, contacte a nossa equipa de suporte através do endereço de correio electrónico suporte@dynamicsworks.ao. O nosso horário de atendimento é de segunda a sexta-feira, das 8h às 17h (hora de Luanda, WAT).`,
+    body: `Para questões relacionadas com a sua conta, depósitos, levantamentos ou qualquer outro assunto, contacte a nossa equipa de suporte através do endereço de correio electrónico suporte@dynamicworks.ao. O nosso horário de atendimento é de segunda a sexta-feira, das 8h às 17h (hora de Luanda, WAT).`,
   },
 ];
 

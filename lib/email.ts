@@ -91,7 +91,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
     </div>
     ${p("Quando estiveres pronto(a), muda para conta real e começa a operar nos mercados forex e índices sintéticos.")}
     ${divider()}
-    ${btn("Ir para a plataforma →", "https://dynamicsworks.ao/trade")}
+    ${btn("Ir para a plataforma →", "https://dynamicworks.ao/trade")}
   `;
 
   try {
@@ -119,7 +119,7 @@ export async function sendDepositApprovedEmail(to: string, name: string, amount:
     </div>
     ${p("Podes começar a operar imediatamente com o saldo disponível na tua conta real.")}
     ${divider()}
-    ${btn("Operar agora →", "https://dynamicsworks.ao/trade")}
+    ${btn("Operar agora →", "https://dynamicworks.ao/trade")}
   `;
 
   try {
@@ -148,7 +148,7 @@ export async function sendDepositRejectedEmail(to: string, name: string, amount:
     ${p("Possíveis motivos: comprovativo não reconhecido, referência incorreta ou dados bancários em falta.")}
     ${p("Se acreditas que se trata de um erro, por favor entra em contacto com o nosso suporte respondendo a este email ou através da plataforma.")}
     ${divider()}
-    ${btn("Ir para a carteira →", "https://dynamicsworks.ao/wallet")}
+    ${btn("Ir para a carteira →", "https://dynamicworks.ao/wallet")}
   `;
 
   try {
@@ -177,7 +177,7 @@ export async function sendWithdrawalApprovedEmail(to: string, name: string, amou
     ${p("O valor será transferido para a tua conta bancária no prazo de <strong style=\"color:#fff;\">1 a 3 dias úteis</strong>.")}
     ${p("Caso não recebas o valor dentro do prazo, contacta o nosso suporte.")}
     ${divider()}
-    ${btn("Ver carteira →", "https://dynamicsworks.ao/wallet")}
+    ${btn("Ver carteira →", "https://dynamicworks.ao/wallet")}
   `;
 
   try {
@@ -206,7 +206,7 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
     ${p("Este código é válido durante <strong style=\"color:#fff;\">15 minutos</strong>.")}
     ${p("Se não criaste uma conta na Dynamics Works, ignora este email.", "#64748b")}
     ${divider()}
-    ${btn("Verificar conta →", "https://dynamicsworks.ao/verify-email")}
+    ${btn("Verificar conta →", "https://dynamicworks.ao/verify-email")}
   `;
 
   try {
@@ -293,7 +293,7 @@ export async function sendWithdrawalRejectedEmail(to: string, name: string, amou
     ${p("Possíveis motivos: dados bancários incorretos, IBAN inválido ou saldo insuficiente no momento do processamento.")}
     ${p("Se precisares de ajuda, entra em contacto com o nosso suporte ou tenta novamente através da plataforma.")}
     ${divider()}
-    ${btn("Ir para a carteira →", "https://dynamicsworks.ao/wallet")}
+    ${btn("Ir para a carteira →", "https://dynamicworks.ao/wallet")}
   `;
 
   try {
@@ -337,7 +337,7 @@ export async function sendTradeWinEmail(to: string, name: string, asset: string,
     </div>
     ${p("O valor foi creditado automaticamente na tua conta. Continua a operar!")}
     ${divider()}
-    ${btn("Operar novamente →", "https://dynamicsworks.ao/trade")}
+    ${btn("Operar novamente →", "https://dynamicworks.ao/trade")}
   `;
 
   try {
@@ -366,7 +366,7 @@ export async function sendTradeLossEmail(to: string, name: string, asset: string
     ${p("Faz parte do trading. Analisa o mercado, ajusta a tua estratégia e volta mais forte.")}
     ${p("Lembra-te: só opera o que estás disposto(a) a perder e mantém sempre a gestão de risco.", "#64748b")}
     ${divider()}
-    ${btn("Tentar novamente →", "https://dynamicsworks.ao/trade")}
+    ${btn("Tentar novamente →", "https://dynamicworks.ao/trade")}
   `;
 
   try {
