@@ -17,8 +17,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) {
-      // Por segurança, não confirmamos se o email existe ou não
-      return NextResponse.json({ success: true, message: "Se o email existir, um código foi enviado." });
+      return NextResponse.json(
+        { error: "Não encontrámos nenhuma conta com esse email. Verifica se escreveste bem ou regista-te." },
+        { status: 404 }
+      );
     }
 
     // Gerar código de 6 dígitos
