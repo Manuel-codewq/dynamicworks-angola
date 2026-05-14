@@ -1,85 +1,89 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyNowPaymentsSignature } from "@/lib/nowpayments";
+import { sendDepositApprovedEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notify";
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get("x-nowpayments-sig") || "";
   const body = await req.json();
 
-  console.log("[nowpayments-webhook] Received IPN:", body.payment_id, body.payment_status);
+  console.log("[nowpayments-webhook] IPN recebido:", body.payment_id, body.payment_status);
 
-  // 1. Verificar assinatura
+  // 1. Verificar assinatura — rejeita requests não autorizados
   if (!verifyNowPaymentsSignature(body, signature)) {
-    console.error("[nowpayments-webhook] Invalid signature for payment:", body.payment_id);
-    // Em produção, deve-se retornar 400. Mas durante testes, podemos ser mais flexíveis.
-    // return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    console.error("[nowpayments-webhook] Assinatura inválida para:", body.payment_id);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   const { payment_id, payment_status, order_id } = body;
 
-  // 2. Procurar a transação no nosso sistema
-  // Podemos usar o order_id (que é o ID da nossa transação) ou o payment_id (reference)
+  // 2. Encontrar transação pelo order_id (ID da nossa DB) ou pelo payment_id (reference)
   const tx = await prisma.transaction.findFirst({
     where: {
       OR: [
         { id: order_id },
-        { reference: String(payment_id) }
-      ]
+        { reference: String(payment_id) },
+      ],
     },
-    include: { user: true }
+    include: { user: { select: { id: true, name: true, email: true } } },
   });
 
   if (!tx) {
-    console.error("[nowpayments-webhook] Transaction not found:", order_id, payment_id);
+    console.error("[nowpayments-webhook] Transação não encontrada:", order_id, payment_id);
     return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
   }
 
-  // Se já estiver concluída, ignorar duplicados
+  // Ignorar duplicados
   if (tx.status === "completed") {
     return NextResponse.json({ ok: true, message: "Already processed" });
   }
 
-  // 3. Processar estados de sucesso
-  // Estados de sucesso no NOWPayments: 'finished', 'partially_paid' (se aceitarmos parcial)
+  // 3. Pagamento confirmado
   if (payment_status === "finished" || payment_status === "partially_paid") {
     try {
       await prisma.$transaction(async (db) => {
-        // Atualizar transação para concluída
         await db.transaction.update({
           where: { id: tx.id },
-          data: { 
+          data: {
             status: "completed",
-            usdtAmount: body.actually_paid || tx.usdtAmount // Atualiza com o valor real pago se disponível
-          }
+            usdtAmount: body.actually_paid ?? tx.usdtAmount,
+          },
         });
 
-        // Creditar saldo do utilizador
         await db.user.update({
           where: { id: tx.userId },
-          data: { balance: { increment: tx.amount } }
-        });
-
-        // Opcional: Criar uma notificação para o utilizador
-        await db.notification.create({
-          data: {
-            userId: tx.userId,
-            type: "deposit",
-            title: "Depósito Confirmado",
-            message: `O teu depósito de ${tx.amount.toLocaleString("pt-PT")} Kz via Crypto foi processado com sucesso!`
-          }
+          data: { balance: { increment: tx.amount } },
         });
       });
 
-      console.log("[nowpayments-webhook] Success! Credited user:", tx.userId, "Amount:", tx.amount);
+      console.log("[nowpayments-webhook] Saldo creditado — user:", tx.userId, "valor:", tx.amount);
+
+      // Notificações — falha silenciosa para não bloquear a resposta ao NOWPayments
+      try {
+        const amtFormatted = tx.amount.toLocaleString("pt-PT");
+        await Promise.all([
+          createNotification(
+            tx.userId,
+            "deposit_completed",
+            "Depósito Crypto confirmado",
+            `O teu depósito de ${amtFormatted} Kz via USDT foi confirmado e adicionado ao teu saldo.`
+          ),
+          sendDepositApprovedEmail(tx.user.email, tx.user.name, tx.amount),
+        ]);
+      } catch (notifErr) {
+        console.error("[nowpayments-webhook] Notificação falhou:", notifErr);
+      }
     } catch (err) {
-      console.error("[nowpayments-webhook] DB Transaction error:", err);
+      console.error("[nowpayments-webhook] Erro na DB:", err);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   } else if (payment_status === "failed" || payment_status === "expired") {
     await prisma.transaction.update({
       where: { id: tx.id },
-      data: { status: "rejected" }
+      data: { status: "rejected" },
     });
+    console.log("[nowpayments-webhook] Pagamento falhado/expirado:", tx.id);
   }
 
   return NextResponse.json({ ok: true });
