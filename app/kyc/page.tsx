@@ -36,6 +36,7 @@ export default function KYCVerificationPage() {
   const [kycData, setKycData] = useState<KYCData>({
     faceFront: '', biFront: '', biBack: ''
   });
+  const [faceFailCount, setFaceFailCount] = useState(0); // nº de falhas consecutivas na selfie
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const biInputRef = useRef<HTMLInputElement>(null);
@@ -183,29 +184,29 @@ export default function KYCVerificationPage() {
       const imgW = img.naturalWidth || img.width;
       const imgH = img.naturalHeight || img.height;
 
-      // Verifica se o rosto está grande o suficiente (mínimo 15% da imagem)
+      // Rosto suficientemente grande (5% — permissivo para câmaras wide-angle)
       const faceArea = (box.width * box.height) / (imgW * imgH);
-      if (faceArea < 0.08) {
-        return { ok: false, message: 'Rosto muito longe. Aproxime-se mais da câmara.' };
+      if (faceArea < 0.05) {
+        return { ok: false, message: '📱 Aproxima mais o telemóvel do rosto e tenta novamente.' };
       }
 
-      // Verifica se o rosto está centrado (não muito para os lados)
+      // Rosto centrado
       const centerX = box.x + box.width / 2;
       const centerY = box.y + box.height / 2;
       const offX = Math.abs(centerX / imgW - 0.5);
       const offY = Math.abs(centerY / imgH - 0.5);
 
-      if (offX > 0.35) {
-        return { ok: false, message: 'Rosto fora do centro. Centre o rosto na câmara.' };
+      if (offX > 0.40) {
+        return { ok: false, message: '↔️ Move o rosto para o centro da câmara.' };
       }
-      if (offY > 0.35) {
-        return { ok: false, message: 'Rosto fora do centro verticalmente. Ajuste a posição.' };
+      if (offY > 0.40) {
+        return { ok: false, message: '↕️ Ajusta a posição — o rosto deve estar no centro.' };
       }
 
-      // Verifica score de confiança
+      // Score de confiança (baixado para 0.4 — mais permissivo em má iluminação)
       const score = det.detection.score;
-      if (score < 0.5) {
-        return { ok: false, message: 'Foto pouco nítida. Melhore a iluminação e tente novamente.' };
+      if (score < 0.40) {
+        return { ok: false, message: '💡 Iluminação insuficiente. Vai para um local mais iluminado e tenta novamente.' };
       }
 
       return { ok: true, message: '', score };
@@ -234,7 +235,7 @@ export default function KYCVerificationPage() {
         const faceArea = (box.width * box.height) / (imgW * imgH);
 
         if (faceArea > 0.25) {
-          return { ok: false, message: 'Parece que fotografou o seu rosto. Esta etapa é para o B.I. — aponte a câmara para o documento.' };
+          return { ok: false, message: '📄 Esta etapa é para o B.I. — deita o documento numa superfície plana e fotografa-o de cima.' };
         }
       }
 
@@ -244,39 +245,74 @@ export default function KYCVerificationPage() {
     }
   };
 
-  const handleFaceCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Processa selfie — com bypass automático após 2 falhas consecutivas
+  const handleFaceCapture = async (e: React.ChangeEvent<HTMLInputElement>, forceUpload = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (e.target) e.target.value = '';
 
-    setProcessingMsg('A verificar rosto...');
+    setProcessingMsg('A verificar foto...');
     setValidationError('');
 
     try {
       const b64 = await compressImage(file);
-      const result = await validateFacePhoto(b64);
 
-      if (!result.ok) {
-        setValidationError(result.message);
-        setProcessingMsg('');
-        return;
+      if (!forceUpload) {
+        const result = await validateFacePhoto(b64);
+
+        if (!result.ok) {
+          const newFailCount = faceFailCount + 1;
+          setFaceFailCount(newFailCount);
+          // Após 2 falhas, guarda a foto e mostra opção de bypass
+          if (newFailCount >= 2) {
+            // Guarda temporariamente para o bypass usar
+            setKycData(prev => ({ ...prev, faceFront: b64 }));
+            setValidationError(result.message + '\n\nSe continuares com dificuldades, podes enviar a foto mesmo assim e a nossa equipa vai analisá-la manualmente.');
+          } else {
+            setValidationError(result.message);
+          }
+          setProcessingMsg('');
+          return;
+        }
+
+        if (result.score !== undefined) faceScoresRef.current.push(result.score);
       }
 
-      if (result.score !== undefined) faceScoresRef.current.push(result.score);
-
       setProcessingMsg('A enviar imagem...');
-      const url = await uploadToCloud(b64);
+      const url = forceUpload
+        ? await uploadToCloud(kycData.faceFront || b64)
+        : await uploadToCloud(b64);
 
       setKycData(prev => ({ ...prev, faceFront: url }));
       setValidationError('');
       setProcessingMsg('');
+      setFaceFailCount(0);
 
       const scores = faceScoresRef.current;
-      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0.92;
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0.75;
       setLivenessScore(Math.round(avg * 100));
       setCurrentView('bi-intro');
     } catch (_) {
-      setValidationError('Erro ao processar a imagem. Tenta novamente.');
+      setValidationError('Erro ao enviar a imagem. Verifica a ligação e tenta novamente.');
+      setProcessingMsg('');
+    }
+  };
+
+  // Bypass: envia a foto guardada sem validação, para revisão manual pelo admin
+  const handleFaceBypass = async () => {
+    if (!kycData.faceFront) return;
+    setProcessingMsg('A enviar para revisão manual...');
+    setValidationError('');
+    try {
+      const url = kycData.faceFront.startsWith('data:')
+        ? await uploadToCloud(kycData.faceFront)
+        : kycData.faceFront;
+      setKycData(prev => ({ ...prev, faceFront: url }));
+      setLivenessScore(50); // score baixo — sinaliza revisão manual ao admin
+      setProcessingMsg('');
+      setCurrentView('bi-intro');
+    } catch (_) {
+      setValidationError('Erro ao enviar. Verifica a ligação e tenta novamente.');
       setProcessingMsg('');
     }
   };
@@ -338,6 +374,7 @@ export default function KYCVerificationPage() {
     setBiStep(1);
     setValidationError('');
     setLivenessScore(0);
+    setFaceFailCount(0);
     faceScoresRef.current = [];
     setCurrentView('intro');
   };
@@ -536,9 +573,10 @@ export default function KYCVerificationPage() {
               </div>
 
               <div className="tips">
-                <div className="tip"><Sun size={15} />Boa iluminação — evita sombras no rosto</div>
+                <div className="tip"><Sun size={15} />Boa iluminação — janela ou luz de tecto</div>
                 <div className="tip"><User size={15} />Remove óculos, boné ou chapéu</div>
-                <div className="tip"><Camera size={15} />Mantém o B.I. à mão antes de começar</div>
+                <div className="tip"><Camera size={15} />Tem o B.I. à mão antes de começar</div>
+                <div className="tip"><CheckCircle size={15} />Se a câmara falhar, podes enviar para revisão manual</div>
               </div>
 
               {!modelLoaded ? (
@@ -559,8 +597,17 @@ export default function KYCVerificationPage() {
         {currentView === 'face' && (
           <div className="view">
             <div className="card">
-              <h2 className="h1">Foto do Rosto</h2>
-              <p className="sub">Olha diretamente para a câmara. Certifica-te de que o rosto está bem visível e iluminado.</p>
+              <h2 className="h1">Selfie</h2>
+              <p className="sub">Tira uma foto do teu rosto. Fica num local bem iluminado e olha directamente para a câmara.</p>
+
+              {/* Dicas rápidas */}
+              {!processingMsg && !kycData.faceFront && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                  {['☀️ Boa luz', '😐 Sem óculos', '📱 Câmara frontal', '🧍 Rosto centrado'].map(tip => (
+                    <span key={tip} style={{ background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 20, padding: '4px 10px', fontSize: 12, color: 'var(--text)' }}>{tip}</span>
+                  ))}
+                </div>
+              )}
 
               {processingMsg ? (
                 <div className="validating-overlay">
@@ -573,28 +620,41 @@ export default function KYCVerificationPage() {
                   {validationError && (
                     <div className="error-box">
                       <XCircle size={18} />
-                      <p>{validationError}</p>
+                      <p style={{ whiteSpace: 'pre-line' }}>{validationError.split('\n\n')[0]}</p>
                     </div>
                   )}
+
                   <div className="face-preview">
-                    {kycData.faceFront ? (
+                    {kycData.faceFront && kycData.faceFront.startsWith('data:') ? (
+                      <img src={kycData.faceFront} alt="selfie" style={{ transform: 'scaleX(-1)' }} />
+                    ) : kycData.faceFront && !kycData.faceFront.startsWith('data:') ? (
                       <img src={kycData.faceFront} alt="selfie" style={{ transform: 'scaleX(-1)' }} />
                     ) : (
                       <>
                         <div className="oval-guide" />
-                        <div className="step-label">Frente</div>
-                        <div className="step-hint">Olha diretamente para a câmara</div>
+                        <div className="step-hint">Posiciona o rosto dentro do oval</div>
                       </>
                     )}
                   </div>
-                  {!validationError && kycData.faceFront ? (
+
+                  {/* Foto aceite — continuar */}
+                  {!validationError && kycData.faceFront && !kycData.faceFront.startsWith('data:') ? (
                     <button className="btn btn-green" onClick={() => setCurrentView('bi-intro')}>
-                      <CheckCircle size={18} /> Continuar para o B.I.
+                      <CheckCircle size={18} /> Foto aceite — Continuar
                     </button>
                   ) : (
-                    <button className="btn btn-gold" onClick={() => { setValidationError(''); faceInputRef.current?.click(); }}>
-                      <Camera size={18} /> {validationError ? 'Tentar Novamente' : 'Tirar Selfie'}
-                    </button>
+                    <>
+                      <button className="btn btn-gold" onClick={() => { setValidationError(''); setFaceFailCount(0); faceInputRef.current?.click(); }}>
+                        <Camera size={18} /> {validationError ? 'Tentar Novamente' : 'Tirar Selfie'}
+                      </button>
+
+                      {/* Bypass após 2 falhas */}
+                      {faceFailCount >= 2 && validationError && (
+                        <button className="btn btn-out" style={{ marginTop: 8 }} onClick={handleFaceBypass}>
+                          Enviar para revisão manual
+                        </button>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -629,7 +689,7 @@ export default function KYCVerificationPage() {
             </div>
             <div className="card">
               <h2 className="h1">{biStep === 1 ? 'B.I. — Frente' : 'B.I. — Verso'}</h2>
-              <p className="sub">{biStep === 1 ? 'Fotografe a frente do documento' : 'Vire e fotografe o verso'}</p>
+              <p className="sub">{biStep === 1 ? '📄 Coloca o B.I. numa superfície plana e fotografa a frente' : '🔄 Vira o B.I. e fotografa o verso'}</p>
 
               {processingMsg ? (
                 <div className="validating-overlay">
