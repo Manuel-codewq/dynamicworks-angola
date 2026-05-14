@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
+import { sendDepositApprovedEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notify";
 
 // USDT TRC-20 contract address (oficial Tether na Tron)
 export const USDT_TRC20_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
@@ -120,20 +122,46 @@ export async function processIncomingUsdt(): Promise<{ checked: number; credited
     if (!pending) continue;
 
     try {
+      let creditOk = false;
       await prisma.$transaction(async (db) => {
-        // Tentativa atómica: só credita se ainda não estiver pago.
         const updated = await db.transaction.updateMany({
           where: { id: pending.id, status: "pending", usdtTxid: null },
           data: { status: "completed", usdtTxid: tx.txid },
         });
-        if (updated.count === 0) return; // outra corrida ganhou
+        if (updated.count === 0) return;
         await db.user.update({
           where: { id: pending.userId },
           data: { balance: { increment: pending.amount } },
         });
+        creditOk = true;
       });
+
+      if (!creditOk) continue;
+
       credited += 1;
       console.log(`[usdt] creditado ${pending.id} via ${tx.txid} (${tx.amount} USDT)`);
+
+      // Notificações — falha silenciosa para não bloquear o crédito
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: pending.userId },
+          select: { name: true, email: true },
+        });
+        if (user) {
+          const amtFormatted = pending.amount.toLocaleString("pt-PT");
+          await Promise.all([
+            createNotification(
+              pending.userId,
+              "deposit_completed",
+              "Depósito USDT confirmado",
+              `O teu depósito de ${amtFormatted} Kz via USDT foi confirmado e adicionado ao teu saldo.`
+            ),
+            sendDepositApprovedEmail(user.email, user.name, pending.amount),
+          ]);
+        }
+      } catch (notifErr) {
+        console.error(`[usdt] notificação falhou para ${pending.id}:`, notifErr);
+      }
     } catch (err) {
       console.error(`[usdt] falha a creditar ${pending.id}:`, err);
     }

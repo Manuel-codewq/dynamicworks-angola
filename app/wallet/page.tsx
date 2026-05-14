@@ -382,10 +382,25 @@ export default function WalletPage() {
                       </div>
                     </div>
 
+                    {/* QR Code */}
+                    <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 16, marginBottom: 12, textAlign: "center" }}>
+                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 10 }}>Escaneia com a tua carteira crypto</div>
+                      <div style={{ display: "inline-block", background: "#ffffff", borderRadius: 10, padding: 10 }}>
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(usdtDeposit.usdtAddress)}&size=180x180&margin=0`}
+                          alt="QR Code"
+                          width={180}
+                          height={180}
+                          style={{ display: "block", borderRadius: 6 }}
+                        />
+                      </div>
+                      <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>Rede: TRC-20 (Tron) · Token: USDT</div>
+                    </div>
+
                     <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12, marginBottom: 12 }}>
                       <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Endereço TRC-20</div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                        <div style={{ color: "#fff", fontFamily: "monospace", fontSize: 13, wordBreak: "break-all" }}>
+                        <div style={{ color: "#fff", fontFamily: "monospace", fontSize: 12, wordBreak: "break-all" }}>
                           {usdtDeposit.usdtAddress}
                         </div>
                         <button onClick={() => copyToClipboard(usdtDeposit.usdtAddress, "addr")}
@@ -396,7 +411,7 @@ export default function WalletPage() {
                     </div>
 
                     <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12, color: "#94a3b8" }}>
-                      ⚠️ Envia <strong style={{ color: "#fff" }}>exatamente</strong> o valor indicado pela rede <strong style={{ color: "#fff" }}>TRC-20 (Tron)</strong>. O saldo será creditado automaticamente após a confirmação na rede.
+                      ⚠️ Envia <strong style={{ color: "#fff" }}>exatamente</strong> o valor indicado pela rede <strong style={{ color: "#fff" }}>TRC-20 (Tron)</strong>. O saldo é creditado automaticamente após confirmação na rede.
                     </div>
 
                     <div style={{ background: "rgba(245,166,35,0.05)", borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: "#64748b", textAlign: "center" }}>
