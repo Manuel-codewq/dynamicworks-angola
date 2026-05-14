@@ -19,14 +19,18 @@ export async function GET() {
     allClosedTrades,
   ] = await Promise.all([
     prisma.user.count(),
+    // Só soma saldos de contas reais
     prisma.user.aggregate({ _sum: { balance: true } }),
-    prisma.trade.count({ where: { createdAt: { gte: today } } }),
+    // Só conta trades reais (isDemo: false)
+    prisma.trade.count({ where: { createdAt: { gte: today }, isDemo: false } }),
+    // Só trades reais fechados hoje
     prisma.trade.findMany({
-      where: { status: "closed", closedAt: { gte: today } },
+      where: { status: "closed", closedAt: { gte: today }, isDemo: false },
       select: { result: true, amount: true, profit: true },
     }),
+    // Só trades reais fechados (para taxa de vitória)
     prisma.trade.findMany({
-      where: { status: "closed" },
+      where: { status: "closed", isDemo: false },
       select: { result: true },
     }),
   ]);

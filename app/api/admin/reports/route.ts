@@ -19,7 +19,7 @@ export async function GET() {
 
     const [closedTrades, newUsers, deposits] = await Promise.all([
       prisma.trade.findMany({
-        where: { status: "closed", closedAt: { gte: start, lte: end } },
+        where: { status: "closed", closedAt: { gte: start, lte: end }, isDemo: false },
         select: { result: true, amount: true },
       }),
       prisma.user.count({ where: { createdAt: { gte: start, lte: end } } }),

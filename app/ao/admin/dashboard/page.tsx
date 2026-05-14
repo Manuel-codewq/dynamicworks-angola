@@ -71,11 +71,11 @@ export default function AdminDashboard() {
 
   const cards = stats ? [
     { label: "Total utilizadores",        value: stats.totalUsers.toString(),              Icon: Users,        color: "#94a3b8" },
-    { label: "Saldo total na plataforma",  value: formatKz(Math.floor(stats.totalBalance)), Icon: Wallet,       color: "#22c55e" },
-    { label: "Operações hoje",             value: stats.todayTradesCount.toString(),        Icon: BarChart2,    color: "#f5a623" },
+    { label: "Saldo total (contas reais)",  value: formatKz(Math.floor(stats.totalBalance)), Icon: Wallet,       color: "#22c55e" },
+    { label: "Operações hoje (conta real)",value: stats.todayTradesCount.toString(),        Icon: BarChart2,    color: "#f5a623" },
     { label: "Lucro hoje (perdas traders)",value: formatKz(Math.floor(stats.platformProfit)), Icon: TrendingDown, color: "#22c55e" },
-    { label: "Taxa de vitória traders",    value: `${stats.winRate}%`,                      Icon: Trophy,       color: "#f5a623" },
-    { label: "Total operações",            value: stats.totalTrades.toString(),             Icon: BarChart2,    color: "#94a3b8" },
+    { label: "Taxa de vitória (conta real)",value: `${stats.winRate}%`,                     Icon: Trophy,       color: "#f5a623" },
+    { label: "Total operações (conta real)",value: stats.totalTrades.toString(),            Icon: BarChart2,    color: "#94a3b8" },
   ] : [];
 
   const th: React.CSSProperties = {
