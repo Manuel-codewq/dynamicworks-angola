@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -12,9 +13,6 @@ const DEPOSIT_METHODS = [
   { id: "multicaixa", name: "Multicaixa Express", color: "#e74c3c" },
 ];
 
-function formatKz(n: number) {
-  return n.toLocaleString("pt-PT") + " Kz";
-}
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {

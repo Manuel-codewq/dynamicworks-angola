@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -7,9 +8,6 @@ import {
   CheckCircle, XCircle, Clock, ChevronLeft, Trophy,
 } from "lucide-react";
 
-function formatKz(n: number) {
-  return n.toLocaleString("pt-PT") + " Kz";
-}
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();

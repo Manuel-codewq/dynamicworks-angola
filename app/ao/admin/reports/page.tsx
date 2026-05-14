@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { RefreshCw, TrendingUp, Users, BarChart2, Wallet } from "lucide-react";
 
@@ -10,7 +11,6 @@ interface DayData {
   deposits: number;
 }
 
-function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function shortDate(d: string) {
   const [, m, day] = d.split("-");
   return `${day}/${m}`;

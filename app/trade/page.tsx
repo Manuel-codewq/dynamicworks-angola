@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -58,9 +59,6 @@ const SEED_PRICES: Record<string, number> = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatKz(n: number) {
-  return n.toLocaleString("pt-PT") + " Kz";
-}
 
 // Placeholder candles — shown while WS data loads (correct OHLC invariants)
 function generatePlaceholder(basePrice: number, count = 100, gran = 60): CandlestickData[] {

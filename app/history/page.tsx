@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -8,9 +9,6 @@ import {
   Filter, RefreshCw,
 } from "lucide-react";
 
-function formatKz(n: number) {
-  return n.toLocaleString("pt-PT") + " Kz";
-}
 
 function formatDate(d: string) {
   return new Date(d).toLocaleString("pt-AO", {

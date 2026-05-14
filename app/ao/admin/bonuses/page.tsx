@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { Gift, Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw, Copy, Check } from "lucide-react";
 
@@ -9,7 +10,6 @@ interface PromoCode {
   _count: { redemptions: number };
 }
 
-function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string | null) {
   if (!s) return "—";
   return new Date(s).toLocaleDateString("pt-AO", { day: "2-digit", month: "short", year: "numeric" });

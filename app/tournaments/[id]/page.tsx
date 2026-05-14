@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useState, useEffect, use } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -8,7 +9,6 @@ import {
   ClipboardList, BarChart2,
 } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   upcoming: { label: "Próximo",     color: "#f5a623", bg: "rgba(245,166,35,0.12)" },

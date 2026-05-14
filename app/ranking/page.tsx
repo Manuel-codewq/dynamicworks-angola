@@ -1,10 +1,10 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TrendingUp, ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight, BarChart2 } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(d: string) { return new Date(d).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" }); }
 function daysLeft(end: string) { return Math.max(0, Math.ceil((new Date(end).getTime() - Date.now()) / 86400000)); }
 

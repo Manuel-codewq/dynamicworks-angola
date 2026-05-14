@@ -1,11 +1,11 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart2, TrendingDown, Trophy, RefreshCw,
   UserCheck, Search, ExternalLink, Circle,
 } from "lucide-react";
 
-function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" });
 }

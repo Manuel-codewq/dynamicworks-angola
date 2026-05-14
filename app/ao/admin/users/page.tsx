@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useEffect, useState, useMemo } from "react";
 import {
   RefreshCw, CheckCircle, XCircle, Shield, ScanFace,
@@ -7,7 +8,6 @@ import {
 } from "lucide-react";
 import { exportCsv } from "@/lib/exportCsv";
 
-function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" });
 }

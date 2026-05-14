@@ -1,4 +1,5 @@
 "use client";
+import { formatKz } from "@/lib/format";
 "use client";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
@@ -16,7 +17,6 @@ const PROVINCES = [
   "Lunda Sul","Malanje","Moxico","Namibe","Uíge","Zaire",
 ];
 
-function formatKz(n: number) { return n.toLocaleString("pt-PT") + " Kz"; }
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString("pt-AO", { year: "numeric", month: "long", day: "numeric" });
 }

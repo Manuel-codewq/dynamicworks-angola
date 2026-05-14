@@ -1,15 +1,10 @@
 "use client";
+import { formatKz } from "@/lib/format";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Zap, ShieldCheck, TrendingUp, Banknote, ArrowRight, ChevronRight } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function formatKz(n: number) {
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + " Mil M Kz";
-  if (n >= 1_000_000)     return (n / 1_000_000).toFixed(1) + " M Kz";
-  if (n >= 1_000)         return (n / 1_000).toFixed(0) + " mil Kz";
-  return n.toLocaleString("pt-PT") + " Kz";
-}
 
 // ── Hook: typewriter ──────────────────────────────────────────────────────────
 function useTypewriter(text: string, speed = 45, delay = 0, active = true) {
@@ -233,10 +228,10 @@ export default function LandingPage() {
           <section style={{ background: "rgba(17,24,39,0.7)", borderTop: "1px solid rgba(30,45,80,0.6)", borderBottom: "1px solid rgba(30,45,80,0.6)", backdropFilter: "blur(12px)" }}>
             <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 24px", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0 }}>
               <div style={{ borderRight: "1px solid rgba(30,45,80,0.6)" }}>
-                <StatCard label="Utilizadores Registados" target={stats.users} format={n => n.toLocaleString("pt-PT")} />
+                <StatCard label="Utilizadores Registados" target={stats.users} format={n => String(n).replace(/B(?=(d{3})+(?!d))/g, ".")} />
               </div>
               <div style={{ borderRight: "1px solid rgba(30,45,80,0.6)" }}>
-                <StatCard label="Operações Concluídas" target={stats.trades} format={n => n.toLocaleString("pt-PT")} />
+                <StatCard label="Operações Concluídas" target={stats.trades} format={n => String(n).replace(/B(?=(d{3})+(?!d))/g, ".")} />
               </div>
               <StatCard label="Volume Negociado" target={stats.volume} format={formatKz} />
             </div>
