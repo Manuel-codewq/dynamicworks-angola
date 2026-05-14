@@ -57,7 +57,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     cacheAt = Date.now();
     return cache;
   } catch {
-    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 5 };
+    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
   }
 }
 
@@ -95,5 +95,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 5 };
+export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
 export async function loadSettings() { settings = await getSettings(); return settings; }

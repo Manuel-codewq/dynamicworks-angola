@@ -207,7 +207,7 @@ export default function AdminSettingsPage() {
                 step="0.01"
                 value={draft.usdtMinDeposit || ""}
                 onChange={e => setDraft(d => d ? { ...d, usdtMinDeposit: Number(e.target.value) || 0 } : d)}
-                placeholder="ex: 5"
+                placeholder="ex: 13"
                 style={{ width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }}
               />
             </div>

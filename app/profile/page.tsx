@@ -1,6 +1,5 @@
 "use client";
 import { formatKz } from "@/lib/format";
-"use client";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";

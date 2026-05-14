@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   if (baseUsdt < cfg.usdtMinDeposit) {
     const minAoa = Math.ceil(usdtToAoa(cfg.usdtMinDeposit, cfg.usdtRateAoa));
     return NextResponse.json(
-      { error: `Valor mínimo para USDT: ${minAoa.toLocaleString("pt-PT")} Kz (${cfg.usdtMinDeposit} USDT).` },
+      { error: `Valor mínimo para USDT: ${minAoa.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")} Kz (${cfg.usdtMinDeposit} USDT).` },
       { status: 400 }
     );
   }
