@@ -72,6 +72,7 @@ export default function WalletPage() {
   const [usdtDeposit,   setUsdtDeposit]   = useState<{ usdtAmount: number; usdtAddress: string; usdtRate: number; expiresAt: string; paymentId?: string; invoiceUrl?: string } | null>(null);
   const [usdtLoading,   setUsdtLoading]   = useState(false);
   const [copied,        setCopied]        = useState<string | null>(null);
+  const [usdtInfo,      setUsdtInfo]      = useState<{ rateAoa: number; minUsdt: number; minAoa: number; available: boolean } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -87,6 +88,9 @@ export default function WalletPage() {
     });
     fetch("/api/profile/kyc").then(r => r.json()).then(d => {
       if (d?.kycStatus) setKycStatus(d.kycStatus);
+    });
+    fetch("/api/usdt-info").then(r => r.json()).then(d => {
+      setUsdtInfo(d);
     });
   }, [status]);
 
@@ -339,19 +343,38 @@ export default function WalletPage() {
 
                 {!usdtDeposit && (
                   <>
+                    {/* Info: mínimo e taxa actuais */}
+                    {usdtInfo && usdtInfo.available && (
+                      <div style={{ background: "rgba(38,161,123,0.06)", border: "1px solid rgba(38,161,123,0.2)", borderRadius: 8, padding: "8px 12px", marginBottom: 14, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                        <span style={{ color: "#94a3b8" }}>Mínimo: <strong style={{ color: "#26a17b" }}>{usdtInfo.minUsdt} USDT ({formatKz(usdtInfo.minAoa)})</strong></span>
+                        <span style={{ color: "#94a3b8" }}>Taxa: <strong style={{ color: "#fff" }}>{formatKz(usdtInfo.rateAoa)}/USDT</strong></span>
+                      </div>
+                    )}
+
                     <div style={{ marginBottom: 16 }}>
                       <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
-                      <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
-                        placeholder="5000" style={inputStyle} />
+                      <input type="number" value={amount}
+                        onChange={e => setAmount(parseInt(e.target.value) || 0)}
+                        placeholder={usdtInfo?.minAoa ? String(usdtInfo.minAoa) : "12025"}
+                        style={inputStyle} />
                     </div>
                     <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                      {[5000, 10000, 25000, 50000].map(v => (
+                      {/* Botões acima do mínimo USDT */}
+                      {(usdtInfo?.minAoa
+                        ? [
+                            Math.ceil(usdtInfo.minAoa / 1000) * 1000,
+                            Math.ceil(usdtInfo.minAoa / 1000) * 2000,
+                            Math.ceil(usdtInfo.minAoa / 1000) * 4000,
+                            Math.ceil(usdtInfo.minAoa / 1000) * 8000,
+                          ]
+                        : [13000, 25000, 50000, 100000]
+                      ).map(v => (
                         <button key={v} onClick={() => setAmount(v)}
                           style={{
                             flex: 1, background: amount === v ? "#26a17b" : "#1e2d50",
                             color: amount === v ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6,
                             padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                          }}>{(v / 1000)}k</button>
+                          }}>{v >= 1000 ? (v / 1000) + "k" : v}</button>
                       ))}
                     </div>
 
