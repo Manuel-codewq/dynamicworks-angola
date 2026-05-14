@@ -144,7 +144,7 @@ export default function WalletPage() {
 
   async function requestUsdtDeposit() {
     setUsdtLoading(true); setMsg(null); setUsdtDeposit(null);
-    const res = await fetch("/api/transactions/usdt/deposit", {
+    const res = await fetch("/api/transactions/crypto/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount }),
@@ -153,14 +153,16 @@ export default function WalletPage() {
     setUsdtLoading(false);
     if (res.ok) {
       setUsdtDeposit({
-        usdtAmount: d.usdtAmount,
-        usdtAddress: d.usdtAddress,
-        usdtRate: d.usdtRate,
-        expiresAt: d.expiresAt,
+        usdtAmount: d.pay_amount,
+        usdtAddress: d.pay_address,
+        usdtRate: 0, 
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        paymentId: d.payment_id,
+        invoiceUrl: d.invoice_url
       });
       fetch("/api/transactions").then(r => r.json()).then(d => { if (Array.isArray(d)) setTransactions(d); });
     } else {
-      setMsg({ text: d.error ?? "Erro ao criar pedido USDT", ok: false });
+      setMsg({ text: d.error ?? "Erro ao criar pedido Crypto", ok: false });
     }
   }
 
@@ -346,7 +348,7 @@ export default function WalletPage() {
                     </div>
 
                     <div style={{ background: "rgba(38,161,123,0.08)", border: "1px solid rgba(38,161,123,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-                      <strong style={{ color: "#26a17b" }}>Como funciona:</strong> Vamos gerar um endereço TRC-20 e um valor exato em USDT. Envias para esse endereço e o sistema credita automaticamente o teu saldo assim que a transferência confirmar.
+                      <strong style={{ color: "#26a17b" }}>Depósito Automatizado:</strong> O sistema gera um pagamento único via NOWPayments. Assim que transferires o valor exato, o teu saldo será creditado automaticamente.
                     </div>
 
                     <button onClick={requestUsdtDeposit} disabled={usdtLoading || kycStatus !== "approved"}
@@ -357,7 +359,7 @@ export default function WalletPage() {
                         opacity: kycStatus !== "approved" ? 0.5 : 1,
                         display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       }}>
-                      {usdtLoading ? "A criar pedido..." : <><Bitcoin size={16} /> Gerar endereço USDT</>}
+                      {usdtLoading ? "A processar..." : <><Bitcoin size={16} /> Pagar com Crypto</>}
                     </button>
                   </>
                 )}
@@ -365,18 +367,18 @@ export default function WalletPage() {
                 {usdtDeposit && (
                   <div>
                     <div style={{ background: "rgba(38,161,123,0.08)", border: "1px solid rgba(38,161,123,0.3)", borderRadius: 10, padding: 16, marginBottom: 12 }}>
-                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Envia EXATAMENTE este valor</div>
+                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Envia este valor exato</div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                         <div style={{ color: "#26a17b", fontSize: 24, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                          {usdtDeposit.usdtAmount.toFixed(4)} USDT
+                          {usdtDeposit.usdtAmount} USDT
                         </div>
-                        <button onClick={() => copyToClipboard(usdtDeposit.usdtAmount.toFixed(4), "amount")}
+                        <button onClick={() => copyToClipboard(usdtDeposit.usdtAmount.toString(), "amount")}
                           style={{ background: "#1e2d50", border: "none", borderRadius: 6, padding: "6px 10px", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
                           <Copy size={12} /> {copied === "amount" ? "Copiado!" : "Copiar"}
                         </button>
                       </div>
                       <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 6 }}>
-                        Equivalente a {formatKz(amount)} · taxa {usdtDeposit.usdtRate.toLocaleString("pt-PT")} Kz/USDT
+                        Equivalente a {formatKz(amount)}
                       </div>
                     </div>
 
@@ -394,16 +396,27 @@ export default function WalletPage() {
                     </div>
 
                     <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12, color: "#94a3b8" }}>
-                      ⚠️ Envia <strong style={{ color: "#fff" }}>exatamente</strong> {usdtDeposit.usdtAmount.toFixed(4)} USDT pela rede <strong style={{ color: "#fff" }}>TRC-20 (Tron)</strong>. Valores diferentes ou outra rede ficam por confirmar manualmente.
+                      ⚠️ Envia <strong style={{ color: "#fff" }}>exatamente</strong> o valor indicado pela rede <strong style={{ color: "#fff" }}>TRC-20 (Tron)</strong>. O saldo será creditado automaticamente após a confirmação na rede.
                     </div>
 
                     <div style={{ background: "rgba(245,166,35,0.05)", borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: "#64748b", textAlign: "center" }}>
                       Janela válida: {new Date(usdtDeposit.expiresAt).toLocaleString("pt-AO", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
                     </div>
 
+                    {usdtDeposit.invoiceUrl && (
+                      <a href={usdtDeposit.invoiceUrl} target="_blank" rel="noopener noreferrer"
+                        style={{
+                          display: "block", width: "100%", background: "rgba(38,161,123,0.15)", color: "#26a17b",
+                          border: "1px solid #26a17b", borderRadius: 8, padding: 12, fontWeight: 700,
+                          fontSize: 13, cursor: "pointer", textAlign: "center", textDecoration: "none", marginBottom: 8
+                        }}>
+                        Abrir Checkout Externo (Opcional)
+                      </a>
+                    )}
+
                     <button onClick={() => setUsdtDeposit(null)}
                       style={{ width: "100%", background: "#1e2d50", color: "#94a3b8", border: "none", borderRadius: 8, padding: 12, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-                      Criar novo pedido
+                      Cancelar e Criar novo pedido
                     </button>
                   </div>
                 )}
