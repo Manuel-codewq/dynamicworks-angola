@@ -61,7 +61,7 @@ export default function WalletPage() {
   // USDT flow
   const [payMethod,     setPayMethod]     = useState<"multicaixa" | "usdt">("usdt");
   const [usdtAddress,   setUsdtAddress]   = useState("");
-  const [usdtDeposit,   setUsdtDeposit]   = useState<{ usdtAmount: number; usdtAddress: string; usdtRate: number; expiresAt: string } | null>(null);
+  const [usdtDeposit,   setUsdtDeposit]   = useState<{ usdtAmount: number; usdtAddress: string; usdtRate: number; expiresAt: string; paymentId?: string; invoiceUrl?: string } | null>(null);
   const [usdtLoading,   setUsdtLoading]   = useState(false);
   const [copied,        setCopied]        = useState<string | null>(null);
 
