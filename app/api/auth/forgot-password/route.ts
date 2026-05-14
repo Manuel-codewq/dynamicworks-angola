@@ -33,7 +33,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Enviar email
+    // Enviar email — lança erro se não for possível (ex: RESEND_API_KEY em falta)
+    if (!process.env.RESEND_API_KEY) {
+      console.error("[forgot-password] RESEND_API_KEY não configurada — impossível enviar email");
+      return NextResponse.json(
+        { error: "Serviço de email não configurado. Contacta o suporte: +244 921 825 299." },
+        { status: 503 }
+      );
+    }
+
     await sendPasswordOtpEmail(user.email, user.name, code);
 
     return NextResponse.json({ success: true, message: "Código enviado com sucesso." });

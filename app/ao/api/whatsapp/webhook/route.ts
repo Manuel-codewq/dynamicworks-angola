@@ -147,7 +147,7 @@ async function processMessage(body: Record<string, unknown>) {
   // Comando /humano, /agente, /atendente → escala e responde
   if (ESCALATE_TRIGGERS.test(messageText)) {
     const reply =
-      "Pronto, vou já passar isto à equipa humana. Um agente fala contigo aqui mesmo assim que possível. Se preferires, contacta o nosso suporte direto: +244 946 621 503.";
+      "Pronto, vou já passar isto à equipa humana. Um agente fala contigo aqui mesmo assim que possível. Se preferires, contacta o nosso suporte direto: +244 921 825 299.";
     if (ticketId) {
       await escalateTicket(ticketId);
       await saveMessage(ticketId, messageText, false);

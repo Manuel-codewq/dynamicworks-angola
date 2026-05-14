@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const MAX_ATTEMPTS = 2;
-const BLOCK_MS = 2 * 60 * 60 * 1000;
+const MAX_ATTEMPTS = 4;
+const BLOCK_MS = 30 * 60 * 1000; // 30 minutos
 
 export async function GET() {
   try {

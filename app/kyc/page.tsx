@@ -4,12 +4,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera, CreditCard, Loader2, ScanFace, ShieldCheck, Sun, User, CheckCircle, RotateCcw, XCircle, Lock, Clock } from 'lucide-react';
 
-type KYCView = 'intro' | 'loading-model' | 'face' | 'bi-intro' | 'bi' | 'review' | 'blocked';
+type KYCView = 'intro' | 'face' | 'bi-intro' | 'bi' | 'review' | 'blocked';
 
 interface KYCData {
   faceFront: string;
-  faceRight: string;
-  faceLeft: string;
   biFront: string;
   biBack: string;
 }
@@ -23,7 +21,6 @@ interface ValidationResult {
 export default function KYCVerificationPage() {
   const router = useRouter();
   const [currentView, setCurrentView] = useState<KYCView>('intro');
-  const [faceStep, setFaceStep] = useState<number>(1);
   const [biStep, setBiStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
@@ -37,19 +34,13 @@ export default function KYCVerificationPage() {
   const [modelLoaded, setModelLoaded] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<string>('A carregar modelos de IA...');
   const [kycData, setKycData] = useState<KYCData>({
-    faceFront: '', faceRight: '', faceLeft: '', biFront: '', biBack: ''
+    faceFront: '', biFront: '', biBack: ''
   });
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const biInputRef = useRef<HTMLInputElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const faceapiRef = useRef<any>(null);
-
-  const faceSteps = [
-    { label: 'Frente', hint: 'Olhe diretamente para a câmara', prop: 'faceFront' as keyof KYCData },
-    { label: 'Direita', hint: 'Vire o rosto ligeiramente para a direita', prop: 'faceRight' as keyof KYCData },
-    { label: 'Esquerda', hint: 'Vire o rosto ligeiramente para a esquerda', prop: 'faceLeft' as keyof KYCData },
-  ];
 
   // Verifica estado KYC ao carregar
   useEffect(() => {
@@ -85,49 +76,43 @@ export default function KYCVerificationPage() {
     return () => clearInterval(id);
   }, [blockedUntil]);
 
-  // Carrega face-api.js dinamicamente
+  // Carrega face-api.js com timeout de 8s — se demorar, avança sem validação IA
   useEffect(() => {
     const loadFaceAPI = async () => {
-      try {
-        setLoadingProgress('A carregar biblioteca de deteção facial...');
+      const timeout = new Promise<void>(resolve => setTimeout(resolve, 8000));
 
-        // Carrega o script face-api.js
-        await new Promise<void>((resolve, reject) => {
-          if (document.getElementById('faceapi-script')) { resolve(); return; }
-          const script = document.createElement('script');
-          script.id = 'faceapi-script';
-          script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
-          script.onload = () => resolve();
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
+      const load = async () => {
+        try {
+          setLoadingProgress('A preparar verificação facial...');
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const faceapi = (window as any).faceapi;
+          await new Promise<void>((resolve, reject) => {
+            if (document.getElementById('faceapi-script')) { resolve(); return; }
+            const script = document.createElement('script');
+            script.id = 'faceapi-script';
+            script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+            script.onload = () => resolve();
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
 
-        if (!faceapi?.nets) {
-          // Script carregou mas global não disponível — continua sem validação
-          setModelLoaded(true);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const faceapi = (window as any).faceapi;
+          if (!faceapi?.nets) return;
+
+          faceapiRef.current = faceapi;
+          setLoadingProgress('A carregar modelo de deteção...');
+          const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+          await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        } catch (err) {
+          console.error('face-api load error:', err);
           faceapiRef.current = null;
-          return;
         }
+      };
 
-        faceapiRef.current = faceapi;
-        setLoadingProgress('A carregar modelos de deteção...');
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-        ]);
-
-        setModelLoaded(true);
-        setLoadingProgress('Pronto!');
-      } catch (err) {
-        console.error('Erro ao carregar face-api:', err);
-        setModelLoaded(true);
-        faceapiRef.current = null;
-      }
+      // Race: load vs timeout — em qualquer caso avança
+      await Promise.race([load(), timeout]);
+      setModelLoaded(true);
+      setLoadingProgress('Pronto!');
     };
 
     loadFaceAPI();
@@ -264,7 +249,7 @@ export default function KYCVerificationPage() {
     if (!file) return;
     if (e.target) e.target.value = '';
 
-    setProcessingMsg('A verificar rosto com IA...');
+    setProcessingMsg('A verificar rosto...');
     setValidationError('');
 
     try {
@@ -279,25 +264,19 @@ export default function KYCVerificationPage() {
 
       if (result.score !== undefined) faceScoresRef.current.push(result.score);
 
-      setProcessingMsg('A enviar para a nuvem...');
+      setProcessingMsg('A enviar imagem...');
       const url = await uploadToCloud(b64);
 
-      const prop = faceSteps[faceStep - 1].prop;
-      setKycData(prev => ({ ...prev, [prop]: url }));
+      setKycData(prev => ({ ...prev, faceFront: url }));
       setValidationError('');
       setProcessingMsg('');
 
-      if (faceStep < 3) {
-        setFaceStep(prev => prev + 1);
-        setTimeout(() => faceInputRef.current?.click(), 400);
-      } else {
-        const scores = faceScoresRef.current;
-        const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0.92;
-        setLivenessScore(Math.round(avg * 100));
-        setCurrentView('bi-intro');
-      }
+      const scores = faceScoresRef.current;
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0.92;
+      setLivenessScore(Math.round(avg * 100));
+      setCurrentView('bi-intro');
     } catch (_) {
-      setValidationError('Erro ao processar imagem. Tente novamente.');
+      setValidationError('Erro ao processar a imagem. Tenta novamente.');
       setProcessingMsg('');
     }
   };
@@ -342,7 +321,6 @@ export default function KYCVerificationPage() {
 
   const startFaceCapture = () => {
     if (!modelLoaded) return;
-    setFaceStep(1);
     setValidationError('');
     setCurrentView('face');
     setTimeout(() => faceInputRef.current?.click(), 200);
@@ -356,8 +334,7 @@ export default function KYCVerificationPage() {
   };
 
   const restartKYC = () => {
-    setKycData({ faceFront: '', faceRight: '', faceLeft: '', biFront: '', biBack: '' });
-    setFaceStep(1);
+    setKycData({ faceFront: '', biFront: '', biBack: '' });
     setBiStep(1);
     setValidationError('');
     setLivenessScore(0);
@@ -371,7 +348,14 @@ export default function KYCVerificationPage() {
       const res = await fetch('/api/profile/kyc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...kycData, livenessScore }),
+        body: JSON.stringify({
+          faceFront: kycData.faceFront,
+          faceRight: kycData.faceFront, // campo mantido na API por compatibilidade
+          faceLeft:  kycData.faceFront,
+          biFront:   kycData.biFront,
+          biBack:    kycData.biBack,
+          livenessScore,
+        }),
       });
       const contentType = res.headers.get('content-type') ?? '';
       const d = contentType.includes('application/json') ? await res.json() : {};
@@ -523,7 +507,7 @@ export default function KYCVerificationPage() {
               <h2 className="h1">Verificação de Identidade</h2>
               <p className="sub">Confirma a tua identidade em 3 passos simples. Todo o processo é automático e seguro.</p>
 
-              <div className={`attempts-badge ${attemptsLeft > 1 ? 'attempts-ok' : 'attempts-warn'}`}>
+              <div className={`attempts-badge ${attemptsLeft > 2 ? 'attempts-ok' : attemptsLeft > 0 ? 'attempts-warn' : 'attempts-warn'}`}>
                 <Clock size={12} /> {attemptsLeft} tentativa{attemptsLeft !== 1 ? 's' : ''} restante{attemptsLeft !== 1 ? 's' : ''}
               </div>
 
@@ -531,15 +515,15 @@ export default function KYCVerificationPage() {
                 <div className="step-row">
                   <div className="step-num">1</div>
                   <div className="step-text">
-                    Verificação facial
-                    <small>3 fotos do rosto — frente, direita e esquerda</small>
+                    Foto do rosto
+                    <small>1 selfie frontal com boa iluminação</small>
                   </div>
                 </div>
                 <div className="step-row">
                   <div className="step-num">2</div>
                   <div className="step-text">
-                    Documento de identidade
-                    <small>Frente e verso do Bilhete de Identidade</small>
+                    Bilhete de Identidade
+                    <small>Foto da frente e do verso do B.I.</small>
                   </div>
                 </div>
                 <div className="step-row">
@@ -574,14 +558,9 @@ export default function KYCVerificationPage() {
         {/* ── FACE ── */}
         {currentView === 'face' && (
           <div className="view">
-            <div className="progress">
-              {[1, 2, 3].map(i => (
-                <div key={i} className={`pdot ${i < faceStep ? 'done' : i === faceStep ? 'active' : ''}`} />
-              ))}
-            </div>
             <div className="card">
-              <h2 className="h1">Verificação Facial</h2>
-              <p className="sub">Passo {faceStep} de 3 — {faceSteps[faceStep - 1].hint}</p>
+              <h2 className="h1">Foto do Rosto</h2>
+              <p className="sub">Olha diretamente para a câmara. Certifica-te de que o rosto está bem visível e iluminado.</p>
 
               {processingMsg ? (
                 <div className="validating-overlay">
@@ -598,19 +577,25 @@ export default function KYCVerificationPage() {
                     </div>
                   )}
                   <div className="face-preview">
-                    {kycData[faceSteps[faceStep - 1].prop] ? (
-                      <img src={kycData[faceSteps[faceStep - 1].prop]} alt="captura" style={{ transform: 'scaleX(-1)' }} />
+                    {kycData.faceFront ? (
+                      <img src={kycData.faceFront} alt="selfie" style={{ transform: 'scaleX(-1)' }} />
                     ) : (
                       <>
                         <div className="oval-guide" />
-                        <div className="step-label">{faceSteps[faceStep - 1].label}</div>
-                        <div className="step-hint">{faceSteps[faceStep - 1].hint}</div>
+                        <div className="step-label">Frente</div>
+                        <div className="step-hint">Olha diretamente para a câmara</div>
                       </>
                     )}
                   </div>
-                  <button className="btn btn-gold" onClick={() => { setValidationError(''); faceInputRef.current?.click(); }}>
-                    <Camera size={18} /> {validationError ? 'Tentar Novamente' : `Tirar Foto — ${faceSteps[faceStep - 1].label}`}
-                  </button>
+                  {!validationError && kycData.faceFront ? (
+                    <button className="btn btn-green" onClick={() => setCurrentView('bi-intro')}>
+                      <CheckCircle size={18} /> Continuar para o B.I.
+                    </button>
+                  ) : (
+                    <button className="btn btn-gold" onClick={() => { setValidationError(''); faceInputRef.current?.click(); }}>
+                      <Camera size={18} /> {validationError ? 'Tentar Novamente' : 'Tirar Selfie'}
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -683,13 +668,9 @@ export default function KYCVerificationPage() {
             <div className="card">
               <h2 className="h1" style={{ marginBottom: 16 }}>Revisão Final</h2>
               <div className="captured-grid">
-                <div className="cap-item">
-                  <div className="cap-label">Rosto</div>
-                  <img src={kycData.faceFront} style={{ transform: 'scaleX(-1)' }} alt="rosto" />
-                </div>
-                <div className="cap-item">
-                  <div className="cap-label">Lado</div>
-                  <img src={kycData.faceRight} style={{ transform: 'scaleX(-1)' }} alt="lado" />
+                <div className="cap-item" style={{ gridColumn: 'span 2' }}>
+                  <div className="cap-label">Selfie</div>
+                  <img src={kycData.faceFront} style={{ transform: 'scaleX(-1)', aspectRatio: '4/3' }} alt="rosto" />
                 </div>
                 <div className="cap-item">
                   <div className="cap-label">B.I. Frente</div>
