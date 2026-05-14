@@ -14,6 +14,16 @@ const DEPOSIT_METHODS = [
 ];
 
 
+function methodLabel(m: string | null): string {
+  if (!m) return "—";
+  const map: Record<string, string> = {
+    multicaixa:          "Multicaixa Express",
+    usdt_trc20:          "USDT TRC-20",
+    crypto_nowpayments:  "USDT TRC-20",
+  };
+  return map[m] ?? m;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
     pending: { color: "#f5a623", bg: "rgba(245,166,35,0.1)", icon: <Clock size={12} />, label: "Pendente" },
@@ -346,7 +356,7 @@ export default function WalletPage() {
                     </div>
 
                     <div style={{ background: "rgba(38,161,123,0.08)", border: "1px solid rgba(38,161,123,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-                      <strong style={{ color: "#26a17b" }}>Depósito Automatizado:</strong> O sistema gera um pagamento único via NOWPayments. Assim que transferires o valor exato, o teu saldo será creditado automaticamente.
+                      <strong style={{ color: "#26a17b" }}>Depósito Automático:</strong> Assim que transferires o valor exato para o endereço indicado, o teu saldo é creditado automaticamente.
                     </div>
 
                     <button onClick={requestUsdtDeposit} disabled={usdtLoading || kycStatus !== "approved"}
@@ -416,16 +426,6 @@ export default function WalletPage() {
                       Janela válida: {new Date(usdtDeposit.expiresAt).toLocaleString("pt-AO", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
                     </div>
 
-                    {usdtDeposit.invoiceUrl && (
-                      <a href={usdtDeposit.invoiceUrl} target="_blank" rel="noopener noreferrer"
-                        style={{
-                          display: "block", width: "100%", background: "rgba(38,161,123,0.15)", color: "#26a17b",
-                          border: "1px solid #26a17b", borderRadius: 8, padding: 12, fontWeight: 700,
-                          fontSize: 13, cursor: "pointer", textAlign: "center", textDecoration: "none", marginBottom: 8
-                        }}>
-                        Abrir Checkout Externo (Opcional)
-                      </a>
-                    )}
 
                     <button onClick={() => setUsdtDeposit(null)}
                       style={{ width: "100%", background: "#1e2d50", color: "#94a3b8", border: "none", borderRadius: 8, padding: 12, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
@@ -565,7 +565,7 @@ export default function WalletPage() {
                           {tx.type === "deposit" ? "Depósito" : "Levantamento"}
                         </div>
                         <div style={{ color: "#94a3b8", fontSize: 11 }}>
-                          {tx.method} · {new Date(tx.createdAt).toLocaleDateString("pt-AO")}
+                          {methodLabel(tx.method)} · {new Date(tx.createdAt).toLocaleDateString("pt-AO")}
                         </div>
                       </div>
                     </div>

@@ -17,7 +17,8 @@ interface AdminTransaction {
   user: { name: string; email: string };
 }
 
-const TYPE_LABEL: Record<string, string>  = { deposit: "Depósito",    withdrawal: "Levantamento" };
+const TYPE_LABEL:   Record<string, string> = { deposit: "Depósito", withdrawal: "Levantamento" };
+const METHOD_LABEL: Record<string, string> = { multicaixa: "Multicaixa Express", usdt_trc20: "USDT TRC-20", crypto_nowpayments: "USDT TRC-20" };
 const TYPE_COLOR: Record<string, string>  = { deposit: "#22c55e",     withdrawal: "#f5a623" };
 const TYPE_BG:    Record<string, string>  = { deposit: "rgba(34,197,94,0.12)", withdrawal: "rgba(245,166,35,0.12)" };
 
@@ -211,7 +212,7 @@ export default function AdminTransactionsPage() {
 
                   {/* Método */}
                   <td style={{ ...td, color: "#94a3b8" }}>
-                    {tx.method ?? "—"}
+                    {METHOD_LABEL[tx.method ?? ""] ?? tx.method ?? "—"}
                   </td>
 
                   {/* Referência */}
