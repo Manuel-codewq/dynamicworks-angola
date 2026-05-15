@@ -20,19 +20,6 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "DW Index 75": "R_75", "DW Index 100": "R_100",
 };
 
-// Mapeamento OTC label → símbolo base real
-export const OTC_ASSET_TO_BASE: Record<string, string> = {
-  "EUR/USD OTC": "frxEURUSD", "GBP/USD OTC": "frxGBPUSD", "USD/JPY OTC": "frxUSDJPY",
-  "AUD/USD OTC": "frxAUDUSD", "USD/CAD OTC": "frxUSDCAD", "EUR/GBP OTC": "frxEURGBP",
-  "USD/CHF OTC": "frxUSDCHF", "NZD/USD OTC": "frxNZDUSD", "EUR/JPY OTC": "frxEURJPY",
-  "GBP/JPY OTC": "frxGBPJPY", "EUR/CAD OTC": "frxEURCAD", "AUD/JPY OTC": "frxAUDJPY",
-  "GBP/AUD OTC": "frxGBPAUD", "EUR/CHF OTC": "frxEURCHF",
-};
-
-export function isOtcAsset(asset: string): boolean {
-  return asset in OTC_ASSET_TO_BASE;
-}
-
 export async function getDerivPrice(asset: string): Promise<number | null> {
   const symbol = ASSET_TO_SYMBOL[asset];
   if (!symbol) return null;

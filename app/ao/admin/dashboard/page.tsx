@@ -1,7 +1,6 @@
 "use client";
 import { formatKz } from "@/lib/format";
 import { useEffect, useState } from "react";
-import MarketModeControl from "@/app/components/MarketModeControl";
 import {
   Users, Wallet, BarChart2, TrendingDown, Trophy, RefreshCw,
   UserCheck, Search, ExternalLink, Circle,
@@ -98,13 +97,10 @@ export default function AdminDashboard() {
           <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Dashboard</h1>
           <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>Visão geral da plataforma</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <MarketModeControl />
-          <button onClick={loadAll}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
-            <RefreshCw size={14} /> Atualizar
-          </button>
-        </div>
+        <button onClick={loadAll}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
+          <RefreshCw size={14} /> Atualizar
+        </button>
       </div>
 
       {/* Stats cards */}
