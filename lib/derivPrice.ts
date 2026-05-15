@@ -18,49 +18,69 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "AUD/JPY":        "frxAUDJPY",
   "GBP/AUD":        "frxGBPAUD",
   "EUR/CHF":        "frxEURCHF",
-  // OTC — usa o par base (mercado fechado, fallback para simulação)
-  "EUR/USD (OTC)":  "frxEURUSD",
-  "GBP/USD (OTC)":  "frxGBPUSD",
-  "USD/JPY (OTC)":  "frxUSDJPY",
-  "AUD/USD (OTC)":  "frxAUDUSD",
-  "USD/CAD (OTC)":  "frxUSDCAD",
-  "EUR/GBP (OTC)":  "frxEURGBP",
-  "EUR/JPY (OTC)":  "frxEURJPY",
-  "GBP/JPY (OTC)":  "frxGBPJPY",
-  "EUR/CAD (OTC)":  "frxEURCAD",
-  "AUD/JPY (OTC)":  "frxAUDJPY",
-  "GBP/AUD (OTC)":  "frxGBPAUD",
-  "EUR/CHF (OTC)":  "frxEURCHF",
+  "AUD/CAD":        "frxAUDCAD",
+  "AUD/CHF":        "frxAUDCHF",
+  "AUD/NZD":        "frxAUDNZD",
+  "EUR/AUD":        "frxEURAUD",
+  "EUR/NZD":        "frxEURNZD",
+  "GBP/CAD":        "frxGBPCAD",
+  "GBP/CHF":        "frxGBPCHF",
+  "GBP/NOK":        "frxGBPNOK",
+  "GBP/NZD":        "frxGBPNZD",
+  "NZD/JPY":        "frxNZDJPY",
+  "USD/MXN":        "frxUSDMXN",
+  "USD/NOK":        "frxUSDNOK",
+  "USD/PLN":        "frxUSDPLN",
+  "USD/SEK":        "frxUSDSEK",
   // Cripto
   "BTC/USD":        "cryBTCUSD",
   "ETH/USD":        "cryETHUSD",
-  // Commodities
+  // Metais
+  "Ouro/USD":       "frxXAUUSD",
+  "Prata/USD":      "frxXAGUSD",
+  "Paládio/USD":    "frxXPDUSD",
+  "Platina/USD":    "frxXPTUSD",
+  // aliases antigos (compatibilidade com trades existentes)
   "XAU/USD":        "frxXAUUSD",
   "XAG/USD":        "frxXAGUSD",
-  // Sintéticos DW (24/7)
   "DW Index 10":    "R_10",
   "DW Index 25":    "R_25",
   "DW Index 50":    "R_50",
   "DW Index 75":    "R_75",
   "DW Index 100":   "R_100",
-  // aliases antigos (manter compatibilidade com trades existentes)
-  "Vol. 10":        "R_10",
-  "Vol. 25":        "R_25",
-  "Vol. 50":        "R_50",
-  "Vol. 75":        "R_75",
-  "Vol. 100":       "R_100",
-  "Boom 300":       "BOOM300N",
-  "Crash 300":      "CRASH300N",
-  "DW Subida 300":  "BOOM300N",
-  "DW Queda 300":   "CRASH300N",
-  "DW Subida 500":  "BOOM500",
-  "DW Queda 500":   "CRASH500",
 };
+
+// Pares OTC — o servidor tenta buscar o par base; se o mercado estiver fechado devolve null
+// e o route.ts usa o preço enviado pelo cliente (gerado pelo simulador OTC)
+export const OTC_ASSET_TO_BASE: Record<string, string> = {
+  "EUR/USD OTC": "frxEURUSD",
+  "GBP/USD OTC": "frxGBPUSD",
+  "USD/JPY OTC": "frxUSDJPY",
+  "AUD/USD OTC": "frxAUDUSD",
+  "USD/CAD OTC": "frxUSDCAD",
+  "EUR/GBP OTC": "frxEURGBP",
+  "USD/CHF OTC": "frxUSDCHF",
+  "NZD/USD OTC": "frxNZDUSD",
+  "EUR/JPY OTC": "frxEURJPY",
+  "GBP/JPY OTC": "frxGBPJPY",
+  "EUR/CAD OTC": "frxEURCAD",
+  "AUD/JPY OTC": "frxAUDJPY",
+  "GBP/AUD OTC": "frxGBPAUD",
+  "EUR/CHF OTC": "frxEURCHF",
+};
+
+export function isOtcAsset(asset: string): boolean {
+  return asset in OTC_ASSET_TO_BASE;
+}
 
 // Busca o último preço disponível para o ativo via Deriv WS.
 // Retorna null se o mercado estiver fechado ou se falhar.
 export async function getDerivPrice(asset: string): Promise<number | null> {
-  const symbol = ASSET_TO_SYMBOL[asset];
+  // Para pares OTC, tenta buscar o par base (pode retornar null se mercado fechado)
+  const symbol = ASSET_TO_SYMBOL[asset] ?? OTC_ASSET_TO_BASE[asset]
+    ? ASSET_TO_SYMBOL[OTC_ASSET_TO_BASE[asset] ?? ""] ?? null
+    : null;
+
   if (!symbol) return null;
 
   return new Promise((resolve) => {

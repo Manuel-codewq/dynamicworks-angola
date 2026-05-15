@@ -52,10 +52,15 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { kycAttempts: true, kycBlockedUntil: true },
+      select: { kycAttempts: true, kycBlockedUntil: true, kycStatus: true },
     });
 
     if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
+
+    // Já em análise — não pode reenviar enquanto admin não decidir
+    if (user.kycStatus === "pending") {
+      return NextResponse.json({ error: "pending" }, { status: 409 });
+    }
 
     // Bloqueado?
     if (user.kycBlockedUntil && user.kycBlockedUntil > new Date()) {
@@ -69,9 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "blocked", blockedUntil: blockedUntil.toISOString() }, { status: 429 });
     }
 
-    const newAttempts = user.kycAttempts + 1;
-    const blockedUntil = newAttempts >= MAX_ATTEMPTS ? new Date(Date.now() + BLOCK_MS) : null;
-
+    // Guardar documentos — tentativas só incrementam quando admin rejeita, não na submissão
     await prisma.kycSubmission.upsert({
       where: { userId },
       create: { userId, faceFront, faceRight: faceRight ?? "", faceLeft: faceLeft ?? "", biFront, biBack, livenessScore: livenessScore || 0 },
@@ -80,18 +83,13 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        kycStatus: "pending",
-        kycAttempts: newAttempts,
-        ...(blockedUntil ? { kycBlockedUntil: blockedUntil } : {}),
-      },
+      data: { kycStatus: "pending" },
     });
 
     return NextResponse.json({
       ok: true,
-      attemptsUsed: newAttempts,
-      attemptsLeft: MAX_ATTEMPTS - newAttempts,
-      ...(blockedUntil ? { blockedUntil: blockedUntil.toISOString() } : {}),
+      attemptsUsed: user.kycAttempts,
+      attemptsLeft: MAX_ATTEMPTS - user.kycAttempts,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro interno";

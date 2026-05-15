@@ -21,9 +21,17 @@ export async function POST(
 
   const data: Record<string, unknown> = { kycStatus: status };
   if (status === "approved") {
-    // Aprovação limpa o histórico de tentativas e desbloqueio
+    // Aprovação limpa tentativas
     data.kycAttempts = 0;
     data.kycBlockedUntil = null;
+  } else {
+    // Rejeição incrementa tentativas; bloqueia se esgotado
+    const user = await prisma.user.findUnique({ where: { id }, select: { kycAttempts: true } });
+    const newAttempts = (user?.kycAttempts ?? 0) + 1;
+    data.kycAttempts = newAttempts;
+    if (newAttempts >= 4) {
+      data.kycBlockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+    }
   }
 
   const updated = await prisma.user.update({

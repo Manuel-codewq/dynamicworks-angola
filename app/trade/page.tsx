@@ -40,53 +40,11 @@ const EXPIRY_OPTIONS = [
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
 
 // Approximate initial prices for placeholder candles while WS connects
-const SEED_PRICES: Record<string, number> = {
-  // Forex
-  frxEURUSD: 1.085,  frxGBPUSD: 1.265,  frxUSDJPY: 149.5,
-  frxAUDUSD: 0.652,  frxUSDCAD: 1.362,  frxEURGBP: 0.858,
-  frxUSDCHF: 0.897,  frxNZDUSD: 0.607,
-  frxEURJPY: 162.5,  frxGBPJPY: 188.7,  frxEURCAD: 1.475,
-  frxAUDJPY: 97.5,   frxGBPAUD: 1.965,  frxEURCHF: 0.968,
-  // Crypto
-  cryBTCUSD: 60000,  cryETHUSD: 3200,
-  // Commodities
-  frxXAUUSD: 2350,   frxXAGUSD: 27.5,
-  // Sintéticos DW
-  R_10: 6300,  R_25: 5800,  R_50: 4500,  R_75: 3700,  R_100: 9800,
-  BOOM300N: 7800,  CRASH300N: 7800,
-  BOOM500:  8200,  CRASH500:  8200,
-};
+// Primeiro preço real recebido por símbolo nesta sessão — base para o cálculo do % change
+const sessionOpenPrices: Record<string, number> = {};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-
-// Placeholder candles — shown while WS data loads (correct OHLC invariants)
-function generatePlaceholder(basePrice: number, count = 100, gran = 60): CandlestickData[] {
-  const map = new Map<number, CandlestickData>();
-  const now  = Math.floor(Date.now() / gran) * gran;
-  const maxSpread = basePrice * 0.012;
-  let price    = basePrice;
-  let momentum = 0;
-
-  for (let i = count; i >= 0; i--) {
-    const t = now - i * gran;
-    momentum = momentum * 0.75 + (Math.random() - 0.5) * maxSpread * 0.7;
-    const open  = price;
-    const close = price + momentum;
-    if (!isFinite(open) || !isFinite(close) || open === 0) continue;
-
-    const bodyHigh = Math.max(open, close);
-    const bodyLow  = Math.min(open, close);
-    const wick     = maxSpread * (0.3 + Math.random() * 0.5);
-    const safeHigh = bodyHigh + Math.random() * wick;
-    const safeLow  = bodyLow  - Math.random() * wick;
-
-    if (!isFinite(safeHigh) || !isFinite(safeLow) || safeHigh < safeLow) continue;
-    map.set(t, { time: t as Time, open, high: safeHigh, low: safeLow, close });
-    price = close;
-  }
-  return Array.from(map.values()).sort((a, b) => (a.time as number) - (b.time as number));
-}
 
 // Convert Deriv candles to lightweight-charts format (validates invariants)
 function toChartCandles(raw: DerivCandle[]): CandlestickData[] {
@@ -921,6 +879,8 @@ export default function TradePage() {
     derivWS.connect();
 
     const unsubTick = derivWS.onTick((tick) => {
+      // Guardar o primeiro preço recebido por símbolo como referência da sessão
+      if (!sessionOpenPrices[tick.symbol]) sessionOpenPrices[tick.symbol] = tick.quote;
       // Update ticker for all pairs
       setTickerPrices(prev => ({ ...prev, [tick.symbol]: tick.quote }));
 
@@ -1171,7 +1131,7 @@ export default function TradePage() {
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
       if (ct === "candle" || ct === "bar") {
-        livePriceLineRef.current = series.createPriceLine({ price: SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1, color: "#22c55e", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "" });
+        livePriceLineRef.current = series.createPriceLine({ price: 0, color: "#22c55e", lineWidth: 1, lineStyle: 0, axisLabelVisible: false, title: "" });
       }
       // Null indicator refs — chart.remove() invalidated them
       maSeriesRefs.current.clear(); emaSeriesRefs.current.clear();
@@ -1189,19 +1149,7 @@ export default function TradePage() {
       rsiSeriesRef.current = null;  rsiPaneRef.current  = null;
       macdLineRef.current = null; macdSignalRef.current = null; macdHistRef.current = null; macdPaneRef.current = null;
       stochKRef.current = null; stochDRef.current = null; stochPaneRef.current = null;
-
-      // Mostrar placeholder imediatamente enquanto os dados reais chegam via WS
-      const basePrice = SEED_PRICES[selectedPair?.symbol ?? ""] ?? 1;
-      const gran = GRANULARITY[timeframeRef.current] ?? 60;
-      const placeholder = generatePlaceholder(basePrice, 120, gran);
-      const ct4 = chartTypeRef.current;
-      if (ct4 === "line" || ct4 === "area") {
-        series.setData(placeholder.map(c => ({ time: c.time, value: c.close })) as any);
-      } else {
-        series.setData(placeholder);
-      }
-      candleDataRef.current = placeholder;
-      currentCandleRef.current = placeholder[placeholder.length - 1] ?? null;
+      candleDataRef.current = [];
 
       // Re-apply drawings after chart reinit (refs were invalidated by chart.remove())
       reapplyDrawings();
@@ -1490,7 +1438,7 @@ export default function TradePage() {
           direction,
           amount,
           expirySecs: expiry.secs,
-          entryPrice: currentPrice || SEED_PRICES[selectedPair.symbol] || 1,
+          entryPrice: currentPrice || 0,
         }),
       });
       const receivedAt = Date.now();
@@ -1783,8 +1731,8 @@ export default function TradePage() {
   function renderAssetDropdown(mobile = false) {
     const groups: Record<string, DerivPair[]> = {};
     pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-    const catOrder  = ["Forex", "Cripto", "Metal", "Índices", "Sintético"];
-    const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d", Índices: "#22c55e", Sintético: "#38bdf8" };
+    const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
+    const catColors: Record<string, string> = { Forex: "#f5a623", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
     return (
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}
@@ -2874,8 +2822,8 @@ export default function TradePage() {
               {(() => {
                 const groups: Record<string, DerivPair[]> = {};
                 pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-                const catOrder  = ["Forex", "Cripto", "Metal", "Índices", "Sintético"];
-                const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d", Índices: "#22c55e", Sintético: "#38bdf8" };
+                const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
+                const catColors: Record<string, string> = { Forex: "#f5a623", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
                 return catOrder.filter(cat => groups[cat]).map(cat => (
                   <div key={cat}>
                     <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>
@@ -2883,9 +2831,9 @@ export default function TradePage() {
                     </div>
                     {groups[cat].map(p => {
                       const price   = tickerPrices[p.symbol] ?? 0;
-                      const seed    = SEED_PRICES[p.symbol] ?? 1;
-                      const isUp    = price >= seed;
-                      const pct     = seed > 0 && price > 0 ? ((price - seed) / seed * 100) : 0;
+                      const open    = sessionOpenPrices[p.symbol] ?? 0;
+                      const isUp    = price >= open;
+                      const pct     = open > 0 && price > 0 ? ((price - open) / open * 100) : 0;
                       const isActive = selectedPair?.symbol === p.symbol;
                       return (
                         <button key={p.symbol} onClick={() => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
@@ -3183,9 +3131,9 @@ export default function TradePage() {
         <div style={{ display: "flex", gap: 28, padding: "0 20px", animation: "ticker 30s linear infinite", whiteSpace: "nowrap" }}>
           {[...pairs, ...pairs].map((p, i) => {
             const price = tickerPrices[p.symbol] ?? 0;
-            const seed  = SEED_PRICES[p.symbol] ?? 1;
-            const isUp  = price >= seed;
-            const pct   = seed > 0 && price > 0 ? ((price - seed) / seed * 100) : 0;
+            const open  = sessionOpenPrices[p.symbol] ?? 0;
+            const isUp  = price >= open;
+            const pct   = open > 0 && price > 0 ? ((price - open) / open * 100) : 0;
             return (
               <span key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
                 <span style={{ color: "#64748b", fontWeight: 600 }}>{p.label}</span>

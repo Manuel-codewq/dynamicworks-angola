@@ -67,6 +67,13 @@ export default function AdminKycPage() {
     load();
   }
 
+  async function resetAttempts(userId: string) {
+    setBusyId(userId);
+    await fetch(`/api/admin/kyc/${userId}`, { method: "DELETE" });
+    setBusyId(null);
+    load();
+  }
+
   const visible = filter === "all" ? entries : entries.filter(e => e.user.kycStatus === filter);
   const counts  = {
     all:      entries.length,
@@ -251,31 +258,40 @@ export default function AdminKycPage() {
             </div>
 
             {/* Actions */}
-            {selected.user.kycStatus === "pending" ? (
-              <div style={{ display: "flex", gap: 12 }}>
-                <button onClick={() => decide(selected.userId, "approved")} disabled={!!busyId}
-                  style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 10, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <CheckCircle size={18} /> Aprovar Identidade
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {selected.user.kycStatus === "pending" ? (
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => decide(selected.userId, "approved")} disabled={!!busyId}
+                    style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 10, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <CheckCircle size={18} /> Aprovar Identidade
+                  </button>
+                  <button onClick={() => decide(selected.userId, "rejected")} disabled={!!busyId}
+                    style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <XCircle size={18} /> Rejeitar Documentos
+                  </button>
+                </div>
+              ) : (
+                (() => {
+                  const st = STATUS[selected.user.kycStatus];
+                  const StIcon = st?.Icon;
+                  return (
+                    <div style={{ background: st?.bg, border: `1px solid ${st?.color ?? "#64748b"}30`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                      {StIcon && <StIcon size={18} color={st.color} />}
+                      <span style={{ color: st?.color, fontWeight: 700 }}>
+                        KYC já {selected.user.kycStatus === "approved" ? "aprovado" : "rejeitado"}
+                      </span>
+                    </div>
+                  );
+                })()
+              )}
+              {/* Botão reset de tentativas — sempre visível para admin desbloquear utilizador */}
+              {(selected.user.kycAttempts > 0 || selected.user.kycBlockedUntil) && (
+                <button onClick={() => resetAttempts(selected.userId)} disabled={!!busyId}
+                  style={{ width: "100%", background: "transparent", color: "#f5a623", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, padding: "11px 0", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <RefreshCw size={15} /> Resetar Tentativas ({selected.user.kycAttempts}/4 usadas)
                 </button>
-                <button onClick={() => decide(selected.userId, "rejected")} disabled={!!busyId}
-                  style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <XCircle size={18} /> Rejeitar Documentos
-                </button>
-              </div>
-            ) : (
-              (() => {
-                const st = STATUS[selected.user.kycStatus];
-                const StIcon = st?.Icon;
-                return (
-                  <div style={{ background: st?.bg, border: `1px solid ${st?.color ?? "#64748b"}30`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-                    {StIcon && <StIcon size={18} color={st.color} />}
-                    <span style={{ color: st?.color, fontWeight: 700 }}>
-                      KYC já {selected.user.kycStatus === "approved" ? "aprovado" : "rejeitado"}
-                    </span>
-                  </div>
-                );
-              })()
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

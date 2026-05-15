@@ -14,19 +14,6 @@ interface KYCData {
   biBack: string;
 }
 
-async function uploadToCloud(b64: string): Promise<string> {
-  const r = await fetch("/api/upload", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file: b64, folder: "kyc" }),
-  });
-  if (!r.ok) {
-    const d = await r.json().catch(() => ({}));
-    throw new Error(d.error || "Falha no upload");
-  }
-  return (await r.json()).url as string;
-}
-
 function compressImage(file: File, maxW = 1400, q = 0.85): Promise<string> {
   return new Promise((res, rej) => {
     const reader = new FileReader();
@@ -54,6 +41,7 @@ export default function KYCPage() {
   const [attemptsLeft, setAL]   = useState<number | null>(null);
   const [blockedUntil, setBU]   = useState<Date | null>(null);
   const [countdown, setCD]      = useState("");
+  const [isPending, setIsPending] = useState(false);
   const [kyc, setKyc]           = useState<KYCData>({ selfie: "", biFront: "", biBack: "" });
   const [uploading, setUploading] = useState<string | null>(null);
   const [uploadErr, setUploadErr] = useState("");
@@ -67,6 +55,7 @@ export default function KYCPage() {
   // Fetch status
   React.useEffect(() => {
     fetch("/api/profile/kyc").then(r => r.json()).then(d => {
+      if (d.kycStatus === "pending") { setIsPending(true); return; }
       if (d.kycBlockedUntil) {
         const u = new Date(d.kycBlockedUntil);
         if (u > new Date()) { setBU(u); return; }
@@ -101,10 +90,9 @@ export default function KYCPage() {
     setUploading(label);
     try {
       const b64 = await compressImage(file);
-      const url = await uploadToCloud(b64);
-      setKyc(p => ({ ...p, [field]: url }));
+      setKyc(p => ({ ...p, [field]: b64 }));
     } catch (err) {
-      setUploadErr(err instanceof Error ? err.message : "Erro ao enviar. Tenta novamente.");
+      setUploadErr(err instanceof Error ? err.message : "Erro ao processar imagem. Tenta novamente.");
     } finally {
       setUploading(null);
     }
@@ -157,6 +145,30 @@ export default function KYCPage() {
     photoBox:{ width: "100%", aspectRatio: "4/3", borderRadius: 12, overflow: "hidden", background: "#0a0f1e", border: "1px solid #1e2d50", display: "flex", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 10, position: "relative" as const },
     tick:    { position: "absolute" as const, top: 8, right: 8, background: "#22c55e", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center" as const, justifyContent: "center" as const },
   };
+
+  // ─── Em análise ──────────────────────────────────────────────────────────
+  if (isPending) return (
+    <div style={S.page}>
+      <div style={S.topbar}>
+        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
+        <span style={{ color: "#f5a623", fontWeight: 800 }}>Dynamics Works</span>
+      </div>
+      <div style={{ ...S.card, textAlign: "center", padding: "40px 24px" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <Clock size={30} color="#f5a623" />
+        </div>
+        <h2 style={{ ...S.h2, textAlign: "center", fontSize: 20, marginBottom: 10 }}>Documentos em Análise</h2>
+        <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+          Os teus documentos foram recebidos e estão a ser analisados pela nossa equipa.<br />
+          <strong style={{ color: "#f5a623" }}>Resposta em até 24 horas.</strong>
+        </p>
+        <p style={{ color: "#64748b", fontSize: 12, marginBottom: 24 }}>
+          Só podes reenviar documentos se a submissão for rejeitada.
+        </p>
+        <button style={S.btnOut} onClick={() => router.push("/profile")}>Voltar ao Perfil</button>
+      </div>
+    </div>
+  );
 
   // ─── Bloqueado ────────────────────────────────────────────────────────────
   if (blockedUntil) return (

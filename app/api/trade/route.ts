@@ -3,20 +3,28 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getDerivPrice } from "@/lib/derivPrice";
+import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
 
-const ALLOWED_ASSETS = [
-  // Forex
-  "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD",
-  "USD/CAD", "EUR/GBP", "USD/CHF", "NZD/USD",
-  "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY", "GBP/AUD", "EUR/CHF",
-  // Crypto (24/7)
+const ALLOWED_ASSETS = new Set([
+  // Forex real
+  "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", "EUR/GBP",
+  "USD/CHF", "NZD/USD", "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY",
+  "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
+  "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
+  "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
+  // Forex OTC (simulado)
+  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC",
+  "USD/CAD OTC", "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC",
+  "EUR/JPY OTC", "GBP/JPY OTC", "EUR/CAD OTC", "AUD/JPY OTC",
+  "GBP/AUD OTC", "EUR/CHF OTC",
+  // Cripto (24/7)
   "BTC/USD", "ETH/USD",
-  // Commodities
+  // Metais
+  "Ouro/USD", "Prata/USD", "Paládio/USD", "Platina/USD",
+  // aliases antigos
   "XAU/USD", "XAG/USD",
-  // Sintéticos DW (24/7)
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
-];
+]);
 
 async function fetchServerEntryPrice(asset: string): Promise<number | null> {
   // 1. Try PriceCandle DB (recorded in the last 30s by price-recorder)
@@ -59,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   const { asset, direction, amount, expirySecs } = body ?? {};
 
-  if (!ALLOWED_ASSETS.includes(asset)) {
+  if (!ALLOWED_ASSETS.has(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
   }
   if (!["call", "put"].includes(direction)) {
@@ -109,8 +117,12 @@ export async function POST(req: NextRequest) {
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: sempre do servidor — nunca aceitar valor do cliente
-  const entryPrice = await fetchServerEntryPrice(asset);
+  // Entry price: servidor tem prioridade; OTC usa preço do cliente se mercado fechado
+  let entryPrice = await fetchServerEntryPrice(asset);
+  if (!entryPrice && isOtcAsset(asset)) {
+    const clientPrice = Number(body?.entryPrice);
+    if (clientPrice > 0) entryPrice = clientPrice;
+  }
   if (!entryPrice) {
     return NextResponse.json(
       { error: "Preço de mercado indisponível. Tente novamente em instantes." },
