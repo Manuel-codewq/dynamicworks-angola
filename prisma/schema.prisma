@@ -247,6 +247,12 @@ model AuditLog {
   @@index([adminId])
 }
 
+model MarketPrice {
+  symbol    String   @id
+  price     Float
+  updatedAt DateTime @updatedAt
+}
+
 model PromoCode {
   id          String   @id @default(cuid())
   code        String   @unique

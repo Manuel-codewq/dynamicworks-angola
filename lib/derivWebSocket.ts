@@ -271,13 +271,25 @@ export class DerivWS {
     this.send({ ticks_history: symbol, style: "candles", granularity, count, end: "latest" });
   }
 
-  // Atualiza o preço base OTC com o último preço real (chamar quando o mercado fecha)
+  // Atualiza o preço base OTC com o último preço real
   seedOtcPrice(forexSymbol: string, price: number) {
     const otcSym = "OTC_" + forexSymbol;
     if (OTC_BASE[otcSym] !== undefined) {
       OTC_BASE[otcSym] = price;
       this.otcPrices.set(otcSym, price);
     }
+  }
+
+  // Carrega os últimos preços reais do servidor e semeia o OTC_BASE
+  async seedOtcFromServer() {
+    try {
+      const res = await fetch("/api/prices/otc");
+      if (!res.ok) return;
+      const prices: Record<string, number> = await res.json();
+      Object.entries(prices).forEach(([symbol, price]) => {
+        this.seedOtcPrice(symbol, price);
+      });
+    } catch { /* falha silenciosa — usa fallback hardcoded */ }
   }
 
   onTick(handler: TickHandler):      () => void { this.tickHandlers.add(handler);    return () => this.tickHandlers.delete(handler); }
