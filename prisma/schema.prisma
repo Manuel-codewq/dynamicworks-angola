@@ -20,7 +20,7 @@ model User {
   isDemo       Boolean       @default(true)
   role         String        @default("user")
   status       String        @default("active")
-  kycStatus      String        @default("pending")
+  kycStatus      String        @default("none")
   kycAttempts    Int           @default(0)
   kycBlockedUntil DateTime?
   emailVerified  Boolean       @default(false)

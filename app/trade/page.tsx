@@ -1165,6 +1165,7 @@ export default function TradePage() {
         const base = { id, color: toolColorRef.current, lineWidth: toolLineWidthRef.current, lineStyle: toolLineStyleRef.current };
         if (tool === "hline") {
           addDrawing({ ...base, type: "hline", price, label: toolLabelRef.current });
+          setActiveTool(null); activeToolRef.current = null;
         } else if (tool === "trendline") {
           const pending = pendingPointRef.current;
           if (!pending) {
@@ -2559,7 +2560,7 @@ export default function TradePage() {
           <button onClick={toggleAccount} style={{ background: isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${isDemo ? "rgba(245,166,35,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
             <Wallet size={11} color={isDemo ? "#f5a623" : "#22c55e"} />
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
-            <span style={{ background: isDemo ? "#f5a623" : "#22c55e", color: "#0a0f1e", borderRadius: 3, fontSize: 8, padding: "1px 4px", fontWeight: 900 }}>{isDemo ? "D" : "R"}</span>
+            <span style={{ background: isDemo ? "#f5a623" : "#22c55e", color: "#0a0f1e", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>{isDemo ? "Demo" : "Real"}</span>
           </button>
         </div>}
 
@@ -3055,10 +3056,11 @@ export default function TradePage() {
     <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif", userSelect: "none" }}>
 
       {notification && (
-        <div style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 1000, background: notification.type === "win" ? "rgba(34,197,94,0.95)" : notification.type === "loss" ? "rgba(239,68,68,0.95)" : "rgba(245,166,35,0.95)", color: "#fff", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 15, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
-          {notification.type === "win" ? <TrendingUp size={18} /> : notification.type === "loss" ? <TrendingDown size={18} /> : <AlertCircle size={18} />}
-          {notification.msg}
-        </div>
+        <TradeResultOverlay
+          type={notification.type}
+          msg={notification.msg}
+          onDone={() => setNotification(null)}
+        />
       )}
 
       {/* Desktop Topbar */}

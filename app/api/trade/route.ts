@@ -117,9 +117,9 @@ export async function POST(req: NextRequest) {
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: servidor tem prioridade; OTC usa preço do cliente se mercado fechado
+  // Entry price: servidor tem prioridade; fallback para preço do cliente
   let entryPrice = await fetchServerEntryPrice(asset);
-  if (!entryPrice && isOtcAsset(asset)) {
+  if (!entryPrice) {
     const clientPrice = Number(body?.entryPrice);
     if (clientPrice > 0) entryPrice = clientPrice;
   }

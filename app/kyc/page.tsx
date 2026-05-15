@@ -55,7 +55,7 @@ export default function KYCPage() {
   // Fetch status
   React.useEffect(() => {
     fetch("/api/profile/kyc").then(r => r.json()).then(d => {
-      if (d.kycStatus === "pending") { setIsPending(true); return; }
+      if (d.kycStatus === "pending" && d.hasSubmission) { setIsPending(true); return; }
       if (d.kycBlockedUntil) {
         const u = new Date(d.kycBlockedUntil);
         if (u > new Date()) { setBU(u); return; }

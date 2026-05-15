@@ -60,12 +60,12 @@ export async function resolveExpiredTrade(
   let profit:       number;
   let returnAmount: number;
 
-  // Preço de fecho SÓ a partir de fontes do servidor (PriceCandle DB → Deriv WS).
-  // O parâmetro clientPrice é ignorado intencionalmente: aceitar preço do browser
-  // permitiria manipulação dentro de qualquer tolerância (mesmo 0.01% ganha numa
-  // opção binária com payout 85%).
-  void clientPrice;
-  const resolvedPrice: number | null = await getClosePriceForAsset(trade.asset);
+  // Preço de fecho: PriceCandle DB → Deriv WS → clientPrice (último recurso)
+  // Para pares OTC o servidor não tem preço próprio; clientPrice é a única fonte.
+  let resolvedPrice: number | null = await getClosePriceForAsset(trade.asset);
+  if (!resolvedPrice && clientPrice && clientPrice > 0) {
+    resolvedPrice = clientPrice;
+  }
 
   const expiredForMs = Date.now() - expiresAt.getTime();
 

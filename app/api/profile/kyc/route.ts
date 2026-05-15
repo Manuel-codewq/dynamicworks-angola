@@ -12,10 +12,13 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { kycStatus: true, kycAttempts: true, kycBlockedUntil: true },
+      select: { kycStatus: true, kycAttempts: true, kycBlockedUntil: true, kycSubmission: { select: { id: true } } },
     });
 
-    return NextResponse.json(user ?? { kycStatus: "pending", kycAttempts: 0, kycBlockedUntil: null });
+    return NextResponse.json({
+      ...(user ?? { kycStatus: "none", kycAttempts: 0, kycBlockedUntil: null }),
+      hasSubmission: !!(user?.kycSubmission),
+    });
   } catch (err) {
     console.error("[kyc GET]", err);
     return NextResponse.json({ kycStatus: "pending", kycAttempts: 0, kycBlockedUntil: null });
@@ -57,9 +60,10 @@ export async function POST(req: NextRequest) {
 
     if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
 
-    // Já em análise — não pode reenviar enquanto admin não decidir
+    // Só bloqueia se já existe uma submissão real em análise
     if (user.kycStatus === "pending") {
-      return NextResponse.json({ error: "pending" }, { status: 409 });
+      const existing = await prisma.kycSubmission.findUnique({ where: { userId }, select: { id: true } });
+      if (existing) return NextResponse.json({ error: "pending" }, { status: 409 });
     }
 
     // Bloqueado?
