@@ -97,9 +97,17 @@ export default function TradePage() {
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
 
   useEffect(() => {
-    const list = getAvailablePairs();
-    setPairs(list);
-    setSelectedPair(list[0] ?? null);
+    function refresh() {
+      const list = getAvailablePairs();
+      setPairs(list);
+      setSelectedPair(prev =>
+        prev && list.some(p => p.symbol === prev.symbol) ? prev : (list[0] ?? null)
+      );
+    }
+    refresh();
+    // Verificar a cada 60s se o horário de mercado mudou
+    const id = setInterval(refresh, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   // ── UI state ─────────────────────────────────────────────────────────────
@@ -867,6 +875,8 @@ export default function TradePage() {
   // ── Deriv WebSocket — connect once, register handlers ───────────────────
   useEffect(() => {
     derivWS.connect();
+    // Carregar preços de fecho reais para escalar os pares OTC
+    derivWS.loadForexCloses();
 
     const unsubTick = derivWS.onTick((tick) => {
       // Guardar o primeiro preço recebido por símbolo como referência da sessão
@@ -893,8 +903,10 @@ export default function TradePage() {
       // Skip candle updates during reconnect window — fresh history will arrive via onCandles
       if (reconnectingRef.current) return;
 
-      // Sanity check: ignora ticks com desvio > 8% (bad tick do Deriv)
-      if (lastPriceRef.current > 0 && Math.abs(q - lastPriceRef.current) / lastPriceRef.current > 0.08) return;
+      // Sanity check: ignora bad ticks do Deriv (> 8% de desvio)
+      // OTC: desvia do histórico no início — não filtrar
+      const isOtc = tick.symbol.startsWith("OTC_");
+      if (!isOtc && lastPriceRef.current > 0 && Math.abs(q - lastPriceRef.current) / lastPriceRef.current > 0.08) return;
 
       // Update live candle
       if (!candleSeriesRef.current) return;
@@ -1040,7 +1052,7 @@ export default function TradePage() {
           borderColor: "#1e2d50", timeVisible: true,
           rightOffset: isMobile ? 5 : 8,
           barSpacing: isMobile ? 10 : 6,
-          fixLeftEdge: false,
+          fixLeftEdge: true,
           lockVisibleTimeRangeOnResize: false,
           shiftVisibleRangeOnNewBar: true,
           tickMarkFormatter: isMobile ? (time: number) => {
@@ -1200,9 +1212,15 @@ export default function TradePage() {
         }
       });
 
+      // Impede scroll para antes da primeira vela (espaço vazio à esquerda)
+      chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+        if (range && range.from < 0) {
+          chart.timeScale().setVisibleLogicalRange({ from: 0, to: range.to });
+        }
+      });
+
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) {
-          // Só atualiza largura — altura é fixada no init e nunca muda por teclado ou inputs
           chartApiRef.current.applyOptions({ width: el.clientWidth });
         }
       });
@@ -2813,8 +2831,8 @@ export default function TradePage() {
               {(() => {
                 const groups: Record<string, DerivPair[]> = {};
                 pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-                const catOrder  = ["Forex", "Cripto", "Metal"];
-                const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d" };
+                const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
+                const catColors: Record<string, string> = { Forex: "#f5a623", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
                 return catOrder.filter(cat => groups[cat]).map(cat => (
                   <div key={cat}>
                     <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>

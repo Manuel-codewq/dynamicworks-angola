@@ -1,9 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import { getDerivPrice } from "@/lib/derivPrice";
+import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
 async function getClosePriceForAsset(asset: string): Promise<number | null> {
+  // Pares OTC: preço vem do cliente (clientPrice) — não há fonte server-side independente
+  // O entryPrice também foi do cliente, por isso a comparação é consistente
+  if (isOtcAsset(asset)) return null;
+
+  // Pares reais: PriceCandle DB → Deriv WS
   try {
     const ninetySecsAgo = new Date(Date.now() - 90_000);
     const candle = await prisma.priceCandle.findFirst({

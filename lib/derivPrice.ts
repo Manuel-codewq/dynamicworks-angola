@@ -20,6 +20,24 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "DW Index 75": "R_75", "DW Index 100": "R_100",
 };
 
+// Pares OTC: label → base forex symbol
+export const OTC_LABEL_TO_BASE: Record<string, string> = {
+  "EUR/USD OTC": "frxEURUSD", "GBP/USD OTC": "frxGBPUSD", "USD/JPY OTC": "frxUSDJPY",
+  "AUD/USD OTC": "frxAUDUSD", "USD/CAD OTC": "frxUSDCAD", "EUR/GBP OTC": "frxEURGBP",
+  "USD/CHF OTC": "frxUSDCHF", "NZD/USD OTC": "frxNZDUSD", "EUR/JPY OTC": "frxEURJPY",
+  "GBP/JPY OTC": "frxGBPJPY", "EUR/CAD OTC": "frxEURCAD", "AUD/JPY OTC": "frxAUDJPY",
+  "GBP/AUD OTC": "frxGBPAUD", "EUR/CHF OTC": "frxEURCHF", "AUD/CAD OTC": "frxAUDCAD",
+  "AUD/CHF OTC": "frxAUDCHF", "AUD/NZD OTC": "frxAUDNZD", "EUR/AUD OTC": "frxEURAUD",
+  "EUR/NZD OTC": "frxEURNZD", "GBP/CAD OTC": "frxGBPCAD", "GBP/CHF OTC": "frxGBPCHF",
+  "GBP/NOK OTC": "frxGBPNOK", "GBP/NZD OTC": "frxGBPNZD", "NZD/JPY OTC": "frxNZDJPY",
+  "USD/MXN OTC": "frxUSDMXN", "USD/NOK OTC": "frxUSDNOK", "USD/PLN OTC": "frxUSDPLN",
+  "USD/SEK OTC": "frxUSDSEK", "CAD/JPY OTC": "frxCADJPY", "CHF/JPY OTC": "frxCHFJPY",
+};
+
+export function isOtcAsset(asset: string): boolean {
+  return asset in OTC_LABEL_TO_BASE;
+}
+
 export async function getDerivPrice(asset: string): Promise<number | null> {
   const symbol = ASSET_TO_SYMBOL[asset];
   if (!symbol) return null;

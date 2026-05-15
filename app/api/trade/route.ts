@@ -3,14 +3,23 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getDerivPrice } from "@/lib/derivPrice";
+import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
 
 const ALLOWED_ASSETS = new Set([
+  // Forex real
   "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", "EUR/GBP",
   "USD/CHF", "NZD/USD", "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY",
   "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
   "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
   "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
+  // Forex OTC (30 pares)
+  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
+  "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC", "EUR/JPY OTC", "GBP/JPY OTC",
+  "EUR/CAD OTC", "AUD/JPY OTC", "GBP/AUD OTC", "EUR/CHF OTC", "AUD/CAD OTC",
+  "AUD/CHF OTC", "AUD/NZD OTC", "EUR/AUD OTC", "EUR/NZD OTC", "GBP/CAD OTC",
+  "GBP/CHF OTC", "GBP/NOK OTC", "GBP/NZD OTC", "NZD/JPY OTC", "USD/MXN OTC",
+  "USD/NOK OTC", "USD/PLN OTC", "USD/SEK OTC", "CAD/JPY OTC", "CHF/JPY OTC",
+  // Cripto + Metais
   "BTC/USD", "ETH/USD",
   "Ouro/USD", "Prata/USD", "Paládio/USD", "Platina/USD",
   "XAU/USD", "XAG/USD",
@@ -108,7 +117,7 @@ export async function POST(req: NextRequest) {
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: servidor tem prioridade; fallback para preço do cliente
+  // Entry price: servidor → fallback clientPrice (necessário para OTC e quando WS falha)
   let entryPrice = await fetchServerEntryPrice(asset);
   if (!entryPrice) {
     const clientPrice = Number(body?.entryPrice);
