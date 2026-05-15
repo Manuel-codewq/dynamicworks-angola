@@ -17,14 +17,11 @@ const OTC_FALLBACK: Record<string, number> = {
   "OTC_frxGBPAUD": 1.96500, "OTC_frxEURCHF": 0.96800,
 };
 
-// Se o preço foi gerado há menos de 1.5s, devolver sem regenerar
 const STALE_MS = 1500;
 
 export async function GET(req: NextRequest) {
   const syms = (req.nextUrl.searchParams.get("symbols") ?? "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(s => OTC_VOL[s]);
+    .split(",").map(s => s.trim()).filter(s => OTC_VOL[s]);
 
   if (syms.length === 0) return NextResponse.json({});
 
@@ -34,23 +31,18 @@ export async function GET(req: NextRequest) {
     const stored = await prisma.marketPrice.findUnique({ where: { symbol: sym } });
     const now = Date.now();
 
-    // Preço recente — devolver sem regenerar (evita race conditions entre clientes)
     if (stored && now - stored.updatedAt.getTime() < STALE_MS) {
-      result[sym] = stored.price;
-      continue;
+      result[sym] = stored.price; continue;
     }
 
-    // Buscar último preço real guardado (ex: frxGBPUSD para OTC_frxGBPUSD)
     const baseSymbol = sym.replace("OTC_", "");
-    const baseRow = await prisma.marketPrice.findUnique({ where: { symbol: baseSymbol } });
-    const basePrice = baseRow?.price ?? OTC_FALLBACK[sym] ?? 1.0;
-    const lastPrice = stored?.price ?? basePrice;
-
-    // Gerar próximo preço no servidor: mean-reversion + ruído
-    const vol      = OTC_VOL[sym];
-    const drift    = (basePrice - lastPrice) * 0.015;
-    const noise    = (Math.random() - 0.5) * vol * 2;
-    const newPrice = Math.max(lastPrice + drift + noise, basePrice * 0.95);
+    const baseRow    = await prisma.marketPrice.findUnique({ where: { symbol: baseSymbol } });
+    const basePrice  = baseRow?.price ?? OTC_FALLBACK[sym] ?? 1.0;
+    const lastPrice  = stored?.price ?? basePrice;
+    const vol        = OTC_VOL[sym];
+    const drift      = (basePrice - lastPrice) * 0.015;
+    const noise      = (Math.random() - 0.5) * vol * 2;
+    const newPrice   = Math.max(lastPrice + drift + noise, basePrice * 0.95);
 
     await prisma.marketPrice.upsert({
       where:  { symbol: sym },

@@ -16,9 +16,10 @@ import {
   CandlestickSeries, LineSeries, HistogramSeries, AreaSeries, BarSeries,
 } from "lightweight-charts";
 import {
-  derivWS, GRANULARITY, getAvailablePairs,
+  derivWS, GRANULARITY, getPairsForMode,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
+import { useMarketMode } from "@/hooks/useMarketMode";
 import NotificationBell from "@/app/components/NotificationBell";
 import TradeResultOverlay from "@/app/components/TradeResultOverlay";
 import OnboardingTutorial from "@/app/components/OnboardingTutorial";
@@ -96,21 +97,16 @@ export default function TradePage() {
   const [pairs,        setPairs]        = useState<DerivPair[]>([]);
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
 
+  const { mode: marketMode } = useMarketMode();
+
   useEffect(() => {
-    function refreshPairs() {
-      const list = getAvailablePairs();
-      setPairs(list);
-      setSelectedPair(prev => {
-        // Mantém o par selecionado se ainda estiver disponível; caso contrário troca para o primeiro
-        if (prev && list.some(p => p.symbol === prev.symbol)) return prev;
-        return list[0];
-      });
-    }
-    refreshPairs();
-    // Verifica a cada 60s se o horário de mercado mudou (troca real ↔ sintético às 18h)
-    const id = setInterval(refreshPairs, 60_000);
-    return () => clearInterval(id);
-  }, []); // eslint-disable-line
+    const list = getPairsForMode(marketMode);
+    setPairs(list);
+    setSelectedPair(prev => {
+      if (prev && list.some(p => p.symbol === prev.symbol)) return prev;
+      return list[0] ?? null;
+    });
+  }, [marketMode]);
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [assetDropdown, setAssetDropdown] = useState(false);
@@ -878,11 +874,22 @@ export default function TradePage() {
   useEffect(() => {
     derivWS.connect();
 
+    // Guardar preços reais no servidor (base para OTC), máx 1x/min por símbolo
+    const lastSaved: Record<string, number> = {};
+    function maybeSavePrice(symbol: string, price: number) {
+      if (symbol.startsWith("OTC_")) return;
+      const now = Date.now();
+      if ((lastSaved[symbol] ?? 0) + 60_000 > now) return;
+      lastSaved[symbol] = now;
+      fetch("/api/prices/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, price }) }).catch(() => {});
+    }
+
     const unsubTick = derivWS.onTick((tick) => {
       // Guardar o primeiro preço recebido por símbolo como referência da sessão
       if (!sessionOpenPrices[tick.symbol]) sessionOpenPrices[tick.symbol] = tick.quote;
       // Update ticker for all pairs
       setTickerPrices(prev => ({ ...prev, [tick.symbol]: tick.quote }));
+      maybeSavePrice(tick.symbol, tick.quote);
 
       // Only update chart/price display for the selected pair
       if (tick.symbol !== selectedPairRef.current?.symbol) return;
@@ -2823,8 +2830,8 @@ export default function TradePage() {
               {(() => {
                 const groups: Record<string, DerivPair[]> = {};
                 pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-                const catOrder  = ["Forex", "Cripto", "Metal"];
-                const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d" };
+                const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
+                const catColors: Record<string, string> = { Forex: "#f5a623", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
                 return catOrder.filter(cat => groups[cat]).map(cat => (
                   <div key={cat}>
                     <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>

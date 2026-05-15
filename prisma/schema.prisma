@@ -253,6 +253,12 @@ model MarketPrice {
   updatedAt DateTime @updatedAt
 }
 
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model PromoCode {
   id          String   @id @default(cuid())
   code        String   @unique

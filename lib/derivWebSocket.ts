@@ -50,7 +50,26 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXPTUSD", label: "Platina/USD", category: "Metal", decimals: 2 },
 ];
 
-export function getAvailablePairs(): DerivPair[] {
+export const OTC_FOREX_PAIRS: DerivPair[] = [
+  { symbol: "OTC_frxEURUSD", label: "EUR/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxGBPUSD", label: "GBP/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxUSDJPY", label: "USD/JPY OTC", category: "Forex OTC", decimals: 3 },
+  { symbol: "OTC_frxAUDUSD", label: "AUD/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxUSDCAD", label: "USD/CAD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxEURGBP", label: "EUR/GBP OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxUSDCHF", label: "USD/CHF OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxNZDUSD", label: "NZD/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxEURJPY", label: "EUR/JPY OTC", category: "Forex OTC", decimals: 3 },
+  { symbol: "OTC_frxGBPJPY", label: "GBP/JPY OTC", category: "Forex OTC", decimals: 3 },
+  { symbol: "OTC_frxEURCAD", label: "EUR/CAD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxAUDJPY", label: "AUD/JPY OTC", category: "Forex OTC", decimals: 3 },
+  { symbol: "OTC_frxGBPAUD", label: "GBP/AUD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "OTC_frxEURCHF", label: "EUR/CHF OTC", category: "Forex OTC", decimals: 5 },
+];
+
+// Pares disponíveis conforme o modo de mercado
+export function getPairsForMode(mode: "forex" | "otc"): DerivPair[] {
+  if (mode === "otc") return [...OTC_FOREX_PAIRS, ...CRYPTO_PAIRS];
   return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
 }
 
@@ -74,6 +93,9 @@ export class DerivWS {
   private candleHandlers  = new Set<CandleHandler>();
   private connectHandlers = new Set<() => void>();
   private isFirstConnect  = true;
+
+  // OTC polling timers
+  private otcTimers = new Map<string, ReturnType<typeof setInterval>>();
 
   connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
@@ -127,8 +149,32 @@ export class DerivWS {
     else { this.pendingMessages.push(msg); this.connect(); }
   }
 
+  // OTC: polling ao servidor a cada 1s (preços gerados server-side)
+  private startOtcTicker(symbol: string) {
+    if (this.otcTimers.has(symbol)) return;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/prices/current?symbols=${symbol}`);
+        if (!res.ok) return;
+        const data: Record<string, number> = await res.json();
+        const price = data[symbol];
+        if (!price || price <= 0) return;
+        const epoch = Math.floor(Date.now() / 1000);
+        this.tickHandlers.forEach(h => h({ symbol, quote: price, epoch }));
+      } catch { /* silencioso */ }
+    };
+    poll();
+    this.otcTimers.set(symbol, setInterval(poll, 1000));
+  }
+
+  private stopOtcTicker(symbol: string) {
+    const t = this.otcTimers.get(symbol);
+    if (t) { clearInterval(t); this.otcTimers.delete(symbol); }
+  }
+
   subscribeToTicks(symbols: string[]) {
     symbols.forEach(sym => {
+      if (sym.startsWith("OTC_")) { this.startOtcTicker(sym); return; }
       if (!this.subscribedSymbols.has(sym)) {
         this.subscribedSymbols.add(sym);
         this.send({ ticks: sym, subscribe: 1 });
@@ -139,11 +185,36 @@ export class DerivWS {
   unsubscribeAll() {
     this.send({ forget_all: "ticks" });
     this.subscribedSymbols.clear();
+    this.otcTimers.forEach((_, sym) => this.stopOtcTicker(sym));
   }
 
   getCandles(symbol: string, granularity: number, count = 150) {
+    if (symbol.startsWith("OTC_")) {
+      // Candles OTC geradas localmente só para display — win/loss usa o servidor
+      this.generateOtcCandles(symbol, granularity, count);
+      return;
+    }
     this.pendingCandleSymbol = symbol;
     this.send({ ticks_history: symbol, style: "candles", granularity, count, end: "latest" });
+  }
+
+  private generateOtcCandles(symbol: string, granularity: number, count: number) {
+    const vol  = 0.00008;
+    const base = 1.0;
+    const now  = Math.floor(Date.now() / 1000);
+    const candles: DerivCandle[] = [];
+    let price = base, momentum = 0;
+    for (let i = 0; i < count; i++) {
+      const epoch  = now - (count - i) * granularity;
+      const drift  = (base - price) * 0.02;
+      momentum     = momentum * 0.6 + (Math.random() - 0.5) * vol * 2 + drift;
+      const open   = price;
+      const close  = Math.max(price + momentum, price * 0.98);
+      const wick   = vol * (0.5 + Math.random() * 1.5);
+      candles.push({ epoch, open, high: Math.max(open, close) + Math.random() * wick, low: Math.min(open, close) - Math.random() * wick, close });
+      price = close;
+    }
+    setTimeout(() => { this.candleHandlers.forEach(h => h(symbol, candles)); }, 0);
   }
 
   onTick(handler: TickHandler):      () => void { this.tickHandlers.add(handler);    return () => this.tickHandlers.delete(handler); }
@@ -154,6 +225,7 @@ export class DerivWS {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.ws?.close(); this.ws = null;
     this.subscribedSymbols.clear(); this.pendingMessages = [];
+    this.otcTimers.forEach((_, sym) => this.stopOtcTicker(sym));
   }
 }
 

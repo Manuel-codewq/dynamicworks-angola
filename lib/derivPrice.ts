@@ -3,48 +3,35 @@ import WebSocket from "ws";
 const DERIV_WS_URL = "wss://ws.binaryws.com/websockets/v3?app_id=127916";
 
 const ASSET_TO_SYMBOL: Record<string, string> = {
-  "EUR/USD":     "frxEURUSD",
-  "GBP/USD":     "frxGBPUSD",
-  "USD/JPY":     "frxUSDJPY",
-  "AUD/USD":     "frxAUDUSD",
-  "USD/CAD":     "frxUSDCAD",
-  "EUR/GBP":     "frxEURGBP",
-  "USD/CHF":     "frxUSDCHF",
-  "NZD/USD":     "frxNZDUSD",
-  "EUR/JPY":     "frxEURJPY",
-  "GBP/JPY":     "frxGBPJPY",
-  "EUR/CAD":     "frxEURCAD",
-  "AUD/JPY":     "frxAUDJPY",
-  "GBP/AUD":     "frxGBPAUD",
-  "EUR/CHF":     "frxEURCHF",
-  "AUD/CAD":     "frxAUDCAD",
-  "AUD/CHF":     "frxAUDCHF",
-  "AUD/NZD":     "frxAUDNZD",
-  "EUR/AUD":     "frxEURAUD",
-  "EUR/NZD":     "frxEURNZD",
-  "GBP/CAD":     "frxGBPCAD",
-  "GBP/CHF":     "frxGBPCHF",
-  "GBP/NOK":     "frxGBPNOK",
-  "GBP/NZD":     "frxGBPNZD",
-  "NZD/JPY":     "frxNZDJPY",
-  "USD/MXN":     "frxUSDMXN",
-  "USD/NOK":     "frxUSDNOK",
-  "USD/PLN":     "frxUSDPLN",
-  "USD/SEK":     "frxUSDSEK",
-  "BTC/USD":     "cryBTCUSD",
-  "ETH/USD":     "cryETHUSD",
-  "Ouro/USD":    "frxXAUUSD",
-  "Prata/USD":   "frxXAGUSD",
-  "Paládio/USD": "frxXPDUSD",
-  "Platina/USD": "frxXPTUSD",
-  "XAU/USD":     "frxXAUUSD",
-  "XAG/USD":     "frxXAGUSD",
-  "DW Index 10":  "R_10",
-  "DW Index 25":  "R_25",
-  "DW Index 50":  "R_50",
-  "DW Index 75":  "R_75",
-  "DW Index 100": "R_100",
+  "EUR/USD": "frxEURUSD", "GBP/USD": "frxGBPUSD", "USD/JPY": "frxUSDJPY",
+  "AUD/USD": "frxAUDUSD", "USD/CAD": "frxUSDCAD", "EUR/GBP": "frxEURGBP",
+  "USD/CHF": "frxUSDCHF", "NZD/USD": "frxNZDUSD", "EUR/JPY": "frxEURJPY",
+  "GBP/JPY": "frxGBPJPY", "EUR/CAD": "frxEURCAD", "AUD/JPY": "frxAUDJPY",
+  "GBP/AUD": "frxGBPAUD", "EUR/CHF": "frxEURCHF", "AUD/CAD": "frxAUDCAD",
+  "AUD/CHF": "frxAUDCHF", "AUD/NZD": "frxAUDNZD", "EUR/AUD": "frxEURAUD",
+  "EUR/NZD": "frxEURNZD", "GBP/CAD": "frxGBPCAD", "GBP/CHF": "frxGBPCHF",
+  "GBP/NOK": "frxGBPNOK", "GBP/NZD": "frxGBPNZD", "NZD/JPY": "frxNZDJPY",
+  "USD/MXN": "frxUSDMXN", "USD/NOK": "frxUSDNOK", "USD/PLN": "frxUSDPLN",
+  "USD/SEK": "frxUSDSEK", "BTC/USD": "cryBTCUSD", "ETH/USD": "cryETHUSD",
+  "Ouro/USD": "frxXAUUSD", "Prata/USD": "frxXAGUSD",
+  "Paládio/USD": "frxXPDUSD", "Platina/USD": "frxXPTUSD",
+  "XAU/USD": "frxXAUUSD", "XAG/USD": "frxXAGUSD",
+  "DW Index 10": "R_10", "DW Index 25": "R_25", "DW Index 50": "R_50",
+  "DW Index 75": "R_75", "DW Index 100": "R_100",
 };
+
+// Mapeamento OTC label → símbolo base real
+export const OTC_ASSET_TO_BASE: Record<string, string> = {
+  "EUR/USD OTC": "frxEURUSD", "GBP/USD OTC": "frxGBPUSD", "USD/JPY OTC": "frxUSDJPY",
+  "AUD/USD OTC": "frxAUDUSD", "USD/CAD OTC": "frxUSDCAD", "EUR/GBP OTC": "frxEURGBP",
+  "USD/CHF OTC": "frxUSDCHF", "NZD/USD OTC": "frxNZDUSD", "EUR/JPY OTC": "frxEURJPY",
+  "GBP/JPY OTC": "frxGBPJPY", "EUR/CAD OTC": "frxEURCAD", "AUD/JPY OTC": "frxAUDJPY",
+  "GBP/AUD OTC": "frxGBPAUD", "EUR/CHF OTC": "frxEURCHF",
+};
+
+export function isOtcAsset(asset: string): boolean {
+  return asset in OTC_ASSET_TO_BASE;
+}
 
 export async function getDerivPrice(asset: string): Promise<number | null> {
   const symbol = ASSET_TO_SYMBOL[asset];
@@ -52,21 +39,17 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
 
   return new Promise((resolve) => {
     let resolved = false;
-
     const done = (val: number | null) => {
       if (resolved) return;
       resolved = true;
       try { ws.terminate(); } catch {}
       resolve(val);
     };
-
     const ws = new WebSocket(DERIV_WS_URL);
     const timeout = setTimeout(() => done(null), 8000);
-
     ws.on("open", () => {
       ws.send(JSON.stringify({ ticks_history: symbol, count: 1, end: "latest", style: "ticks" }));
     });
-
     ws.on("message", (raw: Buffer) => {
       try {
         const msg = JSON.parse(raw.toString());
@@ -78,7 +61,6 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
         }
       } catch { clearTimeout(timeout); done(null); }
     });
-
     ws.on("error", () => { clearTimeout(timeout); done(null); });
   });
 }

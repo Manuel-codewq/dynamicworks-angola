@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// Símbolos reais que têm par OTC equivalente
 const ALLOWED = new Set([
   "frxEURUSD","frxGBPUSD","frxUSDJPY","frxAUDUSD","frxUSDCAD",
   "frxEURGBP","frxUSDCHF","frxNZDUSD","frxEURJPY","frxGBPJPY",

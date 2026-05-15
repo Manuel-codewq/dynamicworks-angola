@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getDerivPrice } from "@/lib/derivPrice";
+import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
 
 const ALLOWED_ASSETS = new Set([
   "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", "EUR/GBP",
@@ -11,6 +11,10 @@ const ALLOWED_ASSETS = new Set([
   "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
   "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
   "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
+  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC",
+  "USD/CAD OTC", "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC",
+  "EUR/JPY OTC", "GBP/JPY OTC", "EUR/CAD OTC", "AUD/JPY OTC",
+  "GBP/AUD OTC", "EUR/CHF OTC",
   "BTC/USD", "ETH/USD",
   "Ouro/USD", "Prata/USD", "Paládio/USD", "Platina/USD",
   "XAU/USD", "XAG/USD",
@@ -108,9 +112,9 @@ export async function POST(req: NextRequest) {
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: servidor tem prioridade; fallback para preço do cliente
+  // Entry price: servidor tem prioridade; OTC e fallback usam preço do cliente
   let entryPrice = await fetchServerEntryPrice(asset);
-  if (!entryPrice) {
+  if (!entryPrice && (isOtcAsset(asset) || true)) {
     const clientPrice = Number(body?.entryPrice);
     if (clientPrice > 0) entryPrice = clientPrice;
   }
