@@ -89,13 +89,13 @@ const OTC_BASE: Record<string, number> = {
   OTC_frxGBPAUD: 1.96500, OTC_frxEURCHF: 0.96800,
 };
 
-// Angola = WAT (UTC+1). Mercado real: Seg-Sex 07h-18h WAT (06h-17h UTC)
+// Angola = WAT (UTC+1). Mercado real: Seg-Sex 07h-20h WAT (06h-19h UTC)
 export function isRealMarketOpen(): boolean {
   if (typeof window === "undefined") return true;
   const now    = new Date();
   const utcDay = now.getUTCDay();
   const utcH   = now.getUTCHours();
-  return utcDay >= 1 && utcDay <= 5 && utcH >= 6 && utcH < 17;
+  return utcDay >= 1 && utcDay <= 5 && utcH >= 6 && utcH < 19;
 }
 
 export function getAvailablePairs(): DerivPair[] {
@@ -220,20 +220,22 @@ export class DerivWS {
 
   private startOtcTicker(symbol: string) {
     if (this.otcTimers.has(symbol)) return;
-    const base   = OTC_BASE[symbol] ?? 1.0;
-    const vol    = OTC_VOL[symbol]  ?? 0.00007;
-    let price    = this.otcPrices.get(symbol) ?? base;
-    let momentum = 0;
 
-    const timer = setInterval(() => {
-      const drift = (base - price) * 0.015;
-      momentum    = momentum * 0.55 + (Math.random() - 0.5) * vol * 2 + drift;
-      price       = Math.max(price + momentum, base * 0.95);
-      this.otcPrices.set(symbol, price);
-      const epoch = Math.floor(Date.now() / 1000);
-      this.tickHandlers.forEach(h => h({ symbol, quote: price, epoch }));
-    }, 1000);
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/prices/current?symbols=${symbol}`);
+        if (!res.ok) return;
+        const data: Record<string, number> = await res.json();
+        const price = data[symbol];
+        if (!price || price <= 0) return;
+        this.otcPrices.set(symbol, price);
+        const epoch = Math.floor(Date.now() / 1000);
+        this.tickHandlers.forEach(h => h({ symbol, quote: price, epoch }));
+      } catch { /* falha silenciosa */ }
+    };
 
+    poll(); // tick imediato
+    const timer = setInterval(poll, 1000);
     this.otcTimers.set(symbol, timer);
   }
 
