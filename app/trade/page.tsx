@@ -16,7 +16,7 @@ import {
   CandlestickSeries, LineSeries, HistogramSeries, AreaSeries, BarSeries,
 } from "lightweight-charts";
 import {
-  derivWS, GRANULARITY, getAvailablePairs, isRealMarketOpen,
+  derivWS, GRANULARITY, getAvailablePairs,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -877,31 +877,12 @@ export default function TradePage() {
   // ── Deriv WebSocket — connect once, register handlers ───────────────────
   useEffect(() => {
     derivWS.connect();
-    // Semear OTC com últimos preços reais guardados no servidor
-    derivWS.seedOtcFromServer();
-
-    // Debounce: guardar preço real no servidor máx 1x por símbolo por minuto
-    const lastSaved: Record<string, number> = {};
-    function maybeSavePrice(symbol: string, price: number) {
-      if (symbol.startsWith("OTC_")) return;
-      const now = Date.now();
-      if ((lastSaved[symbol] ?? 0) + 60_000 > now) return;
-      lastSaved[symbol] = now;
-      fetch("/api/prices/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol, price }),
-      }).catch(() => {});
-    }
 
     const unsubTick = derivWS.onTick((tick) => {
       // Guardar o primeiro preço recebido por símbolo como referência da sessão
       if (!sessionOpenPrices[tick.symbol]) sessionOpenPrices[tick.symbol] = tick.quote;
       // Update ticker for all pairs
       setTickerPrices(prev => ({ ...prev, [tick.symbol]: tick.quote }));
-      // Manter OTC sincronizado + guardar no servidor
-      derivWS.seedOtcPrice(tick.symbol, tick.quote);
-      maybeSavePrice(tick.symbol, tick.quote);
 
       // Only update chart/price display for the selected pair
       if (tick.symbol !== selectedPairRef.current?.symbol) return;
@@ -2842,8 +2823,8 @@ export default function TradePage() {
               {(() => {
                 const groups: Record<string, DerivPair[]> = {};
                 pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-                const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
-                const catColors: Record<string, string> = { Forex: "#f5a623", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
+                const catOrder  = ["Forex", "Cripto", "Metal"];
+                const catColors: Record<string, string> = { Forex: "#f5a623", Cripto: "#a78bfa", Metal: "#fcd34d" };
                 return catOrder.filter(cat => groups[cat]).map(cat => (
                   <div key={cat}>
                     <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>

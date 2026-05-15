@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { isRealMarketOpen } from "@/lib/derivWebSocket";
 
 export async function GET() {
-  const isMarketOpen = isRealMarketOpen();
   const now     = new Date();
-  const watHour = (now.getUTCHours() + 1) % 24; // WAT = UTC+1
+  const utcDay  = now.getUTCDay();
+  const utcH    = now.getUTCHours();
+  const watHour = (utcH + 1) % 24;
+  const isMarketOpen = utcDay >= 1 && utcDay <= 5 && utcH >= 6 && utcH < 19;
   return NextResponse.json({ isMarketOpen, watHour });
 }

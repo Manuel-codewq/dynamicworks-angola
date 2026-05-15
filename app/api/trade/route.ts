@@ -3,25 +3,16 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
+import { getDerivPrice } from "@/lib/derivPrice";
 
 const ALLOWED_ASSETS = new Set([
-  // Forex real
   "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", "EUR/GBP",
   "USD/CHF", "NZD/USD", "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY",
   "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
   "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
   "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
-  // Forex OTC (simulado)
-  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC",
-  "USD/CAD OTC", "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC",
-  "EUR/JPY OTC", "GBP/JPY OTC", "EUR/CAD OTC", "AUD/JPY OTC",
-  "GBP/AUD OTC", "EUR/CHF OTC",
-  // Cripto (24/7)
   "BTC/USD", "ETH/USD",
-  // Metais
   "Ouro/USD", "Prata/USD", "Paládio/USD", "Platina/USD",
-  // aliases antigos
   "XAU/USD", "XAG/USD",
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
 ]);

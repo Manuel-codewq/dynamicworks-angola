@@ -1,25 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getDerivPrice } from "@/lib/derivPrice";
-import { OTC_ASSET_TO_BASE } from "@/lib/derivPrice";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
 async function getClosePriceForAsset(asset: string): Promise<number | null> {
-  // Pares OTC: usar preço guardado pelo servidor em MarketPrice (gerado server-side)
-  const baseSymbol = OTC_ASSET_TO_BASE[asset]; // ex: "EUR/USD OTC" → "frxEURUSD"
-  if (baseSymbol) {
-    try {
-      const otcSymbol = "OTC_" + baseSymbol; // "OTC_frxEURUSD"
-      const row = await prisma.marketPrice.findUnique({ where: { symbol: otcSymbol } });
-      // Aceita preço até 2 minutos antigo (cobre operações de 1min sem actividade)
-      if (row?.price && row.price > 0 && Date.now() - row.updatedAt.getTime() < 120_000) {
-        return row.price;
-      }
-    } catch { /* fallback */ }
-    return null; // OTC sem preço no servidor → clientPrice resolve
-  }
-
-  // Pares reais: PriceCandle DB → Deriv WS
+  // PriceCandle DB (gravado pelo price-recorder, < 90s) → Deriv WS
   try {
     const ninetySecsAgo = new Date(Date.now() - 90_000);
     const candle = await prisma.priceCandle.findFirst({
