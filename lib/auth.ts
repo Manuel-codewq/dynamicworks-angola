@@ -95,31 +95,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
-          // ── 2FA ─────────────────────────────────────────────────────────────
+          // ── 2FA — verificação do OTP (passo 2, após /api/auth/2fa/initiate) ──
           if (user.twoFactorEnabled) {
             if (!otp) {
-              // Primeiro passo: pede o OTP
-              if (user.twoFactorMethod === "email") {
-                // Só envia novo código se não há um válido
-                const hasValid = user.twoFaCode && user.twoFaExpires && user.twoFaExpires > new Date();
-                if (!hasValid) {
-                  const arr  = new Uint32Array(1);
-                  crypto.getRandomValues(arr);
-                  const code = String(100000 + (arr[0] % 900000));
-                  const expires = new Date(Date.now() + 10 * 60_000);
-                  await prisma.user.update({
-                    where: { id: user.id },
-                    data:  { twoFaCode: code, twoFaExpires: expires },
-                  });
-                  const { send2FAEmail } = await import("./email");
-                  await send2FAEmail(user.email, user.name, code);
-                }
-                throw new Error("2FA_REQUIRED_EMAIL");
-              }
-              throw new Error("2FA_REQUIRED_TOTP");
+              // Sem OTP e 2FA activo — bloquear (o fluxo correcto usa /api/auth/2fa/initiate)
+              await logAccess("login_fail", { email, ip, userAgent });
+              return null;
             }
 
-            // Segundo passo: verifica o OTP
             let otpValid = false;
             if (user.twoFactorMethod === "email") {
               otpValid =
@@ -166,14 +149,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             sessionId: session.id,
           };
         } catch (err: any) {
-          // Re-throw 2FA errors para o cliente os interceptar
-          if (
-            err.message === "2FA_REQUIRED_EMAIL" ||
-            err.message === "2FA_REQUIRED_TOTP" ||
-            err.message === "2FA_INVALID"
-          ) {
-            throw err;
-          }
+          // Re-throw 2FA_INVALID para o cliente mostrar mensagem correcta
+          if (err.message === "2FA_INVALID") throw err;
           console.error("[auth] authorize error:", err);
           return null;
         }

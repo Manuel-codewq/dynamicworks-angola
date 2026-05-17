@@ -31,20 +31,69 @@ function LoginContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    if (step === "credentials" && !turnstileToken) {
-      setError("Complete a verificação de segurança.");
-      return;
-    }
-
     setError("");
     setLoading(true);
 
+    // ── Passo 1: credenciais (usa endpoint dedicado para 2FA fiável) ──────────
+    if (step === "credentials") {
+      if (!turnstileToken) {
+        setError("Complete a verificação de segurança.");
+        setLoading(false);
+        return;
+      }
+
+      const res  = await fetch("/api/auth/2fa/initiate", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ email, password, turnstileToken }),
+      });
+      const data = await res.json();
+      setLoading(false);
+
+      if (res.status === 429) {
+        setError(data.error || "Demasiadas tentativas. Aguarda antes de tentar de novo.");
+        return;
+      }
+      if (!res.ok || !data.valid) {
+        turnstileRef.current?.reset();
+        setTurnstileToken("");
+        const newAttempts = failedAttempts + 1;
+        setFailedAttempts(newAttempts);
+        const remaining = MAX_ATTEMPTS - newAttempts;
+        if (remaining <= 0) {
+          setError("Conta temporariamente bloqueada. Recupera a senha ou tenta mais tarde.");
+        } else if (remaining <= 2) {
+          setError(`Email ou senha incorretos — ${remaining} tentativa${remaining === 1 ? "" : "s"} restante${remaining === 1 ? "" : "s"}.`);
+        } else {
+          setError("Email ou senha incorretos");
+        }
+        return;
+      }
+
+      if (data.needs2fa) {
+        setStep(data.method === "totp" ? "2fa_totp" : "2fa_email");
+        setOtp("");
+        return;
+      }
+
+      // Sem 2FA — fazer login directo
+      const result = await signIn("credentials", {
+        email, password, turnstileToken, otp: "", redirect: false,
+      });
+      setLoading(false);
+      if (!result?.error) { router.push("/trade"); return; }
+      turnstileRef.current?.reset();
+      setTurnstileToken("");
+      setError("Erro ao autenticar. Tenta novamente.");
+      return;
+    }
+
+    // ── Passo 2: verificação OTP 2FA ──────────────────────────────────────────
     const result = await signIn("credentials", {
       email,
       password,
       turnstileToken,
-      otp: step !== "credentials" ? otp : "",
+      otp,
       redirect: false,
     });
 
@@ -55,25 +104,13 @@ function LoginContent() {
       return;
     }
 
-    if (result.error === "2FA_REQUIRED_EMAIL") {
-      setStep("2fa_email");
-      setOtp("");
-      return;
-    }
-    if (result.error === "2FA_REQUIRED_TOTP") {
-      setStep("2fa_totp");
-      setOtp("");
-      return;
-    }
     if (result.error === "2FA_INVALID") {
       setError("Código inválido. Tenta novamente.");
       setOtp("");
       return;
     }
 
-    // Erro genérico — reset turnstile
-    turnstileRef.current?.reset();
-    setTurnstileToken("");
+    // Erro genérico no OTP
     const newAttempts = failedAttempts + 1;
     setFailedAttempts(newAttempts);
     const remaining = MAX_ATTEMPTS - newAttempts;
