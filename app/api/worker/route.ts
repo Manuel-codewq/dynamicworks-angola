@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveExpiredTrade } from "@/lib/resolveExpiredTrade";
+import { isOtcAsset } from "@/lib/derivPrice";
 
 function isAuthorized(req: NextRequest): boolean {
   const workerSecret = process.env.WORKER_SECRET;
@@ -32,6 +33,10 @@ export async function GET(req: NextRequest) {
   await Promise.all(activeTrades.map(async (trade) => {
     const expiresAt = trade.expiresAt ?? new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
     if (new Date() < expiresAt) return;
+
+    // Trades OTC não têm preço server-side — devem ser fechados pelo cliente
+    // que envia o exitPrice. O worker não os resolve para não marcar como LOSS incorrectamente.
+    if (isOtcAsset(trade.asset)) return;
 
     const outcome = await resolveExpiredTrade(trade);
     if (outcome === "pending" || outcome === "already_closed") return;
