@@ -2708,8 +2708,8 @@ export default function TradePage() {
                   </div>
                 ) : (
                   tradeHistory.map((t: any) => {
-                    const isWin = t.status === "win";
-                    const profit = isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : -t.amount;
+                    const isWin = t.result === "win";
+                    const profit = t.profit ?? (isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : -t.amount);
                     return (
                       <div key={t.id} style={{ background: "#0d1526", border: `1px solid ${isWin ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 10, padding: "10px 12px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div>
