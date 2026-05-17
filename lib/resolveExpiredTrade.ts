@@ -63,11 +63,25 @@ export async function resolveExpiredTrade(
   let profit:       number;
   let returnAmount: number;
 
-  // Preço de fecho: PriceCandle DB → Deriv WS → clientPrice (último recurso)
-  // Para pares OTC o servidor não tem preço próprio; clientPrice é a única fonte.
+  // Preço de fecho: PriceCandle DB → Deriv WS → clientPrice
+  // O clientPrice é o tick exacto no momento de expiração (WebSocket em tempo real).
+  // O PriceCandle é o close do candle de 1 minuto — pode diferir do tick exacto.
+  // Estratégia: usar clientPrice quando está próximo do servidor (< 0.5% de diferença)
+  // porque representa o preço REAL que o utilizador vê no ecrã no momento da expiração.
   let resolvedPrice: number | null = await getClosePriceForAsset(trade.asset);
-  if (!resolvedPrice && clientPrice && clientPrice > 0) {
-    resolvedPrice = clientPrice;
+
+  if (clientPrice && clientPrice > 0) {
+    if (!resolvedPrice) {
+      // Sem preço do servidor — usar client
+      resolvedPrice = clientPrice;
+    } else {
+      // Usar clientPrice se estiver dentro de 0.5% do servidor
+      // (mesmo tick, latência diferente — client é mais preciso no momento exacto)
+      const pctDiff = Math.abs(clientPrice - resolvedPrice) / resolvedPrice;
+      if (pctDiff < 0.005) {
+        resolvedPrice = clientPrice;
+      }
+    }
   }
 
   const expiredForMs = Date.now() - expiresAt.getTime();

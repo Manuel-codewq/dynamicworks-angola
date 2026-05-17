@@ -237,6 +237,11 @@ export default function HistoryPage() {
                       {isWin ? "+" : "−"}{formatKz(Math.floor(Math.abs(pl)))}
                     </div>
                     <div style={{ color: "#475569", fontSize: 11 }}>{formatKz(Math.floor(t.amount))}</div>
+                    {t.entryPrice > 0 && t.closePrice && (
+                      <div style={{ color: "#374151", fontSize: 10, marginTop: 2 }}>
+                        {t.entryPrice.toFixed(5)} → {t.closePrice.toFixed(5)}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
