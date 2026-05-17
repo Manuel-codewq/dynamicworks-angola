@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/lib/getClientIp";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, incrementFailCount, getFailCount } from "@/lib/rateLimit";
 import { send2FAEmail } from "@/lib/email";
+
+const MAX_FAIL = 5;
+const FAIL_WINDOW_MS = 30 * 60_000; // 30 minutos
 
 const DUMMY_HASH = "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a";
 
@@ -10,14 +13,21 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
     const ip = getClientIp(req);
+    const normalizedEmail = (email as string).toLowerCase().trim();
 
-    // Rate limit
+    // Bloqueio por falhas acumuladas (independente do rate limit por IP)
+    const failCount = await getFailCount(`login:${normalizedEmail}`);
+    if (failCount >= MAX_FAIL) {
+      return NextResponse.json(
+        { error: "Conta temporariamente bloqueada por excesso de tentativas. Tenta novamente em 30 minutos ou recupera a senha." },
+        { status: 429 }
+      );
+    }
+
+    // Rate limit por IP e por email
     if (!await checkRateLimit("login_ip", ip, 30, 15 * 60_000)) {
       return NextResponse.json({ error: "Demasiadas tentativas. Aguarda 15 minutos." }, { status: 429 });
     }
-
-    const normalizedEmail = (email as string).toLowerCase().trim();
-
     if (!await checkRateLimit("login_email", normalizedEmail, 10, 15 * 60_000)) {
       return NextResponse.json({ error: "Demasiadas tentativas. Aguarda 15 minutos." }, { status: 429 });
     }
@@ -30,6 +40,8 @@ export async function POST(req: NextRequest) {
     const validPassword  = await bcrypt.compare(password as string, hashToCompare);
 
     if (!user || !validPassword || user.status === "blocked" || !user.emailVerified) {
+      // Incrementar contador de falhas por email (só quando o email existe, para não revelar contas)
+      if (user) await incrementFailCount(`login:${normalizedEmail}`, FAIL_WINDOW_MS);
       return NextResponse.json({ valid: false }, { status: 401 });
     }
 

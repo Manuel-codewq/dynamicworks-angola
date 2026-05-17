@@ -4,10 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { verifyTotpToken } from "@/lib/totp";
 import { randomInt } from "crypto";
 import { send2FAEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  // 5 tentativas por utilizador a cada 15 minutos
+  if (!await checkRateLimit("2fa-enable", session.user.id, 5, 15 * 60_000)) {
+    return NextResponse.json({ error: "Demasiadas tentativas. Aguarda 15 minutos." }, { status: 429 });
+  }
 
   const { method, token } = await req.json();
 
@@ -26,6 +32,7 @@ export async function POST(req: NextRequest) {
       where: { id: user.id },
       data:  { twoFactorEnabled: true, twoFactorMethod: "totp" },
     });
+    prisma.accessLog.create({ data: { userId: user.id, email: user.email, action: "2fa_enabled", ip: req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown" } }).catch(() => {});
     return NextResponse.json({ success: true });
   }
 
@@ -59,6 +66,7 @@ export async function POST(req: NextRequest) {
         twoFaExpires:     null,
       },
     });
+    prisma.accessLog.create({ data: { userId: user.id, email: user.email, action: "2fa_enabled", ip: req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown" } }).catch(() => {});
     return NextResponse.json({ success: true });
   }
 

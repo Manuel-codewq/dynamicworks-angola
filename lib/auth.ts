@@ -1,8 +1,9 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
-import { checkRateLimit } from "./rateLimit";
+import { checkRateLimit, resetFailCount } from "./rateLimit";
 import { parseDevice } from "./parseDevice";
+import { sendNewLoginEmail } from "./email";
 
 const DUMMY_HASH =
   "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a";
@@ -44,7 +45,7 @@ async function logAccess(
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 7 * 24 * 3600 },
   pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({
@@ -118,17 +119,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           // ── Criar sessão ─────────────────────────────────────────────────────
+          const device = parseDevice(userAgent);
           const session = await prisma.userSession.create({
-            data: {
-              userId:    user.id,
-              ip,
-              userAgent,
-              device:    parseDevice(userAgent),
-              isActive:  true,
-            },
+            data: { userId: user.id, ip, userAgent, device, isActive: true },
           });
 
           await logAccess("login_ok", { userId: user.id, email, ip, userAgent });
+
+          // Limpar contador de falhas após login bem-sucedido
+          resetFailCount(`login:${email}`).catch(() => {});
+
+          // Notificação de novo IP/dispositivo (assíncrono, não bloqueia login)
+          prisma.userSession.findFirst({
+            where: {
+              userId:    user.id,
+              ip,
+              id:        { not: session.id },
+              createdAt: { gte: new Date(Date.now() - 30 * 24 * 3600 * 1000) },
+            },
+            select: { id: true },
+          }).then(existingIp => {
+            if (!existingIp) {
+              const dateStr = new Date().toLocaleString("pt-PT", { timeZone: "Africa/Luanda" });
+              sendNewLoginEmail(user.email, user.name ?? "Trader", ip, device, dateStr).catch(() => {});
+            }
+          }).catch(() => {});
 
           return {
             id:        user.id,

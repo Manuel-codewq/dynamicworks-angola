@@ -464,6 +464,46 @@ export async function sendTradeWinEmail(to: string, name: string, asset: string,
   }
 }
 
+export async function sendNewLoginEmail(to: string, name: string, ip: string, device: string, dateStr: string) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p("Detectámos um <strong style=\"color:#f5a623;\">novo acesso</strong> à tua conta a partir de um dispositivo ou localização não reconhecida.")}
+    <div style="background:#0a0f1e;border:1px solid rgba(245,166,35,0.3);border-radius:12px;padding:20px 24px;margin:16px 0 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding-bottom:10px;">
+          <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Dispositivo</span><br>
+          <span style="color:#fff;font-size:14px;font-weight:600;">${device}</span>
+        </td></tr>
+        <tr><td style="padding-bottom:10px;">
+          <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Endereço IP</span><br>
+          <span style="color:#fff;font-size:14px;font-weight:600;">${ip}</span>
+        </td></tr>
+        <tr><td>
+          <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Data e hora</span><br>
+          <span style="color:#fff;font-size:14px;font-weight:600;">${dateStr}</span>
+        </td></tr>
+      </table>
+    </div>
+    ${p("Se foste tu, podes ignorar este email. Se <strong style=\"color:#ef4444;\">não reconheces</strong> este acesso, altera a tua senha imediatamente e activa o 2FA.")}
+    ${divider()}
+    ${btn("Alterar senha →", "https://dynamicworks.ao/security")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: "Novo acesso detectado — Dynamics Works",
+      html:    baseTemplate("Novo acesso à tua conta", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar new login email:", err);
+  }
+}
+
 export async function sendTradeLossEmail(to: string, name: string, asset: string, amount: number) {
   const client = getClient();
   if (!client) return;

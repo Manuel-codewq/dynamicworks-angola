@@ -2,9 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendVerificationEmail } from "@/lib/email";
-import { randomInt } from "crypto";
+import { randomInt, createHash } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
+
+async function isPwnedPassword(password: string): Promise<boolean> {
+  try {
+    const hash   = createHash("sha1").update(password).digest("hex").toUpperCase();
+    const prefix = hash.slice(0, 5);
+    const suffix = hash.slice(5);
+    const res    = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      headers: { "Add-Padding": "true" },
+      signal:  AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return false; // fail open — não bloquear se API indisponível
+    const text = await res.text();
+    return text.split("\n").some(line => line.split(":")[0] === suffix);
+  } catch { return false; } // fail open
+}
+
+function isStrongPassword(password: string): boolean {
+  if (password.length < 8) return false;
+  const checks = [/[A-Z]/, /[a-z]/, /[0-9]/, /[^A-Za-z0-9]/];
+  return checks.filter(r => r.test(password)).length >= 3;
+}
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -62,6 +83,12 @@ export async function POST(req: NextRequest) {
     }
     if (String(password).length > 128) {
       return NextResponse.json({ error: "Senha demasiado longa" }, { status: 400 });
+    }
+    if (!isStrongPassword(String(password))) {
+      return NextResponse.json({ error: "A senha deve conter maiúsculas, minúsculas e números (mínimo 3 de 4 critérios)" }, { status: 400 });
+    }
+    if (await isPwnedPassword(String(password))) {
+      return NextResponse.json({ error: "Esta senha foi exposta em fugas de dados conhecidas. Escolhe uma senha diferente." }, { status: 400 });
     }
     if (province && !PROVINCES.includes(province)) {
       return NextResponse.json({ error: "Província inválida" }, { status: 400 });
