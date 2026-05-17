@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy,
-  Clock, History, Headphones, MessageCircle,
+  Clock, History, Headphones, MessageCircle, Shield, Gift,
   PenLine, CandlestickChart, LineChart, AreaChart,
   Maximize2, Minimize2, Minus, Sliders, Trash2,
   Square, GitFork, BarChart, Activity,
@@ -150,6 +150,8 @@ export default function TradePage() {
   const candleSeriesRef    = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const currentCandleRef   = useRef<CandlestickData | null>(null);
   const lastPriceRef       = useRef<number>(0);
+  const initialScrollDone  = useRef<boolean>(false);
+  const serverTimeOffset   = useRef<number>(0); // segundos: serverEpoch - browserEpoch
   const reconnectingRef    = useRef<boolean>(false);
   const tradePriceLinesRef = useRef<Map<string, any>>(new Map());
   const livePriceLineRef   = useRef<any>(null);
@@ -371,9 +373,9 @@ export default function TradePage() {
   // gives [1..gran], so 1m can never exceed 1:00, 5m never 5:00, etc.
   useEffect(() => {
     function update() {
-      const gran   = GRANULARITY[timeframe] ?? 60;
-      const nowSec = Math.floor(Date.now() / 1000);
-      const rem    = gran - (nowSec % gran);
+      const gran      = GRANULARITY[timeframe] ?? 60;
+      const serverNow = Math.floor(Date.now() / 1000 + serverTimeOffset.current);
+      const rem       = gran - (serverNow % gran);
       setCandleTimer(`${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`);
     }
     update();
@@ -879,6 +881,9 @@ export default function TradePage() {
     derivWS.loadForexCloses();
 
     const unsubTick = derivWS.onTick((tick) => {
+      // Sincronizar relógio com o servidor Deriv usando o epoch do tick
+      serverTimeOffset.current = tick.epoch - Date.now() / 1000;
+
       // Guardar o primeiro preço recebido por símbolo como referência da sessão
       if (!sessionOpenPrices[tick.symbol]) sessionOpenPrices[tick.symbol] = tick.quote;
       // Update ticker for all pairs
@@ -960,6 +965,11 @@ export default function TradePage() {
       const candles = toChartCandles(raw);
       if (candles.length === 0) return;
 
+      // Guardar range visível antes do setData para evitar saltos
+      const savedRange = initialScrollDone.current
+        ? chartApiRef.current?.timeScale().getVisibleLogicalRange()
+        : null;
+
       const ct2 = chartTypeRef.current;
       if (ct2 === "line" || ct2 === "area") {
         candleSeriesRef.current.setData(candles.map(c => ({ time: c.time, value: c.close })) as any);
@@ -969,8 +979,18 @@ export default function TradePage() {
       candleDataRef.current = candles;
       recalcRef.current();
       currentCandleRef.current = candles[candles.length - 1];
-      reconnectingRef.current = false;       // fresh data arrived — allow tick updates again
-      chartApiRef.current?.timeScale().scrollToRealTime();
+      reconnectingRef.current = false;
+
+      if (!initialScrollDone.current) {
+        // Carga inicial — scroll para mostrar a última vela
+        initialScrollDone.current = true;
+        chartApiRef.current?.timeScale().scrollToRealTime();
+      } else if (savedRange) {
+        // Reconexão/reload — restaurar posição onde o utilizador estava
+        requestAnimationFrame(() => {
+          chartApiRef.current?.timeScale().setVisibleLogicalRange(savedRange);
+        });
+      }
 
       // Seed price display from last candle if no tick yet
       const last = candles[candles.length - 1].close;
@@ -1006,6 +1026,7 @@ export default function TradePage() {
     currentCandleRef.current = null;
 
     lastPriceRef.current = 0;
+    initialScrollDone.current = false; // reset ao mudar par/timeframe → scroll ao carregar novas velas
     derivWS.subscribeToTicks(pairs.map(p => p.symbol));
     derivWS.getCandles(selectedPair.symbol, gran, 300);
   }, [selectedPair, timeframe, pairs]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1054,7 +1075,7 @@ export default function TradePage() {
           barSpacing: isMobile ? 10 : 6,
           fixLeftEdge: true,
           lockVisibleTimeRangeOnResize: false,
-          shiftVisibleRangeOnNewBar: true,
+          shiftVisibleRangeOnNewBar: false,
           tickMarkFormatter: isMobile ? (time: number) => {
             const d = new Date(time * 1000);
             return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
@@ -1212,12 +1233,7 @@ export default function TradePage() {
         }
       });
 
-      // Impede scroll para antes da primeira vela (espaço vazio à esquerda)
-      chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-        if (range && range.from < 0) {
-          chart.timeScale().setVisibleLogicalRange({ from: 0, to: range.to });
-        }
-      });
+      // fixLeftEdge: true (já definido em createChart) impede scroll antes da primeira vela
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) {
@@ -2971,6 +2987,8 @@ export default function TradePage() {
               {/* Nav links */}
               {[
                 { href: "/profile",   icon: <User size={16} color="#f5a623" />,       label: "Perfil",             desc: "Editar dados pessoais" },
+                { href: "/referral",  icon: <Gift size={16} color="#22c55e" />,        label: "Referidos",          desc: "Convida amigos · ganha 2%" },
+                { href: "/security",  icon: <Shield size={16} color="#f5a623" />,      label: "Segurança",          desc: "2FA, sessões e log de acessos" },
                 { href: "/dashboard", icon: <BarChart2 size={16} color="#f5a623" />,   label: "Dashboard",          desc: "Estatísticas das operações" },
                 { href: "/history",   icon: <History size={16} color="#f5a623" />,     label: "Histórico",          desc: "Todas as operações fechadas" },
                 { href: "/ranking",   icon: <Trophy size={16} color="#f5a623" />,      label: "Ranking & Torneios", desc: "Competir com outros traders" },
@@ -3001,7 +3019,7 @@ export default function TradePage() {
               </a>
 
               {/* Suporte — WhatsApp */}
-              <a href={`https://wa.me/244946621503?text=${encodeURIComponent("Olá! Preciso de ajuda com a minha conta na Dynamics Works.")}`} target="_blank" rel="noopener noreferrer"
+              <a href={`https://wa.me/244921825299?text=${encodeURIComponent("Olá! Preciso de ajuda com a minha conta na Dynamics Works.")}`} target="_blank" rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.2)", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
                 <div style={{ width: 32, height: 32, background: "#25D366", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <MessageCircle size={16} color="#fff" />
@@ -3127,6 +3145,7 @@ export default function TradePage() {
               <a href="/ranking"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Trophy size={14} /> Ranking</a>
               <a href="/wallet"    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Wallet size={14} /> Carteira</a>
               <a href="/profile"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><User size={14} /> Perfil</a>
+              <a href="/security"  style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13, borderTop: "1px solid #1e2d50" }}><Shield size={14} /> Segurança</a>
               <button onClick={() => signOut({ callbackUrl: "/login" })}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
                 <LogOut size={14} /> Sair

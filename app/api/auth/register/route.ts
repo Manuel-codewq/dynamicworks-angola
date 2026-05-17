@@ -5,6 +5,7 @@ import { sendVerificationEmail } from "@/lib/email";
 import { randomInt } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
+import { verifyTurnstile } from "@/lib/verifyTurnstile";
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -22,7 +23,33 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, password, phone, province } = body;
+    const { name, email, password, phone, province, turnstileToken, ref } = body;
+
+    // Gerar código de referido único (ex: DW-A3X9)
+    function genCode(): string {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "DW-";
+      for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+    let referralCode: string | null = null;
+    for (let attempts = 0; attempts < 5; attempts++) {
+      const candidate = genCode();
+      const exists = await prisma.user.findUnique({ where: { referralCode: candidate }, select: { id: true } });
+      if (!exists) { referralCode = candidate; break; }
+    }
+
+    // Validar código de referido se fornecido
+    let referredBy: string | null = null;
+    if (ref && typeof ref === "string") {
+      const referrer = await prisma.user.findUnique({ where: { referralCode: ref.toUpperCase() }, select: { id: true } });
+      if (referrer) referredBy = referrer.id;
+    }
+
+    const turnstileOk = await verifyTurnstile(turnstileToken ?? "", ip);
+    if (!turnstileOk) {
+      return NextResponse.json({ error: "Verificação de segurança falhou. Tente novamente." }, { status: 400 });
+    }
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Campos obrigatórios em falta" }, { status: 400 });
@@ -69,6 +96,8 @@ export async function POST(req: NextRequest) {
         balance: 0,
         demoBalance: 10000,
         isDemo: true,
+        ...(referralCode ? { referralCode } : {}),
+        ...(referredBy   ? { referredBy }   : {}),
       },
     });
 

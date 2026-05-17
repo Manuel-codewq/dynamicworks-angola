@@ -7,8 +7,16 @@ import {
   ChevronLeft, User, Shield, BarChart2, Lock,
   CheckCircle, Clock, XCircle, Save, ScanFace,
   TrendingUp, TrendingDown, Edit3, AlertTriangle,
-  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2,
+  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2, Gift,
 } from "lucide-react";
+import PageGuide from "@/app/components/PageGuide";
+
+const PROFILE_GUIDE = [
+  { icon: <User    size={26} color="#f5a623" />, iconColor: "#f5a623", title: "O teu Perfil",            description: "Aqui podes editar os teus dados pessoais, ver o teu saldo, verificar o estado KYC e alterar a senha da conta.", tip: "Mantém o teu número de telefone actualizado para facilitar o suporte." },
+  { icon: <ScanFace size={26} color="#38bdf8" />, iconColor: "#38bdf8", title: "Verificação KYC",        description: "O KYC (Know Your Customer) é a verificação da tua identidade. É obrigatório para fazer levantamentos. Submete o teu BI e fotos do rosto.", tip: "O KYC é aprovado pelo admin em até 24 horas." },
+  { icon: <Shield  size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Segurança",               description: "Clica no card 'Segurança' para activar o 2FA, ver sessões activas e o histórico de acessos à tua conta.", tip: "Recomendamos activar o 2FA para proteger a conta." },
+  { icon: <Lock    size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Alterar Senha",           description: "Para alterar a senha, clica em 'Alterar senha'. Vais receber um código OTP no email para confirmar a alteração.", tip: "Usa uma senha forte com letras, números e símbolos." },
+];
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -307,6 +315,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      <PageGuide storageKey="dw_guide_profile" steps={PROFILE_GUIDE} />
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px" }}>
 
         {/* Hero */}
@@ -402,12 +411,36 @@ export default function ProfilePage() {
             </div>
           </div>
           {kycStatus !== "approved" && !blockedUntil && (
-            <button onClick={() => router.push("/kyc")} style={{ width: "100%", background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <button onClick={() => router.push("/kyc")} style={{ width: "100%", background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <ScanFace size={17} />
               {kycStatus === "unsubmitted" ? "Iniciar Verificação" : kycStatus === "rejected" ? "Submeter Novamente" : "Ver estado da verificação"}
             </button>
           )}
         </div>
+
+        {/* Referidos */}
+        <a href="/referral" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
+          <div style={{ width: 42, height: 42, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Gift size={20} color="#22c55e" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Programa de Referidos</div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>Convida amigos · ganha 2% do primeiro depósito</div>
+          </div>
+          <span style={{ color: "#334155", fontSize: 18 }}>›</span>
+        </a>
+
+        {/* Segurança */}
+        <a href="/security" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
+          <div style={{ width: 42, height: 42, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Shield size={20} color="#f5a623" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Segurança</div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>2FA, sessões activas e log de acessos</div>
+          </div>
+          <span style={{ color: "#334155", fontSize: 18 }}>›</span>
+        </a>
 
         {/* Dados pessoais */}
         <div style={card}>
@@ -484,7 +517,7 @@ export default function ProfilePage() {
                 Por segurança, vamos enviar um código de verificação para <strong style={{ color: "#fff" }}>{maskEmail(email)}</strong> antes de alterar a senha.
               </p>
               <button onClick={sendOtp} disabled={sendingOtp}
-                style={{ width: "100%", background: "#1e2d50", color: "#fff", border: "1px solid #2d3f6b", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: sendingOtp ? "not-allowed" : "pointer", opacity: sendingOtp ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                style={{ width: "100%", background: "#1e2d50", color: "#fff", border: "1px solid #2d3f6b", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: sendingOtp ? "not-allowed" : "pointer", opacity: sendingOtp ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <Send size={16} /> {sendingOtp ? "A enviar código..." : "Enviar código por email"}
               </button>
               <Msg fb={passwordMsg} />
@@ -524,7 +557,7 @@ export default function ProfilePage() {
 
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={confirmPassword} disabled={passwordBusy}
-                  style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 800, cursor: passwordBusy ? "not-allowed" : "pointer", opacity: passwordBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: passwordBusy ? "not-allowed" : "pointer", opacity: passwordBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <KeyRound size={16} /> {passwordBusy ? "A confirmar..." : "Confirmar nova senha"}
                 </button>
                 <button onClick={() => { setPwdStep("idle"); setPasswordMsg(null); setOtpInput(""); setNewPwd(""); setConfPwd(""); }}

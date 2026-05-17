@@ -14,42 +14,48 @@ export async function GET() {
   const [
     totalUsers,
     balanceAgg,
-    todayTradesCount,
-    todayClosedTrades,
-    allClosedTrades,
+    demoBalanceAgg,
+    todayTradesReal,
+    todayTradesDemo,
+    todayClosedReal,
+    todayClosedDemo,
+    allClosedReal,
+    allClosedDemo,
   ] = await Promise.all([
     prisma.user.count(),
-    // Só soma saldos de contas reais
     prisma.user.aggregate({ _sum: { balance: true } }),
-    // Só conta trades reais (isDemo: false)
+    prisma.user.aggregate({ _sum: { demoBalance: true } }),
     prisma.trade.count({ where: { createdAt: { gte: today }, isDemo: false } }),
-    // Só trades reais fechados hoje
-    prisma.trade.findMany({
-      where: { status: "closed", closedAt: { gte: today }, isDemo: false },
-      select: { result: true, amount: true, profit: true },
-    }),
-    // Só trades reais fechados (para taxa de vitória)
-    prisma.trade.findMany({
-      where: { status: "closed", isDemo: false },
-      select: { result: true },
-    }),
+    prisma.trade.count({ where: { createdAt: { gte: today }, isDemo: true  } }),
+    prisma.trade.findMany({ where: { status: "closed", closedAt: { gte: today }, isDemo: false }, select: { result: true, amount: true } }) as Promise<{ result: string; amount: number }[]>,
+    prisma.trade.findMany({ where: { status: "closed", closedAt: { gte: today }, isDemo: true  }, select: { result: true, amount: true } }) as Promise<{ result: string; amount: number }[]>,
+    prisma.trade.findMany({ where: { status: "closed", isDemo: false }, select: { result: true } }) as Promise<{ result: string }[]>,
+    prisma.trade.findMany({ where: { status: "closed", isDemo: true  }, select: { result: true } }) as Promise<{ result: string }[]>,
   ]);
 
-  const totalBalance   = balanceAgg._sum.balance ?? 0;
-  const platformProfit = todayClosedTrades
-    .filter(t => t.result === "loss")
-    .reduce((s, t) => s + t.amount, 0);
-  const wins    = allClosedTrades.filter(t => t.result === "win").length;
-  const winRate = allClosedTrades.length > 0
-    ? Math.round((wins / allClosedTrades.length) * 100)
-    : 0;
+  function calcStats(closed: { result: string }[], todayClosed: { result: string; amount: number }[], todayCount: number, total: number) {
+    const wins        = closed.filter(t => t.result === "win").length;
+    const winRate     = closed.length > 0 ? Math.round((wins / closed.length) * 100) : 0;
+    const profit      = todayClosed.filter(t => t.result === "loss").reduce((s, t) => s + t.amount, 0);
+    return { todayTradesCount: todayCount, platformProfit: profit, winRate, totalTrades: closed.length };
+  }
+
+  const real = calcStats(allClosedReal, todayClosedReal, todayTradesReal, 0);
+  const demo = calcStats(allClosedDemo, todayClosedDemo, todayTradesDemo, 0);
 
   return NextResponse.json({
     totalUsers,
-    totalBalance,
-    todayTradesCount,
-    platformProfit,
-    winRate,
-    totalTrades: allClosedTrades.length,
+    // Real
+    totalBalance:        balanceAgg._sum.balance      ?? 0,
+    todayTradesCount:    real.todayTradesCount,
+    platformProfit:      real.platformProfit,
+    winRate:             real.winRate,
+    totalTrades:         real.totalTrades,
+    // Demo
+    totalDemoBalance:    demoBalanceAgg._sum.demoBalance ?? 0,
+    demoTodayTradesCount: demo.todayTradesCount,
+    demoPlatformProfit:  demo.platformProfit,
+    demoWinRate:         demo.winRate,
+    demoTotalTrades:     demo.totalTrades,
   });
 }

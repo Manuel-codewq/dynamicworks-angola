@@ -1,7 +1,10 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { TrendingUp, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { TrendingUp, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, AlertCircle, CheckCircle, Gift } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile";
+import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -9,13 +12,22 @@ const PROVINCES = [
   "Lunda Sul","Malanje","Moxico","Namibe","Uíge","Zaire",
 ];
 
-export default function RegisterPage() {
-  const router = useRouter();
+function RegisterContent() {
+  const router  = useRouter();
+  const params  = useSearchParams();
+  const refCode = params.get("ref") ?? "";
+  const { status } = useSession();
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", province: "" });
+
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/trade");
+  }, [status, router]);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }));
@@ -23,6 +35,10 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!turnstileToken) {
+      setError("Complete a verificação de segurança.");
+      return;
+    }
     setError("");
     setLoading(true);
 
@@ -30,18 +46,22 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken, ...(refCode ? { ref: refCode } : {}) }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "Erro ao registar");
+        turnstileRef.current?.reset();
+        setTurnstileToken("");
       } else {
         setSuccess(true);
         setTimeout(() => router.push(data.redirect ?? "/login"), 1200);
       }
     } catch {
       setError("Erro de ligação. Tente novamente.");
+      turnstileRef.current?.reset();
+      setTurnstileToken("");
     }
     setLoading(false);
   }
@@ -78,7 +98,14 @@ export default function RegisterPage() {
 
         <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: 32 }}>
           <h1 style={{ color: "#ffffff", fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>Criar conta</h1>
-          <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 24px" }}>Junte-se a milhares de negociadores angolanos</p>
+          <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 16px" }}>Junte-se a milhares de negociadores angolanos</p>
+
+          {refCode && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+              <Gift size={15} color="#22c55e" />
+              <span style={{ color: "#22c55e", fontSize: 13 }}>Foste convidado com o código <strong>{refCode}</strong> — bónus activado!</span>
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -161,12 +188,23 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <button type="submit" disabled={loading}
+            <div style={{ marginBottom: 16 }}>
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                onSuccess={setTurnstileToken}
+                onExpire={() => setTurnstileToken("")}
+                onError={() => setTurnstileToken("")}
+                options={{ theme: "dark", language: "pt" }}
+              />
+            </div>
+
+            <button type="submit" disabled={loading || !turnstileToken}
               style={{
-                width: "100%", background: loading ? "#7a5118" : "#f5a623",
+                width: "100%", background: (loading || !turnstileToken) ? "#7a5118" : "#f5a623",
                 color: "#0a0f1e", border: "none", borderRadius: 8,
-                padding: "13px", fontSize: 15, fontWeight: 700,
-                cursor: loading ? "not-allowed" : "pointer",
+                padding: "10px 16px", fontSize: 14, fontWeight: 700,
+                cursor: (loading || !turnstileToken) ? "not-allowed" : "pointer",
               }}>
               {loading ? "A criar conta..." : "Criar conta gratuita"}
             </button>
@@ -188,4 +226,8 @@ export default function RegisterPage() {
       </div>
     </div>
   );
+}
+
+export default function RegisterPage() {
+  return <Suspense><RegisterContent /></Suspense>;
 }

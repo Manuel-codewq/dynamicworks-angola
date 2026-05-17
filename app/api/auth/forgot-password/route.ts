@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordOtpEmail } from "@/lib/email";
-import crypto from "crypto";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/getClientIp";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    // 3 pedidos por IP a cada 15 minutos
+    if (!await checkRateLimit("forgot_password", ip, 3, 15 * 60_000)) {
+      return NextResponse.json(
+        { error: "Demasiados pedidos. Aguarda 15 minutos antes de tentar novamente.", rateLimited: true },
+        { status: 429 }
+      );
+    }
+
     const { email } = await req.json();
 
     if (!email) {

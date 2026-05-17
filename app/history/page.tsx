@@ -1,282 +1,262 @@
 "use client";
-import { formatKz } from "@/lib/format";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  TrendingUp, ChevronLeft, CheckCircle, XCircle,
-  Clock, BarChart2, Trophy, ChevronLeft as Prev, ChevronRight as Next,
-  Filter, RefreshCw,
+  ChevronLeft, TrendingUp, TrendingDown, Filter,
+  RefreshCw, Download, Search, Trophy, Target,
+  Calendar, BarChart2,
 } from "lucide-react";
+import { formatKz } from "@/lib/format";
 
+type Trade = {
+  id: string; asset: string; direction: string; amount: number;
+  entryPrice: number; closePrice: number | null; payout: number;
+  result: string | null; profit: number | null; expirySecs: number;
+  status: string; isDemo: boolean; createdAt: string; closedAt: string | null;
+};
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleString("pt-AO", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+type ResultFilter = "all" | "win" | "loss";
+type ModeFilter   = "all" | "real" | "demo";
+
+function formatDate(s: string) {
+  return new Date(s).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+function formatExpiry(secs: number) {
+  if (secs < 60)   return `${secs}s`;
+  if (secs < 3600) return `${Math.floor(secs/60)}m`;
+  return `${Math.floor(secs/3600)}h`;
+}
+function exportCsv(trades: Trade[]) {
+  const rows = [
+    ["Data", "Par", "Direcção", "Montante (Kz)", "Resultado", "Lucro/Perda (Kz)", "Expiração", "Conta"],
+    ...trades.map(t => [
+      formatDate(t.createdAt),
+      t.asset,
+      t.direction === "call" ? "ALTA" : "BAIXA",
+      Math.floor(t.amount),
+      t.result === "win" ? "Ganho" : t.result === "loss" ? "Perda" : "—",
+      t.profit !== null ? Math.floor(t.profit) : "—",
+      formatExpiry(t.expirySecs),
+      t.isDemo ? "Demo" : "Real",
+    ]),
+  ];
+  const csv  = rows.map(r => r.join(";")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a"); a.href = url; a.download = `historico_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
 }
 
-type FilterResult = "all" | "win" | "loss" | "draw" | "active";
-type FilterMode   = "all" | "demo" | "real";
-
 export default function HistoryPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { status } = useSession();
+  const router     = useRouter();
 
-  const [trades,      setTrades]      = useState<any[]>([]);
-  const [total,       setTotal]       = useState(0);
-  const [page,        setPage]        = useState(1);
-  const [loading,     setLoading]     = useState(true);
-  const [filterResult, setFilterResult] = useState<FilterResult>("all");
-  const [filterMode,   setFilterMode]   = useState<FilterMode>("all");
+  const [trades,       setTrades]       = useState<Trade[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
+  const [modeFilter,   setModeFilter]   = useState<ModeFilter>("real");
+  const [assetSearch,  setAssetSearch]  = useState("");
+  const [dateFrom,     setDateFrom]     = useState("");
+  const [dateTo,       setDateTo]       = useState("");
+  const [page,         setPage]         = useState(1);
+  const PER_PAGE = 20;
 
-  const LIMIT = 20;
-  const totalPages = Math.ceil(total / LIMIT);
+  useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
-  const fetchTrades = useCallback(async (p: number) => {
+  const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const res  = await fetch(`/api/trade?page=${p}&limit=${LIMIT}`);
-      const data = await res.json();
-      setTrades(data.trades ?? []);
-      setTotal(data.total ?? 0);
-    } finally {
-      setLoading(false);
+    const params = new URLSearchParams({ limit: "500", page: "1" });
+    const res = await fetch("/api/trade?" + params);
+    if (res.ok) {
+      const d = await res.json();
+      const all: Trade[] = Array.isArray(d) ? d : (d.trades ?? []);
+      setTrades(all.filter(t => t.status === "closed"));
     }
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-  }, [status, router]);
+  useEffect(() => { if (status === "authenticated") load(); }, [status, load]);
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    fetchTrades(page);
-  }, [status, page, fetchTrades]);
-
-  // Filtros aplicados localmente (já temos a página inteira em memória)
   const filtered = trades.filter(t => {
-    if (filterResult !== "all" && t.result !== filterResult && !(filterResult === "active" && t.status === "active")) return false;
-    if (filterMode === "demo" && !t.isDemo) return false;
-    if (filterMode === "real" &&  t.isDemo) return false;
+    if (modeFilter === "real" && t.isDemo)   return false;
+    if (modeFilter === "demo" && !t.isDemo)  return false;
+    if (resultFilter !== "all" && t.result !== resultFilter) return false;
+    if (assetSearch.trim() && !t.asset.toLowerCase().includes(assetSearch.toLowerCase())) return false;
+    if (dateFrom && new Date(t.createdAt) < new Date(dateFrom)) return false;
+    if (dateTo   && new Date(t.createdAt) > new Date(dateTo + "T23:59:59")) return false;
     return true;
   });
 
-  // Estatísticas da página actual (após filtro)
-  const closed  = filtered.filter(t => t.status === "closed");
-  const wins    = closed.filter(t => t.result === "win");
-  const losses  = closed.filter(t => t.result === "loss");
-  const winRate = closed.length > 0 ? Math.round((wins.length / closed.length) * 100) : 0;
-  const netProfit = closed.reduce((s: number, t: any) => s + (t.profit ?? 0), 0);
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
 
-  const btnStyle = (active: boolean, color = "#f5a623"): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12,
-    fontWeight: 600, background: active ? color : "#1e2d50",
-    color: active ? "#0a0f1e" : "#94a3b8", transition: "all 0.15s",
+  const wins   = filtered.filter(t => t.result === "win").length;
+  const losses = filtered.filter(t => t.result === "loss").length;
+  const total  = filtered.length;
+  const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+  const totalPnl = filtered.reduce((s, t) => s + (t.profit ?? 0), 0);
+  const totalVol  = filtered.reduce((s, t) => s + t.amount, 0);
+
+  const inp: React.CSSProperties = {
+    background: "#111827", border: "1px solid #1e2d50", borderRadius: 7,
+    padding: "7px 10px", color: "#fff", fontSize: 13, outline: "none",
+  };
+  const filterBtn = (active: boolean, color = "#f5a623"): React.CSSProperties => ({
+    padding: "6px 14px", borderRadius: 20, border: `1px solid ${active ? color : "#1e2d50"}`,
+    background: active ? `${color}18` : "transparent",
+    color: active ? color : "#64748b", fontSize: 12, fontWeight: 700, cursor: "pointer",
   });
 
-  if (status === "loading") {
-    return (
-      <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#f5a623" }}>A carregar...</span>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 40 }}>
+
       {/* Header */}
-      <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex", alignItems: "center" }}>
+      <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
+        <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <BarChart2 size={18} color="#0a0f1e" strokeWidth={2.5} />
-        </div>
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Histórico de Operações</span>
-        <div style={{ flex: 1 }} />
-        <button
-          onClick={() => fetchTrades(page)}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}
-        >
-          <RefreshCw size={14} /> Atualizar
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>Histórico de Operações</span>
+        <button onClick={load} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}><RefreshCw size={16} /></button>
+        <button onClick={() => exportCsv(filtered)}
+          style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "7px 12px", color: "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+          <Download size={14} /> CSV
         </button>
       </div>
 
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "24px 16px" }}>
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "20px 16px" }}>
+
+        {/* Filtros — modo */}
+        <div style={{ display: "flex", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 16, width: "fit-content" }}>
+          {(["real","all","demo"] as ModeFilter[]).map(m => (
+            <button key={m} onClick={() => { setModeFilter(m); setPage(1); }}
+              style={{ padding: "7px 16px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                background: modeFilter === m ? (m === "real" ? "#22c55e" : m === "demo" ? "#f5a623" : "#94a3b8") : "transparent",
+                color: modeFilter === m ? "#0a0f1e" : "#94a3b8",
+              }}>
+              {m === "real" ? "Real" : m === "demo" ? "Demo" : "Ambas"}
+            </button>
+          ))}
+        </div>
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: "Total operações", value: total.toString(),         color: "#94a3b8", icon: <BarChart2 size={16} color="#94a3b8" /> },
-            { label: "Vitórias",        value: wins.length.toString(),   color: "#22c55e", icon: <CheckCircle size={16} color="#22c55e" /> },
-            { label: "Derrotas",        value: losses.length.toString(), color: "#ef4444", icon: <XCircle size={16} color="#ef4444" /> },
-            { label: "Taxa de vitória", value: `${winRate}%`,            color: "#f5a623", icon: <Trophy size={16} color="#f5a623" /> },
-            { label: "Lucro líquido",   value: formatKz(Math.round(netProfit)), color: netProfit >= 0 ? "#22c55e" : "#ef4444", icon: netProfit >= 0 ? <TrendingUp size={16} color="#22c55e" /> : <TrendingUp size={16} color="#ef4444" /> },
+            { label: "Taxa de vitória", value: `${winRate}%`,             color: "#f5a623", Icon: Trophy    },
+            { label: "P&L total",       value: formatKz(Math.floor(totalPnl)), color: totalPnl >= 0 ? "#22c55e" : "#ef4444", Icon: BarChart2 },
+            { label: `${wins}V / ${losses}D`, value: `${total} trades`,  color: "#94a3b8", Icon: Target    },
+            { label: "Volume",          value: formatKz(Math.floor(totalVol)), color: "#64748b", Icon: BarChart2 },
           ].map((s, i) => (
-            <div key={i} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                {s.icon}
-                <span style={{ color: "#94a3b8", fontSize: 11 }}>{s.label}</span>
+            <div key={i} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <s.Icon size={18} color={s.color} />
+              <div>
+                <div style={{ color: s.color, fontWeight: 800, fontSize: 16 }}>{s.value}</div>
+                <div style={{ color: "#64748b", fontSize: 11 }}>{s.label}</div>
               </div>
-              <div style={{ color: s.color, fontSize: 18, fontWeight: 800 }}>{s.value}</div>
             </div>
           ))}
         </div>
 
-        {/* Filtros */}
-        <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px", marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          <Filter size={14} color="#94a3b8" />
-          <span style={{ color: "#94a3b8", fontSize: 12, marginRight: 4 }}>Resultado:</span>
-          {(["all", "win", "loss", "draw", "active"] as FilterResult[]).map(f => (
-            <button key={f} style={btnStyle(filterResult === f)} onClick={() => setFilterResult(f)}>
-              {f === "all" ? "Todos" : f === "win" ? "Win" : f === "loss" ? "Loss" : f === "draw" ? "Empate" : "Ativo"}
-            </button>
-          ))}
-          <div style={{ width: 1, height: 20, background: "#1e2d50", margin: "0 4px" }} />
-          <span style={{ color: "#94a3b8", fontSize: 12, marginRight: 4 }}>Modo:</span>
-          {(["all", "real", "demo"] as FilterMode[]).map(f => (
-            <button key={f} style={btnStyle(filterMode === f, f === "demo" ? "#f5a623" : "#22c55e")} onClick={() => setFilterMode(f)}>
-              {f === "all" ? "Todos" : f === "real" ? "Real" : "Demo"}
-            </button>
-          ))}
+        {/* Filtros avançados */}
+        <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+            <Filter size={14} color="#64748b" />
+            {(["all","win","loss"] as ResultFilter[]).map(r => (
+              <button key={r} onClick={() => { setResultFilter(r); setPage(1); }} style={filterBtn(resultFilter === r, r === "win" ? "#22c55e" : r === "loss" ? "#ef4444" : "#94a3b8")}>
+                {r === "all" ? "Todos" : r === "win" ? "Ganhos" : "Perdas"}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ position: "relative" }}>
+              <Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+              <input placeholder="Par (ex: EUR/USD)" value={assetSearch} onChange={e => { setAssetSearch(e.target.value); setPage(1); }}
+                style={{ ...inp, paddingLeft: 28, width: 160 }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Calendar size={13} color="#64748b" />
+              <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+                style={{ ...inp, colorScheme: "dark" }} />
+              <span style={{ color: "#64748b", fontSize: 12 }}>até</span>
+              <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }}
+                style={{ ...inp, colorScheme: "dark" }} />
+            </div>
+            {(resultFilter !== "all" || assetSearch || dateFrom || dateTo) && (
+              <button onClick={() => { setResultFilter("all"); setAssetSearch(""); setDateFrom(""); setDateTo(""); setPage(1); }}
+                style={{ background: "transparent", border: "1px solid #1e2d50", borderRadius: 7, padding: "6px 12px", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
+                Limpar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tabela */}
-        <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, overflow: "hidden" }}>
-          {loading ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>A carregar operações...</div>
-          ) : filtered.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center" }}>
-              <BarChart2 size={36} color="#1e2d50" style={{ margin: "0 auto 12px" }} />
-              <p style={{ color: "#94a3b8" }}>Nenhuma operação encontrada.</p>
-              <a href="/trade" style={{ color: "#f5a623", fontSize: 13 }}>Começar a negociar →</a>
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#0d1526" }}>
-                    {["Ativo", "Direção", "Modo", "Valor investido", "Preço entrada", "Preço saída", "Resultado", "Lucro/Perda", "Expiração", "Data"].map(h => (
-                      <th key={h} style={{ color: "#64748b", fontSize: 11, padding: "10px 12px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((t, i) => {
-                    const isWin  = t.result === "win";
-                    const isDraw = t.result === "draw";
-                    const isActive = t.status === "active";
-                    return (
-                      <tr key={t.id} style={{ borderTop: "1px solid rgba(30,45,80,0.6)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
-                        {/* Ativo */}
-                        <td style={{ padding: "11px 12px", color: "#fff", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>{t.asset}</td>
-                        {/* Direção */}
-                        <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
-                          <span style={{
-                            color: t.direction === "call" ? "#22c55e" : "#ef4444",
-                            background: t.direction === "call" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-                            borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 700,
-                          }}>
-                            {t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}
-                          </span>
-                        </td>
-                        {/* Modo */}
-                        <td style={{ padding: "11px 12px" }}>
-                          <span style={{
-                            color: t.isDemo ? "#f5a623" : "#22c55e",
-                            background: t.isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)",
-                            borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600,
-                          }}>
-                            {t.isDemo ? "Demo" : "Real"}
-                          </span>
-                        </td>
-                        {/* Valor */}
-                        <td style={{ padding: "11px 12px", color: "#cbd5e1", fontSize: 13 }}>{formatKz(t.amount)}</td>
-                        {/* Preço entrada */}
-                        <td style={{ padding: "11px 12px", color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>{t.entryPrice?.toFixed(5) ?? "—"}</td>
-                        {/* Preço saída */}
-                        <td style={{ padding: "11px 12px", color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>{t.closePrice?.toFixed(5) ?? "—"}</td>
-                        {/* Resultado */}
-                        <td style={{ padding: "11px 12px" }}>
-                          {isActive
-                            ? <span style={{ color: "#f5a623", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><Clock size={12} /> Ativo</span>
-                            : isWin
-                              ? <span style={{ color: "#22c55e", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><CheckCircle size={12} /> Win</span>
-                              : isDraw
-                                ? <span style={{ color: "#94a3b8", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>— Empate</span>
-                                : <span style={{ color: "#ef4444", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><XCircle size={12} /> Loss</span>
-                          }
-                        </td>
-                        {/* Lucro */}
-                        <td style={{ padding: "11px 12px", fontWeight: 700, fontSize: 13, color: isActive ? "#94a3b8" : isWin ? "#22c55e" : isDraw ? "#94a3b8" : "#ef4444" }}>
-                          {isActive ? "—"
-                            : t.profit !== null && t.profit !== undefined
-                              ? (t.profit > 0 ? "+" : "") + formatKz(Math.round(t.profit))
-                              : "—"}
-                        </td>
-                        {/* Expiração */}
-                        <td style={{ padding: "11px 12px", color: "#64748b", fontSize: 12 }}>
-                          {t.expirySecs >= 3600
-                            ? `${t.expirySecs / 3600}h`
-                            : `${t.expirySecs / 60} min`}
-                        </td>
-                        {/* Data */}
-                        <td style={{ padding: "11px 12px", color: "#64748b", fontSize: 11, whiteSpace: "nowrap" }}>
-                          {formatDate(t.createdAt)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Paginação */}
-        {totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 20 }}>
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 14px", color: page === 1 ? "#1e2d50" : "#94a3b8", cursor: page === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center" }}
-            >
-              <Prev size={16} />
-            </button>
-
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-              const p = start + i;
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: "center", color: "#475569", padding: "48px 0" }}>
+            <BarChart2 size={40} color="#1e2d50" style={{ marginBottom: 12 }} />
+            <div style={{ fontSize: 14 }}>Nenhuma operação encontrada.</div>
+          </div>
+        ) : (
+          <>
+            {paginated.map(t => {
+              const isWin = t.result === "win";
+              const pl    = t.profit ?? 0;
               return (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  style={{
-                    background: p === page ? "#f5a623" : "#111827",
-                    border: "1px solid #1e2d50", borderRadius: 8,
-                    padding: "8px 14px", color: p === page ? "#0a0f1e" : "#94a3b8",
-                    cursor: "pointer", fontWeight: p === page ? 700 : 400, fontSize: 13,
-                  }}
-                >
-                  {p}
-                </button>
+                <div key={t.id} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+                  {/* Ícone */}
+                  <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: isWin ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)" }}>
+                    {isWin ? <TrendingUp size={18} color="#22c55e" /> : <TrendingDown size={18} color="#ef4444" />}
+                  </div>
+
+                  {/* Info principal */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t.asset}</span>
+                      <span style={{ background: t.direction === "call" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: t.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
+                        {t.direction === "call" ? "ALTA" : "BAIXA"}
+                      </span>
+                      <span style={{ background: t.isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", color: t.isDemo ? "#f5a623" : "#22c55e", borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
+                        {t.isDemo ? "DEMO" : "REAL"}
+                      </span>
+                      <span style={{ color: "#475569", fontSize: 11 }}>{formatExpiry(t.expirySecs)}</span>
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 11 }}>{formatDate(t.createdAt)}</div>
+                  </div>
+
+                  {/* Valores */}
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ color: isWin ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 15 }}>
+                      {isWin ? "+" : "−"}{formatKz(Math.floor(Math.abs(pl)))}
+                    </div>
+                    <div style={{ color: "#475569", fontSize: 11 }}>{formatKz(Math.floor(t.amount))}</div>
+                  </div>
+                </div>
               );
             })}
 
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 14px", color: page === totalPages ? "#1e2d50" : "#94a3b8", cursor: page === totalPages ? "not-allowed" : "pointer", display: "flex", alignItems: "center" }}
-            >
-              <Next size={16} />
-            </button>
-
-            <span style={{ color: "#64748b", fontSize: 12, marginLeft: 8 }}>
-              Página {page} de {totalPages} · {total} operações
-            </span>
-          </div>
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 20 }}>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                  style={{ padding: "8px 16px", background: page === 1 ? "#1e2d50" : "#111827", border: "1px solid #1e2d50", borderRadius: 8, color: page === 1 ? "#475569" : "#fff", cursor: page === 1 ? "not-allowed" : "pointer", fontSize: 13 }}>
+                  ←
+                </button>
+                <span style={{ color: "#94a3b8", fontSize: 13 }}>Pág. {page} / {totalPages} · {filtered.length} trades</span>
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                  style={{ padding: "8px 16px", background: page === totalPages ? "#1e2d50" : "#111827", border: "1px solid #1e2d50", borderRadius: 8, color: page === totalPages ? "#475569" : "#fff", cursor: page === totalPages ? "not-allowed" : "pointer", fontSize: 13 }}>
+                  →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

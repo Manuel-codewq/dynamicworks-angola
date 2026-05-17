@@ -6,6 +6,14 @@ import {
   ChevronLeft, MessageCircle, Plus, Send, X,
   Clock, CheckCircle, AlertCircle, Inbox, Loader2,
 } from "lucide-react";
+import PageGuide from "@/app/components/PageGuide";
+
+const SUPPORT_GUIDE = [
+  { icon: <MessageCircle size={26} color="#f5a623" />, iconColor: "#f5a623", title: "Centro de Suporte",     description: "Aqui podes abrir tickets de suporte para qualquer problema: depósitos, levantamentos, KYC, problemas técnicos ou questões de conta.", tip: "A equipa responde em até 24 horas nos dias úteis." },
+  { icon: <Plus          size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Abrir um Ticket",       description: "Clica em 'Novo Ticket', escolhe a categoria do problema, escreve o assunto e descreve detalhadamente o que aconteceu.", tip: "Quanto mais detalhes deres, mais rápido conseguimos ajudar-te." },
+  { icon: <MessageCircle size={26} color="#38bdf8" />, iconColor: "#38bdf8", title: "Acompanhar o Ticket",   description: "Após criar o ticket, aparece na lista. Clica nele para ver as respostas do suporte e enviar mais mensagens.", tip: "Activa as notificações push para saber quando o suporte responder." },
+  { icon: <CheckCircle   size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Estados dos Tickets",   description: "Aberto = aguarda resposta do suporte. Em Progresso = a ser tratado. Fechado = resolvido. Podes reabrir um ticket fechado se necessário.", tip: "Se o problema for urgente usa também o WhatsApp disponível no menu." },
+];
 
 const CATEGORIES: Record<string, { label: string; color: string }> = {
   deposito:    { label: "Depósito",       color: "#22c55e" },
@@ -134,6 +142,7 @@ export default function SupportPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui, sans-serif", display: "flex", flexDirection: "column" }}>
+      <PageGuide storageKey="dw_guide_support" steps={SUPPORT_GUIDE} />
 
       {/* Header */}
       <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>

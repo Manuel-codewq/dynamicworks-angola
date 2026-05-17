@@ -3,7 +3,7 @@ import { formatKz } from "@/lib/format";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { TrendingUp, ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight, BarChart2 } from "lucide-react";
+import { TrendingUp, ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight, BarChart2, Crown } from "lucide-react";
 
 function formatDate(d: string) { return new Date(d).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" }); }
 function daysLeft(end: string) { return Math.max(0, Math.ceil((new Date(end).getTime() - Date.now()) / 86400000)); }
@@ -22,7 +22,9 @@ function AvatarCircle({ entry, size = 34, medal, crown }: { entry: RankEntry; si
           </div>
       }
       {crown && (
-        <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", fontSize: 16 }}>👑</div>
+        <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)" }}>
+          <Crown size={16} color="#f5a623" fill="#f5a623" />
+        </div>
       )}
     </div>
   );

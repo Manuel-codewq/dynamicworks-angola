@@ -134,49 +134,59 @@ export async function resolveExpiredTrade(
     } catch { /* silent — never fail trade resolution */ }
   }
 
-  // Email throttle: só envia 1 email de resultado por utilizador a cada 4 horas
-  if (resolved && !trade.user.isDemo) {
-    try {
-      const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-      const recentEmail = await prisma.notification.findFirst({
-        where: {
-          userId: trade.userId,
-          type:   "trade_email_sent",
-          createdAt: { gte: fourHoursAgo },
-        },
-        select: { id: true },
-      });
+  if (resolved) {
+    const profitKz = Math.floor(Math.abs(profit)).toLocaleString("pt-PT");
+    const amountKz = Math.floor(trade.amount).toLocaleString("pt-PT");
+    const demoTag  = trade.user.isDemo ? " (Demo)" : "";
 
-      if (!recentEmail) {
-        await prisma.notification.create({
-          data: {
-            userId:  trade.userId,
-            type:    "trade_email_sent",
-            title:   "Email de resultado enviado",
-            message: `Resultado: ${result}`,
-            read:    true,
-          },
+    // ── 1. Notificação in-app — sempre, demo e real ───────────────────────────
+    prisma.notification.create({
+      data: {
+        userId:  trade.userId,
+        type:    result === "win" ? "trade_win" : "trade_loss",
+        title:   result === "win"
+          ? `Ganhou ${profitKz} Kz${demoTag}`
+          : `Operação encerrada — ${trade.asset}${demoTag}`,
+        message: result === "win"
+          ? `A tua operação de ${amountKz} Kz em ${trade.asset} foi resolvida a teu favor!`
+          : `Perdeste ${amountKz} Kz em ${trade.asset}. Analisa e tenta novamente.`,
+        read: false,
+      },
+    }).catch(() => {});
+
+    // ── 2. Push — sempre, demo e real ────────────────────────────────────────
+    sendPushToUser(trade.userId, {
+      title: result === "win"
+        ? `✅ Ganhou ${profitKz} Kz${demoTag}`
+        : `❌ Operação perdida — ${trade.asset}`,
+      body: result === "win"
+        ? `${trade.asset} · A operação foi resolvida a teu favor!`
+        : `Perdeste ${amountKz} Kz. Continua a tentar!`,
+      url:   "/trade",
+      tag:   "trade-result",
+    }).catch(() => {});
+
+    // ── 3. Email — só para trades reais, throttle 4h ──────────────────────────
+    if (!trade.user.isDemo) {
+      const userName = trade.user.name ?? "Trader";
+      try {
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+        const recentEmail  = await prisma.notification.findFirst({
+          where:  { userId: trade.userId, type: "trade_email_sent", createdAt: { gte: fourHoursAgo } },
+          select: { id: true },
         });
-        const userName = trade.user.name ?? "Trader";
-        if (result === "win") {
-          sendTradeWinEmail(trade.user.email, userName, trade.asset, trade.amount, profit, returnAmount).catch(() => {});
-          sendPushToUser(trade.userId, {
-            title: `✅ Ganhou ${Math.floor(profit).toLocaleString("pt-PT")} Kz`,
-            body:  `${trade.asset} • A operação foi resolvida a seu favor.`,
-            url:   "/trade",
-            tag:   "trade-result",
-          }).catch(() => {});
-        } else {
-          sendTradeLossEmail(trade.user.email, userName, trade.asset, trade.amount).catch(() => {});
-          sendPushToUser(trade.userId, {
-            title: `❌ Operação encerrada — ${trade.asset}`,
-            body:  `Perdeu ${Math.floor(trade.amount).toLocaleString("pt-PT")} Kz. Continue a tentar!`,
-            url:   "/trade",
-            tag:   "trade-result",
-          }).catch(() => {});
+        if (!recentEmail) {
+          await prisma.notification.create({
+            data: { userId: trade.userId, type: "trade_email_sent", title: "Email enviado", message: "", read: true },
+          });
+          if (result === "win") {
+            sendTradeWinEmail(trade.user.email, userName, trade.asset, trade.amount, profit, returnAmount).catch(() => {});
+          } else {
+            sendTradeLossEmail(trade.user.email, userName, trade.asset, trade.amount).catch(() => {});
+          }
         }
-      }
-    } catch { /* silent — nunca falhar a resolução de trade por causa do email */ }
+      } catch { /* silent */ }
+    }
   }
 
   return resolved ? result : "already_closed";

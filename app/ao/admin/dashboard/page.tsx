@@ -3,7 +3,7 @@ import { formatKz } from "@/lib/format";
 import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart2, TrendingDown, Trophy, RefreshCw,
-  UserCheck, Search, ExternalLink, Circle,
+  UserCheck, Search, ExternalLink, Circle, Gamepad2,
 } from "lucide-react";
 
 function formatDate(s: string) {
@@ -11,8 +11,11 @@ function formatDate(s: string) {
 }
 
 interface Stats {
-  totalUsers: number; totalBalance: number; todayTradesCount: number;
-  platformProfit: number; winRate: number; totalTrades: number;
+  totalUsers: number;
+  // Real
+  totalBalance: number; todayTradesCount: number; platformProfit: number; winRate: number; totalTrades: number;
+  // Demo
+  totalDemoBalance: number; demoTodayTradesCount: number; demoPlatformProfit: number; demoWinRate: number; demoTotalTrades: number;
 }
 
 interface OnlineUser {
@@ -35,6 +38,7 @@ export default function AdminDashboard() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [search,       setSearch]       = useState("");
+  const [mode,         setMode]         = useState<"real" | "demo">("real");
 
   async function loadStats() {
     setLoadingStats(true);
@@ -69,13 +73,15 @@ export default function AdminDashboard() {
       })
     : onlineUsers;
 
+  const isDemo = mode === "demo";
   const cards = stats ? [
-    { label: "Total utilizadores",        value: stats.totalUsers.toString(),              Icon: Users,        color: "#94a3b8" },
-    { label: "Saldo total (contas reais)",  value: formatKz(Math.floor(stats.totalBalance)), Icon: Wallet,       color: "#22c55e" },
-    { label: "Operações hoje (conta real)",value: stats.todayTradesCount.toString(),        Icon: BarChart2,    color: "#f5a623" },
-    { label: "Lucro hoje (perdas traders)",value: formatKz(Math.floor(stats.platformProfit)), Icon: TrendingDown, color: "#22c55e" },
-    { label: "Taxa de vitória (conta real)",value: `${stats.winRate}%`,                     Icon: Trophy,       color: "#f5a623" },
-    { label: "Total operações (conta real)",value: stats.totalTrades.toString(),            Icon: BarChart2,    color: "#94a3b8" },
+    { label: "Total utilizadores",          value: stats.totalUsers.toString(),                                                       Icon: Users,        color: "#94a3b8" },
+    { label: isDemo ? "Saldo total (Demo)" : "Saldo total (Real)",
+                                            value: formatKz(Math.floor(isDemo ? stats.totalDemoBalance : stats.totalBalance)),         Icon: Wallet,       color: isDemo ? "#f5a623" : "#22c55e" },
+    { label: "Operações hoje",              value: (isDemo ? stats.demoTodayTradesCount : stats.todayTradesCount).toString(),         Icon: BarChart2,    color: "#f5a623" },
+    { label: "Lucro hoje (perdas traders)", value: formatKz(Math.floor(isDemo ? stats.demoPlatformProfit : stats.platformProfit)),    Icon: TrendingDown, color: "#22c55e" },
+    { label: "Taxa de vitória",             value: `${isDemo ? stats.demoWinRate : stats.winRate}%`,                                  Icon: Trophy,       color: "#f5a623" },
+    { label: "Total operações fechadas",    value: (isDemo ? stats.demoTotalTrades : stats.totalTrades).toString(),                  Icon: BarChart2,    color: "#94a3b8" },
   ] : [];
 
   const th: React.CSSProperties = {
@@ -101,6 +107,22 @@ export default function AdminDashboard() {
           style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
           <RefreshCw size={14} /> Atualizar
         </button>
+      </div>
+
+      {/* Real / Demo tabs */}
+      <div style={{ display: "flex", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, width: "fit-content", marginBottom: 20 }}>
+        {(["real","demo"] as const).map(m => (
+          <button key={m} onClick={() => setMode(m)} style={{
+            padding: "8px 22px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            background: mode === m ? (m === "real" ? "#22c55e" : "#f5a623") : "transparent",
+            color:      mode === m ? "#0a0f1e" : "#94a3b8",
+          }}>
+            {m === "real"
+              ? <><Wallet size={13} style={{ verticalAlign: "middle", marginRight: 5 }} />Conta Real</>
+              : <><Gamepad2 size={13} style={{ verticalAlign: "middle", marginRight: 5 }} />Conta Demo</>
+            }
+          </button>
+        ))}
       </div>
 
       {/* Stats cards */}
@@ -175,7 +197,7 @@ export default function AdminDashboard() {
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
                 <thead>
                   <tr>
-                    {["Utilizador", "Contacto", "Província", "Saldo Real", "Operações", "KYC", "Visto há"].map(h => (
+                    {["Utilizador", "Contacto", "Província", isDemo ? "Saldo Demo" : "Saldo Real", "Operações", "KYC", "Visto há"].map(h => (
                       <th key={h} style={th}>{h}</th>
                     ))}
                   </tr>

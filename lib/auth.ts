@@ -1,11 +1,10 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
-import bcrypt from "bcryptjs";
 import { checkRateLimit } from "./rateLimit";
+import { verifyTurnstile } from "./verifyTurnstile";
+import { parseDevice } from "./parseDevice";
 
-// Hash placeholder usado para igualar o tempo de bcrypt.compare quando o utilizador
-// não existe — evita enumeração de emails por timing. Gerado com bcrypt.hash("",12).
 const DUMMY_HASH =
   "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a";
 
@@ -26,69 +25,155 @@ function extractIp(req: Request | undefined): string {
   );
 }
 
+async function logAccess(
+  action: string,
+  opts: { userId?: string; email?: string; ip?: string; userAgent?: string },
+) {
+  try {
+    await prisma.accessLog.create({
+      data: {
+        action,
+        userId:    opts.userId,
+        email:     opts.email,
+        ip:        opts.ip,
+        userAgent: opts.userAgent,
+      },
+    });
+  } catch { /* non-critical */ }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
   session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
+  pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email:          { label: "Email",     type: "email" },
+        password:       { label: "Password",  type: "password" },
+        turnstileToken: { label: "Turnstile", type: "text" },
+        otp:            { label: "OTP",       type: "text" },
       },
       async authorize(credentials, req) {
         try {
           if (!credentials?.email || !credentials?.password) return null;
 
-          const normalizedEmail = (credentials.email as string).toLowerCase().trim();
-          const ip = extractIp(req as unknown as Request);
+          const email     = (credentials.email as string).toLowerCase().trim();
+          const ip        = extractIp(req as unknown as Request);
+          const userAgent = (req as any)?.headers?.get?.("user-agent") ?? "";
+          const otp       = (credentials.otp as string | undefined)?.trim();
 
-          // Rate-limit por IP é a primeira linha de defesa contra brute-force
-          // distribuído por contas. Limite generoso (30/15min) para não afectar
-          // famílias atrás de NAT, mas suficiente para travar enumeração massiva.
+          // Turnstile — só verificar quando não é re-submit do 2FA (OTP já presente)
+          if (!otp) {
+            const turnstileOk = await verifyTurnstile(
+              (credentials.turnstileToken as string) ?? "",
+              ip,
+            );
+            if (!turnstileOk) return null;
+          }
+
           if (!await checkRateLimit("login_ip", ip, 30, 15 * 60_000)) {
+            await logAccess("login_fail_ratelimit", { email, ip, userAgent });
             return null;
           }
 
-          const user = await prisma.user.findUnique({
-            where: { email: normalizedEmail },
+          const user = await prisma.user.findUnique({ where: { email } });
+
+          if (!await checkRateLimit("login_email", email, 10, 15 * 60_000)) {
+            await logAccess("login_fail_ratelimit", { email, ip, userAgent });
+            return null;
+          }
+
+          const { default: bcrypt } = await import("bcryptjs");
+          const hashToCompare = user?.password ?? DUMMY_HASH;
+          const valid = await bcrypt.compare(credentials.password as string, hashToCompare);
+
+          if (!user || !valid || user.status === "blocked" || user.emailVerified === false) {
+            await logAccess("login_fail", { email, ip, userAgent });
+            return null;
+          }
+
+          // ── 2FA ─────────────────────────────────────────────────────────────
+          if (user.twoFactorEnabled) {
+            if (!otp) {
+              // Primeiro passo: pede o OTP
+              if (user.twoFactorMethod === "email") {
+                // Só envia novo código se não há um válido
+                const hasValid = user.twoFaCode && user.twoFaExpires && user.twoFaExpires > new Date();
+                if (!hasValid) {
+                  const arr  = new Uint32Array(1);
+                  crypto.getRandomValues(arr);
+                  const code = String(100000 + (arr[0] % 900000));
+                  const expires = new Date(Date.now() + 10 * 60_000);
+                  await prisma.user.update({
+                    where: { id: user.id },
+                    data:  { twoFaCode: code, twoFaExpires: expires },
+                  });
+                  const { send2FAEmail } = await import("./email");
+                  await send2FAEmail(user.email, user.name, code);
+                }
+                throw new Error("2FA_REQUIRED_EMAIL");
+              }
+              throw new Error("2FA_REQUIRED_TOTP");
+            }
+
+            // Segundo passo: verifica o OTP
+            let otpValid = false;
+            if (user.twoFactorMethod === "email") {
+              otpValid =
+                !!user.twoFaCode &&
+                !!user.twoFaExpires &&
+                user.twoFaExpires > new Date() &&
+                user.twoFaCode === otp;
+              if (otpValid) {
+                await prisma.user.update({
+                  where: { id: user.id },
+                  data:  { twoFaCode: null, twoFaExpires: null },
+                });
+              }
+            } else if (user.twoFactorMethod === "totp" && user.twoFactorSecret) {
+              const { verifyTotpToken } = await import("./totp");
+              otpValid = await verifyTotpToken(otp, user.twoFactorSecret);
+            }
+
+            if (!otpValid) {
+              await logAccess("2fa_fail", { userId: user.id, email, ip, userAgent });
+              throw new Error("2FA_INVALID");
+            }
+            await logAccess("2fa_ok", { userId: user.id, email, ip, userAgent });
+          }
+
+          // ── Criar sessão ─────────────────────────────────────────────────────
+          const session = await prisma.userSession.create({
+            data: {
+              userId:    user.id,
+              ip,
+              userAgent,
+              device:    parseDevice(userAgent),
+              isActive:  true,
+            },
           });
 
-          // Rate-limit por email — limita brute-force focado num único alvo.
-          // Aplicado APENAS quando a tentativa traz uma password (já passou no IP
-          // rate-limit) para evitar account-lockout DoS trivial: o atacante
-          // precisa de gastar tokens do IP-bucket dele para gastar tokens do
-          // bucket do email da vítima.
-          if (!await checkRateLimit("login_email", normalizedEmail, 10, 15 * 60_000)) {
-            return null;
-          }
+          await logAccess("login_ok", { userId: user.id, email, ip, userAgent });
 
-          // bcrypt.compare contra hash dummy quando o utilizador não existe
-          // para igualar o tempo de resposta e impedir enumeração de emails.
-          const hashToCompare = user?.password ?? DUMMY_HASH;
-          const valid = await bcrypt.compare(
-            credentials.password as string,
-            hashToCompare,
-          );
-
-          if (!user) return null;
-          if (user.status === "blocked") return null;
-          if (user.emailVerified === false) return null;
-          if (!valid) return null;
-
-          // Apenas dados imutáveis ou de longa vida no JWT
-          // balance/demoBalance/isDemo são lidos em tempo real via /api/balance
           return {
-            id:    user.id,
-            name:  user.name,
-            email: user.email,
-            role:  user.role,
+            id:        user.id,
+            name:      user.name,
+            email:     user.email,
+            role:      user.role,
+            sessionId: session.id,
           };
-        } catch (err) {
+        } catch (err: any) {
+          // Re-throw 2FA errors para o cliente os interceptar
+          if (
+            err.message === "2FA_REQUIRED_EMAIL" ||
+            err.message === "2FA_REQUIRED_TOTP" ||
+            err.message === "2FA_INVALID"
+          ) {
+            throw err;
+          }
           console.error("[auth] authorize error:", err);
           return null;
         }
@@ -100,23 +185,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id          = user.id;
         token.role        = (user as any).role;
+        token.sessionId   = (user as any).sessionId;
         token.refreshedAt = Date.now();
       }
 
-      // Refresh role + status from DB every 30s — janela curta para que bloqueios
-      // e mudanças de role apliquem rapidamente (broker: prioridade > custo de query)
       const age = Date.now() - ((token.refreshedAt as number) ?? 0);
       if (age > 30_000) {
         try {
-          const dbUser = await prisma.user.findUnique({
-            where:  { id: token.id as string },
-            select: { role: true, status: true },
-          });
-          // Blocked or deleted user → invalidate JWT immediately
+          const [dbUser, dbSession] = await Promise.all([
+            prisma.user.findUnique({
+              where:  { id: token.id as string },
+              select: { role: true, status: true },
+            }),
+            token.sessionId
+              ? prisma.userSession.findUnique({
+                  where:  { id: token.sessionId as string },
+                  select: { isActive: true },
+                })
+              : null,
+          ]);
+
           if (!dbUser || dbUser.status === "blocked") return null as any;
+          if (dbSession && !dbSession.isActive) return null as any;
+
+          // Actualiza lastActiveAt da sessão
+          if (token.sessionId) {
+            await prisma.userSession.update({
+              where: { id: token.sessionId as string },
+              data:  { lastActiveAt: new Date() },
+            }).catch(() => {});
+          }
+
           token.role        = dbUser.role;
           token.refreshedAt = Date.now();
-        } catch { /* DB unavailable — keep existing token */ }
+        } catch { /* DB unavailable */ }
       }
 
       return token;
@@ -125,6 +227,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id            = token.id as string;
         (session.user as any).role = token.role;
+        (session.user as any).sessionId = token.sessionId;
       }
       return session;
     },

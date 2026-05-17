@@ -6,10 +6,11 @@ import SupportWidget from "./components/SupportWidget";
 import NotificationToast from "./components/NotificationToast";
 import HeartbeatTracker from "./components/HeartbeatTracker";
 import PushManager from "./components/PushManager";
+import PwaInstallPrompt from "./components/PwaInstallPrompt";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
-const DESC     = "Negocia Forex, Cripto e Commodities em Kwanza (AOA) na plataforma de opções binárias líder em Angola. Depósitos rápidos via USDT. Conta demo grátis com 10.000 Kz virtual.";
+const DESC     = "Negocia Forex, Cripto e Metais em Kwanza (AOA) na plataforma de opções binárias líder em Angola. Depósitos via Multicaixa Express. Conta demo grátis com 10.000 Kz virtual.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -20,10 +21,11 @@ export const metadata: Metadata = {
   description: DESC,
   keywords: [
     "trading Angola", "opções binárias Angola", "forex Angola",
-    "plataforma trading Kwanza", "investir Angola", "USDT trading Angola",
+    "plataforma trading Kwanza", "investir Angola", "Multicaixa Express trading",
     "broker Angola", "Dynamics Works", "trading AOA", "bitcoin Angola",
     "ouro Angola", "EUR USD Angola", "ganhar dinheiro Angola", "opções binárias",
     "corretora Angola", "trading online Angola", "Luanda trading",
+    "pagamentos Kwanza", "depósito Multicaixa", "negociação Angola",
   ],
   authors:   [{ name: "Dynamics Works", url: BASE_URL }],
   creator:   "Dynamics Works",
@@ -205,6 +207,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SupportWidget />
           <NotificationToast />
           <PushManager />
+          <PwaInstallPrompt />
         </SessionProvider>
 
         {/* PWA Service Worker */}

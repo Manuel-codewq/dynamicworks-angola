@@ -1,7 +1,7 @@
 "use client";
 import { formatKz } from "@/lib/format";
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, Download, Filter } from "lucide-react";
+import { RefreshCw, Download, Filter, Wallet, Gamepad2 } from "lucide-react";
 import { exportCsv } from "@/lib/exportCsv";
 
 function formatDate(s: string) { return new Date(s).toLocaleString("pt-AO", { dateStyle: "short", timeStyle: "short" }); }
@@ -19,6 +19,7 @@ export default function AdminTradesPage() {
   const [asset,   setAsset]   = useState("");
   const [from,    setFrom]    = useState("");
   const [to,      setTo]      = useState("");
+  const [mode,    setMode]    = useState<"real" | "demo">("real");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -27,10 +28,11 @@ export default function AdminTradesPage() {
     if (asset)  params.set("asset",  asset);
     if (from)   params.set("from",   from);
     if (to)     params.set("to",     to);
+    params.set("isDemo", mode === "demo" ? "true" : "false");
     const res = await fetch("/api/admin/trades?" + params);
     if (res.ok) setTrades(await res.json());
     setLoading(false);
-  }, [result, asset, from, to]);
+  }, [result, asset, from, to, mode]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -61,7 +63,7 @@ export default function AdminTradesPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Operações</h1>
-          <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>{trades.length} operações encontradas</p>
+          <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>{trades.length} operações {mode === "real" ? "reais" : "demo"}</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
@@ -71,6 +73,22 @@ export default function AdminTradesPage() {
             <Download size={14} /> CSV
           </button>
         </div>
+      </div>
+
+      {/* Real / Demo tabs */}
+      <div style={{ display: "flex", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 20, width: "fit-content" }}>
+        {(["real","demo"] as const).map(m => (
+          <button key={m} onClick={() => setMode(m)}
+            style={{ padding: "7px 20px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              background: mode === m ? (m === "real" ? "#22c55e" : "#f5a623") : "transparent",
+              color:      mode === m ? "#0a0f1e" : "#94a3b8",
+            }}>
+            {m === "real"
+              ? <><Wallet size={13} style={{ verticalAlign: "middle", marginRight: 5 }} />Conta Real</>
+              : <><Gamepad2 size={13} style={{ verticalAlign: "middle", marginRight: 5 }} />Conta Demo</>
+            }
+          </button>
+        ))}
       </div>
 
       {/* Filters */}

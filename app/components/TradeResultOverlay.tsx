@@ -151,7 +151,10 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
             fontWeight: 900, fontSize: 11, letterSpacing: 4,
             textTransform: "uppercase", marginBottom: 12,
           }}>
-            {isWin ? "🏆 Win!" : "Loss"}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {isWin ? <Trophy size={14} color="#22c55e" /> : <TrendingDown size={14} color="#ef4444" />}
+              {isWin ? "Win!" : "Loss"}
+            </span>
           </div>
 
           {/* Amount */}

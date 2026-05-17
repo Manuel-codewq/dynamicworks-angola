@@ -6,6 +6,7 @@ import {
   sendWithdrawalApprovedEmail, sendWithdrawalRejectedEmail,
 } from "@/lib/email";
 import { createNotification } from "@/lib/notify";
+import { sendPushToUser } from "@/lib/webPush";
 
 export async function PATCH(
   req: NextRequest,
@@ -38,15 +39,45 @@ export async function PATCH(
     return NextResponse.json({ error: "Transação já processada" }, { status: 409 });
   }
 
+  // Comissão de referido: 2% do depósito creditado ao referidor
+  const REFERRAL_PCT = 0.02;
+
   let updated;
   try {
     updated = await prisma.$transaction(async (dbTx) => {
       if (status === "completed") {
         if (tx.type === "deposit") {
-          await dbTx.user.update({
+          // Creditar saldo ao utilizador
+          const depositor = await dbTx.user.update({
             where: { id: tx.userId },
             data:  { balance: { increment: tx.amount } },
+            select: { referredBy: true },
           });
+
+          // Comissão para o referidor (apenas no primeiro depósito aprovado)
+          if (depositor.referredBy) {
+            const prevDeposits = await dbTx.transaction.count({
+              where: { userId: tx.userId, type: "deposit", status: "completed", id: { not: id } },
+            });
+            if (prevDeposits === 0) {
+              const commission = Math.floor(tx.amount * REFERRAL_PCT);
+              if (commission > 0) {
+                await dbTx.user.update({
+                  where: { id: depositor.referredBy },
+                  data:  { balance: { increment: commission }, referralEarnings: { increment: commission } },
+                });
+                await dbTx.notification.create({
+                  data: {
+                    userId:  depositor.referredBy,
+                    type:    "referral_commission",
+                    title:   `Comissão de referido: +${commission.toLocaleString("pt-PT")} Kz`,
+                    message: `Recebeste uma comissão de 5% pelo depósito de um utilizador que convidaste.`,
+                    read:    false,
+                  },
+                });
+              }
+            }
+          }
         } else if (tx.type === "withdrawal") {
           // Debitar atomicamente: WHERE inclui condição de saldo — sem TOCTOU
           const deducted = await dbTx.user.updateMany({
@@ -94,20 +125,42 @@ export async function PATCH(
     await createNotification(tx.userId, `${tx.type}_${status}`, notifData.title, notifData.message);
   }
 
-  // Send notification email — failure must not affect the API response
+  // Email + Push — falha não afecta a resposta da API
   try {
     const { name, email } = updated.user;
+    const amt = Math.floor(tx.amount).toLocaleString("pt-PT");
+
     if (status === "completed" && tx.type === "deposit") {
-      await sendDepositApprovedEmail(email, name, tx.amount);
+      sendDepositApprovedEmail(email, name, tx.amount).catch(() => {});
+      sendPushToUser(tx.userId, {
+        title: `Depósito aprovado — +${amt} Kz`,
+        body:  "O teu depósito foi aprovado e adicionado ao saldo real.",
+        url:   "/wallet", tag: "deposit",
+      }).catch(() => {});
     } else if (status === "rejected" && tx.type === "deposit") {
-      await sendDepositRejectedEmail(email, name, tx.amount);
+      sendDepositRejectedEmail(email, name, tx.amount).catch(() => {});
+      sendPushToUser(tx.userId, {
+        title: "Depósito não aprovado",
+        body:  "O teu pedido de depósito foi rejeitado. Contacta o suporte.",
+        url:   "/wallet", tag: "deposit",
+      }).catch(() => {});
     } else if (status === "completed" && tx.type === "withdrawal") {
-      await sendWithdrawalApprovedEmail(email, name, tx.amount);
+      sendWithdrawalApprovedEmail(email, name, tx.amount).catch(() => {});
+      sendPushToUser(tx.userId, {
+        title: `Levantamento aprovado — ${amt} Kz`,
+        body:  "O teu levantamento foi aprovado e está a ser processado.",
+        url:   "/wallet", tag: "withdrawal",
+      }).catch(() => {});
     } else if (status === "rejected" && tx.type === "withdrawal") {
-      await sendWithdrawalRejectedEmail(email, name, tx.amount);
+      sendWithdrawalRejectedEmail(email, name, tx.amount).catch(() => {});
+      sendPushToUser(tx.userId, {
+        title: "Levantamento não aprovado",
+        body:  "O teu pedido de levantamento foi rejeitado. Contacta o suporte.",
+        url:   "/wallet", tag: "withdrawal",
+      }).catch(() => {});
     }
   } catch (err) {
-    console.error("[email] Falha ao enviar email de notificação:", err);
+    console.error("[notif] Falha ao enviar notificação:", err);
   }
 
   return NextResponse.json(updated);

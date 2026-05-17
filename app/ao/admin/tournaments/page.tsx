@@ -64,7 +64,7 @@ const DESCRIPTION_TEMPLATES = [
     rules: "• Apenas operações reais contam para a classificação\n• Mínimo de 10 operações para figurar no ranking\n• A classificação é baseada no lucro total em Kwanzas\n• Em caso de empate, vence quem tiver maior taxa de vitória\n• Resultados actualizados em tempo real",
   },
   {
-    label: "⚡ Torneio Relâmpago",
+    label: "Torneio Relâmpago",
     description: "48 horas. Apenas. Este torneio relâmpago é para os traders que gostam de adrenalina pura. Num curto espaço de tempo, terás de maximizar os teus ganhos e superar todos os outros participantes. Rápido, intenso e altamente competitivo — estás preparado?",
     rules: "• Duração limitada de 48 horas\n• Sem limite mínimo de operações\n• Foco em lucro acumulado no período\n• Prémios atribuídos imediatamente após o fim",
   },
@@ -523,7 +523,7 @@ export default function AdminTournamentsPage() {
                 <button onClick={() => setShowForm(false)} style={{ flex: 1, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 12, padding: 13, color: "#64748b", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Cancelar</button>
                 <button onClick={save} disabled={loading}
                   style={{ flex: 2, background: `linear-gradient(135deg,${form.bannerColor},${form.bannerColor}bb)`, border: "none", borderRadius: 12, padding: 13, color: "#fff", fontWeight: 800, fontSize: 15, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <Check size={16} /> {loading ? "A guardar..." : editId ? "Guardar alterações" : "🏆 Lançar torneio"}
+                  <Check size={16} /> {loading ? "A guardar..." : editId ? "Guardar alterações" : <><Trophy size={15} />Lançar torneio</>}
                 </button>
               </div>
             </div>

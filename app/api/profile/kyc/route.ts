@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendKycSubmittedEmail } from "@/lib/email";
 
 const MAX_ATTEMPTS = 4;
 const BLOCK_MS = 30 * 60 * 1000; // 30 minutos
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { kycAttempts: true, kycBlockedUntil: true, kycStatus: true },
+      select: { kycAttempts: true, kycBlockedUntil: true, kycStatus: true, email: true, name: true },
     });
 
     if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
@@ -89,6 +90,9 @@ export async function POST(req: NextRequest) {
       where: { id: userId },
       data: { kycStatus: "pending" },
     });
+
+    // Email de confirmação de submissão
+    sendKycSubmittedEmail(user.email, user.name).catch(() => {});
 
     return NextResponse.json({
       ok: true,

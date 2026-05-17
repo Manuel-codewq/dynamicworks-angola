@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { MessageCircle, X, HeadphonesIcon } from "lucide-react";
 
 // Substitui pelo número WhatsApp da corretora (formato internacional sem +)
-const WA_NUMBER = "244946621503";
+const WA_NUMBER = "244921825299";
 const WA_MSG    = encodeURIComponent("Olá! Preciso de ajuda com a minha conta na Dynamics Works.");
 
 // Páginas onde o widget NÃO aparece (login, registo, kyc, suporte)

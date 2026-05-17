@@ -1,7 +1,7 @@
 {
   "name": "Dynamics Works",
-  "short_name": "DynamicsW",
-  "description": "Plataforma de trading de opções binárias para Angola",
+  "short_name": "DW Trading",
+  "description": "Plataforma de trading de opções binárias em Angola",
   "start_url": "/trade",
   "display": "standalone",
   "background_color": "#0a0f1e",
@@ -12,5 +12,5 @@
     { "src": "/icon-512", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "categories": ["finance"],
-  "lang": "pt"
+  "lang": "pt-AO"
 }

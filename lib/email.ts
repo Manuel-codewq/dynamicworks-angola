@@ -279,6 +279,118 @@ export async function sendPasswordOtpEmail(to: string, name: string, code: strin
   }
 }
 
+export async function sendKycSubmittedEmail(to: string, name: string) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p("Recebemos os teus documentos de verificação de identidade (KYC). A nossa equipa está a analisar as informações submetidas.")}
+    <div style="background:#0a0f1e;border:1px solid #1e2d50;border-radius:12px;padding:20px 24px;margin:16px 0 20px;">
+      <p style="color:#f5a623;font-size:15px;font-weight:800;margin:0 0 8px;">Em análise</p>
+      <p style="color:#64748b;font-size:13px;margin:0;">O processo de verificação demora normalmente até <strong style="color:#fff;">24 horas</strong> nos dias úteis. Receberás um email quando o processo estiver concluído.</p>
+    </div>
+    ${p("Enquanto aguardas, podes continuar a negociar em modo Demo com os teus 10.000 Kz virtuais.")}
+    ${divider()}
+    ${btn("Ir para a plataforma →", "https://dynamicworks.ao/trade")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: "KYC submetido — Dynamics Works",
+      html:    baseTemplate("Os teus documentos estão em análise", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar KYC submitted email:", err);
+  }
+}
+
+export async function sendKycApprovedEmail(to: string, name: string) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p("A tua verificação de identidade foi <strong style=\"color:#22c55e;\">aprovada</strong> com sucesso!")}
+    <div style="background:#0a0f1e;border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:20px 24px;margin:16px 0 20px;">
+      <p style="color:#22c55e;font-size:15px;font-weight:800;margin:0 0 8px;">Identidade verificada</p>
+      <p style="color:#64748b;font-size:13px;margin:0;">A tua conta está agora totalmente desbloqueada. Podes efectuar depósitos, levantamentos e negociar sem restrições.</p>
+    </div>
+    ${p("Bem-vindo(a) à Dynamics Works! Começa a negociar com a tua conta real.")}
+    ${divider()}
+    ${btn("Começar a negociar →", "https://dynamicworks.ao/trade")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: "KYC aprovado — Conta verificada",
+      html:    baseTemplate("Identidade verificada com sucesso!", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar KYC approved email:", err);
+  }
+}
+
+export async function sendKycRejectedEmail(to: string, name: string, attemptsLeft: number) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p("Infelizmente a tua verificação de identidade <strong style=\"color:#ef4444;\">não foi aprovada</strong>.")}
+    <div style="background:#0a0f1e;border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:20px 24px;margin:16px 0 20px;">
+      <p style="color:#ef4444;font-size:15px;font-weight:800;margin:0 0 8px;">Documentos rejeitados</p>
+      <p style="color:#64748b;font-size:13px;margin:0 0 12px;">Possíveis motivos: imagens desfocadas, documentos ilegíveis, rosto não visível ou BI expirado.</p>
+      ${attemptsLeft > 0 ? `<p style="color:#f5a623;font-size:13px;font-weight:700;margin:0;">Tens ainda <strong>${attemptsLeft} tentativa${attemptsLeft === 1 ? "" : "s"}</strong> disponível${attemptsLeft === 1 ? "" : "eis"} para re-submeter.</p>` : `<p style="color:#ef4444;font-size:13px;font-weight:700;margin:0;">Esgotaste as tuas tentativas. Contacta o suporte para ajuda.</p>`}
+    </div>
+    ${p("Certifica-te de que as fotos estão nítidas, bem iluminadas e que o BI está dentro da validade.")}
+    ${divider()}
+    ${attemptsLeft > 0 ? btn("Submeter novamente →", "https://dynamicworks.ao/kyc") : btn("Contactar suporte →", "https://dynamicworks.ao/support")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: "KYC rejeitado — Dynamics Works",
+      html:    baseTemplate("Verificação não aprovada", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar KYC rejected email:", err);
+  }
+}
+
+export async function send2FAEmail(to: string, name: string, code: string) {
+  const client = getClient();
+  if (!client) return;
+
+  const body = `
+    ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
+    ${p("Alguém está a tentar entrar na tua conta. Usa o código abaixo para confirmar o acesso:")}
+    <div style="background:#0a0f1e;border:2px solid #f5a623;border-radius:14px;padding:28px;margin:20px 0;text-align:center;">
+      <p style="color:#64748b;font-size:12px;font-weight:600;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Código de verificação 2FA</p>
+      <p style="color:#f5a623;font-size:42px;font-weight:900;margin:0;letter-spacing:12px;font-variant-numeric:tabular-nums;">${code}</p>
+    </div>
+    ${p("Este código é válido durante <strong style=\"color:#fff;\">10 minutos</strong>. Não o partilhes com ninguém.")}
+    ${p("Se não foste tu, altera a tua senha imediatamente.", "#ef4444")}
+  `;
+
+  try {
+    await client.emails.send({
+      from:    FROM,
+      to,
+      subject: "Código de verificação 2FA — Dynamics Works",
+      html:    baseTemplate("Verificação em dois passos", body),
+    });
+  } catch (err) {
+    console.error("[email] Erro ao enviar 2FA email:", err);
+  }
+}
+
 export async function sendWithdrawalRejectedEmail(to: string, name: string, amount: number) {
   const client = getClient();
   if (!client) return;

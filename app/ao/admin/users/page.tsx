@@ -81,9 +81,9 @@ export default function AdminUsersPage() {
     setResetResult({ name: u.name, email: u.email, tempPassword: d.tempPassword });
   }
 
-  async function saveBalance() {
+  async function saveBalance(type: "real" | "demo" = "real") {
     if (!editBal) return;
-    await action(editBal.id, `/api/admin/users/${editBal.id}/balance`, { balance: editBal.value });
+    await action(editBal.id, `/api/admin/users/${editBal.id}/balance`, { balance: editBal.value, type });
   }
 
   const filtered = useMemo(() => {
@@ -177,7 +177,7 @@ export default function AdminUsersPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
               <thead>
                 <tr>
-                  {["Utilizador", "Contacto", "Saldo Real", "Trades", "KYC", "Estado", "Registo", "Ações"].map(h => (
+                  {["Utilizador", "Contacto", "Saldo Real", "Saldo Demo", "Trades", "KYC", "Estado", "Registo", "Ações"].map(h => (
                     <th key={h} style={th}>{h}</th>
                   ))}
                 </tr>
@@ -209,26 +209,46 @@ export default function AdminUsersPage() {
                         {u.phone && <div style={{ fontSize: 11, marginTop: 2 }}>{u.phone}</div>}
                       </td>
 
-                      {/* Saldo */}
+                      {/* Saldo Real */}
                       <td style={td}>
                         {isEditing ? (
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <input
-                              type="number"
-                              value={editBal.value}
+                            <input type="number" value={editBal.value}
                               onChange={e => setEditBal({ id: u.id, value: e.target.value })}
-                              onKeyDown={e => { if (e.key === "Enter") saveBalance(); if (e.key === "Escape") setEditBal(null); }}
+                              onKeyDown={e => { if (e.key === "Enter") saveBalance("real"); if (e.key === "Escape") setEditBal(null); }}
                               autoFocus
-                              style={{ width: 110, background: "#0a0f1e", border: "1px solid #f5a623", borderRadius: 6, padding: "5px 8px", color: "#fff", fontSize: 12, outline: "none" }}
+                              style={{ width: 110, background: "#0a0f1e", border: "1px solid #22c55e", borderRadius: 6, padding: "5px 8px", color: "#fff", fontSize: 12, outline: "none" }}
                             />
-                            <button onClick={saveBalance} disabled={busy} style={{ background: "#f5a623", color: "#000", border: "none", borderRadius: 5, padding: "5px 8px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>✓</button>
+                            <button onClick={() => saveBalance("real")} disabled={busy} style={{ background: "#22c55e", color: "#000", border: "none", borderRadius: 5, padding: "5px 8px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>✓</button>
                             <button onClick={() => setEditBal(null)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>✕</button>
                           </div>
                         ) : (
                           <button onClick={() => setEditBal({ id: u.id, value: String(Math.floor(u.balance)) })}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 600, padding: 0, textAlign: "left" }}
-                            title="Clique para editar">
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#22c55e", fontSize: 13, fontWeight: 700, padding: 0, textAlign: "left" }}
+                            title="Clique para editar saldo real">
                             {formatKz(Math.floor(u.balance))}
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Saldo Demo */}
+                      <td style={td}>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input type="number" defaultValue={Math.floor((u as any).demoBalance ?? 0)}
+                              id={`demo-${u.id}`}
+                              style={{ width: 110, background: "#0a0f1e", border: "1px solid #f5a623", borderRadius: 6, padding: "5px 8px", color: "#fff", fontSize: 12, outline: "none" }}
+                            />
+                            <button onClick={async () => {
+                              const inp = document.getElementById(`demo-${u.id}`) as HTMLInputElement;
+                              if (inp) await action(u.id, `/api/admin/users/${u.id}/balance`, { balance: inp.value, type: "demo" });
+                            }} disabled={busy} style={{ background: "#f5a623", color: "#000", border: "none", borderRadius: 5, padding: "5px 8px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>✓</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setEditBal({ id: u.id, value: String(Math.floor(u.balance)) })}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#f5a623", fontSize: 13, fontWeight: 600, padding: 0, textAlign: "left" }}
+                            title="Clique para entrar no modo edição">
+                            {formatKz(Math.floor((u as any).demoBalance ?? 0))}
                           </button>
                         )}
                       </td>
@@ -330,7 +350,7 @@ export default function AdminUsersPage() {
             <p style={{ color: "#64748b", fontSize: 12, textAlign: "center", margin: "0 0 24px" }}>{confirmDelete.email}</p>
             <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "12px 14px", marginBottom: 24 }}>
               <p style={{ color: "#fca5a5", fontSize: 12, margin: 0, lineHeight: 1.5 }}>
-                ⚠️ Esta ação é <strong>irreversível</strong>. Todos os dados (trades, transações, KYC, etc.) serão eliminados permanentemente.
+                Esta ação é <strong>irreversível</strong>. Todos os dados (trades, transações, KYC, etc.) serão eliminados permanentemente.
               </p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>

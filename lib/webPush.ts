@@ -1,49 +1,42 @@
 import webpush from "web-push";
 import { prisma } from "./prisma";
 
-const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  ?? "";
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? "";
-const VAPID_EMAIL   = process.env.VAPID_EMAIL       ?? "mailto:suporte@dynamicworks.ao";
-
-if (VAPID_PUBLIC && VAPID_PRIVATE) {
-  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
-}
+webpush.setVapidDetails(
+  process.env.VAPID_EMAIL!,
+  process.env.VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!,
+);
 
 export interface PushPayload {
-  title: string;
-  body:  string;
-  icon?: string;
-  badge?: string;
-  url?:  string;
-  tag?:  string;
+  title:  string;
+  body:   string;
+  url?:   string;
+  tag?:   string;
 }
 
-export async function sendPushToUser(userId: string, payload: PushPayload) {
-  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
-
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
   const subs = await prisma.pushSubscription.findMany({ where: { userId } });
-  if (subs.length === 0) return;
+  if (!subs.length) return;
 
-  const data = JSON.stringify({
-    title: payload.title,
-    body:  payload.body,
-    icon:  payload.icon  ?? "/icon-192",
-    badge: payload.badge ?? "/icon-192",
-    url:   payload.url   ?? "/trade",
-    tag:   payload.tag,
-  });
-
-  await Promise.allSettled(subs.map(async (sub) => {
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        data,
-      );
-    } catch (err: any) {
-      // 410 Gone = subscription expired — remove it
-      if (err?.statusCode === 410 || err?.statusCode === 404) {
-        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+  await Promise.allSettled(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify({
+            title: payload.title,
+            body:  payload.body,
+            url:   payload.url ?? "/trade",
+            tag:   payload.tag ?? "default",
+            icon:  "/icon-192",
+            badge: "/icon-192",
+          }),
+        );
+      } catch (err: any) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await prisma.pushSubscription.deleteMany({ where: { endpoint: sub.endpoint } }).catch(() => {});
+        }
       }
-    }
-  }));
+    }),
+  );
 }

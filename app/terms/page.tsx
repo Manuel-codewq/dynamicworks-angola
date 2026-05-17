@@ -26,8 +26,12 @@ const SECTIONS = [
     body: `Para fins de conformidade regulatória e prevenção de branqueamento de capitais, a verificação de identidade (KYC) é obrigatória para realizar levantamentos. O utilizador deve submeter um documento de identificação válido (Bilhete de Identidade angolano). A não conclusão do processo KYC pode limitar o acesso a determinadas funcionalidades da plataforma.`,
   },
   {
-    title: "7. Contacto e Suporte",
-    body: `Para questões relacionadas com a sua conta, depósitos, levantamentos ou qualquer outro assunto, contacte a nossa equipa de suporte através do endereço de correio electrónico suporte@dynamicworks.ao. O nosso horário de atendimento é de segunda a sexta-feira, das 8h às 17h (hora de Luanda, WAT).`,
+    title: "7. Programa de Referidos",
+    body: `A Dynamics Works disponibiliza um programa de referidos que permite aos utilizadores convidarem terceiros para a plataforma. Quando um utilizador convidado efectua o primeiro depósito aprovado, o utilizador que o convidou recebe automaticamente uma comissão no seu saldo real. Os detalhes e percentagens do programa estão disponíveis na secção de referidos dentro da plataforma. A Dynamics Works reserva-se o direito de alterar ou encerrar o programa de referidos a qualquer momento.`,
+  },
+  {
+    title: "8. Contacto e Suporte",
+    body: `Para questões relacionadas com a sua conta, depósitos, levantamentos ou qualquer outro assunto, contacte a nossa equipa de suporte:\n\n• Email: suporte@dynamicworks.ao\n• WhatsApp: +244 921 825 299\n• Suporte interno: disponível na plataforma em /support\n\nO nosso horário de atendimento é de segunda a sexta-feira, das 8h às 17h (hora de Luanda, WAT).`,
   },
 ];
 
@@ -59,7 +63,7 @@ export default function TermsPage() {
           Termos de Uso
         </h1>
         <p style={{ fontSize: 13, margin: "0 0 48px", color: "#475569" }}>
-          Última actualização: Janeiro de 2025
+          Última actualização: Maio de 2026
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>

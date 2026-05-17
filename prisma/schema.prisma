@@ -30,16 +30,55 @@ model User {
   otpExpires     DateTime?
   pwdOtpCode     String?    // OTP de alteração de senha (separado para não conflituar)
   pwdOtpExpires  DateTime?
-  indicatorPrefs Json?
-  lastSeenAt     DateTime?
-  createdAt      DateTime      @default(now())
-  trades           Trade[]
-  transactions     Transaction[]
-  notifications    Notification[]
-  kycSubmission    KycSubmission?
-  tournaments      TournamentParticipant[]
-  supportTickets   SupportTicket[]
+  indicatorPrefs    Json?
+  lastSeenAt        DateTime?
+  createdAt         DateTime      @default(now())
+  twoFactorEnabled  Boolean       @default(false)
+  twoFactorMethod   String?
+  twoFactorSecret   String?
+  twoFaCode         String?
+  twoFaExpires      DateTime?
+  referralCode      String?       @unique
+  referredBy        String?
+  referralEarnings  Float         @default(0)
+  trades            Trade[]
+  transactions      Transaction[]
+  notifications     Notification[]
+  kycSubmission     KycSubmission?
+  tournaments       TournamentParticipant[]
+  supportTickets    SupportTicket[]
   pushSubscriptions PushSubscription[]
+  sessions          UserSession[]
+  accessLogs        AccessLog[]
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip           String?
+  userAgent    String?
+  device       String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model AccessLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email     String?
+  ip        String?
+  userAgent String?
+  action    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 model PushSubscription {

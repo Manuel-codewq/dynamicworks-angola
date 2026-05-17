@@ -13,6 +13,7 @@ export async function GET() {
       province: true, biNumber: true, kycStatus: true,
       role: true, status: true, createdAt: true,
       balance: true, demoBalance: true, avatar: true,
+      twoFactorEnabled: true, twoFactorMethod: true,
     },
   });
 

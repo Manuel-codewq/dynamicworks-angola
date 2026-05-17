@@ -10,6 +10,7 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   compress: true,
+  serverExternalPackages: ["bcryptjs", "qrcode", "web-push"],
   env: {
     NEXT_PUBLIC_TWELVEDATA_API_KEY: process.env.TWELVEDATA_API_KEY ?? "",
   },

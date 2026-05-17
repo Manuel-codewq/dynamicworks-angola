@@ -18,7 +18,7 @@ export default function NotFound() {
         <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
           <a href="/trade" style={{
             display: "inline-block", background: "#f5a623", color: "#0a0f1e",
-            borderRadius: 10, padding: "13px 32px", fontWeight: 700, fontSize: 15,
+            borderRadius: 10, padding: "10px 28px", fontWeight: 700, fontSize: 14,
             textDecoration: "none", width: "100%", maxWidth: 280, textAlign: "center",
           }}>
             Voltar à plataforma
@@ -26,7 +26,7 @@ export default function NotFound() {
           <a href="/login" style={{
             display: "inline-block", background: "transparent", color: "#94a3b8",
             border: "1px solid #1e2d50", borderRadius: 10, padding: "13px 32px",
-            fontWeight: 600, fontSize: 15, textDecoration: "none",
+            fontWeight: 600, fontSize: 14, textDecoration: "none",
             width: "100%", maxWidth: 280, textAlign: "center",
           }}>
             Ir para login

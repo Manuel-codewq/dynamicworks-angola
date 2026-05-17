@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Bell, X, CheckCircle, XCircle, Wallet, ArrowUpCircle, ScanFace, Megaphone, Info } from "lucide-react";
+import { Bell, X, CheckCircle, XCircle, Wallet, ArrowUpCircle, ScanFace, Megaphone, Info, TrendingUp, TrendingDown, Gift } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -11,18 +11,19 @@ interface Notification {
   createdAt: string;
 }
 
-function TypeIcon({ type }: { type: string }) {
-  const props = { size: 18 };
-  if (type === "deposit_completed")    return <CheckCircle  {...props} color="#22c55e" />;
-  if (type === "deposit_rejected")     return <XCircle      {...props} color="#ef4444" />;
-  if (type === "withdrawal_completed") return <ArrowUpCircle {...props} color="#22c55e" />;
-  if (type === "withdrawal_rejected")  return <XCircle      {...props} color="#ef4444" />;
-  if (type === "kyc_approved")         return <ScanFace     {...props} color="#22c55e" />;
-  if (type === "kyc_rejected")         return <ScanFace     {...props} color="#ef4444" />;
-  if (type === "broadcast")            return <Megaphone    {...props} color="#f5a623" />;
-  if (type === "admin")                return <Info         {...props} color="#38bdf8" />;
-  return <Bell {...props} color="#94a3b8" />;
-}
+const TYPE_CONFIG: Record<string, { icon: React.ReactNode; bg: string }> = {
+  trade_win:            { icon: <TrendingUp  size={18} color="#22c55e" />, bg: "rgba(34,197,94,0.12)"  },
+  trade_loss:           { icon: <TrendingDown size={18} color="#ef4444" />, bg: "rgba(239,68,68,0.12)" },
+  deposit_completed:    { icon: <CheckCircle  size={18} color="#22c55e" />, bg: "rgba(34,197,94,0.12)"  },
+  deposit_rejected:     { icon: <XCircle      size={18} color="#ef4444" />, bg: "rgba(239,68,68,0.12)" },
+  withdrawal_completed: { icon: <ArrowUpCircle size={18} color="#22c55e" />, bg: "rgba(34,197,94,0.12)" },
+  withdrawal_rejected:  { icon: <XCircle      size={18} color="#ef4444" />, bg: "rgba(239,68,68,0.12)" },
+  kyc_approved:         { icon: <ScanFace     size={18} color="#22c55e" />, bg: "rgba(34,197,94,0.12)"  },
+  kyc_rejected:         { icon: <ScanFace     size={18} color="#ef4444" />, bg: "rgba(239,68,68,0.12)" },
+  broadcast:            { icon: <Megaphone    size={18} color="#f5a623" />, bg: "rgba(245,166,35,0.12)" },
+  admin:                { icon: <Info         size={18} color="#38bdf8" />, bg: "rgba(56,189,248,0.12)" },
+  referral_commission:  { icon: <Gift         size={18} color="#22c55e" />, bg: "rgba(34,197,94,0.12)"  },
+};
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -112,8 +113,8 @@ export default function NotificationBell() {
               background: n.read ? "transparent" : "rgba(245,166,35,0.05)",
               cursor: n.read ? "default" : "pointer",
             }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <TypeIcon type={n.type} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: TYPE_CONFIG[n.type]?.bg ?? "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {TYPE_CONFIG[n.type]?.icon ?? <Bell size={18} color="#94a3b8" />}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>

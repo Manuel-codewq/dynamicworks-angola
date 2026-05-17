@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect, Suspense } from "react";
+import { Mail, CheckCircle, AlertCircle } from "lucide-react";
 
 function VerifyEmailContent() {
   const params   = useSearchParams();
@@ -113,7 +114,9 @@ function VerifyEmailContent() {
         {/* Card */}
         <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: "36px 32px" }}>
           <div style={{ textAlign: "center", marginBottom: 28 }}>
-            <div style={{ fontSize: 44, marginBottom: 12 }}>✉️</div>
+            <div style={{ width: 60, height: 60, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 16, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Mail size={28} color="#f5a623" />
+            </div>
             <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>Verifica o teu email</h1>
             <p style={{ color: "#64748b", fontSize: 14, margin: 0, lineHeight: 1.6 }}>
               Enviámos um código de 6 dígitos para<br />
@@ -146,17 +149,23 @@ function VerifyEmailContent() {
             </div>
 
             {error && (
-              <p style={{ color: "#ef4444", fontSize: 13, textAlign: "center", margin: "0 0 16px" }}>{error}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+                <AlertCircle size={15} color="#ef4444" />
+                <span style={{ color: "#ef4444", fontSize: 13 }}>{error}</span>
+              </div>
             )}
             {resent && (
-              <p style={{ color: "#22c55e", fontSize: 13, textAlign: "center", margin: "0 0 16px" }}>Novo código enviado!</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+                <CheckCircle size={15} color="#22c55e" />
+                <span style={{ color: "#22c55e", fontSize: 13 }}>Novo código enviado! Verifica a pasta de spam.</span>
+              </div>
             )}
 
             <button
               type="submit"
               disabled={loading || digits.join("").length < 6}
               style={{
-                width: "100%", padding: "14px", background: loading || digits.join("").length < 6 ? "#374151" : "#f5a623",
+                width: "100%", padding: "10px 16px", background: loading || digits.join("").length < 6 ? "#374151" : "#f5a623",
                 color: loading || digits.join("").length < 6 ? "#6b7280" : "#0a0f1e",
                 fontWeight: 800, fontSize: 15, border: "none", borderRadius: 10,
                 cursor: loading || digits.join("").length < 6 ? "not-allowed" : "pointer",

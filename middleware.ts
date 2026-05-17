@@ -5,7 +5,7 @@ export default auth((req) => {
   const session = req.auth;
   const { pathname } = req.nextUrl;
 
-  const protectedRoutes = ["/trade", "/dashboard", "/wallet", "/ao/admin", "/profile", "/kyc", "/support"];
+  const protectedRoutes = ["/trade", "/dashboard", "/wallet", "/ao/admin", "/profile", "/kyc", "/support", "/referral", "/security", "/history"];
   const isProtected = protectedRoutes.some(r => pathname.startsWith(r));
 
   if (isProtected && !session) {
@@ -30,5 +30,8 @@ export const config = {
     "/profile/:path*",
     "/kyc/:path*",
     "/support/:path*",
+    "/referral/:path*",
+    "/security/:path*",
+    "/history/:path*",
   ],
 };

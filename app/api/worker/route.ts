@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveExpiredTrade } from "@/lib/resolveExpiredTrade";
 
+function isAuthorized(req: NextRequest): boolean {
+  const workerSecret = process.env.WORKER_SECRET;
+  const cronSecret   = process.env.CRON_SECRET;
+  const xWorker      = req.headers.get("x-worker-secret");
+  const auth         = req.headers.get("authorization");
+  if (workerSecret && xWorker === workerSecret) return true;
+  if (cronSecret   && auth   === `Bearer ${cronSecret}`) return true;
+  if (workerSecret && auth   === `Bearer ${workerSecret}`) return true;
+  return false;
+}
+
 export async function GET(req: NextRequest) {
-  const secret = process.env.WORKER_SECRET;
-  if (!secret || req.headers.get("x-worker-secret") !== secret) {
+  if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 

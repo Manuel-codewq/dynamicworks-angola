@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/webPush";
 
 export async function GET() {
   const session = await auth();
@@ -43,6 +44,13 @@ export async function POST(req: NextRequest) {
       await prisma.notification.create({
         data: { userId: targetUserId, type: "admin", title: title.trim(), message: message.trim() },
       });
+      // Push para o utilizador específico
+      sendPushToUser(targetUserId, {
+        title:   title.trim(),
+        body:    message.trim(),
+        url:     "/trade",
+        tag:     "admin",
+      }).catch(() => {});
       await (prisma as any).auditLog.create({
         data: { adminId: session.user.id, adminName: session.user.name ?? "Admin", action: "NOTIFY_USER", target: targetUserId, detail: title },
       });
@@ -54,6 +62,15 @@ export async function POST(req: NextRequest) {
       await prisma.notification.createMany({
         data: users.map(u => ({ userId: u.id, type: "broadcast", title: title.trim(), message: message.trim() })),
       });
+      // Push para todos em paralelo (sem await para não bloquear a resposta)
+      Promise.allSettled(
+        users.map(u => sendPushToUser(u.id, {
+          title: title.trim(),
+          body:  message.trim(),
+          url:   "/trade",
+          tag:   "broadcast",
+        }))
+      ).catch(() => {});
     }
     await (prisma as any).auditLog.create({
       data: { adminId: session.user.id, adminName: session.user.name ?? "Admin", action: "BROADCAST", target: "all_users", detail: title },

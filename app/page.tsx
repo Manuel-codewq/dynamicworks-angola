@@ -2,11 +2,13 @@
 import { formatKz } from "@/lib/format";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Zap, ShieldCheck, TrendingUp, Banknote, ArrowRight, ChevronRight } from "lucide-react";
+import { useSession } from "next-auth/react";
+import {
+  Zap, ShieldCheck, TrendingUp, Banknote, ArrowRight,
+  ChevronRight, Gift, Menu, X, MessageCircle,
+} from "lucide-react";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-// ── Hook: typewriter ──────────────────────────────────────────────────────────
+// ── Typewriter ────────────────────────────────────────────────────────────────
 function useTypewriter(text: string, speed = 45, delay = 0, active = true) {
   const [displayed, setDisplayed] = useState("");
   const [done, setDone] = useState(false);
@@ -27,7 +29,7 @@ function useTypewriter(text: string, speed = 45, delay = 0, active = true) {
   return { displayed, done };
 }
 
-// ── Hook: count-up ────────────────────────────────────────────────────────────
+// ── Count-up ──────────────────────────────────────────────────────────────────
 function useCountUp(target: number, duration = 1800, active = false) {
   const [val, setVal] = useState(0);
   useEffect(() => {
@@ -36,8 +38,7 @@ function useCountUp(target: number, duration = 1800, active = false) {
     const step = (ts: number) => {
       if (!start) start = ts;
       const p = Math.min((ts - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      setVal(Math.floor(ease * target));
+      setVal(Math.floor((1 - Math.pow(1 - p, 3)) * target));
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -45,7 +46,7 @@ function useCountUp(target: number, duration = 1800, active = false) {
   return val;
 }
 
-// ── Hook: IntersectionObserver ────────────────────────────────────────────────
+// ── InView ────────────────────────────────────────────────────────────────────
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
   const [vis, setVis] = useState(false);
@@ -58,12 +59,10 @@ function useInView(threshold = 0.15) {
   return { ref, vis };
 }
 
-// ── Cursor ────────────────────────────────────────────────────────────────────
 function Cursor({ done }: { done: boolean }) {
   return <span style={{ display: "inline-block", width: 3, height: "0.85em", background: "#f5a623", marginLeft: 3, verticalAlign: "middle", borderRadius: 1, animation: done ? "blink 1s step-end infinite" : "none" }} />;
 }
 
-// ── FadeIn wrapper ────────────────────────────────────────────────────────────
 function FadeIn({ children, delay = 0, y = 30, style }: { children: React.ReactNode; delay?: number; y?: number; style?: React.CSSProperties }) {
   const { ref, vis } = useInView();
   return (
@@ -73,24 +72,40 @@ function FadeIn({ children, delay = 0, y = 30, style }: { children: React.ReactN
   );
 }
 
-// ── StatCard with count-up ────────────────────────────────────────────────────
 function StatCard({ label, target, format }: { label: string; target: number; format: (n: number) => string }) {
   const { ref, vis } = useInView(0.3);
   const val = useCountUp(target, 1800, vis);
   return (
     <div ref={ref} style={{ textAlign: "center", padding: "8px 16px" }}>
-      <div style={{ fontSize: "clamp(22px,4vw,34px)", fontWeight: 900, color: "#f5a623", fontVariantNumeric: "tabular-nums", transition: "all .3s" }}>{vis ? format(val) : "—"}</div>
+      <div style={{ fontSize: "clamp(22px,4vw,34px)", fontWeight: 900, color: "#f5a623", fontVariantNumeric: "tabular-nums" }}>{vis ? format(val) : "—"}</div>
       <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{label}</div>
     </div>
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+const Logo = () => (
+  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(245,166,35,0.4)" }}>
+      <TrendingUp size={20} color="#0a0f1e" strokeWidth={2.5} />
+    </div>
+    <span style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, background: "linear-gradient(90deg,#fff,#94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+      Dynamics Works
+    </span>
+  </div>
+);
+
 export default function LandingPage() {
   const router = useRouter();
-  const [stats, setStats] = useState({ users: 0, trades: 0, volume: 0 });
-  const [ready, setReady] = useState(false);
-  const [navIn, setNavIn] = useState(false);
+  const { status } = useSession();
+  const [stats,      setStats]      = useState({ users: 0, trades: 0, volume: 0 });
+  const [ready,      setReady]      = useState(false);
+  const [navIn,      setNavIn]      = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+
+  // Redirecionar utilizadores já autenticados
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/trade");
+  }, [status, router]);
 
   useEffect(() => {
     fetch("/api/stats").then(r => r.json()).then(setStats).catch(() => {});
@@ -98,23 +113,24 @@ export default function LandingPage() {
     setTimeout(() => setReady(true), 300);
   }, []);
 
-  // Typewriter chain
   const badge = useTypewriter("Plataforma de Opções Binárias · Angola", 36, 0, ready);
   const l1    = useTypewriter("Negocie no Mercado Global", 48, 0, badge.done);
   const l2    = useTypewriter("em Kwanzas.", 55, 0, l1.done);
-  const sub   = useTypewriter("A primeira corretora de opções binárias angolana com pagamentos em AOA via USDT, preços em tempo real e conta demo gratuita.", 20, 0, l2.done);
+  const sub   = useTypewriter("A primeira corretora de opções binárias angolana com pagamentos em AOA via Multicaixa Express, preços em tempo real e conta demo gratuita.", 20, 0, l2.done);
 
   const features = [
-    { Icon: Zap,         color: "#f5a623", title: "Execução Instantânea",  desc: "Ordens executadas em milissegundos com preços em tempo real." },
-    { Icon: ShieldCheck, color: "#22c55e", title: "Segurança Avançada",    desc: "KYC obrigatório, autenticação OTP e encriptação de ponta a ponta." },
-    { Icon: TrendingUp,  color: "#3b82f6", title: "16+ Ativos",            desc: "Forex, criptomoedas e metais preciosos disponíveis 24/7." },
-    { Icon: Banknote,    color: "#a78bfa", title: "Pagamentos em Kwanza",  desc: "Depósitos e saques rápidos em AOA via USDT (TRC-20), sem complicações." },
+    { Icon: Zap,         color: "#f5a623", title: "Execução Instantânea",   desc: "Ordens executadas em milissegundos com preços do mercado global em tempo real." },
+    { Icon: ShieldCheck, color: "#22c55e", title: "Segurança Avançada",     desc: "KYC obrigatório, autenticação 2FA por email e encriptação de ponta a ponta." },
+    { Icon: TrendingUp,  color: "#3b82f6", title: "16+ Ativos",             desc: "Forex, criptomoedas e metais preciosos disponíveis 24/7." },
+    { Icon: Banknote,    color: "#a78bfa", title: "Pagamentos em Kwanza",   desc: "Depósitos e levantamentos em AOA via Multicaixa Express. Rápido e sem complicações." },
+    { Icon: Gift,        color: "#22c55e", title: "Programa de Referidos",  desc: "Convida amigos e ganha 2% do primeiro depósito deles directamente no teu saldo." },
+    { Icon: ChevronRight,color: "#38bdf8", title: "Conta Demo Grátis",      desc: "10.000 Kz virtual para praticar sem risco antes de investir capital real." },
   ];
 
   const steps = [
-    { n: "01", title: "Cria a tua conta",   desc: "Regista-te gratuitamente em menos de 2 minutos.", color: "#f5a623" },
-    { n: "02", title: "Faz o depósito",     desc: "Transfere via USDT (TRC-20) em Kwanza.",     color: "#3b82f6" },
-    { n: "03", title: "Começa a negociar",  desc: "Escolhe o ativo, prevê a direção e ganha.",       color: "#22c55e" },
+    { n: "01", title: "Cria a tua conta",    desc: "Regista-te gratuitamente em menos de 2 minutos.",               color: "#f5a623" },
+    { n: "02", title: "Faz o depósito",      desc: "Transfere em Kwanza via Multicaixa Express. Aprovação em 24h.", color: "#3b82f6" },
+    { n: "03", title: "Começa a negociar",   desc: "Escolhe o ativo, prevê a direcção e ganha.",                    color: "#22c55e" },
   ];
 
   const assets = [
@@ -128,6 +144,8 @@ export default function LandingPage() {
     { label: "AUD/USD", color: "#22d3ee" },
   ];
 
+  const WA_LINK = "https://wa.me/244921825299?text=" + encodeURIComponent("Olá! Preciso de ajuda com a Dynamics Works.");
+
   return (
     <div style={{ minHeight: "100vh", background: "#070d1c", fontFamily: "system-ui, sans-serif", color: "#fff", overflowX: "hidden" }}>
       <style>{`
@@ -135,13 +153,13 @@ export default function LandingPage() {
         @keyframes float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes shimmer    { 0%{background-position:200% center} 100%{background-position:-200% center} }
         @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(245,166,35,0.3)} 50%{box-shadow:0 0 40px rgba(245,166,35,0.6)} }
-        .hover-card:hover { transform:translateY(-4px) !important; box-shadow:0 12px 40px rgba(0,0,0,0.4) !important; border-color:rgba(245,166,35,0.3) !important; }
-        .hover-btn:hover  { filter:brightness(1.1); transform:scale(1.03); }
-        .hover-asset:hover{ transform:scale(1.05); }
+        .hover-card:hover  { transform:translateY(-4px) !important; box-shadow:0 12px 40px rgba(0,0,0,0.4) !important; border-color:rgba(245,166,35,0.3) !important; }
+        .hover-btn:hover   { filter:brightness(1.1); transform:scale(1.03); }
+        .hover-asset:hover { transform:scale(1.05); }
         * { box-sizing: border-box; }
       `}</style>
 
-      {/* ── Animated background grid ── */}
+      {/* Background grid */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(30,45,80,0.18) 1px,transparent 1px),linear-gradient(90deg,rgba(30,45,80,0.18) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
         <div style={{ position: "absolute", top: "10%", left: "15%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(245,166,35,0.06) 0%,transparent 70%)", animation: "float 8s ease-in-out infinite" }} />
@@ -150,14 +168,11 @@ export default function LandingPage() {
       </div>
 
       {/* ── Navbar ── */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(7,13,28,0.9)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(30,45,80,0.8)", padding: "0 32px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all .5s ease", transform: navIn ? "translateY(0)" : "translateY(-100%)", opacity: navIn ? 1 : 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(245,166,35,0.4)" }}>
-            <span style={{ fontSize: 18, fontWeight: 900, color: "#0a0f1e" }}>D</span>
-          </div>
-          <span style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, background: "linear-gradient(90deg,#fff,#94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Dynamics Works</span>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(7,13,28,0.9)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(30,45,80,0.8)", padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all .5s ease", transform: navIn ? "translateY(0)" : "translateY(-100%)", opacity: navIn ? 1 : 0 }}>
+        <Logo />
+
+        {/* Desktop nav */}
+        <div style={{ display: "flex", gap: 10 }} className="desktop-nav">
           <button onClick={() => router.push("/login")} className="hover-btn"
             style={{ background: "transparent", border: "1px solid rgba(30,45,80,0.8)", color: "#94a3b8", borderRadius: 8, padding: "8px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", transition: "all .2s" }}>
             Entrar
@@ -167,12 +182,42 @@ export default function LandingPage() {
             Criar Conta
           </button>
         </div>
+
+        {/* Mobile hamburger */}
+        <button onClick={() => setMobileMenu(v => !v)}
+          style={{ display: "none", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 4 }}
+          className="mobile-menu-btn">
+          {mobileMenu ? <X size={24} /> : <Menu size={24} />}
+        </button>
+
+        <style>{`
+          @media (max-width: 540px) {
+            .desktop-nav { display: none !important; }
+            .mobile-menu-btn { display: flex !important; }
+          }
+        `}</style>
       </nav>
+
+      {/* Mobile menu overlay */}
+      {mobileMenu && (
+        <div style={{ position: "fixed", top: 64, left: 0, right: 0, bottom: 0, zIndex: 99, background: "rgba(7,13,28,0.98)", backdropFilter: "blur(16px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <button onClick={() => { router.push("/login"); setMobileMenu(false); }}
+            style={{ width: 240, background: "transparent", border: "1px solid rgba(30,45,80,0.8)", color: "#fff", borderRadius: 12, padding: "16px 24px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
+            Entrar
+          </button>
+          <button onClick={() => { router.push("/register"); setMobileMenu(false); }}
+            style={{ width: 240, background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", color: "#0a0f1e", borderRadius: 12, padding: "16px 24px", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 24px rgba(245,166,35,0.4)" }}>
+            Criar Conta Grátis
+          </button>
+          <a href={WA_LINK} target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 8, color: "#22c55e", fontSize: 14, textDecoration: "none", marginTop: 8 }}>
+            <MessageCircle size={16} /> WhatsApp Suporte
+          </a>
+        </div>
+      )}
 
       {/* ── Hero ── */}
       <section style={{ position: "relative", zIndex: 1, maxWidth: 960, margin: "0 auto", padding: "90px 24px 70px", textAlign: "center" }}>
-
-        {/* Glow behind title */}
         <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translate(-50%,-50%)", width: 600, height: 300, background: "radial-gradient(ellipse,rgba(245,166,35,0.08) 0%,transparent 70%)", pointerEvents: "none" }} />
 
         {/* Badge */}
@@ -205,7 +250,7 @@ export default function LandingPage() {
           {!sub.done && l2.done && <Cursor done={false} />}
         </p>
 
-        {/* CTA buttons */}
+        {/* CTA */}
         <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", transition: "opacity .8s ease, transform .8s ease", opacity: sub.done ? 1 : 0, transform: sub.done ? "translateY(0)" : "translateY(20px)" }}>
           <button onClick={() => router.push("/register")} className="hover-btn"
             style={{ background: "linear-gradient(135deg,#f5a623,#f97316)", border: "none", color: "#0a0f1e", borderRadius: 12, padding: "16px 36px", fontSize: 16, fontWeight: 800, cursor: "pointer", transition: "all .2s", boxShadow: "0 6px 28px rgba(245,166,35,0.4)", display: "flex", alignItems: "center", gap: 8, animation: sub.done ? "pulse-glow 3s ease-in-out infinite" : "none" }}>
@@ -222,16 +267,16 @@ export default function LandingPage() {
         </p>
       </section>
 
-      {/* ── Stats count-up ── */}
+      {/* ── Stats ── */}
       <div style={{ position: "relative", zIndex: 1 }}>
         <FadeIn>
           <section style={{ background: "rgba(17,24,39,0.7)", borderTop: "1px solid rgba(30,45,80,0.6)", borderBottom: "1px solid rgba(30,45,80,0.6)", backdropFilter: "blur(12px)" }}>
             <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 24px", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0 }}>
               <div style={{ borderRight: "1px solid rgba(30,45,80,0.6)" }}>
-                <StatCard label="Utilizadores Registados" target={stats.users} format={n => String(n).replace(/B(?=(d{3})+(?!d))/g, ".")} />
+                <StatCard label="Utilizadores Registados" target={stats.users} format={n => n.toLocaleString("pt-PT")} />
               </div>
               <div style={{ borderRight: "1px solid rgba(30,45,80,0.6)" }}>
-                <StatCard label="Operações Concluídas" target={stats.trades} format={n => String(n).replace(/B(?=(d{3})+(?!d))/g, ".")} />
+                <StatCard label="Operações Concluídas" target={stats.trades} format={n => n.toLocaleString("pt-PT")} />
               </div>
               <StatCard label="Volume Negociado" target={stats.volume} format={formatKz} />
             </div>
@@ -255,9 +300,7 @@ export default function LandingPage() {
               </FadeIn>
             ))}
             <FadeIn delay={assets.length * 70}>
-              <div style={{ background: "rgba(17,24,39,0.5)", border: "1px solid rgba(30,45,80,0.4)", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 600, color: "#374151" }}>
-                +8 mais
-              </div>
+              <div style={{ background: "rgba(17,24,39,0.5)", border: "1px solid rgba(30,45,80,0.4)", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 600, color: "#374151" }}>+8 mais</div>
             </FadeIn>
           </div>
         </section>
@@ -272,7 +315,7 @@ export default function LandingPage() {
           </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 16 }}>
             {features.map((f, i) => (
-              <FadeIn key={i} delay={i * 110}>
+              <FadeIn key={i} delay={i * 90}>
                 <div className="hover-card" style={{ background: "rgba(17,24,39,0.7)", border: "1px solid rgba(30,45,80,0.6)", borderRadius: 16, padding: "28px 22px", transition: "all .3s", cursor: "default", backdropFilter: "blur(8px)", height: "100%" }}>
                   <div style={{ width: 48, height: 48, borderRadius: 12, background: `linear-gradient(135deg,${f.color}22,${f.color}08)`, border: `1px solid ${f.color}30`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, boxShadow: `0 4px 16px ${f.color}20` }}>
                     <f.Icon size={24} color={f.color} strokeWidth={1.8} />
@@ -286,62 +329,57 @@ export default function LandingPage() {
         </section>
       </div>
 
-      {/* ── Como funciona ── */}
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <section style={{ background: "rgba(10,15,30,0.8)", borderTop: "1px solid rgba(30,45,80,0.5)", borderBottom: "1px solid rgba(30,45,80,0.5)", backdropFilter: "blur(12px)" }}>
-          <div style={{ maxWidth: 720, margin: "0 auto", padding: "70px 24px", textAlign: "center" }}>
-            <FadeIn>
-              <h2 style={{ fontSize: "clamp(20px,3vw,26px)", fontWeight: 800, marginBottom: 8, letterSpacing: -0.5 }}>Como funciona?</h2>
-              <p style={{ color: "#4b5563", fontSize: 14, marginBottom: 52 }}>Começa a negociar em 3 passos simples</p>
-            </FadeIn>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {steps.map((s, i) => (
-                <FadeIn key={i} delay={i * 180} y={20}>
-                  <div style={{ display: "flex", gap: 24, alignItems: "flex-start", textAlign: "left", paddingBottom: i < steps.length - 1 ? 40 : 0, position: "relative" }}>
-                    {/* Line connector */}
-                    {i < steps.length - 1 && (
-                      <div style={{ position: "absolute", left: 23, top: 52, width: 2, height: "calc(100% - 12px)", background: `linear-gradient(${s.color}60,${steps[i+1].color}20)` }} />
-                    )}
-                    <div style={{ flexShrink: 0, width: 48, height: 48, borderRadius: "50%", background: `linear-gradient(135deg,${s.color},${s.color}88)`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#0a0f1e", boxShadow: `0 6px 20px ${s.color}40`, border: `2px solid ${s.color}40` }}>
-                      {s.n}
-                    </div>
-                    <div style={{ paddingTop: 10 }}>
-                      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6, color: "#f0f4ff" }}>{s.title}</div>
-                      <div style={{ color: "#4b5563", fontSize: 14, lineHeight: 1.6 }}>{s.desc}</div>
-                    </div>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* ── Testimonial / trust bar ── */}
+      {/* ── Pagamentos ── */}
       <div style={{ position: "relative", zIndex: 1 }}>
         <FadeIn>
-          <section style={{ maxWidth: 960, margin: "0 auto", padding: "60px 24px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 16 }}>
-              {[
-                { Icon: ShieldCheck, color: "#22c55e", title: "Fundos Protegidos",   desc: "Os teus fundos estão segregados e protegidos em todo o momento." },
-                { Icon: Zap,         color: "#f5a623", title: "Suporte 24/7",        desc: "Equipa de apoio disponível a qualquer hora para resolver as tuas dúvidas." },
-                { Icon: TrendingUp,  color: "#3b82f6", title: "App Mobile",          desc: "Plataforma totalmente responsiva — negoceia de qualquer dispositivo." },
-              ].map((t, i) => (
-                <FadeIn key={i} delay={i * 100}>
-                  <div className="hover-card" style={{ background: "rgba(17,24,39,0.6)", border: "1px solid rgba(30,45,80,0.5)", borderRadius: 14, padding: "22px 20px", transition: "all .3s", backdropFilter: "blur(8px)", display: "flex", gap: 14, alignItems: "flex-start" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.color}18`, border: `1px solid ${t.color}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <t.Icon size={18} color={t.color} strokeWidth={1.8} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#f0f4ff" }}>{t.title}</div>
-                      <div style={{ color: "#4b5563", fontSize: 13, lineHeight: 1.6 }}>{t.desc}</div>
-                    </div>
+          <section style={{ background: "rgba(10,15,30,0.8)", borderTop: "1px solid rgba(30,45,80,0.5)", borderBottom: "1px solid rgba(30,45,80,0.5)", backdropFilter: "blur(12px)" }}>
+            <div style={{ maxWidth: 800, margin: "0 auto", padding: "60px 24px", textAlign: "center" }}>
+              <h2 style={{ fontSize: "clamp(20px,3vw,26px)", fontWeight: 800, marginBottom: 8, letterSpacing: -0.5 }}>Pagamentos em Kwanza</h2>
+              <p style={{ color: "#4b5563", fontSize: 14, marginBottom: 36 }}>Depósitos e levantamentos simples, rápidos e em moeda local</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14 }}>
+                {[
+                  { title: "Multicaixa Express",   desc: "Depósito e levantamento directo em AOA", color: "#f5a623" },
+                  { title: "Saldo Mínimo",         desc: "Depósito mínimo de 5.000 Kz", color: "#22c55e" },
+                  { title: "Aprovação Rápida",     desc: "Depósitos aprovados em até 24 horas úteis", color: "#3b82f6" },
+                  { title: "Levantamentos",        desc: "Processados em 1 a 3 dias úteis após KYC", color: "#a78bfa" },
+                ].map((p, i) => (
+                  <div key={i} style={{ background: `rgba(17,24,39,0.7)`, border: `1px solid ${p.color}25`, borderRadius: 12, padding: "20px 16px", textAlign: "left" }}>
+                    <div style={{ color: p.color, fontWeight: 800, fontSize: 14, marginBottom: 6 }}>{p.title}</div>
+                    <div style={{ color: "#4b5563", fontSize: 13, lineHeight: 1.6 }}>{p.desc}</div>
                   </div>
-                </FadeIn>
-              ))}
+                ))}
+              </div>
             </div>
           </section>
         </FadeIn>
+      </div>
+
+      {/* ── Como funciona ── */}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <section style={{ maxWidth: 720, margin: "0 auto", padding: "70px 24px", textAlign: "center" }}>
+          <FadeIn>
+            <h2 style={{ fontSize: "clamp(20px,3vw,26px)", fontWeight: 800, marginBottom: 8, letterSpacing: -0.5 }}>Como funciona?</h2>
+            <p style={{ color: "#4b5563", fontSize: 14, marginBottom: 52 }}>Começa a negociar em 3 passos simples</p>
+          </FadeIn>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {steps.map((s, i) => (
+              <FadeIn key={i} delay={i * 180} y={20}>
+                <div style={{ display: "flex", gap: 24, alignItems: "flex-start", textAlign: "left", paddingBottom: i < steps.length - 1 ? 40 : 0, position: "relative" }}>
+                  {i < steps.length - 1 && (
+                    <div style={{ position: "absolute", left: 23, top: 52, width: 2, height: "calc(100% - 12px)", background: `linear-gradient(${s.color}60,${steps[i+1].color}20)` }} />
+                  )}
+                  <div style={{ flexShrink: 0, width: 48, height: 48, borderRadius: "50%", background: `linear-gradient(135deg,${s.color},${s.color}88)`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#0a0f1e", boxShadow: `0 6px 20px ${s.color}40`, border: `2px solid ${s.color}40` }}>
+                    {s.n}
+                  </div>
+                  <div style={{ paddingTop: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6, color: "#f0f4ff" }}>{s.title}</div>
+                    <div style={{ color: "#4b5563", fontSize: 14, lineHeight: 1.6 }}>{s.desc}</div>
+                  </div>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </section>
       </div>
 
       {/* ── CTA final ── */}
@@ -349,9 +387,7 @@ export default function LandingPage() {
         <FadeIn>
           <section style={{ maxWidth: 700, margin: "0 auto", padding: "70px 24px 90px", textAlign: "center" }}>
             <div style={{ background: "linear-gradient(135deg,rgba(245,166,35,0.08),rgba(59,130,246,0.08))", border: "1px solid rgba(245,166,35,0.15)", borderRadius: 24, padding: "60px 40px", backdropFilter: "blur(16px)" }}>
-              <h2 style={{ fontSize: "clamp(22px,4vw,36px)", fontWeight: 900, marginBottom: 14, letterSpacing: -0.5 }}>
-                Pronto para começar?
-              </h2>
+              <h2 style={{ fontSize: "clamp(22px,4vw,36px)", fontWeight: 900, marginBottom: 14, letterSpacing: -0.5 }}>Pronto para começar?</h2>
               <p style={{ color: "#4b5563", fontSize: 16, marginBottom: 36, lineHeight: 1.6 }}>
                 Regista-te agora e recebe <strong style={{ color: "#f5a623" }}>10.000 Kz virtual</strong> para treinar sem risco.
               </p>
@@ -366,18 +402,72 @@ export default function LandingPage() {
       </div>
 
       {/* ── Footer ── */}
-      <footer style={{ position: "relative", zIndex: 1, background: "rgba(5,9,18,0.95)", borderTop: "1px solid rgba(30,45,80,0.5)", padding: "32px 24px", textAlign: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 14 }}>
-          <div style={{ width: 28, height: 28, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 12px rgba(245,166,35,0.3)" }}>
-            <span style={{ fontSize: 14, fontWeight: 900, color: "#0a0f1e" }}>D</span>
+      <footer style={{ position: "relative", zIndex: 1, background: "rgba(5,9,18,0.95)", borderTop: "1px solid rgba(30,45,80,0.5)", padding: "40px 24px 28px" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto" }}>
+          {/* Top */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 32, justifyContent: "space-between", marginBottom: 36 }}>
+            {/* Brand */}
+            <div style={{ maxWidth: 260 }}>
+              <Logo />
+              <p style={{ color: "#374151", fontSize: 13, marginTop: 12, lineHeight: 1.7 }}>
+                A primeira corretora de opções binárias angolana com pagamentos em Kwanza.
+              </p>
+            </div>
+
+            {/* Links */}
+            <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Plataforma</div>
+                {[
+                  { label: "Entrar",       href: "/login" },
+                  { label: "Registar",     href: "/register" },
+                  { label: "Conta Demo",   href: "/register" },
+                  { label: "Referidos",    href: "/register" },
+                ].map(l => (
+                  <div key={l.label} style={{ marginBottom: 8 }}>
+                    <a href={l.href} style={{ color: "#475569", fontSize: 14, textDecoration: "none" }}
+                      onMouseOver={e => (e.currentTarget.style.color = "#f5a623")}
+                      onMouseOut={e  => (e.currentTarget.style.color = "#475569")}>
+                      {l.label}
+                    </a>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Apoio</div>
+                {[
+                  { label: "Suporte",       href: "/support" },
+                  { label: "Termos de Uso", href: "/terms" },
+                ].map(l => (
+                  <div key={l.label} style={{ marginBottom: 8 }}>
+                    <a href={l.href} style={{ color: "#475569", fontSize: 14, textDecoration: "none" }}
+                      onMouseOver={e => (e.currentTarget.style.color = "#f5a623")}
+                      onMouseOut={e  => (e.currentTarget.style.color = "#475569")}>
+                      {l.label}
+                    </a>
+                  </div>
+                ))}
+                <div style={{ marginTop: 12 }}>
+                  <a href={WA_LINK} target="_blank" rel="noopener noreferrer"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.25)", borderRadius: 8, padding: "8px 14px", color: "#22c55e", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
+                    <MessageCircle size={14} /> WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
-          <span style={{ fontWeight: 800, fontSize: 15, background: "linear-gradient(90deg,#fff,#64748b)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Dynamics Works</span>
+
+          {/* Bottom */}
+          <div style={{ borderTop: "1px solid rgba(30,45,80,0.5)", paddingTop: 20, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <p style={{ color: "#1e2d50", fontSize: 12, margin: 0 }}>
+              © {new Date().getFullYear()} Dynamics Works · Angola · Todos os direitos reservados
+            </p>
+            <p style={{ color: "#1e2d50", fontSize: 12, margin: 0 }}>
+              Opções binárias envolvem risco. Negocie com responsabilidade.
+            </p>
+          </div>
         </div>
-        <p style={{ color: "#1e2d50", fontSize: 12, margin: 0, lineHeight: 2 }}>
-          Opções binárias envolvem risco. Negocie com responsabilidade.
-          <br />
-          © {new Date().getFullYear()} Dynamics Works · Angola · Todos os direitos reservados
-        </p>
       </footer>
     </div>
   );

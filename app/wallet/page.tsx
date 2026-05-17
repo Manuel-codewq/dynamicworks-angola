@@ -1,730 +1,364 @@
 "use client";
-import { formatKz } from "@/lib/format";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  TrendingUp, Wallet, ArrowDownCircle, ArrowUpCircle,
-  CheckCircle, Clock, XCircle, ChevronLeft, ShieldCheck, Mail,
-  CreditCard, RefreshCw, Copy, Bitcoin,
+  ChevronLeft, Wallet, ArrowDownCircle, ArrowUpCircle,
+  Clock, CheckCircle, XCircle, Filter, RefreshCw,
+  Send, AlertCircle, Eye, EyeOff, Copy, Check,
 } from "lucide-react";
+import { formatKz } from "@/lib/format";
+import PageGuide from "@/app/components/PageGuide";
+import { Wallet as WalletIcon, ArrowDownCircle as DepositIcon, ArrowUpCircle as WithdrawIcon, Clock as HistoryIcon } from "lucide-react";
 
-const DEPOSIT_METHODS = [
-  { id: "multicaixa", name: "Multicaixa Express", color: "#e74c3c" },
+const WALLET_GUIDE = [
+  { icon: <WalletIcon   size={26} color="#f5a623" />, iconColor: "#f5a623", title: "A tua Carteira",        description: "Aqui podes ver o teu saldo real e demo, fazer depósitos, pedir levantamentos e consultar todo o histórico de transacções.", tip: "O saldo demo serve para praticar — não é dinheiro real." },
+  { icon: <DepositIcon  size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Como fazer Depósito",   description: "Escolhe o valor, o método de pagamento e a referência. Depois confirmas com um código OTP enviado para o teu email. O admin aprova o depósito manualmente.", tip: "Guarda sempre o comprovativo de pagamento até o depósito ser aprovado." },
+  { icon: <WithdrawIcon size={26} color="#ef4444" />, iconColor: "#ef4444", title: "Como fazer Levantamento", description: "Para levantar precisas de ter KYC aprovado. Indica o valor e a conta de destino, confirma com OTP. O processamento demora 1 a 3 dias úteis.", tip: "O KYC garante a segurança dos levantamentos. Faz a verificação em Perfil." },
+  { icon: <HistoryIcon  size={26} color="#38bdf8" />, iconColor: "#38bdf8", title: "Histórico de Transacções", description: "Usa os filtros para ver só depósitos, só levantamentos, ou filtrar por estado: Pendente (a aguardar aprovação), Aprovado ou Rejeitado.", tip: "Pendente = em análise. Aprovado = creditado. Rejeitado = não processado." },
 ];
 
+type Tx = {
+  id: string; type: string; amount: number; method: string | null;
+  status: string; reference: string | null; createdAt: string;
+};
 
-function methodLabel(m: string | null): string {
-  if (!m) return "—";
-  const map: Record<string, string> = {
-    multicaixa:          "Multicaixa Express",
-    usdt_trc20:          "USDT TRC-20",
-    crypto_nowpayments:  "USDT TRC-20",
-  };
-  return map[m] ?? m;
+type Filter = "all" | "deposit" | "withdrawal";
+type StatusFilter = "all" | "pending" | "approved" | "rejected";
+
+const STATUS_CFG: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
+  pending:  { label: "Pendente",  color: "#f5a623", bg: "rgba(245,166,35,0.1)",  Icon: Clock        },
+  approved: { label: "Aprovado",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
+  rejected: { label: "Rejeitado", color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle      },
+};
+
+function formatDate(s: string) {
+  return new Date(s).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
-    pending: { color: "#f5a623", bg: "rgba(245,166,35,0.1)", icon: <Clock size={12} />, label: "Pendente" },
-    completed: { color: "#22c55e", bg: "rgba(34,197,94,0.1)", icon: <CheckCircle size={12} />, label: "Concluído" },
-    rejected: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", icon: <XCircle size={12} />, label: "Rejeitado" },
-  };
-  const c = config[status] ?? config.pending;
+  const cfg = STATUS_CFG[status] ?? STATUS_CFG.pending;
   return (
-    <span style={{
-      background: c.bg, color: c.color, borderRadius: 20,
-      padding: "2px 8px", fontSize: 11, fontWeight: 600,
-      display: "inline-flex", alignItems: "center", gap: 4,
-    }}>
-      {c.icon} {c.label}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: cfg.bg, color: cfg.color, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+      <cfg.Icon size={11} /> {cfg.label}
     </span>
   );
 }
 
 export default function WalletPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const [balance, setBalance] = useState(0);
+
+  const [balance,     setBalance]     = useState(0);
   const [demoBalance, setDemoBalance] = useState(0);
-  const [isDemo, setIsDemo] = useState(true);
-  const [tab, setTab] = useState<"deposit" | "withdraw" | "history">("deposit");
-  const [method, setMethod] = useState(DEPOSIT_METHODS[0].id);
-  const [amount, setAmount] = useState(5000);
-  const [bankAccount, setBankAccount] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading,       setLoading]       = useState(false);
-  const [msg,           setMsg]           = useState<{ text: string; ok: boolean } | null>(null);
-  const [demoReloading, setDemoReloading] = useState(false);
-  // OTP flow
-  const [otpStep,       setOtpStep]       = useState(false);
-  const [otpCode,       setOtpCode]       = useState("");
-  const [otpLoading,    setOtpLoading]    = useState(false);
-  const [pendingType,   setPendingType]   = useState<"deposit" | "withdrawal" | null>(null);
-  const [kycStatus,     setKycStatus]     = useState<string>("pending");
-  const [promoCode,     setPromoCode]     = useState("");
-  const [promoLoading,  setPromoLoading]  = useState(false);
-  const [promoMsg,      setPromoMsg]      = useState<{ text: string; ok: boolean } | null>(null);
-  // USDT flow
-  const [payMethod,     setPayMethod]     = useState<"multicaixa" | "usdt">("usdt");
-  const [usdtAddress,   setUsdtAddress]   = useState("");
-  const [usdtDeposit,   setUsdtDeposit]   = useState<{ usdtAmount: number; usdtAddress: string; usdtRate: number; expiresAt: string; paymentId?: string; invoiceUrl?: string } | null>(null);
-  const [usdtLoading,   setUsdtLoading]   = useState(false);
-  const [copied,        setCopied]        = useState<string | null>(null);
-  const [usdtInfo,      setUsdtInfo]      = useState<{ rateAoa: number; minUsdt: number; minAoa: number; available: boolean } | null>(null);
+  const [showBalance, setShowBalance] = useState(true);
+  const [transactions, setTransactions] = useState<Tx[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [tab,         setTab]         = useState<"deposit" | "withdraw" | "history">("history");
+  const [typeFilter,  setTypeFilter]  = useState<Filter>("all");
+  const [statusFilter,setStatusFilter]= useState<StatusFilter>("all");
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-  }, [status, router]);
+  // Form state
+  const [amount,    setAmount]    = useState("");
+  const [method,    setMethod]    = useState("");
+  const [reference, setReference] = useState("");
+  const [otpSent,   setOtpSent]   = useState(false);
+  const [otp,       setOtp]       = useState("");
+  const [formMsg,   setFormMsg]   = useState<{ text: string; ok: boolean } | null>(null);
+  const [busy,      setBusy]      = useState(false);
+  const [copied,    setCopied]    = useState(false);
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    fetch("/api/balance").then(r => r.json()).then(d => {
-      setBalance(d.balance); setDemoBalance(d.demoBalance); setIsDemo(d.isDemo);
-    });
-    fetch("/api/transactions").then(r => r.json()).then(d => {
-      if (Array.isArray(d)) setTransactions(d);
-    });
-    fetch("/api/profile/kyc").then(r => r.json()).then(d => {
-      if (d?.kycStatus) setKycStatus(d.kycStatus);
-    });
-    fetch("/api/usdt-info").then(r => r.json()).then(d => {
-      setUsdtInfo(d);
-    });
-  }, [status]);
+  useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
-  async function resetDemo() {
-    setDemoReloading(true);
-    try {
-      const res = await fetch("/api/demo/reset", { method: "POST" });
-      if (res.ok) { const d = await res.json(); setDemoBalance(d.demoBalance); }
-    } catch { /* silent */ }
-    setDemoReloading(false);
-  }
-
-  // Passo 1: pedir OTP
-  async function requestOtp(type: "deposit" | "withdrawal") {
-    setLoading(true); setMsg(null);
-    const res = await fetch("/api/otp", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ type, amount }),
-    });
+  const load = useCallback(async () => {
+    const [bal, txs] = await Promise.all([
+      fetch("/api/balance").then(r => r.json()),
+      fetch("/api/transactions").then(r => r.json()),
+    ]);
+    setBalance(bal.balance ?? 0);
+    setDemoBalance(bal.demoBalance ?? 0);
+    setTransactions(Array.isArray(txs) ? txs : []);
     setLoading(false);
-    if (res.ok) {
-      setPendingType(type);
-      setOtpCode("");
-      setOtpStep(true);
-    } else {
-      const d = await res.json();
-      setMsg({ text: d.error ?? "Erro ao enviar código OTP", ok: false });
-    }
-  }
+  }, []);
 
-  // Passo 2: confirmar OTP e criar transação
-  async function confirmOtp() {
-    if (!pendingType) return;
-    setOtpLoading(true); setMsg(null);
+  useEffect(() => { if (status === "authenticated") load(); }, [status, load]);
 
-    let res: Response;
-    if (pendingType === "withdrawal" && payMethod === "usdt") {
-      res = await fetch("/api/transactions/usdt/withdraw", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ amount, address: usdtAddress, otp: otpCode }),
-      });
-    } else {
-      const body: any = { type: pendingType, amount, method, otp: otpCode };
-      if (pendingType === "withdrawal") { body.reference = bankAccount; body.method = bankName || method; }
-      res = await fetch("/api/transactions", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
-      });
-    }
-    const d = await res.json();
-    setOtpLoading(false);
-    if (res.ok) {
-      setOtpStep(false);
-      setMsg({ text: pendingType === "deposit" ? "Pedido de depósito enviado! Aguarde confirmação." : "Pedido de levantamento enviado!", ok: true });
-      fetch("/api/transactions").then(r => r.json()).then(d => { if (Array.isArray(d)) setTransactions(d); });
-    } else {
-      setMsg({ text: d.error, ok: false });
-    }
-  }
-
-  async function requestUsdtDeposit() {
-    setUsdtLoading(true); setMsg(null); setUsdtDeposit(null);
-    const res = await fetch("/api/transactions/crypto/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount }),
-    });
-    const d = await res.json();
-    setUsdtLoading(false);
-    if (res.ok) {
-      setUsdtDeposit({
-        usdtAmount: d.pay_amount,
-        usdtAddress: d.pay_address,
-        usdtRate: 0, 
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        paymentId: d.payment_id,
-        invoiceUrl: d.invoice_url
-      });
-      fetch("/api/transactions").then(r => r.json()).then(d => { if (Array.isArray(d)) setTransactions(d); });
-    } else {
-      setMsg({ text: d.error ?? "Erro ao criar pedido Crypto", ok: false });
-    }
-  }
-
-  async function copyToClipboard(value: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(label);
-      setTimeout(() => setCopied(null), 1500);
-    } catch { /* silent */ }
-  }
-
-  async function redeemPromo() {
-    if (!promoCode.trim()) return;
-    setPromoLoading(true); setPromoMsg(null);
-    const res = await fetch("/api/promo/redeem", {
+  async function sendOtp() {
+    if (!amount || Number(amount) < 1000) { setFormMsg({ text: "Valor mínimo: 1.000 Kz", ok: false }); return; }
+    setBusy(true); setFormMsg(null);
+    const r = await fetch("/api/otp", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: promoCode }),
+      body: JSON.stringify({ type: tab === "deposit" ? "deposit" : "withdrawal", amount: Number(amount) }),
     });
-    const d = await res.json();
-    setPromoLoading(false);
-    if (res.ok) {
-      setPromoMsg({ text: `🎉 Código aplicado! + ${formatKz(d.value)} adicionados à tua conta real.`, ok: true });
-      setPromoCode("");
-      fetch("/api/balance").then(r => r.json()).then(b => { setBalance(b.balance); });
+    const d = await r.json();
+    setBusy(false);
+    if (r.ok) { setOtpSent(true); setFormMsg({ text: "Código enviado para o teu email.", ok: true }); }
+    else setFormMsg({ text: d.error ?? "Erro ao enviar código.", ok: false });
+  }
+
+  async function submitTx() {
+    if (!otp || otp.length !== 6) { setFormMsg({ text: "Introduz o código de 6 dígitos.", ok: false }); return; }
+    setBusy(true); setFormMsg(null);
+    const r = await fetch("/api/transactions", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: tab === "deposit" ? "deposit" : "withdrawal", amount: Number(amount), method, reference, otp }),
+    });
+    const d = await r.json();
+    setBusy(false);
+    if (r.ok) {
+      setFormMsg({ text: tab === "deposit" ? "Pedido de depósito submetido!" : "Pedido de levantamento submetido!", ok: true });
+      setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false);
+      setTab("history"); load();
     } else {
-      setPromoMsg({ text: d.error ?? "Código inválido", ok: false });
+      setFormMsg({ text: d.error ?? "Erro ao submeter.", ok: false });
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50",
-    borderRadius: 8, padding: "11px 14px", color: "#ffffff",
-    fontSize: 14, outline: "none", boxSizing: "border-box",
-  };
+  function resetForm() {
+    setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false); setFormMsg(null);
+  }
+
+  const filtered = transactions.filter(t => {
+    if (typeFilter !== "all" && t.type !== typeFilter) return false;
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    return true;
+  });
+
+  const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 22, marginBottom: 14 };
+  const inp: React.CSSProperties  = { width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" };
+  const tabBtn = (t: string): React.CSSProperties => ({ flex: 1, padding: "10px 0", background: tab === t ? "#f5a623" : "none", color: tab === t ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" });
+  const filterBtn = (active: boolean): React.CSSProperties => ({ padding: "6px 12px", background: active ? "rgba(245,166,35,0.15)" : "rgba(255,255,255,0.04)", color: active ? "#f5a623" : "#64748b", border: `1px solid ${active ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer" });
+
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 40 }}>
       {/* Header */}
-      <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={() => router.push("/trade")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, color: "#94a3b8" }}>
+      <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
+        <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <TrendingUp size={18} color="#0a0f1e" strokeWidth={2.5} />
-        </div>
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Carteira</span>
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>Carteira</span>
+        <button onClick={() => setShowBalance(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>
+          {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
+        </button>
+        <button onClick={load} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>
+          <RefreshCw size={16} />
+        </button>
       </div>
 
-      <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 16px" }}>
-        {/* Balance cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: 20 }}>
-            <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>Saldo Real</div>
-            <div style={{ color: "#22c55e", fontSize: 22, fontWeight: 800 }}>{formatKz(Math.floor(balance))}</div>
+      <PageGuide storageKey="dw_guide_wallet" steps={WALLET_GUIDE} />
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px" }}>
+
+        {/* Saldo cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+          <div style={{ ...card, marginBottom: 0, background: "linear-gradient(135deg,#111827,#0f1e38)" }}>
+            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Saldo Real</div>
+            <div style={{ color: "#f5a623", fontSize: 22, fontWeight: 900 }}>
+              {showBalance ? formatKz(Math.floor(balance)) : "••••••"}
+            </div>
           </div>
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: 20 }}>
-            <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>Saldo Demo</div>
-            <div style={{ color: "#f5a623", fontSize: 22, fontWeight: 800 }}>{formatKz(Math.floor(demoBalance))}</div>
-            {demoBalance < 5000 && (
-              <button onClick={resetDemo} disabled={demoReloading}
-                style={{ marginTop: 10, background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 6, fontSize: 12, padding: "4px 10px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1 }}>
-                <RefreshCw size={12} style={{ display:"inline", marginRight:5, verticalAlign:"middle" }} />{demoReloading ? "A recarregar..." : "Recarregar demo"}
-              </button>
-            )}
+          <div style={{ ...card, marginBottom: 0 }}>
+            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Saldo Demo</div>
+            <div style={{ color: "#94a3b8", fontSize: 22, fontWeight: 900 }}>
+              {showBalance ? formatKz(Math.floor(demoBalance)) : "••••••"}
+            </div>
           </div>
         </div>
-
 
         {/* Tabs */}
-        <div style={{ display: "flex", background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 20, gap: 4 }}>
-          {([["deposit", "Depositar", ArrowDownCircle], ["withdraw", "Levantar", ArrowUpCircle], ["history", "Histórico", Clock]] as const).map(([id, label, Icon]) => (
-            <button key={id} onClick={() => setTab(id)}
-              style={{
-                flex: 1, background: tab === id ? "#f5a623" : "transparent",
-                color: tab === id ? "#0a0f1e" : "#94a3b8",
-                border: "none", borderRadius: 7, padding: "9px 0", fontSize: 13, fontWeight: 700,
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-              }}>
-              <Icon size={14} /> {label}
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 20 }}>
+          <button style={tabBtn("deposit")}   onClick={() => { setTab("deposit");  resetForm(); }}>
+            <ArrowDownCircle size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Depósito
+          </button>
+          <button style={tabBtn("withdraw")}  onClick={() => { setTab("withdraw"); resetForm(); }}>
+            <ArrowUpCircle  size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Levantamento
+          </button>
+          <button style={tabBtn("history")}   onClick={() => setTab("history")}>
+            <Clock size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Histórico
+          </button>
         </div>
 
-        {msg && (
-          <div style={{
-            background: msg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-            border: `1px solid ${msg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
-            borderRadius: 8, padding: "10px 14px", marginBottom: 16, color: msg.ok ? "#22c55e" : "#ef4444", fontSize: 14,
-          }}>{msg.text}</div>
-        )}
-
-        {/* Deposit tab */}
+        {/* ── Depósito ─────────────────────────────────────────────────────────── */}
         {tab === "deposit" && (
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
-            {/* Method selector */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              {/* Multicaixa Express removido temporariamente */}
-              {/* <button onClick={() => { setPayMethod("multicaixa"); setUsdtDeposit(null); }}
-                style={{
-                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-                  background: payMethod === "multicaixa" ? "rgba(231,76,60,0.12)" : "#0a0f1e",
-                  border: `1px solid ${payMethod === "multicaixa" ? "rgba(231,76,60,0.5)" : "#1e2d50"}`,
-                  borderRadius: 10, cursor: "pointer",
-                }}>
-                <CreditCard size={22} color="#e74c3c" />
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Multicaixa</div>
-                  <div style={{ color: "#94a3b8", fontSize: 11 }}>Express</div>
-                </div>
-              </button> */}
-              <button onClick={() => setPayMethod("usdt")}
-                style={{
-                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-                  background: payMethod === "usdt" ? "rgba(38,161,123,0.12)" : "#0a0f1e",
-                  border: `1px solid ${payMethod === "usdt" ? "rgba(38,161,123,0.5)" : "#1e2d50"}`,
-                  borderRadius: 10, cursor: "pointer",
-                }}>
-                <Bitcoin size={22} color="#26a17b" />
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>USDT</div>
-                  <div style={{ color: "#94a3b8", fontSize: 11 }}>TRC-20</div>
-                </div>
-              </button>
+          <div style={card}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <div style={{ width: 40, height: 40, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ArrowDownCircle size={20} color="#22c55e" />
+              </div>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 700 }}>Pedido de Depósito</div>
+                <div style={{ color: "#64748b", fontSize: 12 }}>Mínimo: 1.000 Kz · Máximo: 5.000.000 Kz</div>
+              </div>
             </div>
 
-            {payMethod === "multicaixa" && (
-              <>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
-                  <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
-                    placeholder="5000" style={inputStyle} />
-                </div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                  {[5000, 10000, 25000, 50000].map(v => (
-                    <button key={v} onClick={() => setAmount(v)}
-                      style={{
-                        flex: 1, background: amount === v ? "#f5a623" : "#1e2d50",
-                        color: amount === v ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6,
-                        padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                      }}>{(v / 1000)}k</button>
-                  ))}
-                </div>
+            {formMsg && (
+              <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                {formMsg.ok ? <CheckCircle size={14} color="#22c55e" /> : <AlertCircle size={14} color="#ef4444" />}
+                <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
+              </div>
+            )}
 
-                <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-                  <strong style={{ color: "#f5a623" }}>Instruções:</strong> Após clicar em &quot;Enviar pedido&quot;, um agente entrará em contacto via WhatsApp para confirmar o depósito via Multicaixa Express.
-                </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor (Kz)</label>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 50000" style={inp} disabled={otpSent} />
+              </div>
+              <div>
+                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Método de pagamento</label>
+                <input value={method} onChange={e => setMethod(e.target.value)} placeholder="ex: Multicaixa, Transferência, USDT" style={inp} disabled={otpSent} />
+              </div>
+              <div>
+                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Referência / Comprovativo</label>
+                <input value={reference} onChange={e => setReference(e.target.value)} placeholder="Número de referência ou descrição" style={inp} disabled={otpSent} />
+              </div>
 
-                <button onClick={() => requestOtp("deposit")} disabled={loading}
-                  style={{
-                    width: "100%", background: "#f5a623", color: "#0a0f1e", border: "none",
-                    borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  }}>
-                  {loading ? "A enviar código..." : <><ShieldCheck size={16} /> {`Depositar ${formatKz(amount)}`}</>}
+              {!otpSent ? (
+                <button onClick={sendOtp} disabled={busy} style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
+                  {busy ? "A enviar código..." : "Continuar → Confirmar com código"}
                 </button>
-              </>
-            )}
-
-            {payMethod === "usdt" && (
-              <>
-                {kycStatus !== "approved" && (
-                  <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, color: "#94a3b8", fontSize: 13 }}>
-                    <strong style={{ color: "#ef4444" }}>KYC obrigatório</strong> — para depositar via USDT precisas de ter a verificação de identidade aprovada. <a href="/kyc" style={{ color: "#f5a623" }}>Verificar →</a>
-                  </div>
-                )}
-
-                {!usdtDeposit && (
-                  <>
-                    {/* Info: mínimo e taxa actuais */}
-                    {usdtInfo && usdtInfo.available && (
-                      <div style={{ background: "rgba(38,161,123,0.06)", border: "1px solid rgba(38,161,123,0.2)", borderRadius: 8, padding: "8px 12px", marginBottom: 14, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                        <span style={{ color: "#94a3b8" }}>Mínimo: <strong style={{ color: "#26a17b" }}>{usdtInfo.minUsdt} USDT ({formatKz(usdtInfo.minAoa)})</strong></span>
-                        <span style={{ color: "#94a3b8" }}>Taxa: <strong style={{ color: "#fff" }}>{formatKz(usdtInfo.rateAoa)}/USDT</strong></span>
-                      </div>
-                    )}
-
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
-                      <input type="number" value={amount}
-                        onChange={e => setAmount(parseInt(e.target.value) || 0)}
-                        placeholder={usdtInfo?.minAoa ? String(usdtInfo.minAoa) : "12025"}
-                        style={inputStyle} />
-                    </div>
-                    <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                      {/* Botões acima do mínimo USDT */}
-                      {(usdtInfo?.minAoa
-                        ? [
-                            Math.ceil(usdtInfo.minAoa / 1000) * 1000,
-                            Math.ceil(usdtInfo.minAoa / 1000) * 2000,
-                            Math.ceil(usdtInfo.minAoa / 1000) * 4000,
-                            Math.ceil(usdtInfo.minAoa / 1000) * 8000,
-                          ]
-                        : [13000, 25000, 50000, 100000]
-                      ).map(v => (
-                        <button key={v} onClick={() => setAmount(v)}
-                          style={{
-                            flex: 1, background: amount === v ? "#26a17b" : "#1e2d50",
-                            color: amount === v ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 6,
-                            padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                          }}>{v >= 1000 ? (v / 1000) + "k" : v}</button>
-                      ))}
-                    </div>
-
-                    <div style={{ background: "rgba(38,161,123,0.08)", border: "1px solid rgba(38,161,123,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-                      <strong style={{ color: "#26a17b" }}>Depósito Automático:</strong> Assim que transferires o valor exato para o endereço indicado, o teu saldo é creditado automaticamente.
-                    </div>
-
-                    <button onClick={requestUsdtDeposit} disabled={usdtLoading || kycStatus !== "approved"}
-                      style={{
-                        width: "100%", background: "#26a17b", color: "#fff", border: "none",
-                        borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15,
-                        cursor: usdtLoading || kycStatus !== "approved" ? "not-allowed" : "pointer",
-                        opacity: kycStatus !== "approved" ? 0.5 : 1,
-                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      }}>
-                      {usdtLoading ? "A processar..." : <><Bitcoin size={16} /> Pagar com Crypto</>}
-                    </button>
-                  </>
-                )}
-
-                {usdtDeposit && (
+              ) : (
+                <>
                   <div>
-                    <div style={{ background: "rgba(38,161,123,0.08)", border: "1px solid rgba(38,161,123,0.3)", borderRadius: 10, padding: 16, marginBottom: 12 }}>
-                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Envia este valor exato</div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                        <div style={{ color: "#26a17b", fontSize: 24, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                          {usdtDeposit.usdtAmount} USDT
-                        </div>
-                        <button onClick={() => copyToClipboard(usdtDeposit.usdtAmount.toString(), "amount")}
-                          style={{ background: "#1e2d50", border: "none", borderRadius: 6, padding: "6px 10px", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
-                          <Copy size={12} /> {copied === "amount" ? "Copiado!" : "Copiar"}
-                        </button>
-                      </div>
-                      <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 6 }}>
-                        Equivalente a {formatKz(amount)}
-                      </div>
-                    </div>
-
-                    {/* QR Code */}
-                    <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 16, marginBottom: 12, textAlign: "center" }}>
-                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 10 }}>Escaneia com a tua carteira crypto</div>
-                      <div style={{ display: "inline-block", background: "#ffffff", borderRadius: 10, padding: 10 }}>
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(usdtDeposit.usdtAddress)}&size=180x180&margin=0`}
-                          alt="QR Code"
-                          width={180}
-                          height={180}
-                          style={{ display: "block", borderRadius: 6 }}
-                        />
-                      </div>
-                      <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>Rede: TRC-20 (Tron) · Token: USDT</div>
-                    </div>
-
-                    <div style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                      <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Endereço TRC-20</div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                        <div style={{ color: "#fff", fontFamily: "monospace", fontSize: 12, wordBreak: "break-all" }}>
-                          {usdtDeposit.usdtAddress}
-                        </div>
-                        <button onClick={() => copyToClipboard(usdtDeposit.usdtAddress, "addr")}
-                          style={{ background: "#1e2d50", border: "none", borderRadius: 6, padding: "6px 10px", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12, flexShrink: 0 }}>
-                          <Copy size={12} /> {copied === "addr" ? "Copiado!" : "Copiar"}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12, color: "#94a3b8" }}>
-                      ⚠️ Envia <strong style={{ color: "#fff" }}>exatamente</strong> o valor indicado pela rede <strong style={{ color: "#fff" }}>TRC-20 (Tron)</strong>. O saldo é creditado automaticamente após confirmação na rede.
-                    </div>
-
-                    <div style={{ background: "rgba(245,166,35,0.05)", borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: "#64748b", textAlign: "center" }}>
-                      Janela válida: {new Date(usdtDeposit.expiresAt).toLocaleString("pt-AO", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
-                    </div>
-
-
-                    <button onClick={() => setUsdtDeposit(null)}
-                      style={{ width: "100%", background: "#1e2d50", color: "#94a3b8", border: "none", borderRadius: 8, padding: 12, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-                      Cancelar e Criar novo pedido
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (enviado por email)</label>
+                    <input type="text" inputMode="numeric" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" autoFocus
+                      style={{ ...inp, fontSize: 24, textAlign: "center", letterSpacing: 10, fontWeight: 700 }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
+                      {busy ? "A submeter..." : "Confirmar Depósito"}
+                    </button>
+                    <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>
+                      Cancelar
                     </button>
                   </div>
-                )}
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Withdraw tab */}
+        {/* ── Levantamento ──────────────────────────────────────────────────────── */}
         {tab === "withdraw" && (
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
-            {/* KYC banner — bloqueia se não aprovado */}
-            {kycStatus !== "approved" && (
-              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 12, padding: "16px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 14 }}>
-                <ShieldCheck size={28} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Verificação de identidade obrigatória</div>
-                  <div style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.5 }}>
-                    Para efectuar levantamentos precisas de completar o processo de verificação KYC.{" "}
-                    {kycStatus === "pending" && "O teu pedido está a aguardar aprovação."}
-                    {kycStatus === "rejected" && "O teu pedido foi rejeitado. Submete novamente."}
-                    {kycStatus === "not_submitted" && ""}
+          <div style={card}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <div style={{ width: 40, height: 40, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ArrowUpCircle size={20} color="#ef4444" />
+              </div>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 700 }}>Pedido de Levantamento</div>
+                <div style={{ color: "#64748b", fontSize: 12 }}>Saldo disponível: {formatKz(Math.floor(balance))}</div>
+              </div>
+            </div>
+
+            <div style={{ background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, color: "#94a3b8", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+              <AlertCircle size={15} color="#f5a623" style={{ flexShrink: 0 }} />
+              KYC obrigatório para levantamentos. O processamento demora 1-3 dias úteis.
+            </div>
+
+            {formMsg && (
+              <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                {formMsg.ok ? <CheckCircle size={14} color="#22c55e" /> : <AlertCircle size={14} color="#ef4444" />}
+                <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor (Kz)</label>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 25000" style={inp} disabled={otpSent} />
+              </div>
+              <div>
+                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Conta de destino / IBAN</label>
+                <input value={method} onChange={e => setMethod(e.target.value)} placeholder="Conta bancária, número de telefone..." style={inp} disabled={otpSent} />
+              </div>
+
+              {!otpSent ? (
+                <button onClick={sendOtp} disabled={busy} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
+                  {busy ? "A enviar código..." : "Continuar → Confirmar com código"}
+                </button>
+              ) : (
+                <>
+                  <div>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (enviado por email)</label>
+                    <input type="text" inputMode="numeric" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" autoFocus
+                      style={{ ...inp, fontSize: 24, textAlign: "center", letterSpacing: 10, fontWeight: 700 }} />
                   </div>
-                  {kycStatus !== "pending" && (
-                    <a href="/kyc" style={{ display: "inline-block", marginTop: 10, background: "#ef4444", color: "#fff", borderRadius: 8, padding: "7px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-                      Verificar identidade →
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-            {/* Method selector */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button onClick={() => {}} 
-                style={{
-                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-                  background: "#0a0f1e",
-                  border: "1px solid #1e2d50",
-                  borderRadius: 10, cursor: "not-allowed", opacity: 0.6
-                }}>
-                <CreditCard size={22} color="#94a3b8" />
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "#94a3b8", fontWeight: 700, fontSize: 13 }}>Multicaixa</div>
-                  <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 600 }}>Brevemente</div>
-                </div>
-              </button>
-              <button onClick={() => setPayMethod("usdt")}
-                style={{
-                  flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-                  background: payMethod === "usdt" ? "rgba(38,161,123,0.12)" : "#0a0f1e",
-                  border: `1px solid ${payMethod === "usdt" ? "rgba(38,161,123,0.5)" : "#1e2d50"}`,
-                  borderRadius: 10, cursor: "pointer",
-                }}>
-                <Bitcoin size={22} color="#26a17b" />
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>USDT</div>
-                  <div style={{ color: "#94a3b8", fontSize: 11 }}>TRC-20</div>
-                </div>
-              </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
+                      {busy ? "A submeter..." : "Confirmar Levantamento"}
+                    </button>
+                    <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-
-            {payMethod === "multicaixa" && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Número de telefone (Multicaixa Express)</label>
-              <input type="tel" value={bankAccount} onChange={e => setBankAccount(e.target.value)}
-                placeholder="9XX XXX XXX" style={inputStyle} />
-            </div>
-            )}
-
-            {payMethod === "usdt" && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Endereço TRC-20 (Tron)</label>
-              <input type="text" value={usdtAddress} onChange={e => setUsdtAddress(e.target.value.trim())}
-                placeholder="TXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style={{ ...inputStyle, fontFamily: "monospace", fontSize: 13 }} />
-              <div style={{ color: "#64748b", fontSize: 11, marginTop: 4 }}>
-                Verifica bem o endereço — envios USDT são irreversíveis.
-              </div>
-            </div>
-            )}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Valor (Kz)</label>
-              <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)}
-                placeholder="5000" style={inputStyle} />
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                {[5000, 10000, 25000, 50000].map(v => (
-                  <button key={v} onClick={() => setAmount(v)}
-                    style={{ flex: 1, background: amount === v ? "#ef4444" : "#1e2d50", color: amount === v ? "#fff" : "#94a3b8", border: "none", borderRadius: 6, padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    {(v / 1000)}k
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#94a3b8" }}>
-              {payMethod === "usdt"
-                ? "Processamento manual em 24h úteis. Mínimo 5.000 Kz. O envio USDT é feito pela equipa após validação."
-                : "Processamento em 1-3 dias úteis. Valor mínimo: 5.000 Kz."}
-            </div>
-            <button
-              onClick={() => requestOtp("withdrawal")}
-              disabled={
-                loading ||
-                (payMethod === "usdt" && !/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(usdtAddress))
-              }
-              style={{
-                width: "100%", background: "#ef4444", color: "#fff", border: "none",
-                borderRadius: 8, padding: 14, fontWeight: 700, fontSize: 15,
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity:
-                  (payMethod === "usdt" && !/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(usdtAddress)) ? 0.5 : 1,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              }}>
-              {loading ? "A enviar código..." : <><ShieldCheck size={16} /> {`Solicitar levantamento de ${formatKz(amount)}`}</>}
-            </button>
           </div>
         )}
 
-        {/* History tab */}
+        {/* ── Histórico ─────────────────────────────────────────────────────────── */}
         {tab === "history" && (
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
-            <h3 style={{ color: "#fff", margin: "0 0 16px", fontSize: 16 }}>Histórico de transações</h3>
-            {transactions.length === 0 ? (
-              <p style={{ color: "#94a3b8", textAlign: "center", padding: "20px 0" }}>Nenhuma transação ainda</p>
+          <>
+            {/* Filtros */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              <Filter size={14} color="#64748b" style={{ alignSelf: "center" }} />
+              {(["all","deposit","withdrawal"] as Filter[]).map(f => (
+                <button key={f} onClick={() => setTypeFilter(f)} style={filterBtn(typeFilter === f)}>
+                  {f === "all" ? "Todos" : f === "deposit" ? "Depósitos" : "Levantamentos"}
+                </button>
+              ))}
+              <div style={{ width: 1, background: "#1e2d50", margin: "0 4px" }} />
+              {(["all","pending","approved","rejected"] as StatusFilter[]).map(s => (
+                <button key={s} onClick={() => setStatusFilter(s)} style={filterBtn(statusFilter === s)}>
+                  {s === "all" ? "Todos" : STATUS_CFG[s]?.label ?? s}
+                </button>
+              ))}
+            </div>
+
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: "center", color: "#475569", padding: "48px 0" }}>
+                <Wallet size={40} color="#1e2d50" style={{ marginBottom: 12 }} />
+                <div style={{ fontSize: 14 }}>Nenhuma transacção encontrada.</div>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {transactions.map(tx => (
-                  <div key={tx.id} style={{ background: "#0a0f1e", borderRadius: 10, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      {tx.type === "deposit"
-                        ? <ArrowDownCircle size={20} color="#22c55e" />
-                        : <ArrowUpCircle size={20} color="#ef4444" />}
-                      <div>
-                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>
-                          {tx.type === "deposit" ? "Depósito" : "Levantamento"}
+              filtered.map(tx => {
+                const isDeposit = tx.type === "deposit";
+                return (
+                  <div key={tx.id} style={{ ...card, padding: "16px 18px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: isDeposit ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {isDeposit ? <ArrowDownCircle size={20} color="#22c55e" /> : <ArrowUpCircle size={20} color="#ef4444" />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{isDeposit ? "Depósito" : "Levantamento"}</span>
+                          <span style={{ color: isDeposit ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 15 }}>
+                            {isDeposit ? "+" : "−"}{formatKz(Math.floor(tx.amount))}
+                          </span>
                         </div>
-                        <div style={{ color: "#94a3b8", fontSize: 11 }}>
-                          {methodLabel(tx.method)} · {new Date(tx.createdAt).toLocaleDateString("pt-AO")}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>
+                          <div>
+                            {tx.method && <span style={{ color: "#64748b", fontSize: 12 }}>{tx.method}</span>}
+                            <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{formatDate(tx.createdAt)}</div>
+                          </div>
+                          <StatusBadge status={tx.status} />
                         </div>
                       </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ color: tx.type === "deposit" ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 14 }}>
-                        {tx.type === "deposit" ? "+" : "-"}{formatKz(tx.amount)}
-                      </div>
-                      <StatusBadge status={tx.status} />
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })
             )}
-          </div>
+          </>
         )}
-
-        {/* ── Código Promocional ── */}
-        <div style={{ background: "#111827", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 14, padding: 20, marginTop: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <div style={{ width: 34, height: 34, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 16 }}>🎁</span>
-            </div>
-            <div>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Código Promocional</div>
-              <div style={{ color: "#64748b", fontSize: 12 }}>Introduz um código para receber bónus</div>
-            </div>
-          </div>
-
-          {promoMsg && (
-            <div style={{
-              background: promoMsg.ok ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
-              border: `1px solid ${promoMsg.ok ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
-              borderRadius: 8, padding: "10px 14px", marginBottom: 14,
-              color: promoMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13,
-            }}>{promoMsg.text}</div>
-          )}
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              type="text"
-              value={promoCode}
-              onChange={e => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="Ex: BONUS2025"
-              style={{ ...inputStyle, flex: 1, letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" }}
-            />
-            <button
-              onClick={redeemPromo}
-              disabled={promoLoading || !promoCode.trim()}
-              style={{
-                background: "linear-gradient(135deg,#f5a623,#e8940f)", color: "#000",
-                border: "none", borderRadius: 8, padding: "0 18px", fontWeight: 800,
-                fontSize: 13, cursor: promoLoading || !promoCode.trim() ? "not-allowed" : "pointer",
-                opacity: promoLoading || !promoCode.trim() ? 0.5 : 1, whiteSpace: "nowrap",
-              }}>
-              {promoLoading ? "..." : "Aplicar"}
-            </button>
-          </div>
-        </div>
       </div>
-
-      {/* ── Modal OTP ── */}
-      {otpStep && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: 32, width: "100%", maxWidth: 400, boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}>
-            {/* Ícone */}
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-              <div style={{ width: 56, height: 56, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Mail size={26} color="#f5a623" />
-              </div>
-            </div>
-
-            <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, textAlign: "center", margin: "0 0 8px" }}>
-              Verificação OTP
-            </h2>
-            <p style={{ color: "#94a3b8", fontSize: 14, textAlign: "center", margin: "0 0 24px", lineHeight: 1.5 }}>
-              Enviámos um código de 6 dígitos para o teu email.<br />
-              Válido durante <strong style={{ color: "#fff" }}>10 minutos</strong>.
-            </p>
-
-            {/* Input OTP */}
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={otpCode}
-              onChange={e => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="000000"
-              style={{
-                width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50",
-                borderRadius: 10, padding: "14px 0", color: "#f5a623",
-                fontSize: 32, fontWeight: 900, textAlign: "center", letterSpacing: 12,
-                outline: "none", boxSizing: "border-box", marginBottom: 20,
-                fontVariantNumeric: "tabular-nums",
-              }}
-            />
-
-            {msg && !msg.ok && (
-              <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 16, color: "#ef4444", fontSize: 13 }}>
-                {msg.text}
-              </div>
-            )}
-
-            {/* Botões */}
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => { setOtpStep(false); setOtpCode(""); setMsg(null); }}
-                style={{ flex: 1, background: "#1e2d50", color: "#94a3b8", border: "none", borderRadius: 8, padding: 13, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-                Cancelar
-              </button>
-              <button
-                onClick={confirmOtp}
-                disabled={otpCode.length !== 6 || otpLoading}
-                style={{
-                  flex: 2, background: pendingType === "deposit" ? "#f5a623" : "#ef4444",
-                  color: pendingType === "deposit" ? "#0a0f1e" : "#fff",
-                  border: "none", borderRadius: 8, padding: 13, fontWeight: 800, fontSize: 14,
-                  cursor: otpCode.length !== 6 || otpLoading ? "not-allowed" : "pointer",
-                  opacity: otpCode.length !== 6 || otpLoading ? 0.6 : 1,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                }}>
-                {otpLoading ? "A verificar..." : <><ShieldCheck size={15} /> Confirmar</>}
-              </button>
-            </div>
-
-            {/* Reenviar */}
-            <p style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "#4b5563" }}>
-              Não recebeste?{" "}
-              <button
-                onClick={() => pendingType && requestOtp(pendingType)}
-                style={{ background: "none", border: "none", color: "#f5a623", cursor: "pointer", fontSize: 13, fontWeight: 600, textDecoration: "underline", padding: 0 }}>
-                Reenviar código
-              </button>
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
