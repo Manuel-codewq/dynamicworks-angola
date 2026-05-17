@@ -5,7 +5,6 @@ import { sendVerificationEmail } from "@/lib/email";
 import { randomInt } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
-import { verifyTurnstile } from "@/lib/verifyTurnstile";
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, password, phone, province, turnstileToken, ref } = body;
+    const { name, email, password, phone, province, ref } = body;
 
     // Gerar código de referido único (ex: DW-A3X9)
     function genCode(): string {
@@ -44,11 +43,6 @@ export async function POST(req: NextRequest) {
     if (ref && typeof ref === "string") {
       const referrer = await prisma.user.findUnique({ where: { referralCode: ref.toUpperCase() }, select: { id: true } });
       if (referrer) referredBy = referrer.id;
-    }
-
-    const turnstileOk = await verifyTurnstile(turnstileToken ?? "", ip);
-    if (!turnstileOk) {
-      return NextResponse.json({ error: "Verificação de segurança falhou. Tente novamente." }, { status: 400 });
     }
 
     if (!name || !email || !password) {

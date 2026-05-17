@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import { checkRateLimit } from "./rateLimit";
-import { verifyTurnstile } from "./verifyTurnstile";
 import { parseDevice } from "./parseDevice";
 
 const DUMMY_HASH =
@@ -51,10 +50,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email:          { label: "Email",     type: "email" },
-        password:       { label: "Password",  type: "password" },
-        turnstileToken: { label: "Turnstile", type: "text" },
-        otp:            { label: "OTP",       type: "text" },
+        email:    { label: "Email",    type: "email" },
+        password: { label: "Password", type: "password" },
+        otp:      { label: "OTP",      type: "text" },
       },
       async authorize(credentials, req) {
         try {
@@ -64,15 +62,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const ip        = extractIp(req as unknown as Request);
           const userAgent = (req as any)?.headers?.get?.("user-agent") ?? "";
           const otp       = (credentials.otp as string | undefined)?.trim();
-
-          // Turnstile — só verificar quando não é re-submit do 2FA (OTP já presente)
-          if (!otp) {
-            const turnstileOk = await verifyTurnstile(
-              (credentials.turnstileToken as string) ?? "",
-              ip,
-            );
-            if (!turnstileOk) return null;
-          }
 
           if (!await checkRateLimit("login_ip", ip, 30, 15 * 60_000)) {
             await logAccess("login_fail_ratelimit", { email, ip, userAgent });

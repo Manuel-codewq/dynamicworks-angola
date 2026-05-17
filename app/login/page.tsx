@@ -1,10 +1,8 @@
 "use client";
-import { useState, Suspense, useRef, useEffect } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TrendingUp, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Shield } from "lucide-react";
-import { Turnstile } from "@marsidev/react-turnstile";
-import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 type Step = "credentials" | "2fa_email" | "2fa_totp";
 
@@ -19,8 +17,6 @@ function LoginContent() {
   const [step, setStep] = useState<Step>("credentials");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const turnstileRef = useRef<TurnstileInstance>(null);
   const isVerified = params.get("verified") === "1";
   const [failedAttempts, setFailedAttempts] = useState(0);
   const MAX_ATTEMPTS = 5;
@@ -36,16 +32,10 @@ function LoginContent() {
 
     // ── Passo 1: credenciais (usa endpoint dedicado para 2FA fiável) ──────────
     if (step === "credentials") {
-      if (!turnstileToken) {
-        setError("Complete a verificação de segurança.");
-        setLoading(false);
-        return;
-      }
-
       const res  = await fetch("/api/auth/2fa/initiate", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, password, turnstileToken }),
+        body:    JSON.stringify({ email, password }),
       });
       const data = await res.json();
       setLoading(false);
@@ -55,8 +45,6 @@ function LoginContent() {
         return;
       }
       if (!res.ok || !data.valid) {
-        turnstileRef.current?.reset();
-        setTurnstileToken("");
         const newAttempts = failedAttempts + 1;
         setFailedAttempts(newAttempts);
         const remaining = MAX_ATTEMPTS - newAttempts;
@@ -78,12 +66,10 @@ function LoginContent() {
 
       // Sem 2FA — fazer login directo
       const result = await signIn("credentials", {
-        email, password, turnstileToken, otp: "", redirect: false,
+        email, password, otp: "", redirect: false,
       });
       setLoading(false);
       if (!result?.error) { router.push("/trade"); return; }
-      turnstileRef.current?.reset();
-      setTurnstileToken("");
       setError("Erro ao autenticar. Tenta novamente.");
       return;
     }
@@ -92,7 +78,6 @@ function LoginContent() {
     const result = await signIn("credentials", {
       email,
       password,
-      turnstileToken,
       otp,
       redirect: false,
     });
@@ -131,7 +116,7 @@ function LoginContent() {
 
   const isCredentialsStep = step === "credentials";
   const is2FAStep = step === "2fa_email" || step === "2fa_totp";
-  const btnDisabled = loading || (isCredentialsStep && !turnstileToken);
+  const btnDisabled = loading;
 
   return (
     <div style={{
@@ -304,17 +289,6 @@ function LoginContent() {
                       {showPass ? <EyeOff size={16} color="#94a3b8" /> : <Eye size={16} color="#94a3b8" />}
                     </button>
                   </div>
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <Turnstile
-                    ref={turnstileRef}
-                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                    onSuccess={setTurnstileToken}
-                    onExpire={() => setTurnstileToken("")}
-                    onError={() => setTurnstileToken("")}
-                    options={{ theme: "dark", language: "pt" }}
-                  />
                 </div>
 
                 <button

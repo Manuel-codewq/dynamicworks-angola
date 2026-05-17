@@ -1,10 +1,8 @@
 "use client";
-import { useState, useRef, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { TrendingUp, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, AlertCircle, CheckCircle, Gift } from "lucide-react";
-import { Turnstile } from "@marsidev/react-turnstile";
-import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 const PROVINCES = [
   "Bengo","Benguela","Bié","Cabinda","Cuando Cubango","Cuanza Norte",
@@ -26,8 +24,6 @@ function RegisterContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const turnstileRef = useRef<TurnstileInstance>(null);
 
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }));
@@ -35,10 +31,6 @@ function RegisterContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!turnstileToken) {
-      setError("Complete a verificação de segurança.");
-      return;
-    }
     setError("");
     setLoading(true);
 
@@ -46,22 +38,18 @@ function RegisterContent() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken, ...(refCode ? { ref: refCode } : {}) }),
+        body: JSON.stringify({ ...form, ...(refCode ? { ref: refCode } : {}) }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "Erro ao registar");
-        turnstileRef.current?.reset();
-        setTurnstileToken("");
       } else {
         setSuccess(true);
         setTimeout(() => router.push(data.redirect ?? "/login"), 1200);
       }
     } catch {
       setError("Erro de ligação. Tente novamente.");
-      turnstileRef.current?.reset();
-      setTurnstileToken("");
     }
     setLoading(false);
   }
@@ -188,23 +176,12 @@ function RegisterContent() {
               </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                onSuccess={setTurnstileToken}
-                onExpire={() => setTurnstileToken("")}
-                onError={() => setTurnstileToken("")}
-                options={{ theme: "dark", language: "pt" }}
-              />
-            </div>
-
-            <button type="submit" disabled={loading || !turnstileToken}
+            <button type="submit" disabled={loading}
               style={{
-                width: "100%", background: (loading || !turnstileToken) ? "#7a5118" : "#f5a623",
+                width: "100%", background: loading ? "#7a5118" : "#f5a623",
                 color: "#0a0f1e", border: "none", borderRadius: 8,
                 padding: "10px 16px", fontSize: 14, fontWeight: 700,
-                cursor: (loading || !turnstileToken) ? "not-allowed" : "pointer",
+                cursor: loading ? "not-allowed" : "pointer",
               }}>
               {loading ? "A criar conta..." : "Criar conta gratuita"}
             </button>

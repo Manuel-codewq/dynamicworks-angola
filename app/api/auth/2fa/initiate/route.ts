@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyTurnstile } from "@/lib/verifyTurnstile";
 import { getClientIp } from "@/lib/getClientIp";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { send2FAEmail } from "@/lib/email";
@@ -9,14 +8,8 @@ const DUMMY_HASH = "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, turnstileToken } = await req.json();
+    const { email, password } = await req.json();
     const ip = getClientIp(req);
-
-    // Turnstile
-    const turnstileOk = await verifyTurnstile(turnstileToken ?? "", ip);
-    if (!turnstileOk) {
-      return NextResponse.json({ error: "Verificação de segurança falhou." }, { status: 400 });
-    }
 
     // Rate limit
     if (!await checkRateLimit("login_ip", ip, 30, 15 * 60_000)) {
