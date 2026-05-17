@@ -1,8 +1,14 @@
 export async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+
+  // Se a secret key não estiver configurada, ignorar verificação
+  if (!secret) return true;
+
+  // Token vazio → falhar
   if (!token) return false;
 
   const body = new URLSearchParams({
-    secret: process.env.TURNSTILE_SECRET_KEY!,
+    secret,
     response: token,
     ...(ip ? { remoteip: ip } : {}),
   });
@@ -15,6 +21,7 @@ export async function verifyTurnstile(token: string, ip?: string): Promise<boole
     const data = await res.json();
     return data.success === true;
   } catch {
-    return false;
+    // Em caso de falha de rede, deixar passar para não bloquear utilizadores legítimos
+    return true;
   }
 }
