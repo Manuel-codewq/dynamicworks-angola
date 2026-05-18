@@ -24,12 +24,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Rate limit por IP e por email
-    if (!await checkRateLimit("login_ip", ip, 30, 15 * 60_000)) {
-      return NextResponse.json({ error: "Demasiadas tentativas. Aguarda 15 minutos." }, { status: 429 });
-    }
-    if (!await checkRateLimit("login_email", normalizedEmail, 10, 15 * 60_000)) {
-      return NextResponse.json({ error: "Demasiadas tentativas. Aguarda 15 minutos." }, { status: 429 });
+    // Rate limit por IP — protege contra brute force em massa
+    if (!await checkRateLimit("login_ip", ip, 60, 15 * 60_000)) {
+      return NextResponse.json({ error: "Demasiadas tentativas a partir deste endereço. Aguarda 15 minutos." }, { status: 429 });
     }
 
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
