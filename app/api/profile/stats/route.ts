@@ -10,7 +10,7 @@ export async function GET() {
 
   const trades = await prisma.trade.findMany({
     where:   { userId, status: "closed", isDemo: false },
-    select:  { asset: true, result: true, profit: true, amount: true, closedAt: true, createdAt: true },
+    select:  { asset: true, result: true, profit: true, amount: true, closedAt: true, createdAt: true, expirySecs: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -65,5 +65,32 @@ export async function GET() {
     date:   t.closedAt ?? t.createdAt,
   }));
 
-  return NextResponse.json({ total, wins, losses, winRate, totalProfit, totalVolume, dailyPnl, byAsset, recent });
+  // Win rate por hora do dia (hora de Luanda = UTC+1)
+  const byHourMap: Record<number, { trades: number; wins: number }> = {};
+  for (const t of trades) {
+    const hour = (new Date(t.createdAt).getUTCHours() + 1) % 24; // UTC+1 Angola
+    if (!byHourMap[hour]) byHourMap[hour] = { trades: 0, wins: 0 };
+    byHourMap[hour].trades++;
+    if (t.result === "win") byHourMap[hour].wins++;
+  }
+  const byHour = Array.from({ length: 24 }, (_, h) => {
+    const v = byHourMap[h] ?? { trades: 0, wins: 0 };
+    return { hour: h, trades: v.trades, wins: v.wins, winRate: v.trades ? Math.round(v.wins / v.trades * 100) : 0 };
+  });
+
+  // Win rate por duração
+  const byDurMap: Record<number, { trades: number; wins: number }> = {};
+  for (const t of trades) {
+    const s = t.expirySecs;
+    if (!byDurMap[s]) byDurMap[s] = { trades: 0, wins: 0 };
+    byDurMap[s].trades++;
+    if (t.result === "win") byDurMap[s].wins++;
+  }
+  const byDuration = Object.entries(byDurMap).map(([secs, v]) => {
+    const s = Number(secs);
+    const label = s < 3600 ? `${s / 60} min` : `${s / 3600}h`;
+    return { secs: s, label, trades: v.trades, wins: v.wins, winRate: Math.round(v.wins / v.trades * 100) };
+  }).sort((a, b) => a.secs - b.secs);
+
+  return NextResponse.json({ total, wins, losses, winRate, totalProfit, totalVolume, dailyPnl, byAsset, byHour, byDuration, recent });
 }

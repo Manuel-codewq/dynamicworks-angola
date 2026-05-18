@@ -59,7 +59,7 @@ const BANNER_COLORS = [
 
 const DESCRIPTION_TEMPLATES = [
   {
-    label: "🗓️ Torneio Mensal",
+    label: "Torneio Mensal",
     description: "O maior torneio do mês está de volta! Compete com os melhores traders da plataforma e prova que tens o que é preciso para chegar ao topo. Apenas os mais consistentes e estratégicos conseguirão subir no ranking. Cada operação conta — não deixes nenhuma oportunidade escapar.",
     rules: "• Apenas operações reais contam para a classificação\n• Mínimo de 10 operações para figurar no ranking\n• A classificação é baseada no lucro total em Kwanzas\n• Em caso de empate, vence quem tiver maior taxa de vitória\n• Resultados actualizados em tempo real",
   },
@@ -69,7 +69,7 @@ const DESCRIPTION_TEMPLATES = [
     rules: "• Duração limitada de 48 horas\n• Sem limite mínimo de operações\n• Foco em lucro acumulado no período\n• Prémios atribuídos imediatamente após o fim",
   },
   {
-    label: "👑 Campeonato Elite",
+    label: "Campeonato Elite",
     description: "Só os melhores chegam aqui. O Campeonato Elite é a competição de maior prestígio da Dynamics Works, reservada para traders com determinação, estratégia e disciplina. Os prémios são os maiores da plataforma e a glória é eterna — o teu nome ficará no hall da fama.",
     rules: "• Torneio exclusivo com entrada paga\n• Mínimo de 20 operações para qualificar\n• Classificação por lucro total em Kwanzas\n• Top 10 recebem prémios escalonados\n• Verificação de identidade (KYC) obrigatória",
   },
@@ -82,7 +82,7 @@ function makeEmptyPrizes(n = 3) {
 const EMPTY_FORM = {
   name: "", description: "", rules: "",
   startDate: "", endDate: "",
-  prizePool: "", isFree: true, entryFee: "",
+  prizePool: "", isFree: true, isDemo: false, entryFee: "",
   maxParticipants: "", bannerColor: "#f5a623",
   prizes: makeEmptyPrizes(3),
 };
@@ -153,7 +153,7 @@ export default function AdminTournamentsPage() {
       name: t.name, description: t.description ?? "", rules: t.rules ?? "",
       startDate: new Date(t.startDate).toISOString().slice(0, 16),
       endDate:   new Date(t.endDate).toISOString().slice(0, 16),
-      prizePool: String(t.prizePool), isFree: t.isFree,
+      prizePool: String(t.prizePool), isFree: t.isFree, isDemo: t.isDemo ?? false,
       entryFee: String(t.entryFee ?? 0),
       maxParticipants: t.maxParticipants ? String(t.maxParticipants) : "",
       bannerColor: t.bannerColor ?? "#f5a623",
@@ -184,7 +184,7 @@ export default function AdminTournamentsPage() {
       name: form.name.trim(), description: form.description.trim(), rules: form.rules.trim(),
       startDate: form.startDate, endDate: form.endDate,
       prizePool: Number(form.prizePool) || 0,
-      isFree: form.isFree, entryFee: form.isFree ? 0 : Number(form.entryFee) || 0,
+      isFree: form.isFree, isDemo: form.isDemo, entryFee: form.isFree ? 0 : Number(form.entryFee) || 0,
       maxParticipants: form.maxParticipants ? Number(form.maxParticipants) : null,
       bannerColor: form.bannerColor,
       prizes: form.prizes.filter(p => p.amount && Number(p.amount) > 0).map(p => ({ position: p.position, amount: Number(p.amount) })),
@@ -294,9 +294,10 @@ export default function AdminTournamentsPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
                       <span style={{ fontWeight: 800, fontSize: 17 }}>{t.name}</span>
                       <span style={{ background: sc.bg, color: sc.color, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>{sc.label}</span>
+                      {t.isDemo && <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>DEMO</span>}
                       {t.isFree
                         ? <span style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}><Unlock size={9} style={{ display:"inline",marginRight:3 }} />GRATUITO</span>
-                        : <span style={{ background: "rgba(245,166,35,0.1)", color: "#f5a623", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}><Lock size={9} style={{ display:"inline",marginRight:3 }} />{formatKz(t.entryFee)} entrada</span>
+                        : <span style={{ background: "rgba(245,166,35,0.1)", color: "#f5a623", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}><Lock size={9} style={{ display:"inline",marginRight:3 }} />{formatKz(t.entryFee)} {t.isDemo ? "saldo demo" : "entrada"}</span>
                       }
                     </div>
                     {t.description && <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 8px", lineHeight: 1.6, maxWidth: 580 }}>{t.description.slice(0, 140)}{t.description.length > 140 ? "…" : ""}</p>}
@@ -391,9 +392,25 @@ export default function AdminTournamentsPage() {
                 </div>
               </div>
 
-              {/* ── 2. Tipo de acesso ── */}
+              {/* ── 2. Tipo de conta ── */}
               <div style={{ marginBottom: 22 }}>
-                <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>2 · TIPO DE ACESSO</div>
+                <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>2 · TIPO DE CONTA</div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {[{ val: false, label: "Conta Real", color: "#22c55e" }, { val: true, label: "Conta Demo", color: "#f5a623" }].map(opt => (
+                    <button key={String(opt.val)} onClick={() => setF("isDemo", opt.val)}
+                      style={{ flex: 1, padding: "13px", border: `2px solid ${form.isDemo === opt.val ? opt.color : "#1e2d50"}`, borderRadius: 12, background: form.isDemo === opt.val ? `${opt.color}12` : "#0d1526", color: form.isDemo === opt.val ? opt.color : "#64748b", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ color: "#475569", fontSize: 11, margin: "8px 0 0" }}>
+                  {form.isDemo ? "Torneio demo — os trades em conta demo contam para o ranking." : "Torneio real — os trades em conta real contam para o ranking."}
+                </p>
+              </div>
+
+              {/* ── 3. Tipo de acesso ── */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>3 · TIPO DE ACESSO</div>
                 <div style={{ display: "flex", gap: 10, marginBottom: form.isFree ? 0 : 12 }}>
                   {[{ val: true, label: "Gratuito", Icon: Unlock, color: "#22c55e" }, { val: false, label: "Pago", Icon: Lock, color: "#f5a623" }].map(opt => (
                     <button key={String(opt.val)} onClick={() => setF("isFree", opt.val)}
@@ -408,7 +425,9 @@ export default function AdminTournamentsPage() {
                     <input type="number" value={form.entryFee} onChange={e => setF("entryFee", e.target.value)} placeholder="Ex: 5000"
                       style={{ width: "100%", background: "#0d1526", border: `1px solid ${errors.entryFee ? "#ef4444" : "#f5a623"}`, borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
                     {errors.entryFee && <p style={{ color: "#ef4444", fontSize: 11, margin: "4px 0 0" }}>{errors.entryFee}</p>}
-                    <p style={{ color: "#64748b", fontSize: 11, margin: "6px 0 0" }}>Debitado do saldo real do utilizador ao inscrever-se.</p>
+                    <p style={{ color: "#64748b", fontSize: 11, margin: "6px 0 0" }}>
+                      {form.isDemo ? "Debitado do saldo demo do utilizador ao inscrever-se." : "Debitado do saldo real do utilizador ao inscrever-se."}
+                    </p>
                   </div>
                 )}
               </div>

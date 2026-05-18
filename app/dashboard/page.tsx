@@ -19,9 +19,11 @@ const DASHBOARD_GUIDE = [
 type Stats = {
   total: number; wins: number; losses: number; winRate: number;
   totalProfit: number; totalVolume: number;
-  dailyPnl:   { date: string; pnl: number; cumulative: number }[];
-  byAsset:    { asset: string; trades: number; wins: number; profit: number; volume: number; winRate: number }[];
-  recent:     { asset: string; result: string | null; profit: number | null; amount: number; date: string }[];
+  dailyPnl:    { date: string; pnl: number; cumulative: number }[];
+  byAsset:     { asset: string; trades: number; wins: number; profit: number; volume: number; winRate: number }[];
+  byHour:      { hour: number; trades: number; wins: number; winRate: number }[];
+  byDuration:  { secs: number; label: string; trades: number; wins: number; winRate: number }[];
+  recent:      { asset: string; result: string | null; profit: number | null; amount: number; date: string }[];
 };
 
 function formatDate(s: string) {
@@ -174,6 +176,55 @@ export default function DashboardPage() {
                         {a.profit >= 0 ? "+" : ""}{formatKz(Math.floor(a.profit))}
                       </div>
                       <div style={{ color: "#475569", fontSize: 11 }}>{a.winRate}% · {a.trades} trades</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Win rate por hora */}
+            {s.byHour.some(h => h.trades > 0) && (
+              <div style={card}>
+                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Melhor Hora para Operar</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4 }}>
+                  {s.byHour.map(h => {
+                    const hasTrades = h.trades > 0;
+                    const bg = !hasTrades ? "#0d1526" : h.winRate >= 60 ? "rgba(34,197,94,0.25)" : h.winRate >= 45 ? "rgba(245,166,35,0.2)" : "rgba(239,68,68,0.2)";
+                    const color = !hasTrades ? "#1e2d50" : h.winRate >= 60 ? "#22c55e" : h.winRate >= 45 ? "#f5a623" : "#ef4444";
+                    return (
+                      <div key={h.hour} style={{ background: bg, borderRadius: 6, padding: "5px 4px", textAlign: "center" }}>
+                        <div style={{ color: "#64748b", fontSize: 9, marginBottom: 2 }}>{String(h.hour).padStart(2,"0")}h</div>
+                        <div style={{ color, fontSize: 11, fontWeight: 700 }}>{hasTrades ? `${h.winRate}%` : "—"}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+                  {[{ color: "#22c55e", label: "≥60% vitória" }, { color: "#f5a623", label: "45–59%" }, { color: "#ef4444", label: "<45%" }].map(l => (
+                    <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
+                      <span style={{ color: "#475569", fontSize: 10 }}>{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Win rate por duração */}
+            {s.byDuration.length > 0 && (
+              <div style={card}>
+                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Desempenho por Duração</div>
+                {s.byDuration.map(d => (
+                  <div key={d.secs} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: "1px solid rgba(30,45,80,0.4)" }}>
+                    <div style={{ width: 52, color: "#f5a623", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{d.label}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ height: 6, borderRadius: 3, background: "#1e2d50", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${d.winRate}%`, background: d.winRate >= 50 ? "#22c55e" : "#ef4444", borderRadius: 3 }} />
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ color: d.winRate >= 50 ? "#22c55e" : "#ef4444", fontSize: 13, fontWeight: 700 }}>{d.winRate}%</div>
+                      <div style={{ color: "#475569", fontSize: 11 }}>{d.trades} trades</div>
                     </div>
                   </div>
                 ))}

@@ -50,6 +50,7 @@ model User {
   pushSubscriptions PushSubscription[]
   sessions          UserSession[]
   accessLogs        AccessLog[]
+  priceAlerts       PriceAlert[]
 }
 
 model UserSession {
@@ -249,6 +250,7 @@ model Tournament {
   prizes          Json     @default("[]")
   status          String   @default("upcoming")
   isFree          Boolean  @default(true)
+  isDemo          Boolean  @default(false)
   entryFee        Float    @default(0)
   maxParticipants Int?
   bannerColor     String   @default("#f5a623")
@@ -320,4 +322,18 @@ model PromoRedemption {
 
   @@unique([promoCodeId, userId])
   @@index([userId])
+}
+
+model PriceAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     String
+  price     Float
+  direction String   // "above" | "below"
+  triggered Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([triggered])
 }

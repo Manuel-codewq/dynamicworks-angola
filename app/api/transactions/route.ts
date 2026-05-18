@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { checkSuspiciousDeposit } from "@/lib/fraudDetection";
 
 export async function GET() {
   const session = await auth();
@@ -89,6 +90,11 @@ export async function POST(req: NextRequest) {
       status: "pending",
     },
   });
+
+  // Detecção de fraude em depósitos (assíncrono)
+  if (type === "deposit") {
+    checkSuspiciousDeposit(session.user.id, amountNum).catch(() => {});
+  }
 
   return NextResponse.json(tx, { status: 201 });
 }

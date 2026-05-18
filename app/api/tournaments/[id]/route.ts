@@ -42,23 +42,27 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   });
   if (existing) return NextResponse.json({ error: "Já participas neste torneio" }, { status: 400 });
 
-  // Paid tournament: debit entry fee + create transaction record
+  // Paid tournament: debit entry fee from real or demo balance
   if (!tournament.isFree && tournament.entryFee > 0) {
+    const balanceField = (tournament as any).isDemo ? "demoBalance" : "balance";
     const deducted = await prisma.user.updateMany({
-      where: { id: session.user.id, balance: { gte: tournament.entryFee } },
-      data:  { balance: { decrement: tournament.entryFee } },
+      where: { id: session.user.id, [balanceField]: { gte: tournament.entryFee } },
+      data:  { [balanceField]: { decrement: tournament.entryFee } },
     });
     if (deducted.count === 0) {
-      return NextResponse.json({ error: `Saldo insuficiente. É necessário ${tournament.entryFee.toLocaleString("pt-PT")} Kz para participar.`, insufficientFunds: true }, { status: 400 });
+      const label = (tournament as any).isDemo ? "saldo demo" : "saldo real";
+      return NextResponse.json({
+        error: `${label.charAt(0).toUpperCase() + label.slice(1)} insuficiente. É necessário ${tournament.entryFee.toLocaleString("pt-PT")} Kz para participar.`,
+        insufficientFunds: true,
+      }, { status: 400 });
     }
-    // Register the payment as a transaction
     await prisma.transaction.create({
       data: {
         userId:    session.user.id,
         type:      "tournament_entry",
         amount:    tournament.entryFee,
         status:    "completed",
-        method:    "Saldo real",
+        method:    (tournament as any).isDemo ? "Saldo demo" : "Saldo real",
         reference: `Inscrição — ${tournament.name}`,
       },
     });
@@ -80,7 +84,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
   const { name, description, rules, startDate, endDate, prizePool, prizes, status,
-          isFree, entryFee, maxParticipants, bannerColor } = body;
+          isFree, isDemo, entryFee, maxParticipants, bannerColor } = body;
 
   // Fetch current tournament to check if we're transitioning to "finished"
   const current = await prisma.tournament.findUnique({
@@ -105,6 +109,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(prizes          !== undefined && { prizes }),
       ...(status          && { status }),
       ...(isFree          !== undefined && { isFree }),
+      ...(isDemo          !== undefined && { isDemo: Boolean(isDemo) }),
       ...(entryFee        !== undefined && { entryFee: Number(entryFee) }),
       ...(maxParticipants !== undefined && { maxParticipants: maxParticipants ? Number(maxParticipants) : null }),
       ...(bannerColor     && { bannerColor }),

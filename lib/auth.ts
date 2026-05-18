@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 import { checkRateLimit, resetFailCount } from "./rateLimit";
 import { parseDevice } from "./parseDevice";
 import { sendNewLoginEmail } from "./email";
+import { checkIpCollision } from "./fraudDetection";
 
 const DUMMY_HASH =
   "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a";
@@ -128,6 +129,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           // Limpar contador de falhas após login bem-sucedido
           resetFailCount(`login:${email}`).catch(() => {});
+
+          // Detecção de fraude — IP partilhado (assíncrono, não bloqueia login)
+          checkIpCollision(ip, user.id).catch(() => {});
 
           // Notificação de novo IP/dispositivo (assíncrono, não bloqueia login)
           prisma.userSession.findFirst({

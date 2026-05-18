@@ -122,14 +122,53 @@ export async function resolveExpiredTrade(
     }
   });
 
-  // Update tournament participant stats for real (non-demo) trades
-  if (resolved && !trade.user.isDemo) {
+  // Verificar 3 wins consecutivos → convidar para grupo WhatsApp
+  if (resolved && result === "win") {
+    try {
+      const WHATSAPP_GROUP = "https://chat.whatsapp.com/CWGZZp0UV7601Dj7MF5awo";
+      const lastTrades = await prisma.trade.findMany({
+        where:   { userId: trade.userId, isDemo: trade.user.isDemo, status: "closed" },
+        orderBy: { closedAt: "desc" },
+        take:    3,
+        select:  { result: true },
+      });
+      const hasThreeConsecWins = lastTrades.length === 3 && lastTrades.every(t => t.result === "win");
+      if (hasThreeConsecWins) {
+        // Só enviar uma vez — verificar se já recebeu este convite
+        const alreadySent = await prisma.notification.findFirst({
+          where: { userId: trade.userId, type: "whatsapp_invite" },
+          select: { id: true },
+        });
+        if (!alreadySent) {
+          await prisma.notification.create({
+            data: {
+              userId:  trade.userId,
+              type:    "whatsapp_invite",
+              title:   "Parabéns! Junta-te ao grupo VIP",
+              message: `Atingiste 3 vitórias consecutivas! Mereces entrar no nosso grupo exclusivo de traders. Clica para entrar: ${WHATSAPP_GROUP}`,
+              read:    false,
+            },
+          });
+          sendPushToUser(trade.userId, {
+            title: "3 wins seguidos! Grupo VIP",
+            body:  "Parabéns! Atingiste 3 vitórias consecutivas. Clica para entrar no grupo exclusivo de traders.",
+            url:   WHATSAPP_GROUP,
+            tag:   "whatsapp-invite",
+          }).catch(() => {});
+        }
+      }
+    } catch { /* silent */ }
+  }
+
+  // Actualizar participantes de torneios — real ou demo conforme o tipo do trade
+  if (resolved) {
     try {
       const participants = await prisma.tournamentParticipant.findMany({
         where: {
           userId: trade.userId,
           tournament: {
-            status: "active",
+            status:  "active",
+            isDemo:  trade.user.isDemo,
             startDate: { lte: trade.createdAt },
             endDate:   { gte: trade.createdAt },
           },

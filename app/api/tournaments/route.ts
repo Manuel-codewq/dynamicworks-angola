@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if ((session.user as any).role !== "admin") return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const { name, description, rules, startDate, endDate, prizePool, prizes, isFree, entryFee, maxParticipants, bannerColor } = await req.json();
+  const { name, description, rules, startDate, endDate, prizePool, prizes, isFree, isDemo, entryFee, maxParticipants, bannerColor } = await req.json();
 
   if (!name || !startDate || !endDate) {
     return NextResponse.json({ error: "Nome, data de início e data de fim são obrigatórios" }, { status: 400 });
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         prizes: prizes ?? [],
         status,
         isFree: isFree !== false,
+        isDemo: isDemo === true,
         entryFee: isFree !== false ? 0 : Number(entryFee) || 0,
         maxParticipants: maxParticipants ? Number(maxParticipants) : null,
         bannerColor: bannerColor ?? "#f5a623",

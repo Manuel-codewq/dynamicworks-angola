@@ -11,18 +11,32 @@ export async function GET() {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
 
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true, name: true, email: true, phone: true, province: true,
-      balance: true, demoBalance: true, role: true, status: true,
-      kycStatus: true, kycAttempts: true, createdAt: true,
-      kycSubmission: { select: { id: true } },
-      _count: { select: { trades: true, transactions: true } },
-    },
-  });
+  const [users, approvedDepositors] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, name: true, email: true, phone: true, province: true,
+        balance: true, demoBalance: true, role: true, status: true,
+        kycStatus: true, kycAttempts: true, createdAt: true,
+        kycSubmission: { select: { id: true } },
+        _count: { select: { trades: true, transactions: true } },
+      },
+    }),
+    // IDs de utilizadores com pelo menos 1 depósito aprovado
+    prisma.transaction.findMany({
+      where:    { type: "deposit", status: "completed" },
+      select:   { userId: true },
+      distinct: ["userId"],
+    }).then(r => new Set(r.map(x => x.userId))),
+  ]);
 
-  return NextResponse.json(users);
+  const result = users.map(u => ({
+    ...u,
+    // Suspeito: tem saldo real > 0 mas nunca teve depósito aprovado
+    suspicious: u.balance > 0 && !approvedDepositors.has(u.id) && u.role !== "admin",
+  }));
+
+  return NextResponse.json(result);
 }
 
 export async function PATCH(req: NextRequest) {

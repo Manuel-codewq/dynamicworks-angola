@@ -8,6 +8,7 @@ import {
   Calendar, BarChart2,
 } from "lucide-react";
 import { formatKz } from "@/lib/format";
+import TradeShareButton from "@/app/components/TradeShareButton";
 
 type Trade = {
   id: string; asset: string; direction: string; amount: number;
@@ -240,6 +241,11 @@ export default function HistoryPage() {
                     {t.entryPrice > 0 && t.closePrice && (
                       <div style={{ color: "#374151", fontSize: 10, marginTop: 2 }}>
                         {t.entryPrice.toFixed(5)} → {t.closePrice.toFixed(5)}
+                      </div>
+                    )}
+                    {t.status === "closed" && t.result && (
+                      <div style={{ marginTop: 6 }}>
+                        <TradeShareButton trade={{ asset: t.asset, direction: t.direction, result: t.result, profit: pl, amount: t.amount, payout: t.payout, createdAt: t.createdAt }} size="sm" />
                       </div>
                     )}
                   </div>
