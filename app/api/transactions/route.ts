@@ -34,8 +34,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
   }
   const amountNum = Number(amount);
-  if (!Number.isFinite(amountNum) || amountNum < 1000) {
-    return NextResponse.json({ error: "Valor mínimo: 1.000 Kz" }, { status: 400 });
+  const minAmount = type === "deposit" ? 5000 : 1000;
+  if (!Number.isFinite(amountNum) || amountNum < minAmount) {
+    return NextResponse.json({ error: `Valor mínimo: ${minAmount.toLocaleString("pt-PT")} Kz` }, { status: 400 });
   }
   if (amountNum > 5_000_000) {
     return NextResponse.json({ error: "Valor máximo por transação: 5.000.000 Kz" }, { status: 400 });
