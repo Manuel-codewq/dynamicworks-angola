@@ -1,25 +1,27 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export default auth((req) => {
-  const session = req.auth;
+const PROTECTED = [
+  "/trade", "/dashboard", "/wallet", "/ao/admin",
+  "/profile", "/kyc", "/support", "/referral", "/security", "/history",
+];
+
+export default async function middleware(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  const protectedRoutes = ["/trade", "/dashboard", "/wallet", "/ao/admin", "/profile", "/kyc", "/support", "/referral", "/security", "/history"];
-  const isProtected = protectedRoutes.some(r => pathname.startsWith(r));
+  const isProtected = PROTECTED.some(r => pathname.startsWith(r));
 
-  if (isProtected && !session) {
+  if (isProtected && !token) {
     return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
 
-  if (pathname.startsWith("/ao/admin")) {
-    if ((session?.user as any)?.role !== "admin") {
-      return NextResponse.redirect(new URL("/trade", req.nextUrl));
-    }
+  if (pathname.startsWith("/ao/admin") && (token as any)?.role !== "admin") {
+    return NextResponse.redirect(new URL("/trade", req.nextUrl));
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
