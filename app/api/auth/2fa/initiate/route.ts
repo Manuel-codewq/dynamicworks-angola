@@ -4,8 +4,8 @@ import { getClientIp } from "@/lib/getClientIp";
 import { checkRateLimit, incrementFailCount, getFailCount } from "@/lib/rateLimit";
 import { send2FAEmail } from "@/lib/email";
 
-const MAX_FAIL = 5;
-const FAIL_WINDOW_MS = 30 * 60_000; // 30 minutos
+const MAX_FAIL = 10;
+const FAIL_WINDOW_MS = 15 * 60_000; // 15 minutos
 
 const DUMMY_HASH = "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a";
 

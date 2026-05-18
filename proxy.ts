@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getToken } from "@auth/core/jwt";
 
-const PROTECTED = [
+const PROTECTED_ROUTES = [
   "/trade", "/dashboard", "/wallet", "/ao/admin",
   "/profile", "/kyc", "/support", "/referral", "/security", "/history",
 ];
 
 export default async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  const isProtected = PROTECTED.some(r => pathname.startsWith(r));
+  const isProtected = PROTECTED_ROUTES.some(r => pathname.startsWith(r));
+  if (!isProtected) return NextResponse.next();
 
-  if (isProtected && !token) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl));
+  const token = await getToken({
+    req,
+    secret:       process.env.AUTH_SECRET!,
+    secureCookie: process.env.NODE_ENV === "production",
+  });
+
+  if (!token) {
+    const loginUrl = new URL("/login", req.nextUrl);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname.startsWith("/ao/admin") && (token as any)?.role !== "admin") {
+  if (pathname.startsWith("/ao/admin") && (token as any).role !== "admin") {
     return NextResponse.redirect(new URL("/trade", req.nextUrl));
   }
 
