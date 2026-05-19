@@ -84,7 +84,7 @@ export default function WalletPage() {
   useEffect(() => { if (status === "authenticated") load(); }, [status, load]);
 
   async function sendOtp() {
-    if (!amount || Number(amount) < 1000) { setFormMsg({ text: "Valor mínimo: 1.000 Kz", ok: false }); return; }
+    if (!amount || Number(amount) < 5000) { setFormMsg({ text: "Valor mínimo: 5.000 Kz", ok: false }); return; }
     setBusy(true); setFormMsg(null);
     const r = await fetch("/api/otp", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -193,7 +193,7 @@ export default function WalletPage() {
               </div>
               <div>
                 <div style={{ color: "#fff", fontWeight: 700 }}>Pedido de Depósito</div>
-                <div style={{ color: "#64748b", fontSize: 12 }}>Mínimo: 1.000 Kz · Máximo: 5.000.000 Kz</div>
+                <div style={{ color: "#64748b", fontSize: 12 }}>Mínimo: 5.000 Kz · Máximo: 5.000.000 Kz</div>
               </div>
             </div>
 

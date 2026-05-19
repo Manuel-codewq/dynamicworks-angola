@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
 
   const { amount } = await req.json();
   const amountAoa = Number(amount);
-  if (!Number.isFinite(amountAoa) || amountAoa < 1000) {
-    return NextResponse.json({ error: "Valor mínimo: 1.000 Kz" }, { status: 400 });
+  if (!Number.isFinite(amountAoa) || amountAoa < 5000) {
+    return NextResponse.json({ error: "Valor mínimo: 5.000 Kz" }, { status: 400 });
   }
   if (amountAoa > 5_000_000) {
     return NextResponse.json({ error: "Valor máximo por depósito: 5.000.000 Kz" }, { status: 400 });

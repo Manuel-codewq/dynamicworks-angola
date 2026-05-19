@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { amount: amountAoa } = await req.json();
-  if (!amountAoa || amountAoa < 1000) {
-    return NextResponse.json({ error: "Valor mínimo: 1.000 Kz" }, { status: 400 });
+  if (!amountAoa || amountAoa < 5000) {
+    return NextResponse.json({ error: "Valor mínimo: 5.000 Kz" }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({
