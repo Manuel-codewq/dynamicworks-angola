@@ -21,7 +21,7 @@ export async function POST() {
 
   try {
     await sendPushToUser(session.user.id, {
-      title: "✅ Notificações activas!",
+      title: "Notificações activas!",
       body:  "As tuas notificações de trading estão a funcionar correctamente.",
       url:   "/trade",
       tag:   "test",

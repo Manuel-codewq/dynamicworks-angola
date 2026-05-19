@@ -106,7 +106,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const msg = `${session.user.name} editou ${label} de ${before.name}: ${sign}${Math.floor(diff).toLocaleString("pt-PT")} Kz. Motivo: ${reason}`;
     for (const admin of admins) {
       sendPushToUser(admin.id, {
-        title: "⚠️ Edição de saldo efectuada",
+        title: "Edição de saldo efectuada",
         body:  msg,
         url:   "/ao/admin/audit",
         tag:   "balance-edit",

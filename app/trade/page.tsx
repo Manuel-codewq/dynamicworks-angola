@@ -131,7 +131,8 @@ export default function TradePage() {
   const [tradeDrawer,   setTradeDrawer]   = useState(false);
   const [timeframe,      setTimeframe]      = useState("1m");
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
-  const [userMenuOpen,   setUserMenuOpen]   = useState(false);
+  const [userMenuOpen,     setUserMenuOpen]     = useState(false);
+  const [tournamentWins,   setTournamentWins]   = useState(0);
   const [demoReloading,  setDemoReloading]  = useState(false);
   const [candleTimer,    setCandleTimer]    = useState("");
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
@@ -880,7 +881,10 @@ export default function TradePage() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated")   fetchBalance();
+    if (status === "authenticated") {
+      fetchBalance();
+      fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => { if (d) setTournamentWins(d.tournamentWins ?? 0); });
+    }
   }, [status, router, fetchBalance]);
 
   // ── Deriv WebSocket — connect once, register handlers ───────────────────
@@ -3107,7 +3111,14 @@ export default function TradePage() {
                   {session?.user?.name?.split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{session?.user?.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{session?.user?.name}</span>
+                    {tournamentWins >= 1 && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#f5a623" }}>
+                        <Trophy size={10} /> {tournamentWins === 1 ? "Campeão" : `${tournamentWins}× Campeão`}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{session?.user?.email}</div>
                 </div>
               </div>
@@ -3276,7 +3287,14 @@ export default function TradePage() {
           {userMenuOpen && (
             <div style={{ position: "absolute", top: "110%", right: 0, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, minWidth: 180, zIndex: 200 }}>
               <div style={{ padding: "12px 14px", borderBottom: "1px solid #1e2d50" }}>
-                <div style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{session?.user?.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{session?.user?.name}</span>
+                  {tournamentWins >= 1 && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 800, color: "#f5a623" }}>
+                      <Trophy size={10} /> {tournamentWins === 1 ? "Campeão" : `${tournamentWins}× Campeão`}
+                    </span>
+                  )}
+                </div>
                 <div style={{ color: "#94a3b8", fontSize: 12 }}>{session?.user?.email}</div>
               </div>
               <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><BarChart2 size={14} /> Dashboard</a>

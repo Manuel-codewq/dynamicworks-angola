@@ -99,7 +99,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
       from:    FROM,
       to,
       subject: "Bem-vindo à Dynamics Works!",
-      html:    baseTemplate("Bem-vindo(a) 🎉", body),
+      html:    baseTemplate("Bem-vindo(a)", body),
     });
   } catch (err) {
     console.error("[email] Erro ao enviar welcome email:", err);
@@ -126,7 +126,7 @@ export async function sendDepositApprovedEmail(to: string, name: string, amount:
     await client.emails.send({
       from:    FROM,
       to,
-      subject: "Depósito aprovado ✅",
+      subject: "Depósito aprovado",
       html:    baseTemplate("Depósito aprovado", body),
     });
   } catch (err) {
@@ -184,7 +184,7 @@ export async function sendWithdrawalApprovedEmail(to: string, name: string, amou
     await client.emails.send({
       from:    FROM,
       to,
-      subject: "Levantamento aprovado ✅",
+      subject: "Levantamento aprovado",
       html:    baseTemplate("Levantamento aprovado", body),
     });
   } catch (err) {
@@ -426,7 +426,7 @@ export async function sendTradeWinEmail(to: string, name: string, asset: string,
 
   const body = `
     ${p(`Olá <strong style="color:#fff;">${name}</strong>,`)}
-    ${p(`A tua operação em <strong style="color:#fff;">${asset}</strong> foi encerrada com <strong style="color:#22c55e;">ganho</strong>! 🎉`)}
+    ${p(`A tua operação em <strong style="color:#fff;">${asset}</strong> foi encerrada com <strong style="color:#22c55e;">ganho</strong>.`)}
     <div style="background:#0a0f1e;border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:20px 24px;margin:16px 0 20px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
@@ -456,7 +456,7 @@ export async function sendTradeWinEmail(to: string, name: string, asset: string,
     await client.emails.send({
       from:    FROM,
       to,
-      subject: `✅ Ganho de ${formatKz(Math.floor(profit))} em ${asset}`,
+      subject: `Ganho de ${formatKz(Math.floor(profit))} em ${asset}`,
       html:    baseTemplate("Operação ganha!", body),
     });
   } catch (err) {

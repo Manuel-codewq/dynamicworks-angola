@@ -27,7 +27,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const dirLabel = alert.direction === "above" ? "atingiu ▲" : "desceu abaixo de ▼";
   sendPushToUser(session.user.id, {
-    title: `🔔 Alerta de preço — ${alert.asset}`,
+    title: `Alerta de preço — ${alert.asset}`,
     body:  `${alert.asset} ${dirLabel} ${alert.price}`,
     url:   "/trade",
     tag:   `price-alert-${id}`,

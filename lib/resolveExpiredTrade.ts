@@ -210,8 +210,8 @@ export async function resolveExpiredTrade(
     // ── 2. Push — sempre, demo e real ────────────────────────────────────────
     sendPushToUser(trade.userId, {
       title: result === "win"
-        ? `✅ Ganhou ${profitKz} Kz${demoTag}`
-        : `❌ Operação perdida — ${trade.asset}`,
+        ? `Ganhou ${profitKz} Kz${demoTag}`
+        : `Operação perdida — ${trade.asset}`,
       body: result === "win"
         ? `${trade.asset} · A operação foi resolvida a teu favor!`
         : `Perdeste ${amountKz} Kz. Continua a tentar!`,

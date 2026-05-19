@@ -42,6 +42,18 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   });
   if (existing) return NextResponse.json({ error: "Já participas neste torneio" }, { status: 400 });
 
+  // Verificar conta do utilizador
+  const user = await prisma.user.findUnique({
+    where:  { id: session.user.id },
+    select: { emailVerified: true, kycStatus: true, status: true },
+  });
+  if (!user || user.status !== "active")
+    return NextResponse.json({ error: "A tua conta está suspensa. Contacta o suporte." }, { status: 403 });
+  if (!user.emailVerified)
+    return NextResponse.json({ error: "Tens de verificar o teu email antes de participar em torneios.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
+  if (user.kycStatus !== "approved")
+    return NextResponse.json({ error: "Tens de completar a verificação de identidade (KYC) antes de participar em torneios.", code: "KYC_REQUIRED" }, { status: 403 });
+
   // Paid tournament: debit entry fee from real or demo balance
   if (!tournament.isFree && tournament.entryFee > 0) {
     const balanceField = (tournament as any).isDemo ? "demoBalance" : "balance";
@@ -157,7 +169,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: {
             userId:  winner.userId,
             type:    "info",
-            title:   `🏆 Prémio recebido — ${position}º lugar!`,
+            title:   `Prémio recebido — ${position}º lugar!`,
             message: `Parabéns! Ficaste em ${position}º lugar no torneio "${tournament.name}" e recebeste ${prizeAmount.toLocaleString("pt-PT")} Kz no teu saldo real.`,
           },
         });

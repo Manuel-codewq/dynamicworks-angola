@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/webPush";
 
 export async function GET() {
   const tournaments = await prisma.tournament.findMany({
@@ -49,6 +50,37 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[tournaments/create]", err);
     return NextResponse.json({ error: "Erro ao criar torneio. Tenta novamente." }, { status: 500 });
+  }
+
+  // Notificar todos os utilizadores activos sobre o novo torneio
+  try {
+    const users = await prisma.user.findMany({ where: { status: "active" }, select: { id: true } });
+    const typeLabel  = tournament.isDemo ? "Demo" : "Real";
+    const entryLabel = tournament.isFree ? "Entrada gratuita" : `Entrada: ${Number(entryFee).toLocaleString("pt-PT")} Kz`;
+    const prizeLabel = Number(prizePool) > 0 ? ` · Prémio: ${Number(prizePool).toLocaleString("pt-PT")} Kz` : "";
+    const notifTitle = `Novo Torneio ${typeLabel} — ${tournament.name}`;
+    const notifBody  = `${entryLabel}${prizeLabel}. Inscreve-te agora e compete pelo topo!`;
+
+    if (users.length > 0) {
+      await prisma.notification.createMany({
+        data: users.map(u => ({
+          userId:  u.id,
+          type:    "broadcast",
+          title:   notifTitle,
+          message: notifBody,
+        })),
+      });
+      Promise.allSettled(
+        users.map(u => sendPushToUser(u.id, {
+          title: notifTitle,
+          body:  notifBody,
+          url:   `/tournaments/${tournament.id}`,
+          tag:   "tournament-launch",
+        }))
+      ).catch(() => {});
+    }
+  } catch (err) {
+    console.error("[tournaments/notify]", err);
   }
 
   return NextResponse.json(tournament, { status: 201 });

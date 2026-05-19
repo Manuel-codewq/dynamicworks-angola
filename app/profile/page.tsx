@@ -7,7 +7,7 @@ import {
   ChevronLeft, User, Shield, BarChart2, Lock,
   CheckCircle, Clock, XCircle, Save, ScanFace,
   TrendingUp, TrendingDown, Edit3, AlertTriangle,
-  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2, Gift,
+  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2, Gift, Trophy,
 } from "lucide-react";
 import PageGuide from "@/app/components/PageGuide";
 
@@ -80,7 +80,8 @@ export default function ProfilePage() {
   const [kycAttempts, setKycAttempts] = useState(0);
   const [blockedUntil,setBlockedUntil]= useState<Date | null>(null);
   const [createdAt,   setCreatedAt]   = useState("");
-  const [balance,     setBalance]     = useState(0);
+  const [balance,          setBalance]          = useState(0);
+  const [tournamentWins,   setTournamentWins]   = useState(0);
 
   const [editMode,    setEditMode]    = useState(false);
   const [showValues,  setShowValues]  = useState(true);
@@ -124,6 +125,7 @@ export default function ProfilePage() {
       setPhone(profile.phone ?? "");
       setProvince(profile.province ?? "");
       setBalance(profile.balance ?? 0);
+      setTournamentWins(profile.tournamentWins ?? 0);
       setCreatedAt(profile.createdAt ?? "");
       setAvatar(profile.avatar ?? "");
 
@@ -345,11 +347,16 @@ export default function ProfilePage() {
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
 
-          {/* Nome + badge verificado */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
+          {/* Nome + badges */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
             <h2 style={{ color: "#fff", margin: 0, fontSize: 20, fontWeight: 800 }}>{name}</h2>
             {kycStatus === "approved" && (
               <span title="Identidade verificada"><BadgeCheck size={22} color="#22c55e" /></span>
+            )}
+            {tournamentWins >= 1 && (
+              <span title={`Campeão de ${tournamentWins} torneio(s)`} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "linear-gradient(135deg,rgba(245,166,35,0.2),rgba(245,166,35,0.08))", border: "1px solid rgba(245,166,35,0.4)", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 800, color: "#f5a623" }}>
+                <Trophy size={12} /> {tournamentWins === 1 ? "Campeão" : `${tournamentWins}× Campeão`}
+              </span>
             )}
           </div>
 

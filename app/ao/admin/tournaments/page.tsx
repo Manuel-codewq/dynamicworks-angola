@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Trophy, Plus, Trash2, Edit3, X, Check, Users, Calendar,
   Gift, Lock, Unlock, ChevronDown, ChevronUp, Zap, Star, Crown,
-  Clock, Eye, Medal, Wand2,
+  Clock, Eye, Medal, Wand2, Copy, MessageCircle,
 } from "lucide-react";
 
 function formatDate(d: string) {
@@ -100,6 +100,7 @@ export default function AdminTournamentsPage() {
   const [expandedId, setExpandedId]       = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [tab, setTab]                     = useState<"active" | "upcoming" | "finished">("active");
+  const [waCopied, setWaCopied]           = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -206,6 +207,29 @@ export default function AdminTournamentsPage() {
     if (!confirm("Apagar este torneio permanentemente?")) return;
     await fetch(`/api/tournaments/${id}`, { method: "DELETE" });
     load();
+  }
+
+  function generateWhatsappPost() {
+    const typeLabel  = form.isDemo ? "DEMO" : "REAL";
+    const entryLine  = form.isFree
+      ? "→ Entrada *gratuita* — sem custos"
+      : `→ Entrada: *${Number(form.entryFee).toLocaleString("pt-PT")} Kz* do teu saldo ${form.isDemo ? "demo" : "real"}`;
+    const demoLine   = form.isDemo
+      ? "→ Operas com saldo demo — *sem arriscar dinheiro real*\n→ Os prémios são pagos em *saldo real*"
+      : "→ Operas com a tua conta real\n→ Os prémios são pagos em *saldo real*";
+    const validPrizes = form.prizes.filter(p => p.amount && Number(p.amount) > 0);
+    const prizesLine = validPrizes.length > 0
+      ? validPrizes.map((p, i) => `→ ${p.position}º lugar: *${Number(p.amount).toLocaleString("pt-PT")} Kz*`).join("\n")
+      : "→ Prémios a anunciar";
+    const vagas = form.maxParticipants
+      ? `⏳ Vagas limitadas — apenas *${form.maxParticipants}* lugares disponíveis`
+      : "⏳ Inscrições abertas";
+    const endDate = form.endDate
+      ? `📅 Termina a *${new Date(form.endDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}*`
+      : "";
+    const name = form.name.trim() || "Novo Torneio";
+
+    return `🚨 *TORNEIO ${typeLabel} — ${name.toUpperCase()}* 🚨\n\nAtenção traders! Novo torneio já disponível na Dynamic Works.\n\n🎯 *Como funciona:*\n${entryLine}\n${demoLine}\n→ Quem tiver mais lucro no ranking ganha\n\n🏅 *Prémios:*\n${prizesLine}\n\n${vagas}\n${endDate}\n\n👇 *Inscreve-te agora na app → Torneios*`;
   }
 
   async function setStatus(id: string, s: string) {
@@ -528,6 +552,25 @@ export default function AdminTournamentsPage() {
                       style={{ width: "100%", background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 </div>
+              </div>
+
+              {/* ── Post WhatsApp ── */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>6 · POST PARA WHATSAPP</div>
+                <div style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px" }}>
+                  <pre style={{ color: "#cbd5e1", fontSize: 12, margin: 0, whiteSpace: "pre-wrap", fontFamily: "inherit", lineHeight: 1.8 }}>
+                    {generateWhatsappPost()}
+                  </pre>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generateWhatsappPost());
+                    setWaCopied(true);
+                    setTimeout(() => setWaCopied(false), 2500);
+                  }}
+                  style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, background: waCopied ? "rgba(34,197,94,0.12)" : "rgba(37,211,102,0.08)", border: `1px solid ${waCopied ? "rgba(34,197,94,0.5)" : "rgba(37,211,102,0.25)"}`, borderRadius: 9, padding: "9px 16px", color: waCopied ? "#22c55e" : "#25d366", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%", justifyContent: "center" }}>
+                  {waCopied ? <><Check size={14} /> Copiado!</> : <><Copy size={14} /><MessageCircle size={14} /> Copiar post para WhatsApp</>}
+                </button>
               </div>
 
               {msg && <div style={{ background: msg.ok ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${msg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 10, padding: "11px 14px", marginBottom: 16, color: msg.ok ? "#22c55e" : "#ef4444", fontSize: 13, fontWeight: 600 }}>{msg.text}</div>}

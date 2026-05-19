@@ -18,7 +18,12 @@ export async function GET() {
   });
 
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
-  return NextResponse.json(user);
+
+  const tournamentWins = await prisma.transaction.count({
+    where: { userId: session.user.id, type: "tournament_prize" },
+  });
+
+  return NextResponse.json({ ...user, tournamentWins });
 }
 
 export async function PATCH(req: NextRequest) {

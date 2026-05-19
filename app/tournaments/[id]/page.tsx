@@ -53,6 +53,10 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       setJoined(true);
       setBalance(b => b - (tournament.isFree ? 0 : tournament.entryFee));
       setMsg({ text: tournament.isFree ? "Inscrito com sucesso! Boa sorte!" : `Inscrito! ${formatKz(tournament.entryFee)} debitados do teu saldo real.`, ok: true });
+    } else if (data.code === "EMAIL_NOT_VERIFIED") {
+      setMsg({ text: "Verifica o teu email antes de participar. Vai a Perfil → reenviar confirmação.", ok: false });
+    } else if (data.code === "KYC_REQUIRED") {
+      setMsg({ text: "Precisas de completar a verificação de identidade (KYC) para participar. Vai a Perfil → Verificação.", ok: false });
     } else {
       setMsg({ text: data.error ?? "Erro ao inscrever.", ok: false });
     }
