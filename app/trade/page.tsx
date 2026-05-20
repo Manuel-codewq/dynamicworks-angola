@@ -190,8 +190,12 @@ export default function TradePage() {
   const [toolLineStyle,  setToolLineStyle]  = useState(0);
   const [toolLineWidth,  setToolLineWidth]  = useState(1);
   const [toolLabel,      setToolLabel]      = useState("");
-  const [pendingPoint,   setPendingPoint]   = useState<{ time: number; price: number } | null>(null);
-  const draggingHLine = useRef<string | null>(null);
+  const [pendingPoint,    setPendingPoint]    = useState<{ time: number; price: number } | null>(null);
+  const [selectedTrendId, setSelectedTrendId] = useState<string | null>(null);
+  const [handlePos,       setHandlePos]       = useState<{ p1: { x: number; y: number }; p2: { x: number; y: number } } | null>(null);
+  const draggingHLine    = useRef<string | null>(null);
+  const draggingHandle   = useRef<{ id: string; point: "p1" | "p2" } | null>(null);
+  const selectedTrendRef = useRef<string | null>(null);
 
   // ── Indicator state + refs ───────────────────────────────────────────────
   const [showIndicators, setShowIndicators] = useState(false);
@@ -434,33 +438,73 @@ export default function TradePage() {
     if (dt === 0) return;
     const slope = (d.p2Price - d.p1Price) / dt;
 
-    // Extend only 300 bars beyond the clicked points to avoid auto-zoom
+    // Extend 30 bars beyond clicked points, capped at last available candle
     const granSecs = GRANULARITY[timeframeRef.current] ?? 60;
-    const pad = 300 * granSecs;
+    const pad      = 30 * granSecs;
+    const lastTime = candleDataRef.current.length > 0
+      ? (candleDataRef.current[candleDataRef.current.length - 1].time as number)
+      : Math.max(d.p1Time, d.p2Time) + pad;
     const tStart = Math.min(d.p1Time, d.p2Time) - pad;
-    const tEnd   = Math.max(d.p1Time, d.p2Time) + pad;
+    const tEnd   = Math.min(Math.max(d.p1Time, d.p2Time) + pad, lastTime);
 
-    // Save visible range before adding series so the chart doesn't zoom out
-    const visibleRange = chartApiRef.current.timeScale().getVisibleRange();
+    const startVal = d.p1Price + slope * (tStart - d.p1Time);
+    const endVal   = d.p1Price + slope * (tEnd   - d.p1Time);
 
-    const series = chartApiRef.current.addSeries(LineSeries, {
-      color: d.color, lineWidth: d.lineWidth as any, lineStyle: d.lineStyle,
-      priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-    });
-    series.setData([
-      { time: tStart as Time, value: d.p1Price + slope * (tStart - d.p1Time) },
-      { time: tEnd   as Time, value: d.p1Price + slope * (tEnd   - d.p1Time) },
-    ]);
+    // Guard against garbage values (exploding slope)
+    if (!isFinite(startVal) || !isFinite(endVal) || Math.abs(startVal) > 1e10 || Math.abs(endVal) > 1e10) return;
 
-    // Restore visible range so chart stays where it was
-    if (visibleRange) {
-      requestAnimationFrame(() => {
-        chartApiRef.current?.timeScale().setVisibleRange(visibleRange);
+    // Reuse existing series — never create duplicates during drag
+    let series = trendSeriesMap.current.get(d.id);
+    if (!series) {
+      const visibleLogicalRange = chartApiRef.current.timeScale().getVisibleLogicalRange();
+      series = chartApiRef.current.addSeries(LineSeries, {
+        color: d.color, lineWidth: d.lineWidth as any, lineStyle: d.lineStyle,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
       });
+      trendSeriesMap.current.set(d.id, series);
+      if (visibleLogicalRange) {
+        requestAnimationFrame(() => {
+          chartApiRef.current?.timeScale().setVisibleLogicalRange(visibleLogicalRange);
+        });
+      }
     }
 
-    trendSeriesMap.current.set(d.id, series);
+    series.setData([
+      { time: tStart as Time, value: startVal },
+      { time: tEnd   as Time, value: endVal   },
+    ]);
   }
+  function refreshHandles(id: string | null) {
+    if (!id || !chartApiRef.current || !candleSeriesRef.current) { setHandlePos(null); return; }
+    const d = drawingsRef.current.find(x => x.id === id) as TrendDrawing | undefined;
+    if (!d) { setHandlePos(null); return; }
+    const x1 = chartApiRef.current.timeScale().timeToCoordinate(d.p1Time as Time);
+    const y1 = candleSeriesRef.current.priceToCoordinate(d.p1Price);
+    const x2 = chartApiRef.current.timeScale().timeToCoordinate(d.p2Time as Time);
+    const y2 = candleSeriesRef.current.priceToCoordinate(d.p2Price);
+    if (x1 === null || y1 === null || x2 === null || y2 === null) { setHandlePos(null); return; }
+    setHandlePos({ p1: { x: x1, y: y1 }, p2: { x: x2, y: y2 } });
+  }
+
+  function updateTrendEndpoint(id: string, point: "p1" | "p2", time: number, price: number) {
+    // Update ref only during drag (no React re-render = smooth movement)
+    const updated = drawingsRef.current.map(d => {
+      if (d.id !== id || d.type !== "trendline") return d;
+      return point === "p1"
+        ? { ...d, p1Time: time, p1Price: price }
+        : { ...d, p2Time: time, p2Price: price };
+    }) as Drawing[];
+    drawingsRef.current = updated;
+    const d = updated.find(x => x.id === id) as TrendDrawing | undefined;
+    if (d) applyTrendLine(d);
+    refreshHandles(id);
+  }
+
+  function commitTrendEndpoint(id: string) {
+    // Commit to React state only on mouseup (one re-render at the end)
+    setDrawings([...drawingsRef.current]);
+  }
+
   function removeTrendLine(id: string) {
     const series = trendSeriesMap.current.get(id);
     if (series && chartApiRef.current) { try { chartApiRef.current.removeSeries(series); } catch {} }
@@ -480,6 +524,11 @@ export default function TradePage() {
     if (d.type === "trendline") removeTrendLine(id);
     setDrawings(prev => prev.filter(x => x.id !== id));
     drawingsRef.current = drawingsRef.current.filter(x => x.id !== id);
+    if (selectedTrendRef.current === id) {
+      selectedTrendRef.current = null;
+      setSelectedTrendId(null);
+      setHandlePos(null);
+    }
   }
   function clearAllDrawings() {
     drawingsRef.current.forEach(d => {
@@ -512,10 +561,25 @@ export default function TradePage() {
       }
     }
   }
-  function onChartPointerMove(clientY: number) {
-    if (!draggingHLine.current || !candleSeriesRef.current || !chartRef.current) return;
+  function onChartPointerMove(clientX: number, clientY: number) {
+    if (!chartRef.current) return;
     const rect = chartRef.current.getBoundingClientRect();
     const y = clientY - rect.top;
+
+    // Drag trendline handle
+    if (draggingHandle.current && chartApiRef.current && candleSeriesRef.current) {
+      const x = clientX - rect.left;
+      const rawTime  = chartApiRef.current.timeScale().coordinateToTime(x);
+      const newTime  = typeof rawTime === "number" ? rawTime : null;
+      const newPrice = candleSeriesRef.current.coordinateToPrice(y);
+      if (newTime && newPrice) {
+        updateTrendEndpoint(draggingHandle.current.id, draggingHandle.current.point, newTime, newPrice);
+      }
+      return;
+    }
+
+    // Drag hline
+    if (!draggingHLine.current || !candleSeriesRef.current) return;
     const newPrice = candleSeriesRef.current.coordinateToPrice(y);
     if (!newPrice) return;
     const id = draggingHLine.current;
@@ -528,7 +592,13 @@ export default function TradePage() {
       x.id === id && x.type === "hline" ? { ...x as HLineDrawing, price: newPrice } : x
     ));
   }
-  function onChartPointerUp() { draggingHLine.current = null; }
+  function onChartPointerUp() {
+    if (draggingHandle.current) {
+      commitTrendEndpoint(draggingHandle.current.id);
+    }
+    draggingHLine.current  = null;
+    draggingHandle.current = null;
+  }
 
   // ── Indicator recalc — rebuilds all indicator series from candleDataRef ──
   // Defined as a standalone function (not useCallback) so it always captures
@@ -537,12 +607,12 @@ export default function TradePage() {
   const MA_COLORS:  Record<number, string> = { 9: "#f5a623", 20: "#3b82f6", 50: "#a78bfa" };
   const EMA_COLORS: Record<number, string> = { 9: "#fbbf24", 20: "#60a5fa", 50: "#c084fc" };
 
-  function runRecalc(cfg: typeof indicators) {
+  function runRecalc(cfg: typeof indicators, preserveRange = false) {
     const chart = chartApiRef.current;
     const data  = candleDataRef.current;
     if (!chart || data.length < 2) return;
 
-    const visibleRange = chart.timeScale().getVisibleRange();
+    const visibleLogicalRange = preserveRange ? chart.timeScale().getVisibleLogicalRange() : null;
     const dec = selectedPairRef.current?.decimals ?? 5;
     const leg: typeof legend = [];
 
@@ -842,7 +912,11 @@ export default function TradePage() {
       removePane(bearsbullsPaneRef);
     }
 
-    if (visibleRange) try { chart.timeScale().setVisibleRange(visibleRange); } catch {}
+    if (visibleLogicalRange) {
+      requestAnimationFrame(() => {
+        try { chartApiRef.current?.timeScale().setVisibleLogicalRange(visibleLogicalRange); } catch {}
+      });
+    }
     lastLegendRef.current = leg;
     setLegend(leg);
   }
@@ -850,9 +924,10 @@ export default function TradePage() {
   // Keep recalcRef pointing at a closure that always has the latest indicators.
   // This lets WS callbacks (captured once in [] effects) call recalcRef.current().
   useEffect(() => {
-    recalcRef.current = () => runRecalc(indicators);
-    // Also trigger immediately so toggling an indicator takes effect right away
-    recalcRef.current();
+    // Tick-driven recalc (new candle): preserveRange=false → chart não salta
+    recalcRef.current = () => runRecalc(indicators, false);
+    // Indicator toggle: preserveRange=true → mantém posição do utilizador
+    runRecalc(indicators, true);
   }, [indicators]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
@@ -1190,6 +1265,11 @@ export default function TradePage() {
       // Re-apply drawings after chart reinit (refs were invalidated by chart.remove())
       reapplyDrawings();
 
+      // Keep trendline handles synced with chart scroll/zoom
+      chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+        if (selectedTrendRef.current) refreshHandles(selectedTrendRef.current);
+      });
+
       // Chart click → place drawing
       chart.subscribeClick((param) => {
         const tool = activeToolRef.current;
@@ -1211,6 +1291,13 @@ export default function TradePage() {
             addDrawing({ ...base, type: "trendline", p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
             pendingPointRef.current = null;
             setPendingPoint(null);
+            setActiveTool(null); activeToolRef.current = null;
+            // Auto-select newly drawn trendline
+            setTimeout(() => {
+              selectedTrendRef.current = id;
+              setSelectedTrendId(id);
+              refreshHandles(id);
+            }, 50);
           }
         } else if (tool === "fibonacci") {
           const pending = pendingPointRef.current;
@@ -2754,15 +2841,21 @@ export default function TradePage() {
         {/* ── Chart ── */}
         <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
           <div ref={chartRef}
-            style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
+            style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHandle.current ? "grabbing" : draggingHLine.current ? "ns-resize" : "default" }}
             onMouseDown={e => onChartPointerDown(e.clientY)}
-            onMouseMove={e => onChartPointerMove(e.clientY)}
+            onMouseMove={e => onChartPointerMove(e.clientX, e.clientY)}
             onMouseUp={onChartPointerUp}
             onMouseLeave={onChartPointerUp}
             onTouchStart={e => onChartPointerDown(e.touches[0].clientY)}
-            onTouchMove={e => { e.preventDefault(); onChartPointerMove(e.touches[0].clientY); }}
+            onTouchMove={e => { e.preventDefault(); onChartPointerMove(e.touches[0].clientX, e.touches[0].clientY); }}
             onTouchEnd={onChartPointerUp}
           />
+          {/* Trendline handles */}
+          {selectedTrendId && handlePos && !activeTool && (["p1","p2"] as const).map(pt => (
+            <div key={pt} onMouseDown={e => { e.stopPropagation(); draggingHandle.current = { id: selectedTrendId, point: pt }; }}
+              onTouchStart={e => { e.stopPropagation(); draggingHandle.current = { id: selectedTrendId, point: pt }; }}
+              style={{ position: "absolute", left: handlePos[pt].x - 8, top: handlePos[pt].y - 8, width: 16, height: 16, borderRadius: "50%", background: "#fff", border: "2.5px solid #3b82f6", cursor: "grab", zIndex: 20, pointerEvents: "all", boxShadow: "0 0 6px rgba(59,130,246,0.6)" }} />
+          ))}
           {renderLegend()}
 
           {/* ── Tipo de gráfico (canto inferior esquerdo) ── */}
@@ -3366,15 +3459,21 @@ export default function TradePage() {
             {/* Slide-in panel */}
             {renderSlideInPanel()}
             <div ref={chartRef}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: activeTool ? "crosshair" : draggingHLine.current ? "ns-resize" : "default" }}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: activeTool ? "crosshair" : draggingHandle.current ? "grabbing" : draggingHLine.current ? "ns-resize" : "default" }}
             onMouseDown={e => onChartPointerDown(e.clientY)}
-            onMouseMove={e => onChartPointerMove(e.clientY)}
+            onMouseMove={e => onChartPointerMove(e.clientX, e.clientY)}
             onMouseUp={onChartPointerUp}
             onMouseLeave={onChartPointerUp}
             onTouchStart={e => onChartPointerDown(e.touches[0].clientY)}
-            onTouchMove={e => { e.preventDefault(); onChartPointerMove(e.touches[0].clientY); }}
+            onTouchMove={e => { e.preventDefault(); onChartPointerMove(e.touches[0].clientX, e.touches[0].clientY); }}
             onTouchEnd={onChartPointerUp}
           />
+          {/* Trendline handles */}
+          {selectedTrendId && handlePos && !activeTool && (["p1","p2"] as const).map(pt => (
+            <div key={pt} onMouseDown={e => { e.stopPropagation(); draggingHandle.current = { id: selectedTrendId, point: pt }; }}
+              onTouchStart={e => { e.stopPropagation(); draggingHandle.current = { id: selectedTrendId, point: pt }; }}
+              style={{ position: "absolute", left: handlePos[pt].x - 8, top: handlePos[pt].y - 8, width: 16, height: 16, borderRadius: "50%", background: "#fff", border: "2.5px solid #3b82f6", cursor: "grab", zIndex: 20, pointerEvents: "all", boxShadow: "0 0 6px rgba(59,130,246,0.6)" }} />
+          ))}
             {renderLegend()}
             {/* Zoom controls — bottom centre, over time axis */}
             <div style={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", gap: 4 }}>
