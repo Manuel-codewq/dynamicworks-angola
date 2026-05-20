@@ -164,10 +164,9 @@ export async function resolveExpiredTrade(
         where: {
           userId: trade.userId,
           tournament: {
-            status:  "active",
-            isDemo:  trade.isDemo,
-            startDate: { lte: trade.createdAt },
-            endDate:   { gte: trade.createdAt },
+            status: "active",
+            isDemo: trade.isDemo,
+            endDate: { gte: trade.createdAt },
           },
         },
       });
