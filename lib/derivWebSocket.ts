@@ -112,7 +112,7 @@ export function isRealMarketOpen(): boolean {
 
 export function getAvailablePairs(): DerivPair[] {
   if (isRealMarketOpen()) {
-    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS, ...OTC_PAIRS];
   }
   return [...OTC_PAIRS, ...CRYPTO_PAIRS];
 }
