@@ -12,18 +12,13 @@ const ALLOWED_ASSETS = new Set([
   "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
   "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
   "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
-  // Forex OTC (30 pares)
-  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
-  "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC", "EUR/JPY OTC", "GBP/JPY OTC",
-  "EUR/CAD OTC", "AUD/JPY OTC", "GBP/AUD OTC", "EUR/CHF OTC", "AUD/CAD OTC",
-  "AUD/CHF OTC", "AUD/NZD OTC", "EUR/AUD OTC", "EUR/NZD OTC", "GBP/CAD OTC",
-  "GBP/CHF OTC", "GBP/NOK OTC", "GBP/NZD OTC", "NZD/JPY OTC", "USD/MXN OTC",
-  "USD/NOK OTC", "USD/PLN OTC", "USD/SEK OTC", "CAD/JPY OTC", "CHF/JPY OTC",
   // Cripto + Metais
   "BTC/USD", "ETH/USD",
   "Ouro/USD", "Prata/USD", "Paládio/USD", "Platina/USD",
   "XAU/USD", "XAG/USD",
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
+  // Pares sintéticos (índices Deriv com labels de forex — 24/7)
+  // Usam os mesmos labels que os pares reais, disponíveis quando mercado fechado
 ]);
 
 async function fetchServerEntryPrice(asset: string): Promise<number | null> {

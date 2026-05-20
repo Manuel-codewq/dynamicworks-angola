@@ -1,8 +1,10 @@
 import WebSocket from "ws";
+import { SYNTHETIC_LABEL_TO_SYMBOL, isRealMarketOpen } from "./derivWebSocket";
 
 const DERIV_WS_URL = "wss://ws.binaryws.com/websockets/v3?app_id=127916";
 
 const ASSET_TO_SYMBOL: Record<string, string> = {
+  // Forex real
   "EUR/USD": "frxEURUSD", "GBP/USD": "frxGBPUSD", "USD/JPY": "frxUSDJPY",
   "AUD/USD": "frxAUDUSD", "USD/CAD": "frxUSDCAD", "EUR/GBP": "frxEURGBP",
   "USD/CHF": "frxUSDCHF", "NZD/USD": "frxNZDUSD", "EUR/JPY": "frxEURJPY",
@@ -18,30 +20,17 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "XAU/USD": "frxXAUUSD", "XAG/USD": "frxXAGUSD",
   "DW Index 10": "R_10", "DW Index 25": "R_25", "DW Index 50": "R_50",
   "DW Index 75": "R_75", "DW Index 100": "R_100",
+  // Índices Deriv directos (símbolo = símbolo Deriv)
+  "1HZ10V": "1HZ10V", "1HZ25V": "1HZ25V", "1HZ50V": "1HZ50V",
+  "1HZ75V": "1HZ75V", "1HZ100V": "1HZ100V",
+  "R_10": "R_10", "R_25": "R_25", "R_50": "R_50", "R_75": "R_75", "R_100": "R_100",
 };
 
-// Pares OTC: label → base forex symbol
-export const OTC_LABEL_TO_BASE: Record<string, string> = {
-  "EUR/USD OTC": "frxEURUSD", "GBP/USD OTC": "frxGBPUSD", "USD/JPY OTC": "frxUSDJPY",
-  "AUD/USD OTC": "frxAUDUSD", "USD/CAD OTC": "frxUSDCAD", "EUR/GBP OTC": "frxEURGBP",
-  "USD/CHF OTC": "frxUSDCHF", "NZD/USD OTC": "frxNZDUSD", "EUR/JPY OTC": "frxEURJPY",
-  "GBP/JPY OTC": "frxGBPJPY", "EUR/CAD OTC": "frxEURCAD", "AUD/JPY OTC": "frxAUDJPY",
-  "GBP/AUD OTC": "frxGBPAUD", "EUR/CHF OTC": "frxEURCHF", "AUD/CAD OTC": "frxAUDCAD",
-  "AUD/CHF OTC": "frxAUDCHF", "AUD/NZD OTC": "frxAUDNZD", "EUR/AUD OTC": "frxEURAUD",
-  "EUR/NZD OTC": "frxEURNZD", "GBP/CAD OTC": "frxGBPCAD", "GBP/CHF OTC": "frxGBPCHF",
-  "GBP/NOK OTC": "frxGBPNOK", "GBP/NZD OTC": "frxGBPNZD", "NZD/JPY OTC": "frxNZDJPY",
-  "USD/MXN OTC": "frxUSDMXN", "USD/NOK OTC": "frxUSDNOK", "USD/PLN OTC": "frxUSDPLN",
-  "USD/SEK OTC": "frxUSDSEK", "CAD/JPY OTC": "frxCADJPY", "CHF/JPY OTC": "frxCHFJPY",
-};
-
-export function isOtcAsset(asset: string): boolean {
-  return asset in OTC_LABEL_TO_BASE;
+export function isOtcAsset(_asset: string): boolean {
+  return false; // Pares OTC removidos — todos os pares agora têm preço server-side
 }
 
-export async function getDerivPrice(asset: string): Promise<number | null> {
-  const symbol = ASSET_TO_SYMBOL[asset];
-  if (!symbol) return null;
-
+async function fetchDerivSymbolPrice(symbol: string): Promise<number | null> {
   return new Promise((resolve) => {
     let resolved = false;
     const done = (val: number | null) => {
@@ -68,4 +57,26 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
     });
     ws.on("error", () => { clearTimeout(timeout); done(null); });
   });
+}
+
+export async function getDerivPrice(asset: string): Promise<number | null> {
+  const synthSymbol = SYNTHETIC_LABEL_TO_SYMBOL[asset];
+
+  // Mercado fechado + par tem versão sintética → usar índice Deriv directamente
+  if (synthSymbol && !isRealMarketOpen()) {
+    return fetchDerivSymbolPrice(synthSymbol);
+  }
+
+  const symbol = ASSET_TO_SYMBOL[asset];
+  if (!symbol) return null;
+
+  const price = await fetchDerivSymbolPrice(symbol);
+  if (price) return price;
+
+  // Fallback: tentar índice sintético se preço real falhou
+  if (synthSymbol && synthSymbol !== symbol) {
+    return fetchDerivSymbolPrice(synthSymbol);
+  }
+
+  return null;
 }

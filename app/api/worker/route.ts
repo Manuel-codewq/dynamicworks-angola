@@ -20,8 +20,13 @@ export async function GET(req: NextRequest) {
   }
 
   const activeTrades = await prisma.trade.findMany({
-    where:   { status: "active" },
-    include: { user: { select: { id: true, isDemo: true, email: true, name: true } } },
+    where:  { status: "active" },
+    select: {
+      id: true, userId: true, asset: true, direction: true, amount: true,
+      entryPrice: true, payout: true, expirySecs: true, expiresAt: true,
+      status: true, isDemo: true, createdAt: true,
+      user: { select: { id: true, isDemo: true, email: true, name: true } },
+    },
   });
 
   if (activeTrades.length === 0) {

@@ -1244,6 +1244,25 @@ export default function TradePage() {
       if (ct === "candle" || ct === "bar") {
         livePriceLineRef.current = series.createPriceLine({ price: 0, color: "#22c55e", lineWidth: 1, lineStyle: 0, axisLabelVisible: false, title: "" });
       }
+      // Recriar linhas de entrada dos trades activos após reinicialização do gráfico
+      requestAnimationFrame(() => {
+        const trades = activeTradesRef.current.filter(t => t.asset === selectedPairRef.current?.label);
+        trades.forEach(t => {
+          if (!candleSeriesRef.current || tradePriceLinesRef.current.has(t.id)) return;
+          const dec   = selectedPairRef.current?.decimals ?? 5;
+          const win   = lastPriceRef.current > 0
+            ? (t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice)
+            : true;
+          const color = win ? "#22c55e" : "#ef4444";
+          const dir   = t.direction === "call" ? "▲ ALTA" : "▼ BAIXA";
+          const line  = candleSeriesRef.current.createPriceLine({
+            price: t.entryPrice, color, lineWidth: 2, lineStyle: 2,
+            axisLabelVisible: true,
+            title: `${dir}  ${t.entryPrice.toFixed(dec)}`,
+          });
+          tradePriceLinesRef.current.set(t.id, line);
+        });
+      });
       // Null indicator refs — chart.remove() invalidated them
       maSeriesRefs.current.clear(); emaSeriesRefs.current.clear();
       bbUpperRef.current  = null; bbMiddleRef.current  = null; bbLowerRef.current = null;
@@ -1421,17 +1440,21 @@ export default function TradePage() {
       }
     });
     activeTrades.filter(t => t.asset === selectedPair?.label).forEach(t => {
-      const win   = t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice;
+      const win   = lastPriceRef.current > 0
+        ? (t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice)
+        : true;
       const color = win ? "#22c55e" : "#ef4444";
-      const title = `${t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}  ${formatKz(t.amount)}`;
+      const dec   = selectedPair?.decimals ?? 5;
+      const dir   = t.direction === "call" ? "▲ ALTA" : "▼ BAIXA";
+      const title = `${dir}  ${t.entryPrice.toFixed(dec)}`;
       if (tradePriceLinesRef.current.has(t.id)) {
         tradePriceLinesRef.current.get(t.id).applyOptions({ color, title });
       } else if (candleSeriesRef.current) {
         const line = candleSeriesRef.current.createPriceLine({
-          price: t.entryPrice,
+          price:            t.entryPrice,
           color,
-          lineWidth: 2,
-          lineStyle: 1,
+          lineWidth:        2,
+          lineStyle:        2, // dashed — mais visível que dotted
           axisLabelVisible: true,
           title,
         });

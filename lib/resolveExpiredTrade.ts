@@ -1,14 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
+import { getDerivPrice } from "@/lib/derivPrice";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
 async function getClosePriceForAsset(asset: string): Promise<number | null> {
-  // Pares OTC: preço vem do cliente (clientPrice) — não há fonte server-side independente
-  // O entryPrice também foi do cliente, por isso a comparação é consistente
-  if (isOtcAsset(asset)) return null;
-
-  // Pares reais: PriceCandle DB → Deriv WS
+  // Todos os pares: PriceCandle DB → Deriv WS (inclui índices sintéticos 24/7)
   try {
     const ninetySecsAgo = new Date(Date.now() - 90_000);
     const candle = await prisma.priceCandle.findFirst({
@@ -34,6 +30,7 @@ export type TradeToResolve = {
   expirySecs: number;
   expiresAt:  Date | null;
   status:     string;
+  isDemo:     boolean;
   createdAt:  Date;
   user:       { id: string; isDemo: boolean; email: string; name: string | null };
 };
@@ -114,7 +111,7 @@ export async function resolveExpiredTrade(
     if (closed.count === 0) return;
     resolved = true;
     if (returnAmount > 0) {
-      const field = trade.user.isDemo ? "demoBalance" : "balance";
+      const field = trade.isDemo ? "demoBalance" : "balance";
       await tx.user.update({
         where: { id: trade.userId },
         data:  { [field]: { increment: returnAmount } },
@@ -168,7 +165,7 @@ export async function resolveExpiredTrade(
           userId: trade.userId,
           tournament: {
             status:  "active",
-            isDemo:  trade.user.isDemo,
+            isDemo:  trade.isDemo,
             startDate: { lte: trade.createdAt },
             endDate:   { gte: trade.createdAt },
           },
@@ -190,7 +187,7 @@ export async function resolveExpiredTrade(
   if (resolved) {
     const profitKz = Math.floor(Math.abs(profit)).toLocaleString("pt-PT");
     const amountKz = Math.floor(trade.amount).toLocaleString("pt-PT");
-    const demoTag  = trade.user.isDemo ? " (Demo)" : "";
+    const demoTag  = trade.isDemo ? " (Demo)" : "";
 
     // ── 1. Notificação in-app — sempre, demo e real ───────────────────────────
     prisma.notification.create({

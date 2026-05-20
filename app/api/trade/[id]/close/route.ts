@@ -14,7 +14,12 @@ export async function POST(
 
   const trade = await prisma.trade.findUnique({
     where:   { id },
-    include: { user: { select: { id: true, isDemo: true, email: true, name: true } } },
+    select:  {
+      id: true, userId: true, asset: true, direction: true, amount: true,
+      entryPrice: true, payout: true, expirySecs: true, expiresAt: true,
+      status: true, isDemo: true, result: true, createdAt: true,
+      user: { select: { id: true, isDemo: true, email: true, name: true } },
+    },
   });
 
   if (!trade || trade.userId !== session.user.id) {
