@@ -69,6 +69,12 @@ export default function WalletPage() {
   const [copied,      setCopied]      = useState(false);
   const [copiedRef,   setCopiedRef]   = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<{ amount: number } | null>(null);
+  // Campos levantamento
+  const [withdrawMethod, setWithdrawMethod] = useState<"multicaixa_express" | "transferencia" | "">("");
+  const [wPhone,   setWPhone]   = useState("");
+  const [wBank,    setWBank]    = useState("");
+  const [wAccount, setWAccount] = useState("");
+  const [wHolder,  setWHolder]  = useState("");
   const MULTICAIXA_ENTITY = "10116";
   const MULTICAIXA_REF    = "946621503";
 
@@ -87,8 +93,20 @@ export default function WalletPage() {
 
   useEffect(() => { if (status === "authenticated") load(); }, [status, load]);
 
+  // Auto-refresh a cada 10 segundos para actualizar estados de transacções
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const id = setInterval(load, 10_000);
+    return () => clearInterval(id);
+  }, [status, load]);
+
   async function sendOtp() {
     if (!amount || Number(amount) < 5000) { setFormMsg({ text: "Valor mínimo: 5.000 Kz", ok: false }); return; }
+    if (tab === "withdraw") {
+      if (!withdrawMethod) { setFormMsg({ text: "Selecciona um método de levantamento.", ok: false }); return; }
+      if (withdrawMethod === "multicaixa_express" && !wPhone.trim()) { setFormMsg({ text: "Introduz o número de telefone.", ok: false }); return; }
+      if (withdrawMethod === "transferencia" && (!wBank.trim() || !wAccount.trim() || !wHolder.trim())) { setFormMsg({ text: "Preenche todos os campos bancários.", ok: false }); return; }
+    }
     setBusy(true); setFormMsg(null);
     const r = await fetch("/api/otp", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -103,9 +121,20 @@ export default function WalletPage() {
   async function submitTx() {
     if (!otp || otp.length !== 6) { setFormMsg({ text: "Introduz o código de 6 dígitos.", ok: false }); return; }
     setBusy(true); setFormMsg(null);
+    let txMethod = method;
+    let txReference = reference;
+    if (tab === "withdraw") {
+      if (withdrawMethod === "multicaixa_express") {
+        txMethod    = "multicaixa_express";
+        txReference = wPhone.trim();
+      } else if (withdrawMethod === "transferencia") {
+        txMethod    = "transferencia_bancaria";
+        txReference = `Banco: ${wBank.trim()} | Conta: ${wAccount.trim()} | Titular: ${wHolder.trim()}`;
+      }
+    }
     const r = await fetch("/api/transactions", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: tab === "deposit" ? "deposit" : "withdrawal", amount: Number(amount), method, reference, otp }),
+      body: JSON.stringify({ type: tab === "deposit" ? "deposit" : "withdrawal", amount: Number(amount), method: txMethod, reference: txReference, otp }),
     });
     const d = await r.json();
     setBusy(false);
@@ -127,6 +156,7 @@ export default function WalletPage() {
 
   function resetForm() {
     setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false); setFormMsg(null); setPaymentInfo(null);
+    setWithdrawMethod(""); setWPhone(""); setWBank(""); setWAccount(""); setWHolder("");
   }
 
   const filtered = transactions.filter(t => {
@@ -313,33 +343,74 @@ export default function WalletPage() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Valor */}
               <div>
                 <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor (Kz)</label>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 25000" style={inp} disabled={otpSent} />
               </div>
+
+              {/* Método */}
               <div>
-                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Conta de destino / IBAN</label>
-                <input value={method} onChange={e => setMethod(e.target.value)} placeholder="Conta bancária, número de telefone..." style={inp} disabled={otpSent} />
+                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Método de levantamento</label>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {[
+                    { value: "multicaixa_express", label: "Multicaixa Express", icon: "MXE" },
+                    { value: "transferencia",      label: "Transferência Bancária", icon: "TRF" },
+                  ].map(opt => (
+                    <button key={opt.value} onClick={() => !otpSent && setWithdrawMethod(opt.value as any)}
+                      style={{ flex: 1, padding: "12px 8px", border: `2px solid ${withdrawMethod === opt.value ? "#ef4444" : "#1e2d50"}`, borderRadius: 10, background: withdrawMethod === opt.value ? "rgba(239,68,68,0.08)" : "#0a0f1e", color: withdrawMethod === opt.value ? "#ef4444" : "#64748b", fontWeight: 700, fontSize: 13, cursor: otpSent ? "not-allowed" : "pointer", textAlign: "center" }}>
+                      <div style={{ fontSize: 11, fontWeight: 900, color: withdrawMethod === opt.value ? "#ef4444" : "#475569", marginBottom: 4, letterSpacing: 1 }}>{opt.icon}</div>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
+              {/* Campos Multicaixa Express */}
+              {withdrawMethod === "multicaixa_express" && (
+                <div>
+                  <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Número de telefone</label>
+                  <input value={wPhone} onChange={e => setWPhone(e.target.value)} placeholder="9XX XXX XXX" style={inp} disabled={otpSent} />
+                </div>
+              )}
+
+              {/* Campos Transferência Bancária */}
+              {withdrawMethod === "transferencia" && (
+                <>
+                  <div>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Banco</label>
+                    <input value={wBank} onChange={e => setWBank(e.target.value)} placeholder="ex: BFA, BIC, BAI, BDA..." style={inp} disabled={otpSent} />
+                  </div>
+                  <div>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Número de conta</label>
+                    <input value={wAccount} onChange={e => setWAccount(e.target.value)} placeholder="ex: 00000000000000000" style={inp} disabled={otpSent} />
+                  </div>
+                  <div>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Nome do titular</label>
+                    <input value={wHolder} onChange={e => setWHolder(e.target.value)} placeholder="Nome completo" style={inp} disabled={otpSent} />
+                  </div>
+                </>
+              )}
+
               {!otpSent ? (
-                <button onClick={sendOtp} disabled={busy} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
+                <button onClick={sendOtp} disabled={busy || !withdrawMethod} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || !withdrawMethod) ? "not-allowed" : "pointer", opacity: (busy || !withdrawMethod) ? 0.6 : 1 }}>
                   {busy ? "A enviar código..." : "Continuar → Confirmar com código"}
                 </button>
               ) : (
                 <>
+                  <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "10px 14px", color: "#22c55e", fontSize: 13, fontWeight: 600 }}>
+                    Código enviado para o teu email. Introduz abaixo para confirmar.
+                  </div>
                   <div>
-                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (enviado por email)</label>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (6 dígitos)</label>
                     <input type="text" inputMode="numeric" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" autoFocus
                       style={{ ...inp, fontSize: 24, textAlign: "center", letterSpacing: 10, fontWeight: 700 }} />
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
+                    <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
                       {busy ? "A submeter..." : "Confirmar Levantamento"}
                     </button>
-                    <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>
-                      Cancelar
-                    </button>
+                    <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>Cancelar</button>
                   </div>
                 </>
               )}
@@ -389,7 +460,13 @@ export default function WalletPage() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>
                           <div>
-                            {tx.method && <span style={{ color: "#64748b", fontSize: 12 }}>{tx.method}</span>}
+                            {tx.method && <span style={{ color: "#64748b", fontSize: 12 }}>{{
+                              multicaixa_ref:      "Multicaixa (Ent/Ref)",
+                              multicaixa_express:  "Multicaixa Express",
+                              transferencia_bancaria: "Transferência Bancária",
+                              usdt_trc20:          "USDT TRC-20",
+                              crypto_nowpayments:  "USDT TRC-20",
+                            }[tx.method] ?? tx.method}</span>}
                             <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{formatDate(tx.createdAt)}</div>
                           </div>
                           <StatusBadge status={tx.status} />
