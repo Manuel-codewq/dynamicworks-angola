@@ -14,18 +14,31 @@ interface KYCData {
   biBack: string;
 }
 
-function compressImage(file: File, maxW = 1400, q = 0.85): Promise<string> {
+function compressImage(file: File): Promise<string> {
   return new Promise((res, rej) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
+        const MAX_W = 1000;
         let w = img.width, h = img.height;
-        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        if (w > MAX_W) { h = Math.round(h * MAX_W / w); w = MAX_W; }
         const c = document.createElement("canvas");
         c.width = w; c.height = h;
         c.getContext("2d")!.drawImage(img, 0, 0, w, h);
-        res(c.toDataURL("image/jpeg", q));
+        // Compressão iterativa — reduz qualidade até caber em 3MB base64
+        const MAX_B64 = 3_000_000;
+        let quality = 0.80;
+        let b64 = c.toDataURL("image/jpeg", quality);
+        while (b64.length > MAX_B64 && quality > 0.40) {
+          quality -= 0.10;
+          b64 = c.toDataURL("image/jpeg", quality);
+        }
+        if (b64.length > MAX_B64) {
+          rej(new Error("Imagem demasiado grande. Tira a foto com menos resolução ou usa outra imagem."));
+          return;
+        }
+        res(b64);
       };
       img.onerror = rej;
       img.src = reader.result as string;

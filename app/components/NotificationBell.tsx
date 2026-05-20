@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Bell, X, CheckCircle, XCircle, Wallet, ArrowUpCircle, ScanFace, Megaphone, Info, TrendingUp, TrendingDown, Gift, ChevronRight } from "lucide-react";
+import { Bell, X, CheckCircle, XCircle, Wallet, ArrowUpCircle, ScanFace, Megaphone, Info, TrendingUp, TrendingDown, Gift, ChevronRight, MessageCircle, ExternalLink } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -22,8 +22,9 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; bg: string; color: st
   kyc_rejected:         { icon: <ScanFace     size={20} color="#ef4444" />, bg: "rgba(239,68,68,0.12)",   color: "#ef4444" },
   broadcast:            { icon: <Megaphone    size={20} color="#f5a623" />, bg: "rgba(245,166,35,0.12)",  color: "#f5a623" },
   admin:                { icon: <Info         size={20} color="#38bdf8" />, bg: "rgba(56,189,248,0.12)",  color: "#38bdf8" },
-  referral_commission:  { icon: <Gift         size={20} color="#22c55e" />, bg: "rgba(34,197,94,0.12)",   color: "#22c55e" },
-  info:                 { icon: <Info         size={20} color="#f5a623" />, bg: "rgba(245,166,35,0.12)",  color: "#f5a623" },
+  referral_commission:  { icon: <Gift          size={20} color="#22c55e" />, bg: "rgba(34,197,94,0.12)",   color: "#22c55e" },
+  info:                 { icon: <Info          size={20} color="#f5a623" />, bg: "rgba(245,166,35,0.12)",  color: "#f5a623" },
+  whatsapp_invite:      { icon: <MessageCircle size={20} color="#25d366" />, bg: "rgba(37,211,102,0.12)",  color: "#25d366" },
 };
 
 function timeAgo(dateStr: string): string {
@@ -182,9 +183,25 @@ export default function NotificationBell() {
             </div>
             {/* Body */}
             <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
-              <div style={{ color: "#d1d5db", fontSize: 15, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
-                {selected.message}
-              </div>
+              {/* Extrair URL da mensagem se existir */}
+              {(() => {
+                const urlMatch = selected.message.match(/https?:\/\/[^\s]+/);
+                const cleanMsg = selected.message.replace(/https?:\/\/[^\s]+/, "").trim();
+                return (
+                  <>
+                    <div style={{ color: "#d1d5db", fontSize: 15, lineHeight: 1.8, whiteSpace: "pre-wrap", marginBottom: urlMatch ? 20 : 0 }}>
+                      {cleanMsg}
+                    </div>
+                    {urlMatch && (
+                      <a href={urlMatch[0]} target="_blank" rel="noopener noreferrer"
+                        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#25d366", color: "#fff", borderRadius: 12, padding: "14px 20px", textDecoration: "none", fontWeight: 800, fontSize: 15 }}>
+                        <MessageCircle size={18} /> Entrar no grupo
+                        <ExternalLink size={14} style={{ opacity: 0.7 }} />
+                      </a>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
