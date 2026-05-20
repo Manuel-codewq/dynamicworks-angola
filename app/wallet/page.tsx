@@ -68,7 +68,9 @@ export default function WalletPage() {
   const [busy,        setBusy]        = useState(false);
   const [copied,      setCopied]      = useState(false);
   const [copiedRef,   setCopiedRef]   = useState(false);
-  const [paymentInfo, setPaymentInfo] = useState<{ reference: string; amount: number } | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<{ amount: number } | null>(null);
+  const MULTICAIXA_ENTITY = "10116";
+  const MULTICAIXA_REF    = "946621503";
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
@@ -109,7 +111,7 @@ export default function WalletPage() {
     setBusy(false);
     if (r.ok) {
       if (tab === "deposit") {
-        setPaymentInfo({ reference: d.reference, amount: Number(amount) });
+        setPaymentInfo({ amount: Number(amount) });
         setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false);
         setFormMsg(null);
         load();
@@ -218,9 +220,9 @@ export default function WalletPage() {
                     Vai ao <strong style={{ color: "#fff" }}>ATM Multicaixa</strong> ou <strong style={{ color: "#fff" }}>banca online</strong> e usa os dados abaixo para pagar:
                   </div>
                   {[
-                    { label: "Entidade", value: "10116", copy: false },
-                    { label: "Referência", value: paymentInfo.reference, copy: true },
-                    { label: "Valor", value: `${paymentInfo.amount.toLocaleString("pt-PT")} Kz`, copy: false },
+                    { label: "Entidade",   value: MULTICAIXA_ENTITY, copy: false },
+                    { label: "Referência", value: MULTICAIXA_REF,    copy: true  },
+                    { label: "Valor",      value: `${paymentInfo.amount.toLocaleString("pt-PT")} Kz`, copy: false },
                   ].map(item => (
                     <div key={item.label} style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div>
