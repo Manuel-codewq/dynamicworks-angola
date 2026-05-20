@@ -65,8 +65,10 @@ export default function WalletPage() {
   const [otpSent,   setOtpSent]   = useState(false);
   const [otp,       setOtp]       = useState("");
   const [formMsg,   setFormMsg]   = useState<{ text: string; ok: boolean } | null>(null);
-  const [busy,      setBusy]      = useState(false);
-  const [copied,    setCopied]    = useState(false);
+  const [busy,        setBusy]        = useState(false);
+  const [copied,      setCopied]      = useState(false);
+  const [copiedRef,   setCopiedRef]   = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState<{ reference: string; amount: number } | null>(null);
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
@@ -106,16 +108,23 @@ export default function WalletPage() {
     const d = await r.json();
     setBusy(false);
     if (r.ok) {
-      setFormMsg({ text: tab === "deposit" ? "Pedido de depósito submetido!" : "Pedido de levantamento submetido!", ok: true });
-      setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false);
-      setTab("history"); load();
+      if (tab === "deposit") {
+        setPaymentInfo({ reference: d.reference, amount: Number(amount) });
+        setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false);
+        setFormMsg(null);
+        load();
+      } else {
+        setFormMsg({ text: "Pedido de levantamento submetido!", ok: true });
+        setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false);
+        setTab("history"); load();
+      }
     } else {
       setFormMsg({ text: d.error ?? "Erro ao submeter.", ok: false });
     }
   }
 
   function resetForm() {
-    setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false); setFormMsg(null);
+    setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false); setFormMsg(null); setPaymentInfo(null);
   }
 
   const filtered = transactions.filter(t => {
@@ -197,49 +206,82 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {formMsg && (
-              <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                {formMsg.ok ? <CheckCircle size={14} color="#22c55e" /> : <AlertCircle size={14} color="#ef4444" />}
-                <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
-              </div>
-            )}
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* Cartão de pagamento após confirmação */}
+            {paymentInfo ? (
               <div>
-                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor (Kz)</label>
-                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 50000" style={inp} disabled={otpSent} />
-              </div>
-              <div>
-                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Método de pagamento</label>
-                <input value={method} onChange={e => setMethod(e.target.value)} placeholder="ex: Multicaixa, Transferência, USDT" style={inp} disabled={otpSent} />
-              </div>
-              <div>
-                <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Referência / Comprovativo</label>
-                <input value={reference} onChange={e => setReference(e.target.value)} placeholder="Número de referência ou descrição" style={inp} disabled={otpSent} />
-              </div>
-
-              {!otpSent ? (
-                <button onClick={sendOtp} disabled={busy} style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
-                  {busy ? "A enviar código..." : "Continuar → Confirmar com código"}
+                <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 14, padding: "20px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+                    <CheckCircle size={18} color="#22c55e" />
+                    <span style={{ color: "#22c55e", fontWeight: 800, fontSize: 15 }}>Pedido criado! Efectua o pagamento</span>
+                  </div>
+                  <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 18, lineHeight: 1.6 }}>
+                    Vai ao <strong style={{ color: "#fff" }}>ATM Multicaixa</strong> ou <strong style={{ color: "#fff" }}>banca online</strong> e usa os dados abaixo para pagar:
+                  </div>
+                  {[
+                    { label: "Entidade", value: "10116", copy: false },
+                    { label: "Referência", value: paymentInfo.reference, copy: true },
+                    { label: "Valor", value: `${paymentInfo.amount.toLocaleString("pt-PT")} Kz`, copy: false },
+                  ].map(item => (
+                    <div key={item.label} style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
+                        <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 0.8, marginBottom: 2 }}>{item.label.toUpperCase()}</div>
+                        <div style={{ color: "#fff", fontWeight: 900, fontSize: item.label === "Referência" ? 22 : 18, letterSpacing: item.label === "Referência" ? 3 : 0 }}>{item.value}</div>
+                      </div>
+                      {item.copy && (
+                        <button onClick={() => { navigator.clipboard.writeText(item.value); setCopiedRef(true); setTimeout(() => setCopiedRef(false), 2000); }}
+                          style={{ background: copiedRef ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${copiedRef ? "rgba(34,197,94,0.4)" : "#1e2d50"}`, borderRadius: 8, padding: "8px 12px", color: copiedRef ? "#22c55e" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700 }}>
+                          {copiedRef ? <Check size={13} /> : <Copy size={13} />} {copiedRef ? "Copiado" : "Copiar"}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, padding: "10px 14px", marginTop: 6, color: "#94a3b8", fontSize: 12, lineHeight: 1.6 }}>
+                    Após o pagamento o teu depósito será aprovado em breve. Guarda a referência caso precises de confirmação.
+                  </div>
+                </div>
+                <button onClick={() => { setPaymentInfo(null); setTab("history"); }}
+                  style={{ width: "100%", background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                  Ver histórico
                 </button>
-              ) : (
-                <>
+              </div>
+            ) : (
+              <>
+                {formMsg && (
+                  <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                    <AlertCircle size={14} color="#ef4444" />
+                    <span style={{ color: "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
-                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (enviado por email)</label>
-                    <input type="text" inputMode="numeric" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" autoFocus
-                      style={{ ...inp, fontSize: 24, textAlign: "center", letterSpacing: 10, fontWeight: 700 }} />
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor (Kz)</label>
+                    <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 50000" style={inp} disabled={otpSent} />
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
-                      {busy ? "A submeter..." : "Confirmar Depósito"}
+                  {!otpSent ? (
+                    <button onClick={sendOtp} disabled={busy} style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
+                      {busy ? "A enviar código..." : "Gerar referência de pagamento"}
                     </button>
-                    <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>
-                      Cancelar
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+                  ) : (
+                    <>
+                      <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "10px 14px", color: "#22c55e", fontSize: 13, fontWeight: 600 }}>
+                        Código enviado para o teu email. Introduz abaixo para confirmar.
+                      </div>
+                      <div>
+                        <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (6 dígitos)</label>
+                        <input type="text" inputMode="numeric" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" autoFocus
+                          style={{ ...inp, fontSize: 24, textAlign: "center", letterSpacing: 10, fontWeight: 700 }} />
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
+                          {busy ? "A gerar referência..." : "Confirmar e gerar referência"}
+                        </button>
+                        <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>Cancelar</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 

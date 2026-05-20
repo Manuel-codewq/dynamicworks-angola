@@ -31,6 +31,17 @@ export async function POST(req: NextRequest) {
 
   const { type, amount, method, reference, otp } = await req.json();
 
+  // Gerar referência única de 9 dígitos para depósitos Multicaixa
+  async function generateRef(): Promise<string> {
+    let ref: string;
+    do {
+      ref = String(Math.floor(100_000_000 + Math.random() * 900_000_000));
+      const exists = await prisma.transaction.findFirst({ where: { reference: ref } });
+      if (!exists) break;
+    } while (true);
+    return ref;
+  }
+
   if (!["deposit", "withdrawal"].includes(type)) {
     return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
   }
@@ -80,14 +91,18 @@ export async function POST(req: NextRequest) {
     data:  { otpCode: null, otpExpires: null },
   });
 
+  // Para depósitos: gera referência Multicaixa automaticamente
+  const txRef  = type === "deposit" ? await generateRef() : (reference ? String(reference).slice(0, 200) : null);
+  const txMethod = type === "deposit" ? "multicaixa_ref" : (method ? String(method).slice(0, 100) : null);
+
   const tx = await prisma.transaction.create({
     data: {
-      userId: session.user.id,
+      userId:    session.user.id,
       type,
-      amount: amountNum,
-      method:    method ? String(method).slice(0, 100) : null,
-      reference: reference ? String(reference).slice(0, 200) : null,
-      status: "pending",
+      amount:    amountNum,
+      method:    txMethod,
+      reference: txRef,
+      status:    "pending",
     },
   });
 
