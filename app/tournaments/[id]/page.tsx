@@ -21,7 +21,8 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const { data: session, status } = useSession();
   const router = useRouter();
   const [tournament, setTournament]   = useState<any>(null);
-  const [balance, setBalance]         = useState(0);
+  const [balance,     setBalance]     = useState(0);
+  const [demoBalance, setDemoBalance] = useState(0);
   const [loading, setLoading]         = useState(true);
   const [joining, setJoining]         = useState(false);
   const [joined, setJoined]           = useState(false);
@@ -38,6 +39,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     ]).then(([t, b]) => {
       setTournament(t);
       setBalance(b.balance ?? 0);
+      setDemoBalance(b.demoBalance ?? 0);
       const uid = (session?.user as any)?.id;
       if (uid && Array.isArray(t.participants)) setJoined(t.participants.some((p: any) => p.userId === uid));
       setLoading(false);
@@ -51,8 +53,10 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     const data = await res.json();
     if (res.ok) {
       setJoined(true);
-      setBalance(b => b - (tournament.isFree ? 0 : tournament.entryFee));
-      setMsg({ text: tournament.isFree ? "Inscrito com sucesso! Boa sorte!" : `Inscrito! ${formatKz(tournament.entryFee)} debitados do teu saldo real.`, ok: true });
+      const saldoLabel = tournament.isDemo ? "saldo demo" : "saldo real";
+      if (tournament.isDemo) setDemoBalance(b => b - (tournament.isFree ? 0 : tournament.entryFee));
+      else setBalance(b => b - (tournament.isFree ? 0 : tournament.entryFee));
+      setMsg({ text: tournament.isFree ? "Inscrito com sucesso! Boa sorte!" : `Inscrito! ${formatKz(tournament.entryFee)} debitados do teu ${saldoLabel}.`, ok: true });
     } else if (data.code === "EMAIL_NOT_VERIFIED") {
       setMsg({ text: "Verifica o teu email antes de participar. Vai a Perfil → reenviar confirmação.", ok: false });
     } else if (data.code === "KYC_REQUIRED") {
@@ -75,7 +79,9 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const daysLeft = Math.max(0, Math.ceil((new Date(tournament.endDate).getTime() - Date.now()) / 86400000));
   const hoursLeft = Math.max(0, Math.ceil((new Date(tournament.endDate).getTime() - Date.now()) / 3600000));
   const canJoin = tournament.status !== "finished" && !joined && !maxReached;
-  const hasFunds = balance >= (tournament.entryFee ?? 0);
+  const activeBalance = tournament.isDemo ? demoBalance : balance;
+  const hasFunds = activeBalance >= (tournament.entryFee ?? 0);
+  const saldoLabel = tournament.isDemo ? "saldo demo" : "saldo real";
   const bannerColor = tournament.bannerColor ?? "#f5a623";
 
   return (
@@ -144,8 +150,8 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   <AlertCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
                   <div>
                     <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 13 }}>Saldo insuficiente</div>
-                    <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>Precisas de {formatKz(tournament.entryFee)} no saldo real. O teu saldo actual é {formatKz(balance)}.</div>
-                    <a href="/wallet" style={{ display: "inline-block", marginTop: 8, color: "#f5a623", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Depositar agora →</a>
+                    <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>Precisas de {formatKz(tournament.entryFee)} no {saldoLabel}. O teu saldo actual é {formatKz(activeBalance)}.</div>
+                    {!tournament.isDemo && <a href="/wallet" style={{ display: "inline-block", marginTop: 8, color: "#f5a623", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Depositar agora →</a>}
                   </div>
                 </div>
               )}
@@ -163,7 +169,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                 <Lock size={16} color="#f5a623" /> Confirmar pagamento de entrada
               </div>
               <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 16px", lineHeight: 1.6 }}>
-                Serão debitados <strong style={{ color: "#f5a623" }}>{formatKz(tournament.entryFee)}</strong> do teu saldo real ({formatKz(balance)} disponível).<br />Esta acção não pode ser revertida.
+                Serão debitados <strong style={{ color: "#f5a623" }}>{formatKz(tournament.entryFee)}</strong> do teu {saldoLabel} ({formatKz(activeBalance)} disponível).<br />Esta acção não pode ser revertida.
               </p>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setConfirmPaid(false)} style={{ flex: 1, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: "11px", color: "#64748b", fontWeight: 700, cursor: "pointer" }}>Cancelar</button>
