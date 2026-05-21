@@ -101,7 +101,8 @@ export default function WalletPage() {
   }, [status, load]);
 
   async function sendOtp() {
-    if (!amount || Number(amount) < 5000) { setFormMsg({ text: "Valor mínimo: 5.000 Kz", ok: false }); return; }
+    const minVal = tab === "withdraw" ? 10000 : 5000;
+    if (!amount || Number(amount) < minVal) { setFormMsg({ text: `Valor mínimo: ${minVal.toLocaleString("pt-PT")} Kz`, ok: false }); return; }
     if (tab === "withdraw") {
       if (!withdrawMethod) { setFormMsg({ text: "Selecciona um método de levantamento.", ok: false }); return; }
       if (withdrawMethod === "multicaixa_express" && !wPhone.trim()) { setFormMsg({ text: "Introduz o número de telefone.", ok: false }); return; }
