@@ -135,6 +135,7 @@ export default function TradePage() {
   const [tournamentWins,     setTournamentWins]     = useState(0);
   const [tournamentPositions, setTournamentPositions] = useState<any[]>([]);
   const [demoReloading,  setDemoReloading]  = useState(false);
+  const [showDemoHelp,   setShowDemoHelp]   = useState(false);
   const [candleTimer,    setCandleTimer]    = useState("");
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
   const [, setTick]                         = useState(0);
@@ -147,12 +148,6 @@ export default function TradePage() {
   const [amountInput,     setAmountInput]     = useState("");
   const [walletData,      setWalletData]      = useState<{ balance: number; demoBalance: number; transactions: any[] } | null>(null);
   const [walletLoading,   setWalletLoading]   = useState(false);
-  const [priceAlerts,     setPriceAlerts]     = useState<any[]>([]);
-  const [showAlertModal,  setShowAlertModal]  = useState(false);
-  const [alertPrice,      setAlertPrice]      = useState("");
-  const [alertDirection,  setAlertDirection]  = useState<"above" | "below">("above");
-  const [alertSaving,     setAlertSaving]     = useState(false);
-  const priceAlertsRef    = useRef<any[]>([]);
   const tradeMarkersRef   = useRef<any>(null);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
@@ -1501,55 +1496,6 @@ export default function TradePage() {
     } catch {}
   }, [tradeHistory, selectedPair]);
 
-  // ── Alertas de preço — carregar e verificar a cada tick ──────────────────
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    fetch("/api/alerts").then(r => r.json()).then(data => {
-      if (Array.isArray(data)) { setPriceAlerts(data); priceAlertsRef.current = data; }
-    }).catch(() => {});
-  }, [status]);
-
-  useEffect(() => { priceAlertsRef.current = priceAlerts; }, [priceAlerts]);
-
-  useEffect(() => {
-    if (!currentPrice || !selectedPair) return;
-    const triggered = priceAlertsRef.current.filter(a =>
-      a.asset === selectedPair.label && !a.triggered &&
-      (a.direction === "above" ? currentPrice >= a.price : currentPrice <= a.price)
-    );
-    if (!triggered.length) return;
-    triggered.forEach(a => {
-      fetch(`/api/alerts/${a.id}`, { method: "POST" }).catch(() => {});
-    });
-    setPriceAlerts(prev => prev.filter(a => !triggered.some((t: any) => t.id === a.id)));
-  }, [currentPrice, selectedPair]);
-
-  async function saveAlert() {
-    if (!selectedPair || !alertPrice) return;
-    const price = parseFloat(alertPrice.replace(",", "."));
-    if (!isFinite(price) || price <= 0) return;
-    setAlertSaving(true);
-    try {
-      const res = await fetch("/api/alerts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ asset: selectedPair.label, price, direction: alertDirection }),
-      });
-      if (res.ok) {
-        const newAlert = await res.json();
-        setPriceAlerts(prev => [newAlert, ...prev]);
-        setAlertPrice("");
-        setShowAlertModal(false);
-      }
-    } catch {}
-    setAlertSaving(false);
-  }
-
-  async function deleteAlert(id: string) {
-    await fetch(`/api/alerts/${id}`, { method: "DELETE" }).catch(() => {});
-    setPriceAlerts(prev => prev.filter(a => a.id !== id));
-  }
-
   // ── Helpers ───────────────────────────────────────────────────────────────
   function isTradeWinning(direction: string, entryPrice: number): boolean {
     if (currentPrice === 0 || entryPrice === 0) return false;
@@ -2786,58 +2732,6 @@ export default function TradePage() {
           />
         )}
 
-        {/* ── Modal de alertas de preço ── */}
-        {showAlertModal && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-            onClick={e => { if (e.target === e.currentTarget) setShowAlertModal(false); }}>
-            <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: 24, width: "100%", maxWidth: 380 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <span style={{ color: "#fff", fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><AlertCircle size={16} color="#f5a623" /> Alerta de Preço — {selectedPair?.label}</span>
-                <button onClick={() => setShowAlertModal(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>✕</button>
-              </div>
-
-              {/* Criar novo alerta */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 6 }}>Preço alvo</label>
-                <input
-                  type="number" step="any"
-                  value={alertPrice}
-                  onChange={e => setAlertPrice(e.target.value)}
-                  placeholder={currentPrice > 0 ? currentPrice.toFixed(5) : "0.00000"}
-                  style={{ width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 12px", color: "#fff", fontSize: 15, outline: "none", boxSizing: "border-box" }}
-                />
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  {(["above", "below"] as const).map(d => (
-                    <button key={d} onClick={() => setAlertDirection(d)}
-                      style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${alertDirection === d ? (d === "above" ? "#22c55e" : "#ef4444") : "#1e2d50"}`, background: alertDirection === d ? (d === "above" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "transparent", color: alertDirection === d ? (d === "above" ? "#22c55e" : "#ef4444") : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                      {d === "above" ? "▲ Acima" : "▼ Abaixo"}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={saveAlert} disabled={alertSaving || !alertPrice}
-                  style={{ width: "100%", marginTop: 12, padding: "11px", background: alertSaving || !alertPrice ? "#7a5118" : "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: alertSaving || !alertPrice ? "not-allowed" : "pointer" }}>
-                  {alertSaving ? "A guardar..." : "Criar Alerta"}
-                </button>
-              </div>
-
-              {/* Alertas activos para este par */}
-              {priceAlerts.filter(a => a.asset === selectedPair?.label).length > 0 && (
-                <div>
-                  <div style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Alertas activos</div>
-                  {priceAlerts.filter(a => a.asset === selectedPair?.label).map(a => (
-                    <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: "#0d1526", borderRadius: 8, marginBottom: 6 }}>
-                      <span style={{ color: a.direction === "above" ? "#22c55e" : "#ef4444", fontSize: 13, fontWeight: 700 }}>
-                        {a.direction === "above" ? "▲" : "▼"} {a.price}
-                      </span>
-                      <button onClick={() => deleteAlert(a.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ── Topbar (chart tab only) ── */}
         {mobileTab === "chart" && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -2853,10 +2747,25 @@ export default function TradePage() {
           <div style={{ flex: 1 }} />
 
           {isDemo && (
-            <button onClick={resetDemo} disabled={demoReloading}
-              style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 5, fontSize: 10, padding: "2px 6px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, flexShrink: 0 }}>
-              {demoReloading ? "..." : "↺"}
-            </button>
+            <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 3 }}>
+              <button onClick={resetDemo} disabled={demoReloading}
+                style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 5, fontSize: 10, padding: "2px 6px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, flexShrink: 0 }}>
+                {demoReloading ? "..." : "↺"}
+              </button>
+              <button onClick={() => setShowDemoHelp(v => !v)}
+                style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}>?</button>
+              {showDemoHelp && (
+                <div onClick={() => setShowDemoHelp(false)}
+                  style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 200, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: "12px 14px", width: 220, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+                  <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 12, marginBottom: 6 }}>↺ Repor Saldo Demo</div>
+                  <div style={{ color: "#94a3b8", fontSize: 12, lineHeight: 1.6 }}>
+                    O botão <strong style={{ color: "#f5a623" }}>↺</strong> repõe o teu saldo demo para <strong style={{ color: "#fff" }}>10.000 Kz</strong>.<br /><br />
+                    Usa-o sempre que quiseres recomeçar a praticar sem precisar de depositar dinheiro real.
+                  </div>
+                  <div style={{ color: "#475569", fontSize: 10, marginTop: 8 }}>Máx. 3 reposições por hora.</div>
+                </div>
+              )}
+            </div>
           )}
 
           <NotificationBell />
@@ -2884,9 +2793,6 @@ export default function TradePage() {
             </button>
             <button onClick={() => { setLeftPanel(p => p === "drawings" ? null : "drawings"); if (leftPanel === "drawings") { setActiveTool(null); setPendingPoint(null); } }} style={{ height: 24, padding: "0 8px", background: leftPanel === "drawings" ? "rgba(34,197,94,0.1)" : "transparent", color: leftPanel === "drawings" ? "#22c55e" : "#4b5563", border: `1px solid ${leftPanel === "drawings" ? "rgba(34,197,94,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
               <PenLine size={11} /> TOOLS
-            </button>
-            <button onClick={() => { setShowAlertModal(true); setAlertPrice(currentPrice > 0 ? currentPrice.toFixed(5) : ""); }} style={{ height: 24, padding: "0 8px", background: priceAlerts.some(a => a.asset === selectedPair?.label) ? "rgba(251,146,60,0.15)" : "transparent", color: priceAlerts.some(a => a.asset === selectedPair?.label) ? "#fb923c" : "#4b5563", border: `1px solid ${priceAlerts.some(a => a.asset === selectedPair?.label) ? "rgba(251,146,60,0.4)" : "#1e2d50"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-              <AlertCircle size={11} /> ALERTA
             </button>
           </div>
         </div>}
@@ -3424,9 +3330,24 @@ export default function TradePage() {
         </button>
 
         {isDemo && (
-          <button onClick={resetDemo} disabled={demoReloading} style={{ background: "transparent", border: "1px solid rgba(245,166,35,0.4)", color: "#f5a623", borderRadius: 6, fontSize: 11, padding: "4px 8px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, whiteSpace: "nowrap" }}>
-            {demoReloading ? "..." : "↺ Recarregar"}
-          </button>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }}>
+            <button onClick={resetDemo} disabled={demoReloading} style={{ background: "transparent", border: "1px solid rgba(245,166,35,0.4)", color: "#f5a623", borderRadius: 6, fontSize: 11, padding: "4px 8px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, whiteSpace: "nowrap" }}>
+              {demoReloading ? "..." : "↺ Recarregar"}
+            </button>
+            <button onClick={() => setShowDemoHelp(v => !v)}
+              style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1 }}>?</button>
+            {showDemoHelp && (
+              <div onClick={() => setShowDemoHelp(false)}
+                style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 200, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: "14px 16px", width: 240, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+                <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 13, marginBottom: 8 }}>↺ Repor Saldo Demo</div>
+                <div style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.7 }}>
+                  Clica em <strong style={{ color: "#f5a623" }}>↺ Recarregar</strong> para repor o teu saldo demo para <strong style={{ color: "#fff" }}>10.000 Kz</strong>.<br /><br />
+                  Usa-o sempre que quiseres recomeçar a praticar sem precisar de depositar dinheiro real.
+                </div>
+                <div style={{ color: "#475569", fontSize: 11, marginTop: 10 }}>Máx. 3 reposições por hora.</div>
+              </div>
+            )}
+          </div>
         )}
 
         <div style={{ position: "relative" }}>

@@ -330,6 +330,20 @@ export default function WalletPage() {
               </div>
             </div>
 
+            {balance <= 0 ? (
+              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "20px", textAlign: "center" }}>
+                <XCircle size={36} color="#ef4444" style={{ marginBottom: 12 }} />
+                <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 15, marginBottom: 6 }}>Saldo insuficiente</div>
+                <div style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.6 }}>
+                  Precisas de ter saldo real para efectuar um levantamento.<br />
+                  Faz um depósito primeiro.
+                </div>
+                <button onClick={() => setTab("deposit")} style={{ marginTop: 16, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+                  Fazer Depósito
+                </button>
+              </div>
+            ) : (
+            <>
             <div style={{ background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, color: "#94a3b8", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
               <AlertCircle size={15} color="#f5a623" style={{ flexShrink: 0 }} />
               KYC obrigatório para levantamentos. O processamento demora 1-3 dias úteis.
@@ -415,6 +429,8 @@ export default function WalletPage() {
                 </>
               )}
             </div>
+            </>
+            )}
           </div>
         )}
 
