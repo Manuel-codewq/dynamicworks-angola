@@ -1582,8 +1582,10 @@ export default function TradePage() {
 
     closingTradesRef.current.add(tradeId);
     try {
-      // Envia o preço actual como fallback — o servidor usa o seu próprio preço se conseguir
-      const exitPrice = lastPriceRef.current > 0 ? lastPriceRef.current : undefined;
+      // Só enviar exitPrice se o par activo é o mesmo do trade — evita enviar preço errado
+      const trade = activeTradesRef.current.find(t => t.id === tradeId);
+      const sameAsset = trade?.asset === selectedPairRef.current?.label;
+      const exitPrice = sameAsset && lastPriceRef.current > 0 ? lastPriceRef.current : undefined;
       const res = await fetch(`/api/trade/${tradeId}/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2542,23 +2544,22 @@ export default function TradePage() {
   function renderTournamentWidget() {
     if (!tournamentPositions.length) return null;
     return (
-      <div style={{ position: "absolute", top: 6, right: 6, zIndex: 10, display: "flex", flexDirection: "column", gap: 4, pointerEvents: "none" }}>
+      <div style={{ position: "absolute", top: 4, right: 4, zIndex: 10, display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
         {tournamentPositions.map((tp: any) => {
-          const posLabel = tp.position === 1 ? "🥇" : tp.position === 2 ? "🥈" : tp.position === 3 ? "🥉" : `#${tp.position}`;
+          const pos = tp.position;
+          const medal = pos === 1 ? "🥇" : pos === 2 ? "🥈" : pos === 3 ? "🥉" : null;
           const profitColor = tp.profit >= 0 ? "#22c55e" : "#ef4444";
           return (
-            <div key={tp.tournamentId} style={{ background: "rgba(10,15,30,0.85)", border: "1px solid rgba(245,166,35,0.4)", borderRadius: 10, padding: "6px 10px", backdropFilter: "blur(4px)" }}>
-              <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, marginBottom: 2 }}>TORNEIO {tp.isDemo ? "DEMO" : "REAL"}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>{posLabel}</span>
-                <div>
-                  <div style={{ color: profitColor, fontWeight: 800, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
-                    {tp.profit >= 0 ? "+" : ""}{Math.floor(tp.profit).toLocaleString("pt-PT")} Kz
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: 10 }}>{tp.trades} trades · {tp.wins} vitórias</div>
+            <div key={tp.tournamentId} style={{ background: "rgba(10,15,30,0.82)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 7, padding: "4px 7px", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: medal ? 12 : 10, fontWeight: 900, color: medal ? undefined : "#f5a623" }}>
+                {medal ?? `#${pos}`}
+              </span>
+              <div>
+                <div style={{ color: "#f5a623", fontSize: 8, fontWeight: 700, letterSpacing: 0.3 }}>TORNEIO {tp.isDemo ? "DEMO" : "REAL"}</div>
+                <div style={{ color: profitColor, fontWeight: 800, fontSize: 10, fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>
+                  {tp.profit >= 0 ? "+" : ""}{Math.floor(tp.profit).toLocaleString("pt-PT")} Kz
                 </div>
               </div>
-              {tp.prize && <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, marginTop: 2 }}>Prémio: {Number(tp.prize).toLocaleString("pt-PT")} Kz</div>}
             </div>
           );
         })}
@@ -2851,7 +2852,7 @@ export default function TradePage() {
           </button>
           <div style={{ flex: 1 }} />
 
-          {isDemo && demoBalance < 5000 && (
+          {isDemo && (
             <button onClick={resetDemo} disabled={demoReloading}
               style={{ background: "transparent", border: "1px solid #f5a623", color: "#f5a623", borderRadius: 5, fontSize: 10, padding: "2px 6px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, flexShrink: 0 }}>
               {demoReloading ? "..." : "↺"}
@@ -3422,7 +3423,7 @@ export default function TradePage() {
           <span style={{ color: "#fff", fontWeight: 700, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
         </button>
 
-        {isDemo && demoBalance < 5000 && (
+        {isDemo && (
           <button onClick={resetDemo} disabled={demoReloading} style={{ background: "transparent", border: "1px solid rgba(245,166,35,0.4)", color: "#f5a623", borderRadius: 6, fontSize: 11, padding: "4px 8px", cursor: demoReloading ? "not-allowed" : "pointer", opacity: demoReloading ? 0.6 : 1, whiteSpace: "nowrap" }}>
             {demoReloading ? "..." : "↺ Recarregar"}
           </button>
