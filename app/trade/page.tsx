@@ -131,8 +131,9 @@ export default function TradePage() {
   const [tradeDrawer,   setTradeDrawer]   = useState(false);
   const [timeframe,      setTimeframe]      = useState("1m");
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
-  const [userMenuOpen,     setUserMenuOpen]     = useState(false);
-  const [tournamentWins,   setTournamentWins]   = useState(0);
+  const [userMenuOpen,       setUserMenuOpen]       = useState(false);
+  const [tournamentWins,     setTournamentWins]     = useState(0);
+  const [tournamentPositions, setTournamentPositions] = useState<any[]>([]);
   const [demoReloading,  setDemoReloading]  = useState(false);
   const [candleTimer,    setCandleTimer]    = useState("");
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
@@ -959,6 +960,10 @@ export default function TradePage() {
     if (status === "authenticated") {
       fetchBalance();
       fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => { if (d) setTournamentWins(d.tournamentWins ?? 0); });
+      const loadPos = () => fetch("/api/tournaments/position").then(r => r.ok ? r.json() : null).then(d => { setTournamentPositions(Array.isArray(d) ? d : []); });
+      loadPos();
+      const posInterval = setInterval(loadPos, 30_000);
+      return () => clearInterval(posInterval);
     }
   }, [status, router, fetchBalance]);
 
@@ -2534,6 +2539,33 @@ export default function TradePage() {
     );
   }
 
+  function renderTournamentWidget() {
+    if (!tournamentPositions.length) return null;
+    return (
+      <div style={{ position: "absolute", top: 6, right: 6, zIndex: 10, display: "flex", flexDirection: "column", gap: 4, pointerEvents: "none" }}>
+        {tournamentPositions.map((tp: any) => {
+          const posLabel = tp.position === 1 ? "🥇" : tp.position === 2 ? "🥈" : tp.position === 3 ? "🥉" : `#${tp.position}`;
+          const profitColor = tp.profit >= 0 ? "#22c55e" : "#ef4444";
+          return (
+            <div key={tp.tournamentId} style={{ background: "rgba(10,15,30,0.85)", border: "1px solid rgba(245,166,35,0.4)", borderRadius: 10, padding: "6px 10px", backdropFilter: "blur(4px)" }}>
+              <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, marginBottom: 2 }}>TORNEIO {tp.isDemo ? "DEMO" : "REAL"}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>{posLabel}</span>
+                <div>
+                  <div style={{ color: profitColor, fontWeight: 800, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
+                    {tp.profit >= 0 ? "+" : ""}{Math.floor(tp.profit).toLocaleString("pt-PT")} Kz
+                  </div>
+                  <div style={{ color: "#64748b", fontSize: 10 }}>{tp.trades} trades · {tp.wins} vitórias</div>
+                </div>
+              </div>
+              {tp.prize && <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, marginTop: 2 }}>Prémio: {Number(tp.prize).toLocaleString("pt-PT")} Kz</div>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   function renderLegend() {
     if (!legend.length) return null;
     return (
@@ -2880,6 +2912,7 @@ export default function TradePage() {
               style={{ position: "absolute", left: handlePos[pt].x - 8, top: handlePos[pt].y - 8, width: 16, height: 16, borderRadius: "50%", background: "#fff", border: "2.5px solid #3b82f6", cursor: "grab", zIndex: 20, pointerEvents: "all", boxShadow: "0 0 6px rgba(59,130,246,0.6)" }} />
           ))}
           {renderLegend()}
+          {renderTournamentWidget()}
 
           {/* ── Tipo de gráfico (canto inferior esquerdo) ── */}
           {(() => {
@@ -3498,6 +3531,7 @@ export default function TradePage() {
               style={{ position: "absolute", left: handlePos[pt].x - 8, top: handlePos[pt].y - 8, width: 16, height: 16, borderRadius: "50%", background: "#fff", border: "2.5px solid #3b82f6", cursor: "grab", zIndex: 20, pointerEvents: "all", boxShadow: "0 0 6px rgba(59,130,246,0.6)" }} />
           ))}
             {renderLegend()}
+          {renderTournamentWidget()}
             {/* Zoom controls — bottom centre, over time axis */}
             <div style={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", gap: 4 }}>
               <button onClick={() => { const ts = chartApiRef.current?.timeScale(); if (!ts) return; const cur = (ts.options() as any).barSpacing ?? 6; ts.applyOptions({ barSpacing: Math.max(cur - 2, 2) }); }}
