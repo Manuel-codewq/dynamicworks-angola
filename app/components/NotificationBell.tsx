@@ -99,6 +99,7 @@ export default function NotificationBell() {
 
   function openNotif(n: Notification) {
     if (!n.read) markRead(n.id);
+    setOpen(false);
     setSelected(n);
   }
 
