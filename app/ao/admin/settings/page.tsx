@@ -200,9 +200,9 @@ export default function AdminSettingsPage() {
 
       {/* Pares de fim de semana */}
       <div style={card}>
-        <p style={sectionTitle}>Pares de Fim de Semana</p>
+        <p style={sectionTitle}>Pares Sintéticos (24/7)</p>
         <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
-          Pares sintéticos activos quando o mercado real está fechado (noites, fins de semana e feriados).
+          Disponíveis a qualquer hora, incluindo fins de semana e fora do horário de mercado.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
           {SYNTHETIC_OPTIONS.map(opt => {
