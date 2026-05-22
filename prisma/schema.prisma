@@ -254,6 +254,7 @@ model Tournament {
   entryFee        Float    @default(0)
   maxParticipants Int?
   bannerColor     String   @default("#f5a623")
+  startingBalance Float    @default(10000)
   createdAt       DateTime @default(now())
   participants    TournamentParticipant[]
 
@@ -266,10 +267,11 @@ model TournamentParticipant {
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   userId       String
   user         User       @relation(fields: [userId], references: [id])
-  profit       Float      @default(0)
-  trades       Int        @default(0)
-  wins         Int        @default(0)
-  joinedAt     DateTime   @default(now())
+  profit            Float      @default(0)
+  trades            Int        @default(0)
+  wins              Int        @default(0)
+  tournamentBalance Float      @default(10000)
+  joinedAt          DateTime   @default(now())
 
   @@unique([tournamentId, userId])
   @@index([tournamentId, profit])
