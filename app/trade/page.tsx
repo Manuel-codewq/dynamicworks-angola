@@ -1131,9 +1131,13 @@ export default function TradePage() {
 
     lastPriceRef.current = 0;
     initialScrollDone.current = false; // reset ao mudar par/timeframe → scroll ao carregar novas velas
-    derivWS.subscribeToTicks(pairs.map(p => p.symbol));
     derivWS.getCandles(selectedPair.symbol, gran, 300);
-  }, [selectedPair, timeframe, pairs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPair, timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Re-subscribe ticks when pairs list changes (ticker strip) ─────────────
+  useEffect(() => {
+    if (pairs.length > 0) derivWS.subscribeToTicks(pairs.map(p => p.symbol));
+  }, [pairs]);
 
   // ── Real wins feed (polls every 15s) ─────────────────────────────────────
   useEffect(() => {

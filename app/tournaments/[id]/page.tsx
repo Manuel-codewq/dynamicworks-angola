@@ -20,14 +20,15 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [tournament, setTournament]   = useState<any>(null);
-  const [balance,     setBalance]     = useState(0);
-  const [demoBalance, setDemoBalance] = useState(0);
-  const [loading, setLoading]         = useState(true);
-  const [joining, setJoining]         = useState(false);
-  const [joined, setJoined]           = useState(false);
+  const [tournament,        setTournament]        = useState<any>(null);
+  const [balance,           setBalance]           = useState(0);
+  const [demoBalance,       setDemoBalance]       = useState(0);
+  const [tournamentBalance, setTournamentBalance] = useState<number | null>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [joining,     setJoining]     = useState(false);
+  const [joined,      setJoined]      = useState(false);
   const [confirmPaid, setConfirmPaid] = useState(false);
-  const [msg, setMsg]                 = useState<{ text: string; ok: boolean } | null>(null);
+  const [msg,         setMsg]         = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
@@ -40,6 +41,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       setTournament(t);
       setBalance(b.balance ?? 0);
       setDemoBalance(b.demoBalance ?? 0);
+      setTournamentBalance(b.tournamentBalance ?? null);
       const uid = (session?.user as any)?.id;
       if (uid && Array.isArray(t.participants)) setJoined(t.participants.some((p: any) => p.userId === uid));
       setLoading(false);
@@ -180,13 +182,29 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
             </div>
           )}
 
-          {joined && (
+          {joined && tournament.status === "active" && (
+            <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 12, padding: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <Check size={18} color="#22c55e" />
+                <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 15 }}>Estás inscrito!</div>
+              </div>
+              {tournamentBalance !== null && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0a0f1e", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                  <span style={{ color: "#94a3b8", fontSize: 13 }}>Saldo do torneio</span>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(tournamentBalance))}</span>
+                </div>
+              )}
+              <button onClick={() => router.push("/trade")}
+                style={{ width: "100%", background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: 10, padding: "13px", color: "#fff", fontWeight: 900, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Zap size={17} /> Opera agora
+              </button>
+            </div>
+          )}
+
+          {joined && tournament.status !== "active" && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 12, padding: "14px 16px" }}>
               <Check size={18} color="#22c55e" />
-              <div>
-                <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 15 }}>Estás inscrito!</div>
-                <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>As tuas operações reais contam para este torneio.</div>
-              </div>
+              <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 15 }}>Estás inscrito!</div>
             </div>
           )}
 
