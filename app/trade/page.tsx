@@ -126,9 +126,11 @@ export default function TradePage() {
   const [amount,        setAmount]        = useState(1000);
   const [expiry,        setExpiry]        = useState(EXPIRY_OPTIONS[0]);
   const [customMins,   setCustomMins]    = useState("1");
-  const [isDemo,        setIsDemo]        = useState(true);
-  const [balance,       setBalance]       = useState(10000);
-  const [demoBalance,   setDemoBalance]   = useState(10000);
+  const [isDemo,            setIsDemo]            = useState(true);
+  const [balance,           setBalance]           = useState(10000);
+  const [demoBalance,       setDemoBalance]        = useState(10000);
+  const [tournamentBalance, setTournamentBalance] = useState<number | null>(null);
+  const [tournamentName,    setTournamentName]    = useState<string | null>(null);
   const [activeTrades,  setActiveTrades]  = useState<ActiveTrade[]>([]);
   const [recentWins,    setRecentWins]    = useState<RecentWin[]>([]);
   const [sentiment,     setSentiment]     = useState(62);
@@ -955,6 +957,8 @@ export default function TradePage() {
     if (res.ok) {
       const d = await res.json();
       setBalance(d.balance); setDemoBalance(d.demoBalance); setIsDemo(d.isDemo);
+      setTournamentBalance(d.tournamentBalance ?? null);
+      setTournamentName(d.tournamentName ?? null);
     }
   }, []);
 
@@ -1700,7 +1704,7 @@ export default function TradePage() {
     if (res.ok) { const d = await res.json(); setIsDemo(d.isDemo); }
   }
 
-  const displayBalance = isDemo ? demoBalance : balance;
+  const displayBalance = tournamentBalance !== null ? tournamentBalance : (isDemo ? demoBalance : balance);
   const currentPayout  = selectedPair ? (payoutMap[selectedPair.label] ?? 0.85) : 0.85;
   const profit         = amount * currentPayout;
   const decimals       = selectedPair?.decimals ?? 5;
@@ -2812,10 +2816,10 @@ export default function TradePage() {
 
           <NotificationBell />
 
-          <button onClick={toggleAccount} style={{ background: isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${isDemo ? "rgba(245,166,35,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
-            <Wallet size={11} color={isDemo ? "#f5a623" : "#22c55e"} />
+          <button onClick={toggleAccount} style={{ background: tournamentBalance !== null ? "rgba(99,102,241,0.1)" : isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${tournamentBalance !== null ? "rgba(99,102,241,0.4)" : isDemo ? "rgba(245,166,35,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
+            <Wallet size={11} color={tournamentBalance !== null ? "#6366f1" : isDemo ? "#f5a623" : "#22c55e"} />
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
-            <span style={{ background: isDemo ? "#f5a623" : "#22c55e", color: "#0a0f1e", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>{isDemo ? "Demo" : "Real"}</span>
+            <span style={{ background: tournamentBalance !== null ? "#6366f1" : isDemo ? "#f5a623" : "#22c55e", color: "#fff", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>{tournamentBalance !== null ? "Torneio" : isDemo ? "Demo" : "Real"}</span>
           </button>
         </div>}
 
