@@ -229,6 +229,17 @@ export default function WalletPage() {
         {/* ── Depósito ─────────────────────────────────────────────────────────── */}
         {tab === "deposit" && (
           <div style={card}>
+            {/* Banner bónus */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,rgba(245,166,35,0.1),rgba(249,115,22,0.07))", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
+              <div style={{ width: 36, height: 36, background: "rgba(245,166,35,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ fontSize: 18 }}>🎁</span>
+              </div>
+              <div>
+                <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>Bónus de boas-vindas +10%</div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>No primeiro depósito de <strong style={{ color: "#fff" }}>50.000 Kz ou mais</strong>, recbes +10% directo no saldo.</div>
+              </div>
+            </div>
+
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <div style={{ width: 40, height: 40, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <ArrowDownCircle size={20} color="#22c55e" />

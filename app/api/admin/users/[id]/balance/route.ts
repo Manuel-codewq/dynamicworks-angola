@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const prev = isDemo ? (before.demoBalance ?? 0) : (before.balance ?? 0);
   const diff = n - prev;
 
-  // Limite diário de ajuste por admin (5M Kz)
+  // Limite diário de ajuste por admin (5M Kz) — filtrado por adminId, não por nome
   if (!isDemo) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: {
         type:      "adjustment",
         status:    "completed",
-        reference: { contains: session.user.name ?? "" },
+        reference: { startsWith: `Admin:${session.user.id}:` },
         createdAt: { gte: todayStart },
       },
       _sum: { amount: true },
@@ -92,7 +92,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         type:      "adjustment",
         amount:    diff,
         status:    "completed",
-        reference: `Admin: ${session.user.name} — ${reason}`,
+        reference: `Admin:${session.user.id}:${session.user.name} — ${reason}`,
       },
     });
   }

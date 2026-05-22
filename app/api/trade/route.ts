@@ -51,6 +51,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
+  const { maintenanceMode } = await getSettings();
+  if (maintenanceMode) {
+    return NextResponse.json({ error: "Plataforma em manutenção. Tenta mais tarde." }, { status: 503 });
+  }
+
   if (!await checkRateLimit("trade", session.user.id, 10, 60_000)) {
     return NextResponse.json({ error: "Demasiadas operações. Aguarde 1 minuto." }, { status: 429 });
   }
@@ -102,17 +107,37 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const balanceField = user.isDemo ? "demoBalance" : "balance";
-  const currentBalance: number = user[balanceField] ?? 0;
+  // Verificar se utilizador está inscrito em torneio activo (demo ou real conforme o modo)
+  const activeTournamentParticipant = await prisma.tournamentParticipant.findFirst({
+    where: {
+      userId: user.id,
+      tournament: { status: "active", isDemo: user.isDemo, endDate: { gte: new Date() } },
+    },
+    include: { tournament: { select: { id: true, startingBalance: true } } },
+  });
+
+  const isTournamentTrade = !!activeTournamentParticipant;
+
+  // Saldo a usar: torneio > demo > real
+  let currentBalance: number;
+  if (isTournamentTrade) {
+    currentBalance = activeTournamentParticipant!.tournamentBalance;
+  } else {
+    const balanceField = user.isDemo ? "demoBalance" : "balance";
+    currentBalance = user[balanceField] ?? 0;
+  }
+
   if (currentBalance < amountNum) {
-    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
+    return NextResponse.json({
+      error: isTournamentTrade ? "Saldo do torneio insuficiente" : "Saldo insuficiente",
+    }, { status: 400 });
   }
 
   // Obter payout das definições (com fallback)
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: servidor → fallback clientPrice (necessário para OTC e quando WS falha)
+  // Entry price: servidor → fallback clientPrice
   let entryPrice = await fetchServerEntryPrice(asset);
   if (!entryPrice) {
     const clientPrice = Number(body?.entryPrice);
@@ -125,13 +150,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Débito atómico: WHERE garante que saldo não ficou negativo entre a verificação e o débito
+  // Débito atómico
   let deducted: any;
   try {
-    deducted = await prisma.user.updateMany({
-      where: { id: user.id, [balanceField]: { gte: amountNum } },
-      data:  { [balanceField]: { decrement: amountNum } },
-    });
+    if (isTournamentTrade) {
+      deducted = await prisma.tournamentParticipant.updateMany({
+        where: { id: activeTournamentParticipant!.id, tournamentBalance: { gte: amountNum } },
+        data:  { tournamentBalance: { decrement: amountNum } },
+      });
+    } else {
+      const balanceField = user.isDemo ? "demoBalance" : "balance";
+      deducted = await prisma.user.updateMany({
+        where: { id: user.id, [balanceField]: { gte: amountNum } },
+        data:  { [balanceField]: { decrement: amountNum } },
+      });
+    }
   } catch (err) {
     console.error("[trade/open] deduct", err);
     return NextResponse.json({ error: "Erro ao processar saldo. Tente novamente." }, { status: 500 });
@@ -155,10 +188,18 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[trade/open] create", err);
     // Reembolsar saldo se a criação falhou
-    await prisma.user.update({
-      where: { id: user.id },
-      data:  { [balanceField]: { increment: amountNum } },
-    }).catch(() => {});
+    if (isTournamentTrade) {
+      await prisma.tournamentParticipant.update({
+        where: { id: activeTournamentParticipant!.id },
+        data:  { tournamentBalance: { increment: amountNum } },
+      }).catch(() => {});
+    } else {
+      const bf = user.isDemo ? "demoBalance" : "balance";
+      await prisma.user.update({
+        where: { id: user.id },
+        data:  { [bf]: { increment: amountNum } },
+      }).catch(() => {});
+    }
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
 

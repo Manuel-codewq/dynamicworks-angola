@@ -71,19 +71,59 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [type]);
 
-  // ── INFO toast — simples, não interrompe ─────────────────────────────────
+  // ── INFO modal — overlay centrado ────────────────────────────────────────
   if (type === "info") return (
-    <div onClick={onDone} style={{
-      position: "fixed", top: 72, left: 12, right: 12, zIndex: 3000,
-      background: "rgba(245,166,35,0.96)", color: "#0a0f1e",
-      padding: "12px 16px", borderRadius: 12, fontWeight: 700, fontSize: 14,
-      boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-      display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
-      animation: "trToastIn .3s cubic-bezier(.22,1,.36,1)",
-    }}>
-      <style>{`@keyframes trToastIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}`}</style>
-      <Info size={16} color="#0a0f1e" />
-      {msg}
+    <div
+      onClick={onDone}
+      style={{
+        position: "fixed",
+        top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 99999,
+        backgroundColor: "rgba(0,0,0,0.75)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          backgroundColor: "#111827",
+          border: "2px solid #f5a623",
+          borderRadius: 20,
+          padding: "32px 36px",
+          maxWidth: "80vw",
+          width: 300,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 14,
+          textAlign: "center",
+          boxShadow: "0 0 40px rgba(245,166,35,0.3), 0 20px 60px rgba(0,0,0,0.8)",
+        }}
+      >
+        <Info size={32} color="#f5a623" />
+        <div style={{ color: "#ffffff", fontWeight: 700, fontSize: 16, lineHeight: 1.4 }}>
+          {msg}
+        </div>
+        <button
+          onClick={onDone}
+          style={{
+            marginTop: 4,
+            background: "#f5a623",
+            color: "#0a0f1e",
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 32px",
+            fontWeight: 800,
+            fontSize: 14,
+            cursor: "pointer",
+            width: "100%",
+          }}
+        >
+          OK
+        </button>
+      </div>
     </div>
   );
 

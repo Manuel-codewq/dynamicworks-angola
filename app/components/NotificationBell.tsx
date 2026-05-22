@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, X, CheckCircle, XCircle, Wallet, ArrowUpCircle, ScanFace, Megaphone, Info, TrendingUp, TrendingDown, Gift, ChevronRight, MessageCircle, ExternalLink } from "lucide-react";
 
 interface Notification {
@@ -152,24 +153,28 @@ export default function NotificationBell() {
 
   return (
     <>
-      {/* Modal — notificação expandida */}
-      {selected && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: isMobile ? 0 : 20 }}
-          onClick={e => { if (e.target === e.currentTarget) setSelected(null); }}>
+      {/* Notificação expandida */}
+      {selected && typeof document !== "undefined" && createPortal(
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99999,
+          background: isMobile ? "#080e1d" : "rgba(0,0,0,0.75)",
+          display: "flex",
+          alignItems: isMobile ? "flex-start" : "center",
+          justifyContent: "center",
+          padding: isMobile ? 0 : 20,
+        }}
+          onClick={e => { if (!isMobile && e.target === e.currentTarget) setSelected(null); }}>
           <div style={{
-            background: "#111827", border: "1px solid #1e2d50", borderRadius: isMobile ? "20px 20px 0 0" : 16,
-            width: "100%", maxWidth: 480, maxHeight: isMobile ? "85vh" : "80vh",
+            background: "#111827",
+            border: isMobile ? "none" : "1px solid #1e2d50",
+            borderRadius: isMobile ? 0 : 16,
+            width: "100%", maxWidth: isMobile ? "100%" : 480,
+            height: isMobile ? "100%" : "auto",
+            maxHeight: isMobile ? "100%" : "80vh",
             display: "flex", flexDirection: "column", overflow: "hidden",
-            boxShadow: "0 -8px 40px rgba(0,0,0,0.6)",
           }}>
-            {/* Handle (mobile) */}
-            {isMobile && (
-              <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 0" }}>
-                <div style={{ width: 36, height: 4, background: "#374151", borderRadius: 2 }} />
-              </div>
-            )}
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: "1px solid #1e2d50" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: "1px solid #1e2d50", flexShrink: 0 }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: cfg(selected).bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {cfg(selected).icon}
               </div>
@@ -178,19 +183,18 @@ export default function NotificationBell() {
                 <div style={{ color: "#475569", fontSize: 12, marginTop: 3 }}>{timeAgo(selected.createdAt)}</div>
               </div>
               <button onClick={() => setSelected(null)}
-                style={{ background: "#1e2d50", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                style={{ background: "#1e2d50", border: "none", borderRadius: 8, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <X size={15} color="#94a3b8" />
               </button>
             </div>
             {/* Body */}
-            <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
-              {/* Extrair URL da mensagem se existir */}
+            <div style={{ padding: "24px 20px", overflowY: "auto", flex: 1 }}>
               {(() => {
                 const urlMatch = selected.message.match(/https?:\/\/[^\s]+/);
                 const cleanMsg = selected.message.replace(/https?:\/\/[^\s]+/, "").trim();
                 return (
                   <>
-                    <div style={{ color: "#d1d5db", fontSize: 15, lineHeight: 1.8, whiteSpace: "pre-wrap", marginBottom: urlMatch ? 20 : 0 }}>
+                    <div style={{ color: "#d1d5db", fontSize: 15, lineHeight: 1.8, whiteSpace: "pre-wrap", marginBottom: urlMatch ? 24 : 0 }}>
                       {cleanMsg}
                     </div>
                     {urlMatch && (
@@ -205,7 +209,8 @@ export default function NotificationBell() {
               })()}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Bell button */}
@@ -241,42 +246,42 @@ export default function NotificationBell() {
         )}
       </div>
 
-      {/* Mobile bottom sheet */}
-      {isMobile && (
-        <>
-          {open && <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 500 }} />}
-          <div style={{
-            position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 600,
-            background: "#111827", borderRadius: "18px 18px 0 0",
-            boxShadow: "0 -8px 40px rgba(0,0,0,0.6)",
-            transform: open ? "translateY(0)" : "translateY(100%)",
-            transition: "transform 0.3s cubic-bezier(0.32,0.72,0,1)",
-            maxHeight: "80vh", display: "flex", flexDirection: "column",
-          }}>
-            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 0" }}>
-              <div style={{ width: 36, height: 4, background: "#374151", borderRadius: 2 }} />
+      {/* Mobile — ecrã inteiro via portal */}
+      {isMobile && open && typeof document !== "undefined" && createPortal(
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99999,
+          background: "#080e1d", display: "flex", flexDirection: "column",
+        }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 12px", borderBottom: "1px solid #1e2d50", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Bell size={20} color="#f5a623" />
+              <span style={{ color: "#fff", fontWeight: 800, fontSize: 17 }}>Notificações</span>
+              {unread > 0 && (
+                <span style={{ background: "#ef4444", color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "2px 8px" }}>
+                  {unread}
+                </span>
+              )}
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #1e2d50" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Notificações</span>
-                {unread > 0 && <span style={{ background: "#ef4444", color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "1px 7px" }}>{unread}</span>}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {unread > 0 && (
-                  <button onClick={markAll} disabled={markingAll} style={{ background: "none", border: "none", cursor: "pointer", color: "#f5a623", fontSize: 12, fontWeight: 600 }}>
-                    Ler todas
-                  </button>
-                )}
-                <button onClick={() => setOpen(false)} style={{ background: "#1e2d50", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <X size={14} color="#94a3b8" />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {unread > 0 && (
+                <button onClick={markAll} disabled={markingAll}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#f5a623", fontSize: 13, fontWeight: 600 }}>
+                  Ler todas
                 </button>
-              </div>
-            </div>
-            <div style={{ overflowY: "auto", flex: 1, paddingBottom: 24 }}>
-              <NotifList />
+              )}
+              <button onClick={() => setOpen(false)}
+                style={{ background: "#1e2d50", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={16} color="#94a3b8" />
+              </button>
             </div>
           </div>
-        </>
+          {/* Lista */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <NotifList />
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );

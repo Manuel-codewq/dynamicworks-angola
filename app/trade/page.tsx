@@ -10,6 +10,7 @@ import {
   PenLine, CandlestickChart, LineChart, AreaChart,
   Maximize2, Minimize2, Minus, Sliders, Trash2,
   Square, GitFork, BarChart, Activity,
+  Volume2, VolumeX,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -29,6 +30,7 @@ import {
   calcATR, calcCCI, calcWilliamsR, calcMomentum, calcAO, calcADX,
   calcAlligator, calcDonchian, calcKeltner, calcParabolicSAR, calcBearsBulls,
 } from "@/lib/indicators";
+import { playOpen, playWin, playLoss, isSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -90,6 +92,7 @@ export default function TradePage() {
     };
     setIsMobile(window.innerWidth < 768);
     setWindowHeight(window.innerHeight);
+    setSoundOn(isSoundEnabled());
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
@@ -148,6 +151,7 @@ export default function TradePage() {
   const [amountInput,     setAmountInput]     = useState("");
   const [walletData,      setWalletData]      = useState<{ balance: number; demoBalance: number; transactions: any[] } | null>(null);
   const [walletLoading,   setWalletLoading]   = useState(false);
+  const [soundOn,         setSoundOn]         = useState(true);
   const tradeMarkersRef   = useRef<any>(null);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
@@ -951,8 +955,12 @@ export default function TradePage() {
   }, []);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
+    if (status === "unauthenticated") { router.push("/login"); return; }
     if (status === "authenticated") {
+      // Verificar modo manutenção antes de carregar a plataforma
+      fetch("/api/maintenance-check").then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.maintenance) { router.push("/maintenance"); return; }
+      });
       fetchBalance();
       fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => { if (d) setTournamentWins(d.tournamentWins ?? 0); });
       const loadPos = () => fetch("/api/tournaments/position").then(r => r.ok ? r.json() : null).then(d => { setTournamentPositions(Array.isArray(d) ? d : []); });
@@ -1138,7 +1146,7 @@ export default function TradePage() {
 
     const TOPBAR_H     = 48;
     const TF_H         = 36;
-    const TRADEPANEL_H = 162;
+    const TRADEPANEL_H = 185;
     const BOTTOMNAV_H  = 52;
 
     function initChart() {
@@ -1249,16 +1257,18 @@ export default function TradePage() {
         const trades = activeTradesRef.current.filter(t => t.asset === selectedPairRef.current?.label);
         trades.forEach(t => {
           if (!candleSeriesRef.current || tradePriceLinesRef.current.has(t.id)) return;
-          const dec   = selectedPairRef.current?.decimals ?? 5;
           const win   = lastPriceRef.current > 0
             ? (t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice)
             : true;
-          const color = win ? "#22c55e" : "#ef4444";
-          const dir   = t.direction === "call" ? "▲ ALTA" : "▼ BAIXA";
+          const color  = win ? "#22c55e" : "#ef4444";
+          const dir    = t.direction === "call" ? "▲ ALTA" : "▼ BAIXA";
+          const remSec = Math.max(0, Math.ceil((t.expiresAt - Date.now()) / 1000));
+          const mm     = String(Math.floor(remSec / 60)).padStart(2, "0");
+          const ss     = String(remSec % 60).padStart(2, "0");
           const line  = candleSeriesRef.current.createPriceLine({
             price: t.entryPrice, color, lineWidth: 2, lineStyle: 2,
             axisLabelVisible: true,
-            title: `${dir}  ${t.entryPrice.toFixed(dec)}`,
+            title: `${dir}  ${mm}:${ss}`,
           });
           tradePriceLinesRef.current.set(t.id, line);
         });
@@ -1416,6 +1426,7 @@ export default function TradePage() {
       if (unnotified) {
         notifiedTradesRef.current.add(unnotified.id);
         const isWin = unnotified.result === "win";
+        if (isWin) playWin(); else playLoss();
         setNotification({
           msg:  isWin ? `Win +${formatKz(Math.round(unnotified.profit))}` : `Loss ${formatKz(unnotified.amount)}`,
           type: isWin ? "win" : "loss",
@@ -1444,9 +1455,11 @@ export default function TradePage() {
         ? (t.direction === "call" ? lastPriceRef.current > t.entryPrice : lastPriceRef.current < t.entryPrice)
         : true;
       const color = win ? "#22c55e" : "#ef4444";
-      const dec   = selectedPair?.decimals ?? 5;
       const dir   = t.direction === "call" ? "▲ ALTA" : "▼ BAIXA";
-      const title = `${dir}  ${t.entryPrice.toFixed(dec)}`;
+      const remSec = Math.max(0, Math.ceil((t.expiresAt - Date.now()) / 1000));
+      const mm = String(Math.floor(remSec / 60)).padStart(2, "0");
+      const ss = String(remSec % 60).padStart(2, "0");
+      const title = `${dir}  ${mm}:${ss}`;
       if (tradePriceLinesRef.current.has(t.id)) {
         tradePriceLinesRef.current.get(t.id).applyOptions({ color, title });
       } else if (candleSeriesRef.current) {
@@ -1472,6 +1485,24 @@ export default function TradePage() {
       line.applyOptions({ color: win ? "#22c55e" : "#ef4444", lineWidth: 2, lineStyle: 1 });
     });
   }, [currentPrice]);
+
+  // Actualiza o título da linha de entrada com o countdown (1/s)
+  useEffect(() => {
+    const tick = () => {
+      tradePriceLinesRef.current.forEach((line, id) => {
+        const trade = activeTradesRef.current.find(t => t.id === id);
+        if (!trade) return;
+        const remSec = Math.max(0, Math.ceil((trade.expiresAt - Date.now()) / 1000));
+        const mm  = String(Math.floor(remSec / 60)).padStart(2, "0");
+        const ss  = String(remSec % 60).padStart(2, "0");
+        const dir = trade.direction === "call" ? "▲ ALTA" : "▼ BAIXA";
+        line.applyOptions({ title: `${dir}  ${mm}:${ss}` });
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [activeTrades]);
 
   // ── Marcadores de trades históricos no gráfico ───────────────────────────
   useEffect(() => {
@@ -1560,6 +1591,7 @@ export default function TradePage() {
       if (t?.status === "closed" && !notifiedTradesRef.current.has(t.id) && sessionTradeIdsRef.current.has(tradeId)) {
         notifiedTradesRef.current.add(t.id);
         const isWin = t.result === "win";
+        if (isWin) playWin(); else playLoss();
         setNotification({
           msg:  isWin ? `Win +${formatKz(Math.round(t.profit ?? 0))}` : `Loss ${formatKz(t.amount)}`,
           type: isWin ? "win" : "loss",
@@ -1619,6 +1651,7 @@ export default function TradePage() {
       if (!res.ok) {
         setNotification({ msg: data.error, type: "info" });
       } else {
+        playOpen();
         setNotification({
           msg: `Operação aberta — ${direction === "call" ? "ALTA" : "BAIXA"} ${selectedPair.label}`,
           type: "info",
@@ -2176,6 +2209,11 @@ export default function TradePage() {
 
         <div style={{ flex: 1 }} />
         {sBtn(false, () => {
+          const next = !soundOn;
+          setSoundOn(next);
+          setSoundEnabled(next);
+        }, soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />, soundOn ? "Som ligado" : "Som desligado")}
+        {sBtn(false, () => {
           const el = document.documentElement;
           if (!document.fullscreenElement) el.requestFullscreen?.();
           else document.exitFullscreen?.();
@@ -2710,7 +2748,7 @@ export default function TradePage() {
   if (isMobile) {
     const TOPBAR_H      = 48;
     const TF_H          = 36;
-    const TRADEPANEL_H  = 162;
+    const TRADEPANEL_H  = 185;
     const BOTTOMNAV_H   = 52;
     const OPSPANEL_H    = 230;
     const CONTENT_TOP   = TOPBAR_H + TF_H;
@@ -2947,90 +2985,124 @@ export default function TradePage() {
           }
 
           return (
-            <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column" }}>
+            <>
+            {/* ── Faixa de trades activos (acima do painel) ── */}
+            {activeTrades.length > 0 && (
+              <div style={{ position: "fixed", bottom: BOTTOMNAV_H + TRADEPANEL_H, left: 0, right: 0, zIndex: 111, background: "rgba(6,12,26,0.96)", borderTop: "1px solid #1a2540", backdropFilter: "blur(6px)", overflowX: "auto", display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", scrollbarWidth: "none" }}>
+                {activeTrades.map(t => {
+                  const rem = Math.max(0, t.expiresAt - Date.now());
+                  const remSec = Math.ceil(rem / 1000);
+                  const mm = String(Math.floor(remSec / 60)).padStart(2, "0");
+                  const ss = String(remSec % 60).padStart(2, "0");
+                  const isWinning = t.direction === "call" ? currentPrice > t.entryPrice : currentPrice < t.entryPrice;
+                  const urgent = remSec <= 10;
+                  return (
+                    <button key={t.id} onClick={() => { setMobileTab("trade"); setTradeHistoryTab("open"); }}
+                      style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, background: isWinning ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${isWinning ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.3)"}`, borderRadius: 20, padding: "3px 10px 3px 7px", cursor: "pointer" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: isWinning ? "#22c55e" : "#ef4444", flexShrink: 0 }} />
+                      <span style={{ color: "#fff", fontWeight: 700, fontSize: 11 }}>{t.asset}</span>
+                      <span style={{ color: t.direction === "call" ? "#22c55e" : "#ef4444", fontSize: 10, fontWeight: 800 }}>{t.direction === "call" ? "▲" : "▼"}</span>
+                      <span style={{ color: urgent ? "#ef4444" : "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 32, textAlign: "right" }}>{mm}:{ss}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-              {/* Row 1 — Asset + % + Pagamento | Expiry pills */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px 0" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", boxShadow: priceUp ? "0 0 5px #22c55e" : "0 0 5px #ef4444" }} />
-                  <span style={{ color: "#fff", fontWeight: 800, fontSize: 12 }}>{selectedPair?.label}</span>
-                  <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontWeight: 900, fontSize: 11, borderRadius: 4, padding: "1px 5px" }}>{Math.round(currentPayout * 100)}%</span>
-                  <span style={{ color: "#334155", fontSize: 10 }}>·</span>
-                  <span style={{ color: "#f5a623", fontWeight: 700, fontSize: 11 }}>{formatKz(payoutAmt)}</span>
+            <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", gap: 0 }}>
+
+              {/* Row 1 — Expiração */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px 0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", flexShrink: 0 }} />
+                  <span style={{ color: "#94a3b8", fontWeight: 700, fontSize: 11 }}>{selectedPair?.label}</span>
+                  <span style={{ background: "rgba(245,166,35,0.12)", color: "#f5a623", fontWeight: 800, fontSize: 10, borderRadius: 4, padding: "1px 5px" }}>{Math.round(currentPayout * 100)}%</span>
+                  <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 10 }}>+{formatKz(payoutAmt)}</span>
                 </div>
                 <div style={{ display: "flex", gap: 3 }}>
                   {EXPIRY_OPTIONS.map(opt => (
                     <button key={opt.secs} onClick={() => setExpiry(opt)}
-                      style={{ height: 22, padding: "0 7px", background: expiry.secs === opt.secs ? "#f5a623" : "#0b1220", color: expiry.secs === opt.secs ? "#0a0f1e" : "#64748b", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+                      style={{ height: 22, padding: "0 8px", background: expiry.secs === opt.secs ? "#f5a623" : "transparent", color: expiry.secs === opt.secs ? "#0a0f1e" : "#4b5563", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
                       {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Row 2 — Tempo | Investimento */}
-              <div style={{ display: "flex", gap: 8, padding: "6px 12px 0" }}>
-                {/* Timer */}
+              {/* Row 2 — Tempo + Investimento */}
+              <div style={{ display: "flex", gap: 6, padding: "5px 12px 0" }}>
+
+                {/* Tempo */}
                 <div onClick={() => { if (!timerEditing) { setTimerEditing(true); setTimerInput(String(Math.floor(expiry.secs / 60))); } }}
-                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${timerEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", cursor: "pointer", transition: "border-color 0.3s" }}>
-                  <div style={{ color: "#334155", fontSize: 9, fontWeight: 600, letterSpacing: 0.8, marginBottom: 1 }}>
-                    TEMPO {!timerEditing && <span style={{ color: "#f5a623" }}>✎</span>}
-                  </div>
+                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${timerEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
+                  <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Tempo</div>
                   {timerEditing ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 3 }} onClick={e => e.stopPropagation()}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 2 }} onClick={e => e.stopPropagation()}>
                       <input autoFocus type="number" min="1" max="60" value={timerInput}
                         onChange={e => setTimerInput(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter") { const m = Math.max(1, Math.min(60, parseInt(timerInput)||1)); setExpiry({label:`${m} min`,secs:m*60}); setTimerEditing(false); } if (e.key === "Escape") setTimerEditing(false); }}
                         onBlur={() => { const m = Math.max(1, Math.min(60, parseInt(timerInput)||1)); setExpiry({label:`${m} min`,secs:m*60}); setTimerEditing(false); }}
-                        style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 19, fontVariantNumeric: "tabular-nums" }} />
-                      <span style={{ color: "#4b5563", fontSize: 10 }}>min</span>
+                        style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 17, fontVariantNumeric: "tabular-nums" }} />
+                      <span style={{ color: "#4b5563", fontSize: 9 }}>min</span>
                     </div>
                   ) : (
-                    <div style={{ color: timerColor, fontWeight: 900, fontSize: 19, fontVariantNumeric: "tabular-nums", letterSpacing: 1.5, transition: "color 0.4s" }}>{timerDisplay}</div>
+                    <div style={{ color: timerColor, fontWeight: 900, fontSize: 17, fontVariantNumeric: "tabular-nums", letterSpacing: 1, transition: "color 0.4s" }}>{timerDisplay}</div>
                   )}
                 </div>
 
-                {/* Amount */}
-                <div onClick={() => { if (!amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}
-                  style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 10, padding: "6px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", transition: "border-color 0.3s" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: "#334155", fontSize: 9, fontWeight: 600, letterSpacing: 0.8, marginBottom: 1 }}>
-                      INVESTIMENTO {!amountEditing && <span style={{ color: "#f5a623" }}>✎</span>}
-                    </div>
+                {/* Investimento com +/- */}
+                <div style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 9, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ flex: 1, minWidth: 0 }} onClick={() => { if (!amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}>
+                    <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Investimento</div>
                     {amountEditing ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 3 }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 2 }} onClick={e => e.stopPropagation()}>
                         <input autoFocus type="number" min="1000" max="500000" value={amountInput}
                           onChange={e => setAmountInput(e.target.value)}
                           onKeyDown={e => { if (e.key === "Enter") { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); } if (e.key === "Escape") setAmountEditing(false); }}
                           onBlur={() => { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); }}
                           style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }} />
-                        <span style={{ color: "#4b5563", fontSize: 10, flexShrink: 0 }}>Kz</span>
+                        <span style={{ color: "#4b5563", fontSize: 9, flexShrink: 0 }}>Kz</span>
                       </div>
                     ) : (
                       <div style={{ color: "#fff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
                     )}
                   </div>
-                  <div style={{ display: "flex", gap: 5, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => setAmount(a => Math.max(1000, a - 500))}
-                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      style={{ width: 26, height: 26, background: "#1a2540", border: "none", borderRadius: 6, color: "#94a3b8", fontSize: 17, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
                     <button onClick={() => setAmount(a => a + 500)}
-                      style={{ width: 28, height: 28, background: "#1a2540", border: "none", borderRadius: 7, color: "#94a3b8", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                      style={{ width: 26, height: 26, background: "#1a2540", border: "none", borderRadius: 6, color: "#94a3b8", fontSize: 17, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
                   </div>
                 </div>
               </div>
 
-              {/* Row 3 — ALTA + BAIXA */}
-              <div style={{ display: "flex", gap: 8, padding: "7px 12px 8px", flex: 1 }}>
+              {/* Row 3 — Valores rápidos */}
+              <div style={{ display: "flex", gap: 5, padding: "5px 12px 0" }}>
+                {QUICK_AMOUNTS.map(q => (
+                  <button key={q} onClick={() => setAmount(q)} style={{
+                    flex: 1, height: 24,
+                    background: amount === q ? "#f5a623" : "transparent",
+                    color:      amount === q ? "#0a0f1e" : "#4b5563",
+                    border:     `1px solid ${amount === q ? "#f5a623" : "#1a2540"}`,
+                    borderRadius: 6, fontSize: 10, fontWeight: 800, cursor: "pointer",
+                    transition: "all 0.12s",
+                  }}>{q >= 1000 ? `${q / 1000}k` : q}</button>
+                ))}
+              </div>
+
+              {/* Row 4 — ALTA + BAIXA */}
+              <div style={{ display: "flex", gap: 8, padding: "5px 12px 6px", flex: 1 }}>
                 <button onClick={() => openTrade("call")} disabled={btnDisabled}
-                  style={{ flex: 1, background: "linear-gradient(150deg,#15803d,#22c55e)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(34,197,94,0.3)", letterSpacing: 0.5 }}>
-                  {loading ? "..." : <><TrendingUp size={17} strokeWidth={2.5} /> ALTA</>}
+                  style={{ flex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(150deg,#15803d,#22c55e)", color: "#fff", border: "none", borderRadius: 11, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: btnDisabled ? "none" : "0 3px 14px rgba(34,197,94,0.28)" }}>
+                  {loading ? "..." : <><TrendingUp size={16} strokeWidth={2.5} /> ALTA</>}
                 </button>
                 <button onClick={() => openTrade("put")} disabled={btnDisabled}
-                  style={{ flex: 1, background: "linear-gradient(150deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, boxShadow: btnDisabled ? "none" : "0 3px 16px rgba(239,68,68,0.3)", letterSpacing: 0.5 }}>
-                  {loading ? "..." : <><TrendingDown size={17} strokeWidth={2.5} /> BAIXA</>}
+                  style={{ flex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(150deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 11, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: btnDisabled ? "none" : "0 3px 14px rgba(239,68,68,0.28)" }}>
+                  {loading ? "..." : <><TrendingDown size={16} strokeWidth={2.5} /> BAIXA</>}
                 </button>
               </div>
             </div>
+            </>
           );
         })()}
 
@@ -3088,6 +3160,159 @@ export default function TradePage() {
             </div>
           </div>
         )}
+
+        {/* ── Positions page ── */}
+        {mobileTab === "trade" && (() => {
+          const openCount = activeTrades.length;
+          return (
+            <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#080e1d", display: "flex", flexDirection: "column" }}>
+
+              {/* Header */}
+              <div style={{ padding: "14px 16px 0", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 17, letterSpacing: 0.2 }}>Posições</span>
+                  {openCount > 0 && (
+                    <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontWeight: 800, fontSize: 11, borderRadius: 20, padding: "2px 10px", border: "1px solid rgba(245,166,35,0.3)" }}>
+                      {openCount} em aberto
+                    </span>
+                  )}
+                </div>
+                {/* Tabs */}
+                <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #1a2540" }}>
+                  {(["open", "history"] as const).map(tab => (
+                    <button key={tab} onClick={() => { setTradeHistoryTab(tab); if (tab === "history") fetchTradeHistory(); }}
+                      style={{ flex: 1, padding: "8px 0", background: "none", border: "none", borderBottom: `2px solid ${tradeHistoryTab === tab ? "#f5a623" : "transparent"}`, color: tradeHistoryTab === tab ? "#f5a623" : "#4b5563", fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.2s" }}>
+                      {tab === "open" ? `Em aberto${openCount > 0 ? ` (${openCount})` : ""}` : "Histórico"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
+
+                {/* ── Em aberto ── */}
+                {tradeHistoryTab === "open" && (
+                  openCount === 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80%", gap: 12 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#0d1526", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <BarChart2 size={26} color="#1e2d50" />
+                      </div>
+                      <span style={{ color: "#4b5563", fontSize: 14, fontWeight: 600 }}>Nenhuma operação em aberto</span>
+                      <button onClick={() => setMobileTab("chart")}
+                        style={{ marginTop: 4, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, padding: "9px 22px", color: "#f5a623", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                        Ir para o gráfico
+                      </button>
+                    </div>
+                  ) : (
+                    activeTrades.map(t => {
+                      const rem = Math.max(0, t.expiresAt - Date.now());
+                      const remSec = Math.ceil(rem / 1000);
+                      const mm = String(Math.floor(remSec / 60)).padStart(2, "0");
+                      const ss = String(remSec % 60).padStart(2, "0");
+                      const isWinning = t.direction === "call" ? currentPrice > t.entryPrice : currentPrice < t.entryPrice;
+                      const pnl = isWinning ? Math.round(t.amount * t.payout) : -t.amount;
+                      const pct = remSec / t.expirySecs;
+                      return (
+                        <div key={t.id} style={{ background: "#0b1220", border: `1px solid ${isWinning ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.2)"}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                          {/* Barra de progresso no fundo */}
+                          <div style={{ position: "absolute", bottom: 0, left: 0, width: `${(1 - pct) * 100}%`, height: 3, background: isWinning ? "#22c55e" : "#ef4444", borderRadius: "0 0 0 14px", transition: "width 1s linear" }} />
+
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
+                                <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{t.asset}</span>
+                                <span style={{ background: t.direction === "call" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: t.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 5, fontSize: 10, fontWeight: 800, padding: "2px 7px" }}>
+                                  {t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}
+                                </span>
+                                <span style={{ background: isWinning ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.08)", color: isWinning ? "#22c55e" : "#ef4444", borderRadius: 5, fontSize: 9, fontWeight: 700, padding: "2px 6px" }}>
+                                  {isWinning ? "A ganhar" : "A perder"}
+                                </span>
+                              </div>
+                              <div style={{ color: "#4b5563", fontSize: 11 }}>
+                                Entrada: <span style={{ color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>{t.entryPrice.toFixed(5)}</span>
+                              </div>
+                            </div>
+                            {/* Countdown */}
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ color: remSec <= 10 ? "#ef4444" : "#f5a623", fontWeight: 900, fontSize: 22, fontVariantNumeric: "tabular-nums", letterSpacing: 1, lineHeight: 1 }}>{mm}:{ss}</div>
+                              <div style={{ color: "#334155", fontSize: 9, marginTop: 2 }}>restante</div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <div>
+                              <div style={{ color: "#4b5563", fontSize: 10, marginBottom: 1 }}>Investimento</div>
+                              <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{formatKz(t.amount)}</div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ color: "#4b5563", fontSize: 10, marginBottom: 1 }}>P&L atual</div>
+                              <div style={{ color: isWinning ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>
+                                {pnl > 0 ? "+" : ""}{formatKz(pnl)}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ color: "#4b5563", fontSize: 10, marginBottom: 1 }}>Payout</div>
+                              <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 13 }}>{Math.round(t.payout * 100)}%</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )
+                )}
+
+                {/* ── Histórico ── */}
+                {tradeHistoryTab === "history" && (
+                  tradeHistory.length === 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80%", gap: 12 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#0d1526", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <History size={26} color="#1e2d50" />
+                      </div>
+                      <span style={{ color: "#4b5563", fontSize: 14, fontWeight: 600 }}>Nenhum histórico ainda</span>
+                    </div>
+                  ) : (
+                    tradeHistory.map((t: any) => {
+                      const isWin = t.result === "win";
+                      const profit = t.profit ?? (isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : -t.amount);
+                      const timeStr = new Date(t.createdAt).toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" });
+                      const dateStr = new Date(t.createdAt).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" });
+                      return (
+                        <div key={t.id} style={{ background: "#0b1220", border: `1px solid ${isWin ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.15)"}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                              <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{t.asset}</span>
+                              <span style={{ background: t.direction === "call" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: t.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 5, fontSize: 10, fontWeight: 800, padding: "2px 7px" }}>
+                                {t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}
+                              </span>
+                              <span style={{ background: isWin ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.1)", color: isWin ? "#22c55e" : "#ef4444", borderRadius: 5, fontSize: 9, fontWeight: 900, padding: "2px 7px" }}>
+                                {isWin ? "GANHOU" : "PERDEU"}
+                              </span>
+                            </div>
+                            <span style={{ color: "#334155", fontSize: 10 }}>{dateStr} {timeStr}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <div>
+                              <div style={{ color: "#4b5563", fontSize: 10, marginBottom: 1 }}>Investimento</div>
+                              <div style={{ color: "#94a3b8", fontWeight: 700, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{formatKz(t.amount)}</div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ color: "#4b5563", fontSize: 10, marginBottom: 1 }}>Resultado</div>
+                              <div style={{ color: isWin ? "#22c55e" : "#ef4444", fontWeight: 900, fontSize: 17, fontVariantNumeric: "tabular-nums" }}>
+                                {isWin ? "+" : ""}{formatKz(profit)}
+                              </div>
+                            </div>
+                            <TradeShareButton trade={{ ...t, profit }} size="sm" />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Wallet overlay ── */}
         {mobileTab === "wallet" && (
@@ -3257,17 +3482,13 @@ export default function TradePage() {
           return (
             <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: BOTTOMNAV_H, zIndex: 120, background: "#060c1a", borderTop: "1px solid #1a2540", display: "flex", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
               {NAV.map(({ id, icon, label }) => {
-                const active = mobileTab === id || (id === "trade" && showTradesPanel && mobileTab === "chart");
+                const active = mobileTab === id;
                 return (
                   <button key={id} onClick={() => {
-                    if (id === "trade") {
-                      setMobileTab("chart");
-                      setShowTradesPanel(v => { if (!v) { setTradeHistoryTab("open"); fetchTradeHistory(); } return !v; });
-                    } else {
-                      setMobileTab(id);
-                      if (id !== "wallet") setWalletData(null);
-                      setShowTradesPanel(false);
-                    }
+                    setMobileTab(id);
+                    if (id !== "wallet") setWalletData(null);
+                    if (id === "trade") { setTradeHistoryTab("open"); fetchTradeHistory(); }
+                    setShowTradesPanel(false);
                   }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer", color: active ? "#f5a623" : "#334155", transition: "color 0.2s" }}>
                     {icon}
                     <span style={{ fontSize: 9, fontWeight: active ? 800 : 600, letterSpacing: 0.3 }}>{label}</span>

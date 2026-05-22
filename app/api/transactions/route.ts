@@ -49,53 +49,79 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Código OTP inválido" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
+  const userId = session.user.id;
 
-  // KYC obrigatório para levantamentos
-  if (type === "withdrawal" && user.kycStatus !== "approved") {
-    return NextResponse.json(
-      { error: "Verificação de identidade (KYC) obrigatória para efectuar levantamentos.", kycRequired: true },
-      { status: 403 }
-    );
+  // Validação e criação atómica — previne race condition em levantamentos concorrentes
+  let tx;
+  try {
+    tx = await prisma.$transaction(async (dbTx) => {
+      const user = await dbTx.user.findUnique({ where: { id: userId } });
+      if (!user) throw Object.assign(new Error("USER_NOT_FOUND"), { code: "USER_NOT_FOUND" });
+
+      // KYC obrigatório para levantamentos
+      if (type === "withdrawal" && user.kycStatus !== "approved") {
+        throw Object.assign(new Error("KYC_REQUIRED"), { code: "KYC_REQUIRED" });
+      }
+
+      // Validar saldo dentro da transacção — elimina TOCTOU
+      if (type === "withdrawal" && user.balance < amountNum) {
+        throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
+      }
+
+      // Bloquear levantamento duplicado: só 1 pedido pendente por utilizador de cada vez
+      if (type === "withdrawal") {
+        const existing = await dbTx.transaction.findFirst({
+          where: { userId: userId, type: "withdrawal", status: "pending" },
+          select: { id: true },
+        });
+        if (existing) throw Object.assign(new Error("PENDING_EXISTS"), { code: "PENDING_EXISTS" });
+      }
+
+      // Validar OTP (constant-time) — separado do verifyCode de email
+      const { timingSafeEqual } = await import("crypto");
+      const otpTrimmed = otp.trim();
+      const storedOtp  = user.otpCode ?? "";
+      const len        = Math.max(otpTrimmed.length, storedOtp.length, 1);
+      const otpMatch   =
+        storedOtp.length === otpTrimmed.length &&
+        timingSafeEqual(
+          Buffer.from(otpTrimmed.padEnd(len, "\0")),
+          Buffer.from(storedOtp.padEnd(len, "\0")),
+        );
+
+      if (!otpMatch || !user.otpExpires || user.otpExpires < new Date()) {
+        throw Object.assign(new Error("OTP_INVALID"), { code: "OTP_INVALID" });
+      }
+
+      // Invalidar OTP imediatamente após verificação
+      await dbTx.user.update({
+        where: { id: user.id },
+        data:  { otpCode: null, otpExpires: null },
+      });
+
+      const txRef    = type === "deposit" ? MULTICAIXA_REF : (reference ? String(reference).slice(0, 200) : null);
+      const txMethod = type === "deposit" ? "multicaixa_ref" : (method ? String(method).slice(0, 100) : null);
+
+      return dbTx.transaction.create({
+        data: {
+          userId:    userId,
+          type,
+          amount:    amountNum,
+          method:    txMethod,
+          reference: txRef,
+          status:    "pending",
+        },
+      });
+    });
+  } catch (err: any) {
+    if (err?.code === "USER_NOT_FOUND")       return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
+    if (err?.code === "KYC_REQUIRED")         return NextResponse.json({ error: "Verificação de identidade (KYC) obrigatória para efectuar levantamentos.", kycRequired: true }, { status: 403 });
+    if (err?.code === "INSUFFICIENT_BALANCE") return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
+    if (err?.code === "PENDING_EXISTS")       return NextResponse.json({ error: "Já tens um levantamento pendente. Aguarda a sua aprovação antes de fazer um novo pedido." }, { status: 409 });
+    if (err?.code === "OTP_INVALID")          return NextResponse.json({ error: "Código OTP inválido ou expirado" }, { status: 400 });
+    console.error("[transactions] erro:", err);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
-
-  // Levantamento: validar saldo na origem para não permitir pedidos abusivos.
-  // O débito atómico real acontece na aprovação admin — esta verificação evita
-  // que utilizadores encham a fila com pedidos impossíveis.
-  if (type === "withdrawal" && user.balance < amountNum) {
-    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
-  }
-
-  // Validar OTP no campo dedicado (otpCode) — separado do verifyCode de email
-  if (
-    !user.otpCode ||
-    user.otpCode !== otp.trim() ||
-    !user.otpExpires ||
-    user.otpExpires < new Date()
-  ) {
-    return NextResponse.json({ error: "Código OTP inválido ou expirado" }, { status: 400 });
-  }
-
-  // Invalidar OTP imediatamente após verificação
-  await prisma.user.update({
-    where: { id: user.id },
-    data:  { otpCode: null, otpExpires: null },
-  });
-
-  const txRef    = type === "deposit" ? MULTICAIXA_REF : (reference ? String(reference).slice(0, 200) : null);
-  const txMethod = type === "deposit" ? "multicaixa_ref" : (method ? String(method).slice(0, 100) : null);
-
-  const tx = await prisma.transaction.create({
-    data: {
-      userId:    session.user.id,
-      type,
-      amount:    amountNum,
-      method:    txMethod,
-      reference: txRef,
-      status:    "pending",
-    },
-  });
 
   // Detecção de fraude em depósitos (assíncrono)
   if (type === "deposit") {

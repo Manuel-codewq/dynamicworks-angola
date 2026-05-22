@@ -12,18 +12,24 @@ const DUMMY_HASH =
 function extractIp(req: Request | undefined): string {
   if (!req) return "unknown";
   const h = req.headers;
-  return (
-    h.get("x-vercel-forwarded-for")?.split(",")[0].trim() ||
-    h.get("cf-connecting-ip")?.trim() ||
-    h.get("x-real-ip")?.trim() ||
-    (() => {
-      const fwd = h.get("x-forwarded-for");
-      if (!fwd) return "";
-      const ips = fwd.split(",").map(s => s.trim()).filter(Boolean);
-      return ips[ips.length - 1] ?? "";
-    })() ||
-    "unknown"
-  );
+  // Cloudflare injeta cf-connecting-ip com o IP real do cliente — tem prioridade máxima
+  const cfIp = h.get("cf-connecting-ip")?.trim();
+  if (cfIp) return cfIp;
+  // Vercel edge injeta x-vercel-forwarded-for
+  const vercelIp = h.get("x-vercel-forwarded-for")?.split(",")[0].trim();
+  if (vercelIp) return vercelIp;
+  // Proxy de confiança (nginx/traefik)
+  const realIp = h.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+  // Fallback: PRIMEIRO IP do x-forwarded-for (cliente original)
+  // Nota: o último IP é adicionado pelo proxy mais próximo e pode ser falsificado
+  // se o cliente aceder directamente ao servidor sem proxy
+  const fwd = h.get("x-forwarded-for");
+  if (fwd) {
+    const first = fwd.split(",")[0].trim();
+    if (first) return first;
+  }
+  return "unknown";
 }
 
 async function logAccess(

@@ -26,12 +26,11 @@ export function getClientIp(req: NextRequest): string {
   const realIp = req.headers.get("x-real-ip");
   if (realIp) return realIp.trim();
 
-  // Fallback: usa o ÚLTIMO IP do x-forwarded-for (adicionado pelo load balancer)
-  // O primeiro IP é facilmente falsificado; o último é controlado pela infra
+  // Fallback: PRIMEIRO IP do x-forwarded-for (IP original do cliente)
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
-    const ips = forwarded.split(",").map(s => s.trim()).filter(Boolean);
-    if (ips.length > 0) return ips[ips.length - 1];
+    const first = forwarded.split(",")[0].trim();
+    if (first) return first;
   }
 
   return "unknown";

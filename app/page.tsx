@@ -123,13 +123,13 @@ export default function LandingPage() {
     { Icon: ShieldCheck, color: "#22c55e", title: "Segurança Avançada",     desc: "KYC obrigatório, autenticação 2FA por email e encriptação de ponta a ponta." },
     { Icon: TrendingUp,  color: "#3b82f6", title: "16+ Ativos",             desc: "Forex, criptomoedas e metais preciosos disponíveis 24/7." },
     { Icon: Banknote,    color: "#a78bfa", title: "Pagamentos em Kwanza",   desc: "Depósitos e levantamentos em AOA via Multicaixa Express. Rápido e sem complicações." },
-    { Icon: Gift,        color: "#22c55e", title: "Programa de Referidos",  desc: "Convida amigos e ganha 2% do primeiro depósito deles directamente no teu saldo." },
+    { Icon: Gift,        color: "#f5a623", title: "Bónus de Boas-Vindas",   desc: "Deposita 50.000 Kz ou mais no primeiro depósito e recebe +10% de bónus directo no saldo. Sem condições escondidas." },
     { Icon: ChevronRight,color: "#38bdf8", title: "Conta Demo Grátis",      desc: "10.000 Kz virtual para praticar sem risco antes de investir capital real." },
   ];
 
   const steps = [
     { n: "01", title: "Cria a tua conta",    desc: "Regista-te gratuitamente em menos de 2 minutos.",               color: "#f5a623" },
-    { n: "02", title: "Faz o depósito",      desc: "Transfere em Kwanza via Multicaixa Express. Aprovação em 24h.", color: "#3b82f6" },
+    { n: "02", title: "Faz o depósito",      desc: "Transfere em Kwanza via Multicaixa Express. Aprovação em 24h. Bónus de 10% no primeiro depósito acima de 50.000 Kz.", color: "#3b82f6" },
     { n: "03", title: "Começa a negociar",   desc: "Escolhe o ativo, prevê a direcção e ganha.",                    color: "#22c55e" },
   ];
 
@@ -265,6 +265,14 @@ export default function LandingPage() {
         <p style={{ color: "#2d3d58", fontSize: 12, marginTop: 18, transition: "opacity .8s ease .3s", opacity: sub.done ? 1 : 0 }}>
           Conta demo com 10.000 Kz virtual grátis · Sem cartão de crédito
         </p>
+
+        {/* Banner bónus */}
+        <div style={{ marginTop: 32, display: "inline-flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,rgba(245,166,35,0.12),rgba(249,115,22,0.08))", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 14, padding: "12px 24px", transition: "opacity .8s ease .5s", opacity: sub.done ? 1 : 0 }}>
+          <Gift size={18} color="#f5a623" />
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+            Bónus de boas-vindas — deposita <span style={{ color: "#f5a623" }}>50.000 Kz ou mais</span> e recebe <span style={{ color: "#f5a623", fontWeight: 900 }}>+10% directo no saldo</span>
+          </span>
+        </div>
       </section>
 
       {/* ── Stats ── */}
