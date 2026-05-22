@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Trophy, Plus, Trash2, Edit3, X, Check, Users, Calendar,
   Gift, Lock, Unlock, ChevronDown, ChevronUp, Zap, Star, Crown,
-  Clock, Eye, Medal, Wand2, Copy, MessageCircle,
+  Clock, Eye, Medal, Wand2, Copy, MessageCircle, RotateCcw,
 } from "lucide-react";
 
 function formatDate(d: string) {
@@ -84,6 +84,7 @@ const EMPTY_FORM = {
   startDate: "", endDate: "",
   prizePool: "", isFree: true, isDemo: false, entryFee: "",
   maxParticipants: "", bannerColor: "#f5a623",
+  startingBalance: "10000",
   prizes: makeEmptyPrizes(3),
 };
 
@@ -157,6 +158,7 @@ export default function AdminTournamentsPage() {
       prizePool: String(t.prizePool), isFree: t.isFree, isDemo: t.isDemo ?? false,
       entryFee: String(t.entryFee ?? 0),
       maxParticipants: t.maxParticipants ? String(t.maxParticipants) : "",
+      startingBalance: String(t.startingBalance ?? 10000),
       bannerColor: t.bannerColor ?? "#f5a623",
       prizes: (t.prizes as any[]).length > 0
         ? t.prizes.map((p: any) => ({ position: p.position, amount: String(p.amount) }))
@@ -187,6 +189,7 @@ export default function AdminTournamentsPage() {
       prizePool: Number(form.prizePool) || 0,
       isFree: form.isFree, isDemo: form.isDemo, entryFee: form.isFree ? 0 : Number(form.entryFee) || 0,
       maxParticipants: form.maxParticipants ? Number(form.maxParticipants) : null,
+      startingBalance: Number(form.startingBalance) || 10000,
       bannerColor: form.bannerColor,
       prizes: form.prizes.filter(p => p.amount && Number(p.amount) > 0).map(p => ({ position: p.position, amount: Number(p.amount) })),
     };
@@ -235,6 +238,13 @@ export default function AdminTournamentsPage() {
   async function setStatus(id: string, s: string) {
     await fetch(`/api/tournaments/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: s }) });
     load();
+  }
+
+  async function resetBalances(id: string, name: string) {
+    if (!confirm(`Repor saldos de todos os participantes de "${name}" para o valor inicial?`)) return;
+    const res = await fetch(`/api/admin/tournaments/${id}/reset-balances`, { method: "POST" });
+    if (res.ok) { const d = await res.json(); alert(`Saldos repostos para ${d.resetTo.toLocaleString()} Kz.`); }
+    else alert("Erro ao repor saldos.");
   }
 
   const byTab = tournaments.filter(t =>
@@ -342,6 +352,7 @@ export default function AdminTournamentsPage() {
                       {t.status === "upcoming" && <button onClick={() => setStatus(t.id, "active")}   style={{ flex: 1, background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)",  borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Iniciar</button>}
                       {t.status === "active"   && <button onClick={() => setStatus(t.id, "finished")} style={{ flex: 1, background: "rgba(100,116,139,0.1)", color: "#94a3b8", border: "1px solid rgba(100,116,139,0.25)", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>■ Terminar</button>}
                       {t.status === "finished" && <button onClick={() => setStatus(t.id, "upcoming")} style={{ flex: 1, background: "rgba(245,166,35,0.1)",  color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)",  borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>↺ Repor</button>}
+                      {t.status !== "finished" && <button onClick={() => resetBalances(t.id, t.name)} style={{ flex: 1, background: "rgba(99,102,241,0.1)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><RotateCcw size={10} /> Saldos</button>}
                     </div>
                   </div>
                 </div>
@@ -551,6 +562,14 @@ export default function AdminTournamentsPage() {
                     <input type="number" value={form.maxParticipants} onChange={e => setF("maxParticipants", e.target.value)} placeholder="Sem limite"
                       style={{ width: "100%", background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
+                  {form.isDemo && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>Saldo inicial do torneio (Kz)</label>
+                      <input type="number" value={form.startingBalance} onChange={e => setF("startingBalance", e.target.value)} placeholder="10000"
+                        style={{ width: "100%", background: "#0d1526", border: "1px solid #f5a623", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                      <p style={{ color: "#475569", fontSize: 11, margin: "5px 0 0" }}>Cada participante começa com este saldo — igual para todos, separado do saldo demo pessoal.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
