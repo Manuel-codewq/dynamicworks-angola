@@ -2,6 +2,27 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Save, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react";
 
+// Pares reais agrupados por categoria
+const REAL_PAIR_OPTIONS = [
+  { label: "EUR/USD",    cat: "Forex" }, { label: "GBP/USD",    cat: "Forex" },
+  { label: "USD/JPY",    cat: "Forex" }, { label: "AUD/USD",    cat: "Forex" },
+  { label: "USD/CAD",    cat: "Forex" }, { label: "EUR/GBP",    cat: "Forex" },
+  { label: "USD/CHF",    cat: "Forex" }, { label: "NZD/USD",    cat: "Forex" },
+  { label: "EUR/JPY",    cat: "Forex" }, { label: "GBP/JPY",    cat: "Forex" },
+  { label: "EUR/CAD",    cat: "Forex" }, { label: "AUD/JPY",    cat: "Forex" },
+  { label: "GBP/AUD",    cat: "Forex" }, { label: "EUR/CHF",    cat: "Forex" },
+  { label: "AUD/CAD",    cat: "Forex" }, { label: "AUD/CHF",    cat: "Forex" },
+  { label: "AUD/NZD",    cat: "Forex" }, { label: "EUR/AUD",    cat: "Forex" },
+  { label: "EUR/NZD",    cat: "Forex" }, { label: "GBP/CAD",    cat: "Forex" },
+  { label: "GBP/CHF",    cat: "Forex" }, { label: "GBP/NOK",    cat: "Forex" },
+  { label: "GBP/NZD",    cat: "Forex" }, { label: "NZD/JPY",    cat: "Forex" },
+  { label: "USD/MXN",    cat: "Forex" }, { label: "USD/NOK",    cat: "Forex" },
+  { label: "USD/PLN",    cat: "Forex" }, { label: "USD/SEK",    cat: "Forex" },
+  { label: "BTC/USD",    cat: "Cripto" }, { label: "ETH/USD",    cat: "Cripto" },
+  { label: "Prata/USD",  cat: "Metal"  }, { label: "Paládio/USD", cat: "Metal" },
+  { label: "Platina/USD", cat: "Metal" },
+];
+
 // Pares sintéticos disponíveis para configurar no fim de semana
 const SYNTHETIC_OPTIONS = [
   { symbol: "1HZ10V",  label: "EUR/USD" },
@@ -19,6 +40,7 @@ const SYNTHETIC_OPTIONS = [
 interface Settings {
   payout:          Record<string, number>;
   maintenanceMode: boolean;
+  activePairs:     string[];
   weekendPairs:    string[];
 }
 
@@ -140,6 +162,40 @@ export default function AdminSettingsPage() {
           </div>
 
         </div>
+      </div>
+
+      {/* Pares do mercado real */}
+      <div style={card}>
+        <p style={sectionTitle}>Pares do Mercado Real</p>
+        <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
+          Pares activos durante o horário de mercado (Seg–Sex, 07h–20h WAT).
+        </p>
+        {(["Forex", "Cripto", "Metal"] as const).map(cat => {
+          const catPairs = REAL_PAIR_OPTIONS.filter(p => p.cat === cat);
+          return (
+            <div key={cat} style={{ marginBottom: 16 }}>
+              <div style={{ color: "#475569", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{cat}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
+                {catPairs.map(opt => {
+                  const active = draft.activePairs?.includes(opt.label) ?? true;
+                  return (
+                    <button key={opt.label} onClick={() => setDraft(d => {
+                      if (!d) return d;
+                      const cur = d.activePairs ?? REAL_PAIR_OPTIONS.map(o => o.label);
+                      return { ...d, activePairs: active ? cur.filter(l => l !== opt.label) : [...cur, opt.label] };
+                    })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "9px 12px", border: `1px solid ${active ? "rgba(34,197,94,0.3)" : "#1e2d50"}`, cursor: "pointer" }}>
+                      <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
+                      {active
+                        ? <ToggleRight size={18} color="#22c55e" />
+                        : <ToggleLeft  size={18} color="#334155" />
+                      }
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Pares de fim de semana */}

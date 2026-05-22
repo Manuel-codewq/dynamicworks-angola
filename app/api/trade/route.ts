@@ -12,10 +12,10 @@ const ALLOWED_ASSETS = new Set([
   "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
   "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
   "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
-  // Cripto + Metais
+  // Cripto + Metais (sem XAU/USD)
   "BTC/USD", "ETH/USD",
-  "Ouro/USD", "Prata/USD", "Paládio/USD", "Platina/USD",
-  "XAU/USD", "XAG/USD",
+  "Prata/USD", "Paládio/USD", "Platina/USD",
+  "XAG/USD",
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
   // Pares sintéticos (índices Deriv com labels de forex — 24/7)
   // Usam os mesmos labels que os pares reais, disponíveis quando mercado fechado

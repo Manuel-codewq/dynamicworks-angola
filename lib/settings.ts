@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { SYNTHETIC_PAIRS } from "./derivWebSocket";
+import { FOREX_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS, SYNTHETIC_PAIRS } from "./derivWebSocket";
 
 const ALL_PAIRS = [
   // Forex
@@ -8,16 +8,24 @@ const ALL_PAIRS = [
   "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY", "GBP/AUD", "EUR/CHF",
   // Cripto
   "BTC/USD", "ETH/USD",
-  // Commodities
-  "XAU/USD", "XAG/USD",
+  // Metais (sem XAU/USD)
+  "XAG/USD",
   // Sintéticos DW (24/7)
   "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
 ] as const;
+
+// Labels de todos os pares reais (usado como default de activePairs)
+export const ALL_REAL_PAIR_LABELS = [
+  ...FOREX_PAIRS.map(p => p.label),
+  ...CRYPTO_PAIRS.map(p => p.label),
+  ...COMMODITY_PAIRS.map(p => p.label),
+];
 
 export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));
 export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.47]));
 export const DEFAULT_RANKING_RESET: Date | null = null;
 export const DEFAULT_WEEKEND_PAIRS   = SYNTHETIC_PAIRS.map(p => p.symbol);
+export const DEFAULT_ACTIVE_PAIRS    = ALL_REAL_PAIR_LABELS;
 
 export const ALL_PAIR_KEYS = ALL_PAIRS as unknown as string[];
 
@@ -43,7 +51,7 @@ export async function getSettings(): Promise<PlatformSettings> {
   try {
     const row = await prisma.settings.upsert({
       where:  { id: "singleton" },
-      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null },
+      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null },
       update: {},
     }) as any;
     const savedPairs        = Array.isArray(row.activePairs)   ? row.activePairs   as string[] : [];
@@ -52,7 +60,7 @@ export async function getSettings(): Promise<PlatformSettings> {
       maintenanceMode: row.maintenanceMode,
       payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
-      activePairs:     savedPairs.length > 0 ? savedPairs : [...ALL_PAIRS],
+      activePairs:     savedPairs.length > 0 ? savedPairs : DEFAULT_ACTIVE_PAIRS,
       weekendPairs:    savedWeekendPairs.length > 0 ? savedWeekendPairs : DEFAULT_WEEKEND_PAIRS,
       rankingResetAt:  row.rankingResetAt ? new Date(row.rankingResetAt) : null,
       usdtRateAoa:     Number(row.usdtRateAoa ?? 0),
@@ -62,7 +70,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     cacheAt = Date.now();
     return cache;
   } catch {
-    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
+    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
   }
 }
 
@@ -101,5 +109,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
+export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
 export async function loadSettings() { settings = await getSettings(); return settings; }

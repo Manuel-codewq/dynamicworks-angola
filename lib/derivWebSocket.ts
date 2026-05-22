@@ -44,7 +44,6 @@ export const CRYPTO_PAIRS: DerivPair[] = [
 ];
 
 export const COMMODITY_PAIRS: DerivPair[] = [
-  { symbol: "frxXAUUSD", label: "Ouro/USD",    category: "Metal", decimals: 2 },
   { symbol: "frxXAGUSD", label: "Prata/USD",   category: "Metal", decimals: 3 },
   { symbol: "frxXPDUSD", label: "Paládio/USD", category: "Metal", decimals: 2 },
   { symbol: "frxXPTUSD", label: "Platina/USD", category: "Metal", decimals: 2 },

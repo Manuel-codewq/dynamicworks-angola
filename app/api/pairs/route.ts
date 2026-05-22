@@ -6,18 +6,25 @@ import {
 } from "@/lib/derivWebSocket";
 
 export async function GET() {
-  const { weekendPairs } = await getSettings();
+  const { activePairs, weekendPairs } = await getSettings();
   const marketOpen = isRealMarketOpen();
 
   let pairs: DerivPair[];
   if (marketOpen) {
-    pairs = [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+    const allowed = new Set(activePairs);
+    const allReal = [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
+    pairs = allowed.size > 0 ? allReal.filter(p => allowed.has(p.label)) : allReal;
   } else {
-    const allowed = new Set(weekendPairs);
-    const filtered = allowed.size > 0
-      ? SYNTHETIC_PAIRS.filter(p => allowed.has(p.symbol))
+    const allowedWeekend = new Set(weekendPairs);
+    const filtered = allowedWeekend.size > 0
+      ? SYNTHETIC_PAIRS.filter(p => allowedWeekend.has(p.symbol))
       : SYNTHETIC_PAIRS;
-    pairs = [...filtered, ...CRYPTO_PAIRS];
+    // Cripto é sempre 24/7; filtrar por activePairs também
+    const allowedReal = new Set(activePairs);
+    const crypto = allowedReal.size > 0
+      ? CRYPTO_PAIRS.filter(p => allowedReal.has(p.label))
+      : CRYPTO_PAIRS;
+    pairs = [...filtered, ...crypto];
   }
 
   return NextResponse.json({ pairs, marketOpen });
