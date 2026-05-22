@@ -41,9 +41,12 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       setTournament(t);
       setBalance(b.balance ?? 0);
       setDemoBalance(b.demoBalance ?? 0);
-      setTournamentBalance(b.tournamentBalance ?? null);
       const uid = (session?.user as any)?.id;
-      if (uid && Array.isArray(t.participants)) setJoined(t.participants.some((p: any) => p.userId === uid));
+      if (uid && Array.isArray(t.participants)) {
+        const me = t.participants.find((p: any) => p.userId === uid);
+        setJoined(!!me);
+        if (me) setTournamentBalance(me.tournamentBalance ?? null);
+      }
       setLoading(false);
     });
   }, [status, id, session]);
