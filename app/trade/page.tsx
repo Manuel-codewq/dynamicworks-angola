@@ -1652,6 +1652,7 @@ export default function TradePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           asset:      selectedPair.label,
+          symbol:     selectedPair.symbol,
           direction,
           amount,
           expirySecs: expiry.secs,
