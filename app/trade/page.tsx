@@ -18,7 +18,7 @@ import {
   createSeriesMarkers,
 } from "lightweight-charts";
 import {
-  derivWS, GRANULARITY,
+  derivWS, GRANULARITY, getAvailablePairs,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -97,9 +97,10 @@ export default function TradePage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ── Available pairs — fetches /api/pairs every 60s (reacts to market hours + admin config) ─
-  const [pairs,        setPairs]        = useState<DerivPair[]>([]);
-  const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
+  // ── Available pairs — inicia com pares síncronos, actualiza via API ─────────
+  const initialPairs = getAvailablePairs();
+  const [pairs,        setPairs]        = useState<DerivPair[]>(initialPairs);
+  const [selectedPair, setSelectedPair] = useState<DerivPair | null>(initialPairs[0] ?? null);
 
   useEffect(() => {
     async function refresh() {
