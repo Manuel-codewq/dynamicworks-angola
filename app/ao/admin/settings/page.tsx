@@ -1,10 +1,25 @@
 "use client";
 import { useEffect, useState } from "react";
-import { RefreshCw, Save, RotateCcw } from "lucide-react";
+import { RefreshCw, Save, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react";
+
+// Pares sintéticos disponíveis para configurar no fim de semana
+const SYNTHETIC_OPTIONS = [
+  { symbol: "1HZ10V",  label: "EUR/USD" },
+  { symbol: "1HZ25V",  label: "GBP/USD" },
+  { symbol: "1HZ50V",  label: "USD/JPY" },
+  { symbol: "1HZ75V",  label: "AUD/USD" },
+  { symbol: "1HZ100V", label: "USD/CAD" },
+  { symbol: "R_10",    label: "EUR/GBP" },
+  { symbol: "R_25",    label: "USD/CHF" },
+  { symbol: "R_50",    label: "NZD/USD" },
+  { symbol: "R_75",    label: "EUR/JPY" },
+  { symbol: "R_100",   label: "GBP/JPY" },
+];
 
 interface Settings {
   payout:          Record<string, number>;
   maintenanceMode: boolean;
+  weekendPairs:    string[];
 }
 
 // UI works in whole-number percentages; API uses fractions
@@ -124,6 +139,35 @@ export default function AdminSettingsPage() {
             </button>
           </div>
 
+        </div>
+      </div>
+
+      {/* Pares de fim de semana */}
+      <div style={card}>
+        <p style={sectionTitle}>Pares de Fim de Semana</p>
+        <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
+          Pares sintéticos activos quando o mercado real está fechado (noites, fins de semana e feriados).
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+          {SYNTHETIC_OPTIONS.map(opt => {
+            const active = draft.weekendPairs?.includes(opt.symbol) ?? true;
+            return (
+              <button key={opt.symbol} onClick={() => setDraft(d => {
+                if (!d) return d;
+                const cur = d.weekendPairs ?? SYNTHETIC_OPTIONS.map(o => o.symbol);
+                return { ...d, weekendPairs: active ? cur.filter(s => s !== opt.symbol) : [...cur, opt.symbol] };
+              })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "10px 14px", border: `1px solid ${active ? "rgba(99,102,241,0.4)" : "#1e2d50"}`, cursor: "pointer" }}>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</div>
+                  <div style={{ color: "#475569", fontSize: 10, marginTop: 1 }}>{opt.symbol}</div>
+                </div>
+                {active
+                  ? <ToggleRight size={20} color="#6366f1" />
+                  : <ToggleLeft  size={20} color="#334155" />
+                }
+              </button>
+            );
+          })}
         </div>
       </div>
 

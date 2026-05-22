@@ -18,7 +18,7 @@ import {
   createSeriesMarkers,
 } from "lightweight-charts";
 import {
-  derivWS, GRANULARITY, getAvailablePairs,
+  derivWS, GRANULARITY,
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
@@ -97,20 +97,23 @@ export default function TradePage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ── Available pairs — polls /api/market-mode every 15s (reacts to admin changes) ─
+  // ── Available pairs — fetches /api/pairs every 60s (reacts to market hours + admin config) ─
   const [pairs,        setPairs]        = useState<DerivPair[]>([]);
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(null);
 
   useEffect(() => {
-    function refresh() {
-      const list = getAvailablePairs();
-      setPairs(list);
-      setSelectedPair(prev =>
-        prev && list.some(p => p.symbol === prev.symbol) ? prev : (list[0] ?? null)
-      );
+    async function refresh() {
+      try {
+        const res = await fetch("/api/pairs");
+        if (!res.ok) return;
+        const { pairs: list } = await res.json() as { pairs: DerivPair[]; marketOpen: boolean };
+        setPairs(list);
+        setSelectedPair(prev =>
+          prev && list.some(p => p.symbol === prev.symbol) ? prev : (list[0] ?? null)
+        );
+      } catch {}
     }
     refresh();
-    // Verificar a cada 60s se o horário de mercado mudou
     const id = setInterval(refresh, 60_000);
     return () => clearInterval(id);
   }, []);

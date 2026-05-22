@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { SYNTHETIC_PAIRS } from "./derivWebSocket";
 
 const ALL_PAIRS = [
   // Forex
@@ -16,6 +17,7 @@ const ALL_PAIRS = [
 export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));
 export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.47]));
 export const DEFAULT_RANKING_RESET: Date | null = null;
+export const DEFAULT_WEEKEND_PAIRS   = SYNTHETIC_PAIRS.map(p => p.symbol);
 
 export const ALL_PAIR_KEYS = ALL_PAIRS as unknown as string[];
 
@@ -24,6 +26,7 @@ export interface PlatformSettings {
   winProbability:  Record<string, number>;
   maintenanceMode: boolean;
   activePairs:     string[];
+  weekendPairs:    string[];
   rankingResetAt:  Date | null;
   usdtRateAoa:     number;
   usdtWallet:      string | null;
@@ -40,15 +43,17 @@ export async function getSettings(): Promise<PlatformSettings> {
   try {
     const row = await prisma.settings.upsert({
       where:  { id: "singleton" },
-      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null },
+      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null },
       update: {},
     }) as any;
-    const savedPairs = Array.isArray(row.activePairs) ? row.activePairs as string[] : [];
+    const savedPairs        = Array.isArray(row.activePairs)   ? row.activePairs   as string[] : [];
+    const savedWeekendPairs = Array.isArray(row.weekendPairs)  ? row.weekendPairs  as string[] : [];
     cache = {
       maintenanceMode: row.maintenanceMode,
       payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
       activePairs:     savedPairs.length > 0 ? savedPairs : [...ALL_PAIRS],
+      weekendPairs:    savedWeekendPairs.length > 0 ? savedWeekendPairs : DEFAULT_WEEKEND_PAIRS,
       rankingResetAt:  row.rankingResetAt ? new Date(row.rankingResetAt) : null,
       usdtRateAoa:     Number(row.usdtRateAoa ?? 0),
       usdtWallet:      row.usdtWallet ?? null,
@@ -57,7 +62,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     cacheAt = Date.now();
     return cache;
   } catch {
-    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
+    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
   }
 }
 
@@ -77,7 +82,8 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
     });
   }
   if (typeof patch.maintenanceMode === "boolean") current.maintenanceMode = patch.maintenanceMode;
-  if (Array.isArray(patch.activePairs)) current.activePairs = patch.activePairs;
+  if (Array.isArray(patch.activePairs))  current.activePairs  = patch.activePairs;
+  if (Array.isArray(patch.weekendPairs)) current.weekendPairs = patch.weekendPairs;
   if (patch.rankingResetAt instanceof Date || patch.rankingResetAt === null) current.rankingResetAt = patch.rankingResetAt;
   if (typeof patch.usdtRateAoa === "number" && isFinite(patch.usdtRateAoa) && patch.usdtRateAoa >= 0) current.usdtRateAoa = patch.usdtRateAoa;
   if (typeof patch.usdtWallet === "string" || patch.usdtWallet === null) current.usdtWallet = patch.usdtWallet || null;
@@ -86,7 +92,7 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
   await (prisma.settings.upsert as any)({
     where:  { id: "singleton" },
     create: { id: "singleton", ...current },
-    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, rankingResetAt: current.rankingResetAt, usdtRateAoa: current.usdtRateAoa, usdtWallet: current.usdtWallet, usdtMinDeposit: current.usdtMinDeposit },
+    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, weekendPairs: current.weekendPairs, rankingResetAt: current.rankingResetAt, usdtRateAoa: current.usdtRateAoa, usdtWallet: current.usdtWallet, usdtMinDeposit: current.usdtMinDeposit },
   });
 
   cache = current;
@@ -95,5 +101,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
+export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: [...ALL_PAIRS], weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
 export async function loadSettings() { settings = await getSettings(); return settings; }

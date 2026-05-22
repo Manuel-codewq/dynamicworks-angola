@@ -156,6 +156,7 @@ model Settings {
   winProbability  Json      @default("{}")
   payout          Json      @default("{}")
   activePairs     Json      @default("[]")
+  weekendPairs    Json      @default("[]")
   rankingResetAt  DateTime?
   usdtRateAoa     Float     @default(0)
   usdtWallet      String?
