@@ -22,7 +22,7 @@ export async function GET() {
   const tp = await prisma.tournamentParticipant.findFirst({
     where: {
       userId: session.user.id,
-      tournament: { status: "active", endDate: { gte: new Date() } },
+      tournament: { status: "active" },
     },
     select: { tournamentBalance: true, tournament: { select: { name: true } } },
   });
