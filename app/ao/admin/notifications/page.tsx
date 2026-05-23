@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Send, Users, User, Bell, RefreshCw, CheckCircle, Zap, Rocket, Trophy, Wrench, BadgeCheck, Gift, BarChart2 } from "lucide-react";
+import { Send, Users, User, Bell, RefreshCw, CheckCircle, Zap, Rocket, Trophy, Wrench, BadgeCheck, Gift, Sparkles, AlertTriangle, TrendingUp } from "lucide-react";
 
 interface SentNotif { id: string; title: string; message: string; createdAt: string; }
 
@@ -10,46 +10,78 @@ function formatDate(s: string) {
 
 const TEMPLATES = [
   {
-    label: "Novas funcionalidades",
-    icon: Rocket,
-    title: "Grande actualização — novas funcionalidades!",
-    message: `A plataforma acaba de receber várias melhorias:
+    category: "novidades",
+    label: "O que há de novo",
+    icon: Sparkles,
+    title: "Novidades na plataforma!",
+    message: `A Dynamics Works acabou de receber novas funcionalidades:
 
-🏅 Conquistas — desbloqueia badges por alcançar metas no teu trading (vitórias, sequências, volume e muito mais).
+Selector de contas — alterna facilmente entre Conta Real, Demo e Torneio directamente na plataforma.
 
-📊 Ranking melhorado — filtra por Hoje, Semana, Mês ou Tudo. A tua posição aparece mesmo que não estejas no top 20.
+Comutacao de vela — define a tua operacao para expirar exactamente quando a vela actual fechar.
 
-🔔 Alertas de preço — define um preço alvo e recebe uma notificação quando o activo o atingir.
+Expiracoes curtas — agora podes abrir operacoes com apenas 30 segundos de duracao.
 
-🎮 Torneios Demo — compite com outros traders usando a tua conta demo. Sem risco, com prémios reais.
-
-📤 Partilha de trades — partilha os teus resultados directamente para o WhatsApp ou Instagram com um clique.
-
-Acede à plataforma e explora tudo!`,
+Acede ja e experimenta!`,
   },
   {
-    label: "Promoção / bónus",
+    category: "novidades",
+    label: "Grande actualizacao",
+    icon: Rocket,
+    title: "Grande actualizacao — novas funcionalidades!",
+    message: `A plataforma acaba de receber varias melhorias:
+
+Conquistas — desbloqueia badges por alcançar metas no teu trading.
+
+Ranking melhorado — filtra por Hoje, Semana, Mes ou Tudo.
+
+Torneios Demo — compite com outros traders usando a tua conta demo. Sem risco, com premios reais.
+
+Partilha de trades — partilha os teus resultados directamente para o WhatsApp.
+
+Acede a plataforma e explora tudo!`,
+  },
+  {
+    category: "promocao",
+    label: "Promocao / bonus",
     icon: Gift,
     title: "Oferta especial para ti!",
-    message: "Temos uma promoção exclusiva disponível agora. Acede à plataforma para saber mais e aproveitar antes que termine!",
+    message: "Temos uma promocao exclusiva disponivel agora. Acede a plataforma para saber mais e aproveitar antes que termine!",
   },
   {
+    category: "promocao",
+    label: "Bonus boas-vindas",
+    icon: TrendingUp,
+    title: "Bonus de 10% no primeiro deposito!",
+    message: "Sabia que ao fazer o teu primeiro deposito de 50.000 Kz ou mais recebes automaticamente 10% de bonus no teu saldo? Aproveita esta oferta exclusiva para novos traders da Dynamics Works!",
+  },
+  {
+    category: "torneio",
     label: "Torneio novo",
     icon: Trophy,
-    title: "Novo torneio disponível!",
-    message: "Um novo torneio acabou de começar na Dynamics Works. Inscreve-te agora, compete com os melhores traders e ganha prémios em Kwanza! Acede a Ranking → Torneios para participar.",
+    title: "Novo torneio disponivel!",
+    message: "Um novo torneio acabou de começar na Dynamics Works. Inscreve-te agora, compete com os melhores traders e ganha premios em Kwanza! Acede a Ranking Torneios para participar.",
   },
   {
-    label: "Manutenção programada",
+    category: "sistema",
+    label: "Manutencao programada",
     icon: Wrench,
-    title: "Manutenção programada",
-    message: "Informamos que a plataforma estará em manutenção brevemente por melhorias técnicas. O serviço será restabelecido em breve. Pedimos desculpa pelo inconveniente.",
+    title: "Manutencao programada",
+    message: "Informamos que a plataforma estara em manutencao brevemente por melhorias tecnicas. O servico sera restabelecido em breve. Pedimos desculpa pelo inconveniente.",
   },
   {
+    category: "sistema",
     label: "Sistema normal",
     icon: BadgeCheck,
     title: "Plataforma a funcionar normalmente",
-    message: "A manutenção foi concluída com sucesso. A plataforma está totalmente operacional. Obrigado pela vossa paciência!",
+    message: "A manutencao foi concluida com sucesso. A plataforma esta totalmente operacional. Obrigado pela vossa paciencia!",
+  },
+  {
+    category: "sistema",
+    label: "Alerta importante",
+    icon: AlertTriangle,
+    title: "Informacao importante",
+    message: "",
   },
 ];
 
@@ -100,19 +132,30 @@ export default function AdminNotificationsPage() {
         <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>Envia mensagens e anúncios aos utilizadores</p>
       </div>
 
-      {/* Templates */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>MODELOS RÁPIDOS</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {TEMPLATES.map(t => (
-            <button key={t.label} onClick={() => applyTemplate(t)}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#111827", border: "1px solid #1e2d50", borderRadius: 20, color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#f5a623"; e.currentTarget.style.color = "#f5a623"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#1e2d50"; e.currentTarget.style.color = "#94a3b8"; }}>
-              <t.icon size={13} /> {t.label}
-            </button>
-          ))}
-        </div>
+      {/* Templates agrupados por categoria */}
+      <div style={{ marginBottom: 24 }}>
+        {[
+          { key: "novidades", label: "NOVIDADES", color: "#6366f1", bg: "rgba(99,102,241,0.1)" },
+          { key: "promocao",  label: "PROMOÇÃO",  color: "#f5a623", bg: "rgba(245,166,35,0.1)" },
+          { key: "torneio",   label: "TORNEIO",   color: "#22c55e", bg: "rgba(34,197,94,0.1)"  },
+          { key: "sistema",   label: "SISTEMA",   color: "#94a3b8", bg: "rgba(148,163,184,0.08)" },
+        ].map(cat => (
+          <div key={cat.key} style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ background: cat.bg, color: cat.color, fontSize: 10, fontWeight: 800, letterSpacing: 1, padding: "2px 8px", borderRadius: 20, border: `1px solid ${cat.color}44` }}>{cat.label}</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {TEMPLATES.filter(t => t.category === cat.key).map(t => (
+                <button key={t.label} onClick={() => applyTemplate(t)}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#111827", border: "1px solid #1e2d50", borderRadius: 20, color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.12s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color; e.currentTarget.style.color = cat.color; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "#1e2d50"; e.currentTarget.style.color = "#94a3b8"; }}>
+                  <t.icon size={13} /> {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
