@@ -2821,10 +2821,19 @@ export default function TradePage() {
 
           <NotificationBell />
 
-          <button onClick={toggleAccount} style={{ background: tournamentBalance !== null ? "rgba(99,102,241,0.1)" : isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${tournamentBalance !== null ? "rgba(99,102,241,0.4)" : isDemo ? "rgba(245,166,35,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
-            <Wallet size={11} color={tournamentBalance !== null ? "#6366f1" : isDemo ? "#f5a623" : "#22c55e"} />
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
-            <span style={{ background: tournamentBalance !== null ? "#6366f1" : isDemo ? "#f5a623" : "#22c55e", color: "#fff", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>{tournamentBalance !== null ? "Torneio" : isDemo ? "Demo" : "Real"}</span>
+          {/* Saldo do torneio — separado, sempre visível quando inscrito */}
+          {tournamentBalance !== null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.35)", borderRadius: 8, padding: "4px 9px", flexShrink: 0 }}>
+              <Trophy size={11} color="#6366f1" />
+              <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(tournamentBalance))}</span>
+              <span style={{ background: "#6366f1", color: "#fff", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>Torneio</span>
+            </div>
+          )}
+
+          <button onClick={toggleAccount} style={{ background: isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", border: `1px solid ${isDemo ? "rgba(245,166,35,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
+            <Wallet size={11} color={isDemo ? "#f5a623" : "#22c55e"} />
+            <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(isDemo ? demoBalance : balance))}</span>
+            <span style={{ background: isDemo ? "#f5a623" : "#22c55e", color: "#0a0f1e", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>{isDemo ? "Demo" : "Real"}</span>
           </button>
         </div>}
 

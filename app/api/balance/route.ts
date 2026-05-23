@@ -15,7 +15,23 @@ export async function GET() {
 
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
 
-  return NextResponse.json(user);
+  // Incluir saldo do torneio se inscrito num torneio activo (demo ou real)
+  let tournamentBalance: number | null = null;
+  let tournamentName: string | null    = null;
+  // Busca qualquer torneio activo do utilizador (independente do modo demo/real)
+  const tp = await prisma.tournamentParticipant.findFirst({
+    where: {
+      userId: session.user.id,
+      tournament: { status: "active", endDate: { gte: new Date() } },
+    },
+    select: { tournamentBalance: true, tournament: { select: { name: true } } },
+  });
+  if (tp) {
+    tournamentBalance = tp.tournamentBalance;
+    tournamentName    = tp.tournament.name;
+  }
+
+  return NextResponse.json({ ...user, tournamentBalance, tournamentName });
 }
 
 export async function PATCH(req: NextRequest) {
