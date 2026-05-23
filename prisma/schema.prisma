@@ -107,10 +107,11 @@ model Trade {
   profit     Float?
   expirySecs Int
   expiresAt  DateTime?
-  status     String    @default("active")
-  isDemo     Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  closedAt   DateTime?
+  status                String    @default("active")
+  isDemo                Boolean   @default(false)
+  tournamentParticipantId String?
+  createdAt             DateTime  @default(now())
+  closedAt              DateTime?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])

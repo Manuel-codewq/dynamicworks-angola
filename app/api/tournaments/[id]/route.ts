@@ -80,8 +80,9 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
     });
   }
 
+  const startingBalance = (tournament as any).startingBalance ?? 10000;
   const participant = await prisma.tournamentParticipant.create({
-    data: { tournamentId: id, userId: session.user.id },
+    data: { tournamentId: id, userId: session.user.id, tournamentBalance: startingBalance },
   });
 
   return NextResponse.json(participant, { status: 201 });
@@ -96,7 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
   const { name, description, rules, startDate, endDate, prizePool, prizes, status,
-          isFree, isDemo, entryFee, maxParticipants, bannerColor } = body;
+          isFree, isDemo, entryFee, maxParticipants, bannerColor, startingBalance } = body;
 
   // Fetch current tournament to check if we're transitioning to "finished"
   const current = await prisma.tournament.findUnique({
@@ -123,8 +124,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(isFree          !== undefined && { isFree }),
       ...(isDemo          !== undefined && { isDemo: Boolean(isDemo) }),
       ...(entryFee        !== undefined && { entryFee: Number(entryFee) }),
-      ...(maxParticipants !== undefined && { maxParticipants: maxParticipants ? Number(maxParticipants) : null }),
-      ...(bannerColor     && { bannerColor }),
+      ...(maxParticipants  !== undefined && { maxParticipants: maxParticipants ? Number(maxParticipants) : null }),
+      ...(bannerColor      && { bannerColor }),
+      ...(startingBalance  !== undefined && { startingBalance: Number(startingBalance) || 10000 }),
     },
   });
 

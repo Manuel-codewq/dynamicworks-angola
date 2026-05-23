@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true, userId: true, asset: true, direction: true, amount: true,
       entryPrice: true, payout: true, expirySecs: true, expiresAt: true,
-      status: true, isDemo: true, createdAt: true,
+      status: true, isDemo: true, tournamentParticipantId: true, createdAt: true,
       user: { select: { id: true, isDemo: true, email: true, name: true } },
     },
   });

@@ -17,7 +17,7 @@ export async function POST(
     select:  {
       id: true, userId: true, asset: true, direction: true, amount: true,
       entryPrice: true, payout: true, expirySecs: true, expiresAt: true,
-      status: true, isDemo: true, result: true, createdAt: true,
+      status: true, isDemo: true, tournamentParticipantId: true, result: true, createdAt: true,
       user: { select: { id: true, isDemo: true, email: true, name: true } },
     },
   });

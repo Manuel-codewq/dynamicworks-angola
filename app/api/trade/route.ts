@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { asset, symbol: pairSymbol, direction, amount, expirySecs } = body ?? {};
+  const { asset, symbol: pairSymbol, direction, amount, expirySecs, skipTournament } = body ?? {};
 
   if (!ALLOWED_ASSETS.has(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
@@ -107,8 +107,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Verificar se utilizador está inscrito em torneio activo (demo ou real conforme o modo)
-  const activeTournamentParticipant = await prisma.tournamentParticipant.findFirst({
+  // Verificar se utilizador está inscrito em torneio activo — respeita escolha de conta do utilizador
+  const activeTournamentParticipant = skipTournament ? null : await prisma.tournamentParticipant.findFirst({
     where: {
       userId: user.id,
       tournament: { status: "active", isDemo: user.isDemo, endDate: { gte: new Date() } },
@@ -187,6 +187,7 @@ export async function POST(req: NextRequest) {
         userId: user.id, asset, direction,
         amount: amountNum, entryPrice, payout,
         expirySecs: expiry, expiresAt, status: "active", isDemo: user.isDemo,
+        tournamentParticipantId: isTournamentTrade ? activeTournamentParticipant!.id : null,
       },
     });
   } catch (err) {

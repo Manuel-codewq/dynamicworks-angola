@@ -31,6 +31,7 @@ export type TradeToResolve = {
   expiresAt:  Date | null;
   status:     string;
   isDemo:     boolean;
+  tournamentParticipantId: string | null;
   createdAt:  Date;
   user:       { id: string; isDemo: boolean; email: string; name: string | null };
 };
@@ -111,11 +112,18 @@ export async function resolveExpiredTrade(
     if (closed.count === 0) return;
     resolved = true;
     if (returnAmount > 0) {
-      const field = trade.isDemo ? "demoBalance" : "balance";
-      await tx.user.update({
-        where: { id: trade.userId },
-        data:  { [field]: { increment: returnAmount } },
-      });
+      if (trade.tournamentParticipantId) {
+        await tx.tournamentParticipant.update({
+          where: { id: trade.tournamentParticipantId },
+          data:  { tournamentBalance: { increment: returnAmount } },
+        });
+      } else {
+        const field = trade.isDemo ? "demoBalance" : "balance";
+        await tx.user.update({
+          where: { id: trade.userId },
+          data:  { [field]: { increment: returnAmount } },
+        });
+      }
     }
   });
 
