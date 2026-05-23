@@ -1701,13 +1701,19 @@ export default function TradePage() {
     setDemoReloading(false);
   }
 
-  async function toggleAccount() {
+  const [showAccountModal, setShowAccountModal] = useState(false);
+
+  async function switchAccount(demo: boolean) {
     const res = await fetch("/api/balance", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isDemo: !isDemo }),
+      body: JSON.stringify({ isDemo: demo }),
     });
     if (res.ok) { const d = await res.json(); setIsDemo(d.isDemo); }
+    setShowAccountModal(false);
+    fetchBalance();
   }
+
+  function toggleAccount() { setShowAccountModal(v => !v); }
 
   const displayBalance = tournamentBalance !== null ? tournamentBalance : (isDemo ? demoBalance : balance);
   const currentPayout  = selectedPair ? (payoutMap[selectedPair.label] ?? 0.85) : 0.85;
@@ -2773,6 +2779,45 @@ export default function TradePage() {
       <div style={{ height: "100vh", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif", overflow: "hidden" }}>
 
         <OnboardingTutorial />
+
+        {/* Modal de selecção de conta */}
+        {showAccountModal && (
+          <div onClick={() => setShowAccountModal(false)} style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: "60px 12px 0" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: "8px", minWidth: 240, boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+              {/* Real */}
+              <button onClick={() => switchAccount(false)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: !isDemo ? "rgba(34,197,94,0.1)" : "none", border: !isDemo ? "1px solid rgba(34,197,94,0.3)" : "1px solid transparent", borderRadius: 10, padding: "12px 14px", cursor: "pointer", marginBottom: 4 }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${!isDemo ? "#22c55e" : "#334155"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {!isDemo && <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e" }} />}
+                </div>
+                <div style={{ textAlign: "left", flex: 1 }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Conta Real</div>
+                  <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(balance))}</div>
+                </div>
+              </button>
+              {/* Demo */}
+              <button onClick={() => switchAccount(true)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: isDemo && tournamentBalance === null ? "rgba(245,166,35,0.1)" : "none", border: isDemo && tournamentBalance === null ? "1px solid rgba(245,166,35,0.3)" : "1px solid transparent", borderRadius: 10, padding: "12px 14px", cursor: "pointer", marginBottom: 4 }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${isDemo && tournamentBalance === null ? "#f5a623" : "#334155"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {isDemo && tournamentBalance === null && <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#f5a623" }} />}
+                </div>
+                <div style={{ textAlign: "left", flex: 1 }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Conta Demo</div>
+                  <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(demoBalance))}</div>
+                </div>
+              </button>
+              {/* Torneio — só aparece se inscrito */}
+              {tournamentBalance !== null && (
+                <button style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 10, padding: "12px 14px", cursor: "default", marginBottom: 4 }}>
+                  <Trophy size={20} color="#6366f1" style={{ flexShrink: 0 }} />
+                  <div style={{ textAlign: "left", flex: 1 }}>
+                    <div style={{ color: "#6366f1", fontWeight: 700, fontSize: 13 }}>{tournamentName ?? "Torneio"}</div>
+                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(tournamentBalance))}</div>
+                  </div>
+                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: 5, fontSize: 9, padding: "2px 6px", fontWeight: 900 }}>ACTIVO</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Win/loss overlay */}
         {notification && (
