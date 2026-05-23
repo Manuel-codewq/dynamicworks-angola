@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Valor entre 1.000 e 500.000 Kz" }, { status: 400 });
   }
   const expiry = Number(expirySecs);
-  if (!Number.isInteger(expiry) || expiry < 60 || expiry > 3600) {
-    return NextResponse.json({ error: "Expiração entre 1 e 60 minutos" }, { status: 400 });
+  if (!Number.isInteger(expiry) || expiry < 30 || expiry > 3600) {
+    return NextResponse.json({ error: "Expiração entre 30 segundos e 60 minutos" }, { status: 400 });
   }
 
   // Buscar utilizador

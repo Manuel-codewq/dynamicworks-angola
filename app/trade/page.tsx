@@ -35,6 +35,7 @@ import { playOpen, playWin, playLoss, isSoundEnabled, setSoundEnabled } from "@/
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const EXPIRY_OPTIONS = [
+  { label: "30 seg", secs: 30   },
   { label: "1 min",  secs: 60   },
   { label: "5 min",  secs: 300  },
   { label: "15 min", secs: 900  },
@@ -42,6 +43,7 @@ const EXPIRY_OPTIONS = [
 ];
 
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
+
 
 // Approximate initial prices for placeholder candles while WS connects
 // Primeiro preço real recebido por símbolo nesta sessão — base para o cálculo do % change
@@ -125,6 +127,7 @@ export default function TradePage() {
   const [priceUp,       setPriceUp]       = useState(true);
   const [amount,        setAmount]        = useState(1000);
   const [expiry,        setExpiry]        = useState(EXPIRY_OPTIONS[0]);
+  const [comutacaoActive, setComutacaoActive] = useState(false);
   const [customMins,   setCustomMins]    = useState("1");
   const [isDemo,            setIsDemo]            = useState(true);
   const [balance,           setBalance]           = useState(10000);
@@ -146,6 +149,7 @@ export default function TradePage() {
   const [demoReloading,  setDemoReloading]  = useState(false);
   const [showDemoHelp,   setShowDemoHelp]   = useState(false);
   const [candleTimer,    setCandleTimer]    = useState("");
+  const [candleRemSecs,  setCandleRemSecs]  = useState(0);
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
   const [, setTick]                         = useState(0);
   const [showTradesPanel, setShowTradesPanel] = useState(false);
@@ -397,6 +401,7 @@ export default function TradePage() {
       const serverNow = Math.floor(Date.now() / 1000 + serverTimeOffset.current);
       const rem       = gran - (serverNow % gran);
       setCandleTimer(`${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, "0")}`);
+      setCandleRemSecs(rem);
     }
     update();
     const id = setInterval(update, 1000);
@@ -1886,17 +1891,45 @@ export default function TradePage() {
         <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>Expiração</div>
         <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
           {EXPIRY_OPTIONS.map(opt => (
-            <button key={opt.secs} onClick={() => { setExpiry(opt); setCustomMins(String(opt.secs / 60)); }} style={{
+            <button key={opt.secs} onClick={() => { setExpiry(opt); setComutacaoActive(false); setCustomMins(String(Math.max(1, Math.round(opt.secs / 60)))); }} style={{
               flex: 1, height: 34,
-              background: expiry.secs === opt.secs ? "rgba(245,166,35,0.15)" : "#0d1526",
-              color: expiry.secs === opt.secs ? "#f5a623" : "#64748b",
-              border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1e2d50"}`,
+              background: !comutacaoActive && expiry.secs === opt.secs ? "rgba(245,166,35,0.15)" : "#0d1526",
+              color: !comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "#64748b",
+              border: `1px solid ${!comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "#1e2d50"}`,
               borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
               transition: "all 0.12s",
               boxShadow: expiry.secs === opt.secs ? "0 0 8px rgba(245,166,35,0.25)" : "none",
             }}>{opt.label}</button>
           ))}
         </div>
+
+        {/* Comutação — expira quando a vela actual fechar */}
+        <button
+          type="button"
+          onClick={() => {
+            const secs = Math.max(30, candleRemSecs);
+            const mm = Math.floor(secs / 60);
+            const ss = secs % 60;
+            const label = mm > 0 ? `${mm}m ${ss > 0 ? ss + "s" : ""}`.trim() : `${ss}s`;
+            setExpiry({ label, secs });
+            setComutacaoActive(true);
+            setCustomMins(String(Math.max(1, mm)));
+          }}
+          style={{
+            width: "100%", marginBottom: 8, padding: "6px 10px",
+            background: comutacaoActive ? "rgba(99,102,241,0.25)" : "rgba(99,102,241,0.08)",
+            border: `1px solid ${comutacaoActive ? "rgba(99,102,241,0.7)" : "rgba(99,102,241,0.3)"}`,
+            borderRadius: 7, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            color: comutacaoActive ? "#a5b4fc" : "#818cf8",
+            fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+            boxShadow: comutacaoActive ? "0 0 8px rgba(99,102,241,0.3)" : "none",
+          }}
+        >
+          <span style={{ fontSize: 13 }}>⇄</span>
+          COMUTAÇÃO · FECHA COM A VELA ({candleTimer || "—"})
+        </button>
+
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ color: "#4b5563", fontSize: 10, whiteSpace: "nowrap" }}>Personalizado</span>
           <div style={{ position: "relative", flex: 1 }}>
@@ -1906,12 +1939,14 @@ export default function TradePage() {
                 const mins = Math.max(1, Math.min(59, parseInt(e.target.value) || 1));
                 setCustomMins(String(mins));
                 setExpiry({ label: `${mins} min`, secs: mins * 60 });
+                setComutacaoActive(false);
               }}
               onKeyDown={e => {
                 if (e.key === "Enter") {
                   const mins = Math.max(1, Math.min(59, parseInt((e.target as HTMLInputElement).value) || 1));
                   setCustomMins(String(mins));
                   setExpiry({ label: `${mins} min`, secs: mins * 60 });
+                  setComutacaoActive(false);
                   (e.target as HTMLInputElement).blur();
                 }
               }}
@@ -3131,8 +3166,8 @@ export default function TradePage() {
                 </div>
                 <div style={{ display: "flex", gap: 3 }}>
                   {EXPIRY_OPTIONS.map(opt => (
-                    <button key={opt.secs} onClick={() => setExpiry(opt)}
-                      style={{ height: 22, padding: "0 8px", background: expiry.secs === opt.secs ? "#f5a623" : "transparent", color: expiry.secs === opt.secs ? "#0a0f1e" : "#4b5563", border: `1px solid ${expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+                    <button key={opt.secs} onClick={() => { setExpiry(opt); setComutacaoActive(false); }}
+                      style={{ height: 22, padding: "0 8px", background: !comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "transparent", color: !comutacaoActive && expiry.secs === opt.secs ? "#0a0f1e" : "#4b5563", border: `1px solid ${!comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
                       {opt.label}
                     </button>
                   ))}
