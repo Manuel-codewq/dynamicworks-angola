@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
       const user = await dbTx.user.findUnique({ where: { id: userId } });
       if (!user) throw Object.assign(new Error("USER_NOT_FOUND"), { code: "USER_NOT_FOUND" });
 
-      // KYC obrigatório para levantamentos
-      if (type === "withdrawal" && user.kycStatus !== "approved") {
+      // KYC obrigatório para depósitos e levantamentos
+      if ((type === "deposit" || type === "withdrawal") && user.kycStatus !== "approved") {
         throw Object.assign(new Error("KYC_REQUIRED"), { code: "KYC_REQUIRED" });
       }
 
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     if (err?.code === "USER_NOT_FOUND")       return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
-    if (err?.code === "KYC_REQUIRED")         return NextResponse.json({ error: "Verificação de identidade (KYC) obrigatória para efectuar levantamentos.", kycRequired: true }, { status: 403 });
+    if (err?.code === "KYC_REQUIRED")         return NextResponse.json({ error: "Verificação de identidade (KYC) obrigatória para efectuar depósitos e levantamentos.", kycRequired: true }, { status: 403 });
     if (err?.code === "INSUFFICIENT_BALANCE") return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
     if (err?.code === "PENDING_EXISTS")       return NextResponse.json({ error: "Já tens um levantamento pendente. Aguarda a sua aprovação antes de fazer um novo pedido." }, { status: 409 });
     if (err?.code === "OTP_INVALID")          return NextResponse.json({ error: "Código OTP inválido ou expirado" }, { status: 400 });

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { formatKz } from "@/lib/format";
 import PageGuide from "@/app/components/PageGuide";
-import { Wallet as WalletIcon, ArrowDownCircle as DepositIcon, ArrowUpCircle as WithdrawIcon, Clock as HistoryIcon } from "lucide-react";
+import { Wallet as WalletIcon, ArrowDownCircle as DepositIcon, ArrowUpCircle as WithdrawIcon, Clock as HistoryIcon, ShieldAlert } from "lucide-react";
 
 const WALLET_GUIDE = [
   { icon: <WalletIcon   size={26} color="#f5a623" />, iconColor: "#f5a623", title: "A tua Carteira",        description: "Aqui podes ver o teu saldo real e demo, fazer depósitos, pedir levantamentos e consultar todo o histórico de transacções.", tip: "O saldo demo serve para praticar — não é dinheiro real." },
@@ -52,6 +52,7 @@ export default function WalletPage() {
   const [balance,     setBalance]     = useState(0);
   const [demoBalance, setDemoBalance] = useState(0);
   const [showBalance, setShowBalance] = useState(true);
+  const [kycStatus,   setKycStatus]   = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [tab,         setTab]         = useState<"deposit" | "withdraw" | "history">("history");
@@ -81,13 +82,15 @@ export default function WalletPage() {
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
   const load = useCallback(async () => {
-    const [bal, txs] = await Promise.all([
+    const [bal, txs, prof] = await Promise.all([
       fetch("/api/balance").then(r => r.json()),
       fetch("/api/transactions").then(r => r.json()),
+      fetch("/api/profile").then(r => r.ok ? r.json() : null),
     ]);
     setBalance(bal.balance ?? 0);
     setDemoBalance(bal.demoBalance ?? 0);
     setTransactions(Array.isArray(txs) ? txs : []);
+    if (prof?.kycStatus) setKycStatus(prof.kycStatus);
     setLoading(false);
   }, []);
 
@@ -229,6 +232,24 @@ export default function WalletPage() {
         {/* ── Depósito ─────────────────────────────────────────────────────────── */}
         {tab === "deposit" && (
           <div style={card}>
+            {/* Bloqueio KYC */}
+            {kycStatus !== "approved" && (
+              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 14, padding: "24px 20px", textAlign: "center", marginBottom: 20 }}>
+                <ShieldAlert size={40} color="#ef4444" style={{ marginBottom: 12 }} />
+                <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 16, marginBottom: 8 }}>Verificação de Identidade Necessária</div>
+                <div style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+                  Para efectuar depósitos precisas de completar a verificação de identidade (KYC).<br />
+                  {kycStatus === "pending"
+                    ? "O teu KYC está a ser analisado. Aguarda a aprovação."
+                    : "Submete os teus documentos no teu Perfil."}
+                </div>
+                {kycStatus !== "pending" && (
+                  <a href="/profile" style={{ display: "inline-block", background: "#ef4444", color: "#fff", borderRadius: 10, padding: "10px 24px", fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
+                    Verificar Identidade
+                  </a>
+                )}
+              </div>
+            )}
             {/* Banner bónus */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,rgba(245,166,35,0.1),rgba(249,115,22,0.07))", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
               <div style={{ width: 36, height: 36, background: "rgba(245,166,35,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -250,8 +271,8 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Cartão de pagamento após confirmação */}
-            {paymentInfo ? (
+            {/* Formulário só disponível com KYC aprovado */}
+            {kycStatus !== "approved" ? null : paymentInfo ? (
               <div>
                 <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 14, padding: "20px", marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
