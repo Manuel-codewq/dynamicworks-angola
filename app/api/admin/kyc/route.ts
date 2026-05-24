@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status"); // pending | approved | rejected | null (all)
 
   try {
-    // Contar por estado em paralelo com a query principal
-    const [submissions, counts] = await Promise.all([
+    const [submissions, pendingCount, approvedCount, rejectedCount] = await Promise.all([
       prisma.kycSubmission.findMany({
         where: status ? { user: { kycStatus: status } } : undefined,
         orderBy: { createdAt: "desc" },
@@ -41,18 +40,17 @@ export async function GET(req: NextRequest) {
           },
         },
       }),
-      prisma.user.groupBy({
-        by: ["kycStatus"],
-        where: { kycStatus: { not: null } },
-        _count: true,
-      }),
+      prisma.user.count({ where: { kycStatus: "pending" } }),
+      prisma.user.count({ where: { kycStatus: "approved" } }),
+      prisma.user.count({ where: { kycStatus: "rejected" } }),
     ]);
 
-    const countMap: Record<string, number> = { pending: 0, approved: 0, rejected: 0 };
-    for (const row of counts) {
-      if (row.kycStatus) countMap[row.kycStatus] = (countMap[row.kycStatus] ?? 0) + row._count;
-    }
-    countMap.all = Object.values(countMap).reduce((a, b) => a + b, 0);
+    const countMap = {
+      pending:  pendingCount,
+      approved: approvedCount,
+      rejected: rejectedCount,
+      all:      pendingCount + approvedCount + rejectedCount,
+    };
 
     return NextResponse.json({ entries: submissions, counts: countMap });
   } catch (err: unknown) {
