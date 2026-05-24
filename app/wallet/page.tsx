@@ -24,12 +24,13 @@ type Tx = {
 };
 
 type Filter = "all" | "deposit" | "withdrawal";
-type StatusFilter = "all" | "pending" | "approved" | "rejected";
+type StatusFilter = "all" | "pending" | "completed" | "rejected";
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
-  pending:  { label: "Pendente",  color: "#f5a623", bg: "rgba(245,166,35,0.1)",  Icon: Clock        },
-  approved: { label: "Aprovado",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
-  rejected: { label: "Rejeitado", color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle      },
+  pending:   { label: "Pendente",  color: "#f5a623", bg: "rgba(245,166,35,0.1)",  Icon: Clock        },
+  approved:  { label: "Aprovado",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
+  completed: { label: "Aprovado",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
+  rejected:  { label: "Rejeitado", color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle      },
 };
 
 function formatDate(s: string) {
@@ -493,7 +494,7 @@ export default function WalletPage() {
                 </button>
               ))}
               <div style={{ width: 1, background: "#1e2d50", margin: "0 4px" }} />
-              {(["all","pending","approved","rejected"] as StatusFilter[]).map(s => (
+              {(["all","pending","completed","rejected"] as StatusFilter[]).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)} style={filterBtn(statusFilter === s)}>
                   {s === "all" ? "Todos" : STATUS_CFG[s]?.label ?? s}
                 </button>
@@ -518,7 +519,7 @@ export default function WalletPage() {
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                           <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{isDeposit ? "Depósito" : "Levantamento"}</span>
                           <span style={{ color: isDeposit ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 15 }}>
-                            {isDeposit ? "+" : "−"}{formatKz(Math.floor(tx.amount))}
+                            {isDeposit ? "+" : "−"}{formatKz(Math.abs(Math.floor(tx.amount)))}
                           </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>

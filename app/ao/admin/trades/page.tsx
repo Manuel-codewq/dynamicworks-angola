@@ -8,7 +8,7 @@ function formatDate(s: string) { return new Date(s).toLocaleString("pt-AO", { da
 
 interface AdminTrade {
   id: string; asset: string; direction: string; amount: number;
-  result: string; payout: number; createdAt: string;
+  result: string; payout: number; profit: number | null; createdAt: string;
   user: { name: string; email: string };
 }
 
@@ -50,7 +50,7 @@ export default function AdminTradesPage() {
       trades.map(t => [
         t.user.name, t.user.email, t.asset, t.direction,
         Math.floor(t.amount), t.result ?? "",
-        t.result === "win" ? Math.floor(t.payout - t.amount) : t.result === "loss" ? -Math.floor(t.amount) : 0,
+        t.result === "active" ? 0 : Math.floor(t.profit ?? 0),
         formatDate(t.createdAt),
       ])
     );
@@ -66,7 +66,7 @@ export default function AdminTradesPage() {
         all.map(t => [
           t.user.name, t.user.email, t.asset, t.direction,
           Math.floor(t.amount), t.result ?? "",
-          t.result === "win" ? Math.floor(t.payout - t.amount) : t.result === "loss" ? -Math.floor(t.amount) : 0,
+          t.result === "active" ? 0 : Math.floor(t.profit ?? 0),
           formatDate(t.createdAt),
         ])
       );
@@ -164,7 +164,7 @@ export default function AdminTradesPage() {
               {trades.length === 0 ? (
                 <tr><td colSpan={7} style={{ ...td, textAlign: "center", color: "#94a3b8", padding: 32 }}>Nenhuma operação encontrada</td></tr>
               ) : trades.map(t => {
-                const pl = t.result === "win" ? Math.floor(t.payout - t.amount) : t.result === "loss" ? -Math.floor(t.amount) : 0;
+                const pl = t.result === "active" ? 0 : Math.floor(t.profit ?? 0);
                 const plColor = pl > 0 ? "#22c55e" : pl < 0 ? "#ef4444" : "#94a3b8";
                 return (
                   <tr key={t.id}>
