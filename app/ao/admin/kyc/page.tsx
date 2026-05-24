@@ -39,21 +39,33 @@ function LivenessBadge({ score }: { score: number }) {
   );
 }
 
+// Reduz imagem Cloudinary para thumbnail 80×80 — evita carregar imagens de alta resolução na tabela
+function cloudThumb(url: string, size = 80): string {
+  if (!url?.includes("cloudinary.com")) return url;
+  return url.replace("/upload/", `/upload/w_${size},h_${size},c_fill,q_auto,f_auto/`);
+}
+
 export default function AdminKycPage() {
   const [entries,  setEntries]  = useState<KycEntry[]>([]);
+  const [counts,   setCounts]   = useState({ all: 0, pending: 0, approved: 0, rejected: 0 });
   const [loading,  setLoading]  = useState(true);
   const [filter,   setFilter]   = useState<Filter>("pending");
   const [selected, setSelected] = useState<KycEntry | null>(null);
   const [busyId,   setBusyId]   = useState<string | null>(null);
   const [imgZoom,  setImgZoom]  = useState<string | null>(null);
 
-  async function load() {
+  async function load(f: Filter = filter) {
     setLoading(true);
-    const res = await fetch("/api/admin/kyc");
-    if (res.ok) setEntries(await res.json());
+    const param = f === "all" ? "" : `?status=${f}`;
+    const res = await fetch(`/api/admin/kyc${param}`);
+    if (res.ok) {
+      const data = await res.json();
+      setEntries(data.entries ?? []);
+      setCounts(data.counts ?? { all: 0, pending: 0, approved: 0, rejected: 0 });
+    }
     setLoading(false);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load("pending"); }, []);
 
   async function decide(userId: string, status: "approved" | "rejected") {
     setBusyId(userId);
@@ -64,23 +76,22 @@ export default function AdminKycPage() {
     });
     setBusyId(null);
     setSelected(null);
-    load();
+    load(filter);
   }
 
   async function resetAttempts(userId: string) {
     setBusyId(userId);
     await fetch(`/api/admin/kyc/${userId}`, { method: "DELETE" });
     setBusyId(null);
-    load();
+    load(filter);
   }
 
-  const visible = filter === "all" ? entries : entries.filter(e => e.user.kycStatus === filter);
-  const counts  = {
-    all:      entries.length,
-    pending:  entries.filter(e => e.user.kycStatus === "pending").length,
-    approved: entries.filter(e => e.user.kycStatus === "approved").length,
-    rejected: entries.filter(e => e.user.kycStatus === "rejected").length,
-  };
+  function changeFilter(f: Filter) {
+    setFilter(f);
+    load(f);
+  }
+
+  const visible = entries; // filtragem feita no servidor
 
   const card  = (extra?: React.CSSProperties): React.CSSProperties => ({ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, ...extra });
   const th: React.CSSProperties = { color: "#64748b", fontSize: 11, padding: "10px 14px", textAlign: "left", borderBottom: "1px solid #1e2d50", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", whiteSpace: "nowrap" };
@@ -97,7 +108,7 @@ export default function AdminKycPage() {
           </h1>
           <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 0" }}>Reveja e decida sobre as submissões de identidade</p>
         </div>
-        <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
+        <button onClick={() => load(filter)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
           <RefreshCw size={14} /> Atualizar
         </button>
       </div>
@@ -109,7 +120,7 @@ export default function AdminKycPage() {
           const colors: Record<Filter, string> = { all: "#94a3b8", pending: "#f5a623", approved: "#22c55e", rejected: "#ef4444" };
           const c = colors[f];
           return (
-            <button key={f} onClick={() => setFilter(f)}
+            <button key={f} onClick={() => changeFilter(f)}
               style={{ ...card({ padding: "16px 20px", cursor: "pointer", border: active ? `1px solid ${c}` : "1px solid #1e2d50", background: active ? `${c}18` : "#111827", textAlign: "left" }) }}>
               <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 6 }}>
                 {f === "all" ? "Total" : STATUS[f].label}
@@ -149,7 +160,7 @@ export default function AdminKycPage() {
                       <td style={{ ...td, color: "#fff", fontWeight: 600 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ width: 34, height: 34, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <img src={entry.faceFront} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            <img src={cloudThumb(entry.faceFront, 80)} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                           </div>
                           {entry.user.name}
                         </div>
