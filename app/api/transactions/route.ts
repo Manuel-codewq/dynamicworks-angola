@@ -99,7 +99,17 @@ export async function POST(req: NextRequest) {
         data:  { otpCode: null, otpExpires: null },
       });
 
-      const txRef    = type === "deposit" ? MULTICAIXA_REF : (reference ? String(reference).slice(0, 200) : null);
+      const WITHDRAWAL_FEE_RATE = 0.05;
+      let txRef: string | null;
+      if (type === "deposit") {
+        txRef = MULTICAIXA_REF;
+      } else {
+        const fee = Math.round(amountNum * WITHDRAWAL_FEE_RATE);
+        const net = amountNum - fee;
+        const feeNote = ` | Taxa 5%: ${fee.toLocaleString("pt-PT")} Kz | A enviar: ${net.toLocaleString("pt-PT")} Kz`;
+        const baseRef = reference ? String(reference).slice(0, 150) : "";
+        txRef = (baseRef + feeNote).trim() || null;
+      }
       const txMethod = type === "deposit" ? "multicaixa_ref" : (method ? String(method).slice(0, 100) : null);
 
       return dbTx.transaction.create({

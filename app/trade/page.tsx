@@ -35,11 +35,15 @@ import { playOpen, playWin, playLoss, isSoundEnabled, setSoundEnabled } from "@/
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const EXPIRY_OPTIONS = [
-  { label: "30 seg", secs: 30   },
-  { label: "1 min",  secs: 60   },
-  { label: "5 min",  secs: 300  },
-  { label: "15 min", secs: 900  },
-  { label: "1 hora", secs: 3600 },
+  { label: "30s",   secs: 30   },
+  { label: "1m",    secs: 60   },
+  { label: "2m",    secs: 120  },
+  { label: "3m",    secs: 180  },
+  { label: "5m",    secs: 300  },
+  { label: "10m",   secs: 600  },
+  { label: "15m",   secs: 900  },
+  { label: "30m",   secs: 1800 },
+  { label: "1h",    secs: 3600 },
 ];
 
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
@@ -128,6 +132,8 @@ export default function TradePage() {
   const [amount,        setAmount]        = useState(1000);
   const [expiry,        setExpiry]        = useState(EXPIRY_OPTIONS[0]);
   const [comutacaoActive, setComutacaoActive] = useState(false);
+  const [expirySheetOpen, setExpirySheetOpen] = useState(false);
+  const [sheetManualMins, setSheetManualMins] = useState("1");
   const [customMins,   setCustomMins]    = useState("1");
   const [isDemo,            setIsDemo]            = useState(true);
   const [balance,           setBalance]           = useState(10000);
@@ -1660,7 +1666,7 @@ export default function TradePage() {
           symbol:          selectedPair.symbol,
           direction,
           amount,
-          expirySecs:      expiry.secs,
+          expirySecs:      comutacaoActive ? Math.max(30, candleRemSecs) : expiry.secs,
           entryPrice:      currentPrice || 0,
           skipTournament:  activeAccount !== "tournament",
         }),
@@ -1676,6 +1682,7 @@ export default function TradePage() {
           type: "info",
         });
         if (isMobile) setTradeDrawer(false);
+        if (comutacaoActive) { setComutacaoActive(false); setExpiry(EXPIRY_OPTIONS[1]); }
         fetchBalance();
         if (data.trade) {
           // Regista como trade desta sessão (para notificação win/loss)
@@ -3156,43 +3163,24 @@ export default function TradePage() {
 
             <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#080e1d", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", gap: 0 }}>
 
-              {/* Row 1 — Expiração */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px 0" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", flexShrink: 0 }} />
-                  <span style={{ color: "#94a3b8", fontWeight: 700, fontSize: 11 }}>{selectedPair?.label}</span>
-                  <span style={{ background: "rgba(245,166,35,0.12)", color: "#f5a623", fontWeight: 800, fontSize: 10, borderRadius: 4, padding: "1px 5px" }}>{Math.round(currentPayout * 100)}%</span>
-                  <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 10 }}>+{formatKz(payoutAmt)}</span>
-                </div>
-                <div style={{ display: "flex", gap: 3 }}>
-                  {EXPIRY_OPTIONS.map(opt => (
-                    <button key={opt.secs} onClick={() => { setExpiry(opt); setComutacaoActive(false); }}
-                      style={{ height: 22, padding: "0 8px", background: !comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "transparent", color: !comutacaoActive && expiry.secs === opt.secs ? "#0a0f1e" : "#4b5563", border: `1px solid ${!comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "#1a2540"}`, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+              {/* Row 1 — Par + Payout */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px 0" }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: priceUp ? "#22c55e" : "#ef4444", flexShrink: 0 }} />
+                <span style={{ color: "#94a3b8", fontWeight: 700, fontSize: 11 }}>{selectedPair?.label}</span>
+                <span style={{ background: "rgba(245,166,35,0.12)", color: "#f5a623", fontWeight: 800, fontSize: 10, borderRadius: 4, padding: "1px 5px" }}>{Math.round(currentPayout * 100)}%</span>
+                <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 10 }}>+{formatKz(payoutAmt)}</span>
               </div>
 
               {/* Row 2 — Tempo + Investimento */}
               <div style={{ display: "flex", gap: 6, padding: "5px 12px 0" }}>
 
-                {/* Tempo */}
-                <div onClick={() => { if (!timerEditing) { setTimerEditing(true); setTimerInput(String(Math.floor(expiry.secs / 60))); } }}
-                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${timerEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
+                {/* Tempo — clique abre o sheet */}
+                <div onClick={() => setExpirySheetOpen(true)}
+                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${comutacaoActive ? "rgba(99,102,241,0.5)" : "#1a2540"}`, borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
                   <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Tempo</div>
-                  {timerEditing ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 2 }} onClick={e => e.stopPropagation()}>
-                      <input autoFocus type="number" min="1" max="60" value={timerInput}
-                        onChange={e => setTimerInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") { const m = Math.max(1, Math.min(60, parseInt(timerInput)||1)); setExpiry({label:`${m} min`,secs:m*60}); setTimerEditing(false); } if (e.key === "Escape") setTimerEditing(false); }}
-                        onBlur={() => { const m = Math.max(1, Math.min(60, parseInt(timerInput)||1)); setExpiry({label:`${m} min`,secs:m*60}); setTimerEditing(false); }}
-                        style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 17, fontVariantNumeric: "tabular-nums" }} />
-                      <span style={{ color: "#4b5563", fontSize: 9 }}>min</span>
-                    </div>
-                  ) : (
-                    <div style={{ color: timerColor, fontWeight: 900, fontSize: 17, fontVariantNumeric: "tabular-nums", letterSpacing: 1, transition: "color 0.4s" }}>{timerDisplay}</div>
-                  )}
+                  <div style={{ color: comutacaoActive ? "#a5b4fc" : timerColor, fontWeight: comutacaoActive ? 800 : 900, fontSize: comutacaoActive ? 13 : 17, fontVariantNumeric: "tabular-nums", letterSpacing: comutacaoActive ? 0 : 1, transition: "color 0.4s" }}>
+                    {comutacaoActive ? "⇄ VELA" : timerDisplay}
+                  </div>
                 </div>
 
                 {/* Investimento com +/- */}
@@ -3247,6 +3235,56 @@ export default function TradePage() {
                 </button>
               </div>
             </div>
+
+            {/* ── Bottom sheet: Seleccionar Tempo ── */}
+            {expirySheetOpen && (
+              <>
+                {/* Backdrop */}
+                <div onClick={() => setExpirySheetOpen(false)}
+                  style={{ position: "fixed", inset: 0, zIndex: 119, background: "rgba(0,0,0,0.55)" }} />
+                {/* Sheet */}
+                <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, zIndex: 120, background: "#0d1526", borderRadius: "18px 18px 0 0", borderTop: "1px solid #1e2d50", padding: "0 16px 20px" }}>
+                  {/* Handle */}
+                  <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
+                    <div style={{ width: 36, height: 4, background: "#1e2d50", borderRadius: 2 }} />
+                  </div>
+                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14, textAlign: "center" }}>Seleccionar Tempo</div>
+
+                  {/* Grelha de opções */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
+                    {EXPIRY_OPTIONS.map(opt => {
+                      const active = !comutacaoActive && expiry.secs === opt.secs;
+                      return (
+                        <button key={opt.secs} onClick={() => { setExpiry(opt); setComutacaoActive(false); setExpirySheetOpen(false); }}
+                          style={{ padding: "14px 0", background: active ? "#f5a623" : "#111827", color: active ? "#0a0f1e" : "#94a3b8", border: `1px solid ${active ? "#f5a623" : "#1e2d50"}`, borderRadius: 12, fontSize: 15, fontWeight: 800, cursor: "pointer", transition: "all 0.12s" }}>
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Comutação */}
+                  <button onClick={() => { setComutacaoActive(true); setExpiry({ label: `${Math.ceil((candleRemSecs ?? 60) / 60)} min`, secs: Math.max(30, candleRemSecs ?? 60) }); setExpirySheetOpen(false); }}
+                    style={{ width: "100%", padding: "13px 0", background: comutacaoActive ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.08)", color: comutacaoActive ? "#a5b4fc" : "#818cf8", border: `1px solid ${comutacaoActive ? "rgba(99,102,241,0.6)" : "rgba(99,102,241,0.25)"}`, borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <span>⇄</span>
+                    <span>COMUTAÇÃO · Fecha com a vela{candleTimer ? ` (${candleTimer})` : ""}</span>
+                  </button>
+
+                  {/* Manual */}
+                  <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ color: "#64748b", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>Definir manualmente</span>
+                    <input type="number" min="1" max="60" value={sheetManualMins}
+                      onChange={e => setSheetManualMins(e.target.value)}
+                      style={{ flex: 1, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 10px", color: "#fff", fontSize: 15, fontWeight: 700, outline: "none", textAlign: "center", width: 0 }} />
+                    <span style={{ color: "#64748b", fontSize: 13 }}>min</span>
+                    <button onClick={() => { const m = Math.max(1, Math.min(60, parseInt(sheetManualMins) || 1)); setExpiry({ label: `${m} min`, secs: m * 60 }); setComutacaoActive(false); setExpirySheetOpen(false); }}
+                      style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      OK
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
             </>
           );
         })()}

@@ -19,3 +19,5 @@ export async function GET(req: NextRequest) {
   const total = await prisma.auditLog.count();
   return NextResponse.json({ logs, total, page });
 }
+
+  

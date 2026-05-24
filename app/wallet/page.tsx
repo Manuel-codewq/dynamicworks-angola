@@ -396,6 +396,20 @@ export default function WalletPage() {
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 25000" style={inp} disabled={otpSent} />
               </div>
 
+              {/* Taxa de levantamento */}
+              {Number(amount) >= 10000 && (
+                <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: 13 }}>
+                    <span>Taxa de levantamento (5%)</span>
+                    <span style={{ color: "#ef4444", fontWeight: 700 }}>− {Math.round(Number(amount) * 0.05).toLocaleString("pt-PT")} Kz</span>
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(239,68,68,0.15)", paddingTop: 6, display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Valor que recebes</span>
+                    <span style={{ color: "#22c55e", fontWeight: 800, fontSize: 14 }}>{Math.round(Number(amount) * 0.95).toLocaleString("pt-PT")} Kz</span>
+                  </div>
+                </div>
+              )}
+
               {/* Método */}
               <div>
                 <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Método de levantamento</label>
