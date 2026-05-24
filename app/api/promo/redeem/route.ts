@@ -20,28 +20,35 @@ export async function POST(req: NextRequest) {
   if (promo.expiresAt && promo.expiresAt < new Date())
     return NextResponse.json({ error: "Este código já expirou" }, { status: 410 });
 
-  if (promo._count.redemptions >= promo.maxUses)
-    return NextResponse.json({ error: "Este código já atingiu o limite de utilizações" }, { status: 409 });
+  // Verificações de maxUses e dupla utilização dentro de uma transacção interativa
+  // para eliminar a race condition (TOCTOU) entre o check e o create
+  try {
+    await prisma.$transaction(async (db) => {
+      const fresh = await db.promoCode.findUnique({
+        where:  { id: promo.id },
+        select: { usedCount: true, maxUses: true },
+      });
+      if (!fresh || fresh.usedCount >= fresh.maxUses)
+        throw Object.assign(new Error("MAXUSES"), { code: "MAXUSES" });
 
-  const alreadyUsed = await prisma.promoRedemption.findFirst({
-    where: { promoCodeId: promo.id, userId: session.user.id },
-  });
-  if (alreadyUsed)
-    return NextResponse.json({ error: "Já utilizaste este código" }, { status: 409 });
+      const alreadyUsed = await db.promoRedemption.findFirst({
+        where: { promoCodeId: promo.id, userId: session.user.id },
+      });
+      if (alreadyUsed)
+        throw Object.assign(new Error("ALREADY_USED"), { code: "ALREADY_USED" });
 
-  await prisma.$transaction([
-    prisma.promoRedemption.create({
-      data: { promoCodeId: promo.id, userId: session.user.id },
-    }),
-    prisma.promoCode.update({
-      where: { id: promo.id },
-      data: { usedCount: { increment: 1 } },
-    }),
-    prisma.user.update({
-      where: { id: session.user.id },
-      data: { balance: { increment: promo.value } },
-    }),
-  ]);
+      await db.promoRedemption.create({ data: { promoCodeId: promo.id, userId: session.user.id } });
+      await db.promoCode.update({ where: { id: promo.id }, data: { usedCount: { increment: 1 } } });
+      await db.user.update({ where: { id: session.user.id }, data: { balance: { increment: promo.value } } });
+    });
+  } catch (err: any) {
+    if (err?.code === "MAXUSES")
+      return NextResponse.json({ error: "Este código já atingiu o limite de utilizações" }, { status: 409 });
+    if (err?.code === "ALREADY_USED")
+      return NextResponse.json({ error: "Já utilizaste este código" }, { status: 409 });
+    console.error("[promo/redeem]", err);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, value: promo.value });
 }

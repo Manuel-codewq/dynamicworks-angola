@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { asset, symbol: pairSymbol, direction, amount, expirySecs, skipTournament } = body ?? {};
+  const { asset, direction, amount, expirySecs, skipTournament } = body ?? {};
 
   if (!ALLOWED_ASSETS.has(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
@@ -137,12 +137,9 @@ export async function POST(req: NextRequest) {
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Pares sintéticos usam o preço do cliente directamente (PriceCandle tem o preço real, não sintético)
-  const SYNTHETIC_SYMBOLS = new Set(["1HZ10V","1HZ25V","1HZ50V","1HZ75V","1HZ100V","R_10","R_25","R_50","R_75","R_100"]);
-  const isSynthetic = SYNTHETIC_SYMBOLS.has(pairSymbol);
-
-  // Entry price: servidor → fallback clientPrice
-  let entryPrice = isSynthetic ? null : await fetchServerEntryPrice(asset);
+  // Entry price: servidor (getDerivPrice já suporta pares sintéticos via isRealMarketOpen)
+  // Nunca usar symbol do cliente para determinar o tipo de par — seria contornável
+  let entryPrice = await fetchServerEntryPrice(asset);
   if (!entryPrice) {
     const clientPrice = Number(body?.entryPrice);
     if (clientPrice > 0) entryPrice = clientPrice;

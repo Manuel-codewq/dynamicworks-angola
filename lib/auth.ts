@@ -102,11 +102,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             let otpValid = false;
             if (user.twoFactorMethod === "email") {
+              // timingSafeEqual previne ataques de timing na comparação do OTP
+              const { timingSafeEqual } = await import("crypto");
+              const stored  = user.twoFaCode ?? "";
+              const maxLen  = Math.max(otp.length, stored.length, 1);
+              const codeMatch =
+                stored.length === otp.length &&
+                timingSafeEqual(
+                  Buffer.from(otp.padEnd(maxLen, "\0")),
+                  Buffer.from(stored.padEnd(maxLen, "\0")),
+                );
               otpValid =
-                !!user.twoFaCode &&
+                codeMatch &&
                 !!user.twoFaExpires &&
-                user.twoFaExpires > new Date() &&
-                user.twoFaCode === otp;
+                user.twoFaExpires > new Date();
               if (otpValid) {
                 await prisma.user.update({
                   where: { id: user.id },

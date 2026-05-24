@@ -37,8 +37,9 @@ export async function POST(req: NextRequest) {
     const validPassword  = await bcrypt.compare(password as string, hashToCompare);
 
     if (!user || !validPassword || user.status === "blocked" || !user.emailVerified) {
-      // Incrementar contador de falhas por email (só quando o email existe, para não revelar contas)
-      if (user) await incrementFailCount(`login:${normalizedEmail}`, FAIL_WINDOW_MS);
+      // Incrementar sempre — impede brute force em emails inexistentes
+      // A resposta é idêntica, portanto não revela se a conta existe
+      await incrementFailCount(`login:${normalizedEmail}`, FAIL_WINDOW_MS);
       return NextResponse.json({ valid: false }, { status: 401 });
     }
 

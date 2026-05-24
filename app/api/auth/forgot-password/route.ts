@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPasswordOtpEmail } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
+import { randomInt } from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,14 +28,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Não encontrámos nenhuma conta com esse email. Verifica se escreveste bem ou regista-te." },
-        { status: 404 }
-      );
+      // Resposta idêntica ao caso de sucesso — não revelar se o email existe
+      return NextResponse.json({ success: true, message: "Se o email estiver registado, receberás um código em breve." });
     }
 
-    // Gerar código de 6 dígitos
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Gerar código de 6 dígitos criptograficamente seguro
+    const code = randomInt(100000, 1000000).toString();
     const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
 
     await prisma.user.update({
@@ -56,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     await sendPasswordOtpEmail(user.email, user.name, code);
 
-    return NextResponse.json({ success: true, message: "Código enviado com sucesso." });
+    return NextResponse.json({ success: true, message: "Se o email estiver registado, receberás um código em breve." });
   } catch (error) {
     console.error("[forgot-password] Error:", error);
     return NextResponse.json({ error: "Erro interno ao processar pedido" }, { status: 500 });
