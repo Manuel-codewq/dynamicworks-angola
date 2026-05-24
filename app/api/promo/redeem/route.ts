@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const userId = session.user.id;
 
   const { code } = await req.json();
   if (!code?.trim()) return NextResponse.json({ error: "Código inválido" }, { status: 400 });
@@ -32,14 +33,14 @@ export async function POST(req: NextRequest) {
         throw Object.assign(new Error("MAXUSES"), { code: "MAXUSES" });
 
       const alreadyUsed = await db.promoRedemption.findFirst({
-        where: { promoCodeId: promo.id, userId: session.user.id },
+        where: { promoCodeId: promo.id, userId: userId },
       });
       if (alreadyUsed)
         throw Object.assign(new Error("ALREADY_USED"), { code: "ALREADY_USED" });
 
-      await db.promoRedemption.create({ data: { promoCodeId: promo.id, userId: session.user.id } });
+      await db.promoRedemption.create({ data: { promoCodeId: promo.id, userId: userId } });
       await db.promoCode.update({ where: { id: promo.id }, data: { usedCount: { increment: 1 } } });
-      await db.user.update({ where: { id: session.user.id }, data: { balance: { increment: promo.value } } });
+      await db.user.update({ where: { id: userId }, data: { balance: { increment: promo.value } } });
     });
   } catch (err: any) {
     if (err?.code === "MAXUSES")
