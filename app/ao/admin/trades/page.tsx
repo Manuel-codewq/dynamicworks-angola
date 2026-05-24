@@ -1,7 +1,7 @@
 "use client";
 import { formatKz } from "@/lib/format";
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, Download, Filter, Wallet, Gamepad2 } from "lucide-react";
+import { RefreshCw, Download, Filter, Wallet, Gamepad2, Users } from "lucide-react";
 import { exportCsv } from "@/lib/exportCsv";
 
 function formatDate(s: string) { return new Date(s).toLocaleString("pt-AO", { dateStyle: "short", timeStyle: "short" }); }
@@ -14,25 +14,33 @@ interface AdminTrade {
 
 export default function AdminTradesPage() {
   const [trades,  setTrades]  = useState<AdminTrade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [result,  setResult]  = useState("");
-  const [asset,   setAsset]   = useState("");
-  const [from,    setFrom]    = useState("");
-  const [to,      setTo]      = useState("");
-  const [mode,    setMode]    = useState<"real" | "demo">("real");
+  const [loading,       setLoading]       = useState(true);
+  const [exporting,     setExporting]     = useState(false);
+  const [result,        setResult]        = useState("");
+  const [asset,         setAsset]         = useState("");
+  const [from,          setFrom]          = useState("");
+  const [to,            setTo]            = useState("");
+  const [userSearch,    setUserSearch]    = useState("");
+  const [mode,          setMode]          = useState<"real" | "demo">("real");
+
+  function buildParams(extra?: Record<string, string>) {
+    const params = new URLSearchParams();
+    if (result)     params.set("result",    result);
+    if (asset)      params.set("asset",     asset);
+    if (from)       params.set("from",      from);
+    if (to)         params.set("to",        to);
+    if (userSearch) params.set("user",      userSearch);
+    params.set("isDemo", mode === "demo" ? "true" : "false");
+    if (extra) Object.entries(extra).forEach(([k, v]) => params.set(k, v));
+    return params.toString();
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (result) params.set("result", result);
-    if (asset)  params.set("asset",  asset);
-    if (from)   params.set("from",   from);
-    if (to)     params.set("to",     to);
-    params.set("isDemo", mode === "demo" ? "true" : "false");
-    const res = await fetch("/api/admin/trades?" + params);
+    const res = await fetch("/api/admin/trades?" + buildParams());
     if (res.ok) setTrades(await res.json());
     setLoading(false);
-  }, [result, asset, from, to, mode]);
+  }, [result, asset, from, to, userSearch, mode]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -46,6 +54,24 @@ export default function AdminTradesPage() {
         formatDate(t.createdAt),
       ])
     );
+  }
+
+  async function handleExportAll() {
+    setExporting(true);
+    const res = await fetch("/api/admin/trades?" + buildParams({ export: "1" }));
+    if (res.ok) {
+      const all: AdminTrade[] = await res.json();
+      exportCsv(`trades_completo_${new Date().toISOString().slice(0,10)}.csv`,
+        ["Utilizador", "Email", "Par", "Direcção", "Montante (Kz)", "Resultado", "Lucro/Perda (Kz)", "Data"],
+        all.map(t => [
+          t.user.name, t.user.email, t.asset, t.direction,
+          Math.floor(t.amount), t.result ?? "",
+          t.result === "win" ? Math.floor(t.payout - t.amount) : t.result === "loss" ? -Math.floor(t.amount) : 0,
+          formatDate(t.createdAt),
+        ])
+      );
+    }
+    setExporting(false);
   }
 
   const th: React.CSSProperties = { color: "#94a3b8", fontSize: 12, padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #1e2d50", fontWeight: 600, whiteSpace: "nowrap" };
@@ -65,12 +91,15 @@ export default function AdminTradesPage() {
           <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Operações</h1>
           <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>{trades.length} operações {mode === "real" ? "reais" : "demo"}</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
             <RefreshCw size={14} /> Atualizar
           </button>
           <button onClick={handleExportCsv} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 14px", color: "#22c55e", cursor: "pointer", fontSize: 13 }}>
-            <Download size={14} /> CSV
+            <Download size={14} /> CSV (vista)
+          </button>
+          <button onClick={handleExportAll} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: "8px 14px", color: "#f5a623", cursor: exporting ? "wait" : "pointer", fontSize: 13, opacity: exporting ? 0.6 : 1 }}>
+            <Download size={14} /> {exporting ? "A exportar..." : "Exportar Tudo"}
           </button>
         </div>
       </div>
@@ -94,6 +123,11 @@ export default function AdminTradesPage() {
       {/* Filters */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
         <Filter size={15} color="#94a3b8" />
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <Users size={13} color="#64748b" style={{ position: "absolute", left: 10 }} />
+          <input placeholder="Nome ou email" value={userSearch} onChange={e => setUserSearch(e.target.value)}
+            style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 7, padding: "7px 12px 7px 30px", color: "#fff", fontSize: 13, outline: "none", width: 180 }} />
+        </div>
         <select value={result} onChange={e => setResult(e.target.value)}
           style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 7, padding: "7px 12px", color: result ? "#fff" : "#94a3b8", fontSize: 13, cursor: "pointer", outline: "none" }}>
           <option value="">Todos resultados</option>
@@ -108,8 +142,8 @@ export default function AdminTradesPage() {
         <span style={{ color: "#94a3b8", fontSize: 13 }}>até</span>
         <input type="date" value={to} onChange={e => setTo(e.target.value)}
           style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 7, padding: "7px 12px", color: to ? "#fff" : "#94a3b8", fontSize: 13, outline: "none", colorScheme: "dark" }} />
-        {(result || asset || from || to) && (
-          <button onClick={() => { setResult(""); setAsset(""); setFrom(""); setTo(""); }}
+        {(result || asset || from || to || userSearch) && (
+          <button onClick={() => { setResult(""); setAsset(""); setFrom(""); setTo(""); setUserSearch(""); }}
             style={{ background: "transparent", border: "1px solid #1e2d50", borderRadius: 7, padding: "7px 12px", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
             Limpar
           </button>
