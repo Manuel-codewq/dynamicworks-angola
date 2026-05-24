@@ -485,10 +485,28 @@ export default function AdminUsersPage() {
                 </div>
                 {balHistory && <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>{balHistory.user.name} · {balHistory.user.email}</div>}
               </div>
-              <button onClick={() => { setBalHistory(null); setBalHistLoading(false); }}
-                style={{ background: "#1e2d50", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={15} color="#94a3b8" />
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                {balHistory && (
+                  <button onClick={() => exportCsv(
+                    `historial_${balHistory.user.name.replace(/\s+/g,"_")}_${new Date().toISOString().slice(0,10)}.csv`,
+                    ["Data", "Tipo", "Detalhe", "Valor (Kz)", "Sinal", "Estado"],
+                    balHistory.events.map((ev: any) => [
+                      new Date(ev.date).toLocaleString("pt-PT"),
+                      ev.label,
+                      ev.detail ?? "",
+                      ev.amount !== null ? Math.floor(ev.amount) : "",
+                      ev.sign,
+                      ev.status,
+                    ])
+                  )} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "6px 12px", color: "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                    <Download size={13} /> Exportar CSV
+                  </button>
+                )}
+                <button onClick={() => { setBalHistory(null); setBalHistLoading(false); }}
+                  style={{ background: "#1e2d50", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <X size={15} color="#94a3b8" />
+                </button>
+              </div>
             </div>
 
             {balHistLoading && (
