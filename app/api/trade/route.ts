@@ -21,7 +21,7 @@ const ALLOWED_ASSETS = new Set([
   // Usam os mesmos labels que os pares reais, disponíveis quando mercado fechado
 ]);
 
-async function fetchServerEntryPrice(asset: string): Promise<number | null> {
+async function fetchServerEntryPrice(asset: string, forceReal = false): Promise<number | null> {
   // 1. Try PriceCandle DB (recorded in the last 30s by price-recorder)
   try {
     const cutoff = new Date(Date.now() - 30_000);
@@ -34,7 +34,7 @@ async function fetchServerEntryPrice(asset: string): Promise<number | null> {
   } catch { /* DB unavailable — fall through to WS */ }
 
   // 2. Fallback: live Deriv WS tick
-  return getDerivPrice(asset);
+  return getDerivPrice(asset, forceReal);
 }
 
 
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const { maintenanceMode } = await getSettings();
+  const { maintenanceMode, forceRealMarket } = await getSettings();
   if (maintenanceMode) {
     return NextResponse.json({ error: "Plataforma em manutenção. Tenta mais tarde." }, { status: 503 });
   }
@@ -137,9 +137,9 @@ export async function POST(req: NextRequest) {
   const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: servidor (getDerivPrice já suporta pares sintéticos via isRealMarketOpen)
+  // Entry price: servidor (getDerivPrice suporta forceReal para override de horário)
   // Nunca usar symbol do cliente para determinar o tipo de par — seria contornável
-  let entryPrice = await fetchServerEntryPrice(asset);
+  let entryPrice = await fetchServerEntryPrice(asset, forceRealMarket);
   if (!entryPrice) {
     const clientPrice = Number(body?.entryPrice);
     if (clientPrice > 0) entryPrice = clientPrice;

@@ -59,11 +59,11 @@ async function fetchDerivSymbolPrice(symbol: string): Promise<number | null> {
   });
 }
 
-export async function getDerivPrice(asset: string): Promise<number | null> {
+export async function getDerivPrice(asset: string, forceReal = false): Promise<number | null> {
   const synthSymbol = SYNTHETIC_LABEL_TO_SYMBOL[asset];
 
-  // Mercado fechado + par tem versão sintética → usar índice Deriv directamente
-  if (synthSymbol && !isRealMarketOpen()) {
+  // Mercado fechado + par tem versão sintética + não forçado real → usar índice Deriv directamente
+  if (synthSymbol && !isRealMarketOpen() && !forceReal) {
     return fetchDerivSymbolPrice(synthSymbol);
   }
 
@@ -73,8 +73,8 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
   const price = await fetchDerivSymbolPrice(symbol);
   if (price) return price;
 
-  // Fallback: tentar índice sintético se preço real falhou
-  if (synthSymbol && synthSymbol !== symbol) {
+  // Fallback: tentar índice sintético se preço real falhou (só quando mercado fechado sem override)
+  if (synthSymbol && synthSymbol !== symbol && !forceReal) {
     return fetchDerivSymbolPrice(synthSymbol);
   }
 

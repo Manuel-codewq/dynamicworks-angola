@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDerivPrice } from "@/lib/derivPrice";
+import { getSettings } from "@/lib/settings";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
@@ -14,7 +15,8 @@ async function getClosePriceForAsset(asset: string): Promise<number | null> {
     });
     if (candle?.close && candle.close > 0) return candle.close;
   } catch { /* ignora erros de DB */ }
-  return getDerivPrice(asset);
+  const { forceRealMarket } = await getSettings().catch(() => ({ forceRealMarket: false }));
+  return getDerivPrice(asset, forceRealMarket);
 }
 
 // Empates removidos — qualquer movimento determina win ou loss
