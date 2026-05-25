@@ -1,7 +1,7 @@
 "use client";
 import { formatKz } from "@/lib/format";
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, Search, CheckCircle, XCircle, Download } from "lucide-react";
+import { RefreshCw, Search, CheckCircle, XCircle, Download, FileDown } from "lucide-react";
 import { exportCsv } from "@/lib/exportCsv";
 
 function formatDate(s: string) {
@@ -32,12 +32,15 @@ const STATUS_BG:    Record<string, string> = {
 
 export default function AdminTransactionsPage() {
   const [transactions, setTransactions] = useState<AdminTransaction[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [busyId,   setBusyId]   = useState<string | null>(null);
-  const [status,   setStatus]   = useState("");
-  const [type,     setType]     = useState("");
-  const [search,   setSearch]   = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [loading,      setLoading]      = useState(true);
+  const [busyId,       setBusyId]       = useState<string | null>(null);
+  const [status,       setStatus]       = useState("");
+  const [type,         setType]         = useState("");
+  const [search,       setSearch]       = useState("");
+  const [searchInput,  setSearchInput]  = useState("");
+  const [exportFrom,   setExportFrom]   = useState("");
+  const [exportTo,     setExportTo]     = useState("");
+  const [exporting,    setExporting]    = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,6 +89,26 @@ export default function AdminTransactionsPage() {
 
   const pending = Array.isArray(transactions) ? transactions.filter(t => t.status === "pending").length : 0;
 
+  async function handleExportAll() {
+    setExporting(true);
+    const params = new URLSearchParams();
+    if (exportFrom) params.set("from", exportFrom);
+    if (exportTo)   params.set("to",   exportTo);
+    const res = await fetch("/api/admin/export?" + params);
+    if (res.ok) {
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      const cd   = res.headers.get("Content-Disposition") ?? "";
+      const match = cd.match(/filename="([^"]+)"/);
+      a.href = url;
+      a.download = match?.[1] ?? "extrato.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    setExporting(false);
+  }
+
   const th: React.CSSProperties = {
     color: "#94a3b8", fontSize: 12, padding: "8px 12px",
     textAlign: "left", borderBottom: "1px solid #1e2d50",
@@ -115,12 +138,39 @@ export default function AdminTransactionsPage() {
             {transactions.length} transação{transactions.length !== 1 ? "ões" : ""} encontrada{transactions.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Exportar extrato completo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#0f172a", border: "1px solid #1e2d50", borderRadius: 10, padding: "6px 10px", flexWrap: "wrap" }}>
+            <span style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>Extrato contabilístico:</span>
+            <input
+              type="date"
+              value={exportFrom}
+              onChange={e => setExportFrom(e.target.value)}
+              style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 6, padding: "5px 8px", color: "#fff", fontSize: 12, outline: "none" }}
+              title="De"
+            />
+            <span style={{ color: "#64748b", fontSize: 12 }}>até</span>
+            <input
+              type="date"
+              value={exportTo}
+              onChange={e => setExportTo(e.target.value)}
+              style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 6, padding: "5px 8px", color: "#fff", fontSize: 12, outline: "none" }}
+              title="Até"
+            />
+            <button
+              onClick={handleExportAll}
+              disabled={exporting}
+              style={{ display: "flex", alignItems: "center", gap: 5, background: exporting ? "rgba(99,102,241,0.05)" : "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 7, padding: "6px 12px", color: "#818cf8", cursor: exporting ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+              <FileDown size={13} /> {exporting ? "A exportar…" : "Exportar Tudo"}
+            </button>
+          </div>
+
+          {/* CSV da vista actual */}
           <button onClick={() => exportCsv("transacoes.csv",
             ["ID", "Utilizador", "Email", "Tipo", "Valor (Kz)", "Método", "Referência", "Estado", "Data"],
             transactions.map(t => [t.id, t.user.name, t.user.email, TYPE_LABEL[t.type] ?? t.type, t.amount, t.method ?? "", t.reference ?? "", STATUS_LABEL[t.status] ?? t.status, formatDate(t.createdAt)])
           )} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 14px", color: "#22c55e", cursor: "pointer", fontSize: 13 }}>
-            <Download size={14} /> CSV
+            <Download size={14} /> CSV (vista)
           </button>
           <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
             <RefreshCw size={14} /> Atualizar
