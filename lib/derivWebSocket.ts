@@ -68,12 +68,12 @@ export const SYNTHETIC_PAIRS: DerivPair[] = [
 export const SYNTHETIC_LABEL_TO_SYMBOL: Record<string, string> = {};
 SYNTHETIC_PAIRS.forEach(p => { SYNTHETIC_LABEL_TO_SYMBOL[p.label] = p.symbol; });
 
-// Angola WAT = UTC+1. Forex: Seg-Sex 07h-20h WAT (06h-19h UTC)
+// Angola WAT = UTC+1. Forex: Seg-Sex 02h-18h WAT (01h-17h UTC)
 export function isRealMarketOpen(): boolean {
   const now    = new Date();
   const utcDay = now.getUTCDay();
   const utcH   = now.getUTCHours();
-  return utcDay >= 1 && utcDay <= 5 && utcH >= 6 && utcH < 19;
+  return utcDay >= 1 && utcDay <= 5 && utcH >= 1 && utcH < 17;
 }
 
 export function getAvailablePairs(): DerivPair[] {

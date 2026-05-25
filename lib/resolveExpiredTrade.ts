@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { getDerivPrice } from "@/lib/derivPrice";
-import { getSettings } from "@/lib/settings";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
-async function getClosePriceForAsset(asset: string): Promise<number | null> {
-  // Todos os pares: PriceCandle DB → Deriv WS (inclui índices sintéticos 24/7)
+const SYNTHETIC_SYMBOLS = new Set([
+  "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V",
+  "R_10", "R_25", "R_50", "R_75", "R_100",
+]);
+
+async function getClosePriceForAsset(asset: string, symbol?: string | null): Promise<number | null> {
+  // Todos os pares: PriceCandle DB → Deriv WS
   try {
     const ninetySecsAgo = new Date(Date.now() - 90_000);
     const candle = await prisma.priceCandle.findFirst({
@@ -15,8 +19,8 @@ async function getClosePriceForAsset(asset: string): Promise<number | null> {
     });
     if (candle?.close && candle.close > 0) return candle.close;
   } catch { /* ignora erros de DB */ }
-  const { forceRealMarket } = await getSettings().catch(() => ({ forceRealMarket: false }));
-  return getDerivPrice(asset, forceRealMarket);
+  const isSynthetic = typeof symbol === "string" && SYNTHETIC_SYMBOLS.has(symbol);
+  return getDerivPrice(asset, !isSynthetic);
 }
 
 // Empates removidos — qualquer movimento determina win ou loss
@@ -25,6 +29,7 @@ export type TradeToResolve = {
   id:         string;
   userId:     string;
   asset:      string;
+  symbol:     string | null;
   direction:  string;
   amount:     number;
   entryPrice: number;
@@ -68,7 +73,7 @@ export async function resolveExpiredTrade(
   // O PriceCandle é o close do candle de 1 minuto — pode diferir do tick exacto.
   // Estratégia: usar clientPrice quando está próximo do servidor (< 0.5% de diferença)
   // porque representa o preço REAL que o utilizador vê no ecrã no momento da expiração.
-  let resolvedPrice: number | null = await getClosePriceForAsset(trade.asset);
+  let resolvedPrice: number | null = await getClosePriceForAsset(trade.asset, trade.symbol);
 
   if (clientPrice && clientPrice > 0) {
     if (!resolvedPrice) {
