@@ -33,6 +33,7 @@ export interface PlatformSettings {
   payout:          Record<string, number>;
   winProbability:  Record<string, number>;
   maintenanceMode: boolean;
+  forceRealMarket: boolean;
   activePairs:     string[];
   weekendPairs:    string[];
   rankingResetAt:  Date | null;
@@ -51,13 +52,14 @@ export async function getSettings(): Promise<PlatformSettings> {
   try {
     const row = await prisma.settings.upsert({
       where:  { id: "singleton" },
-      create: { id: "singleton", maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null },
+      create: { id: "singleton", maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null },
       update: {},
     }) as any;
     const savedPairs        = Array.isArray(row.activePairs)   ? row.activePairs   as string[] : [];
     const savedWeekendPairs = Array.isArray(row.weekendPairs)  ? row.weekendPairs  as string[] : [];
     cache = {
       maintenanceMode: row.maintenanceMode,
+      forceRealMarket: row.forceRealMarket ?? false,
       payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
       activePairs:     savedPairs.length > 0 ? savedPairs : DEFAULT_ACTIVE_PAIRS,
@@ -70,7 +72,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     cacheAt = Date.now();
     return cache;
   } catch {
-    return { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
+    return { maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
   }
 }
 
@@ -90,6 +92,7 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
     });
   }
   if (typeof patch.maintenanceMode === "boolean") current.maintenanceMode = patch.maintenanceMode;
+  if (typeof patch.forceRealMarket === "boolean") current.forceRealMarket = patch.forceRealMarket;
   if (Array.isArray(patch.activePairs))  current.activePairs  = patch.activePairs;
   if (Array.isArray(patch.weekendPairs)) current.weekendPairs = patch.weekendPairs;
   if (patch.rankingResetAt instanceof Date || patch.rankingResetAt === null) current.rankingResetAt = patch.rankingResetAt;
@@ -100,7 +103,7 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
   await (prisma.settings.upsert as any)({
     where:  { id: "singleton" },
     create: { id: "singleton", ...current },
-    update: { maintenanceMode: current.maintenanceMode, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, weekendPairs: current.weekendPairs, rankingResetAt: current.rankingResetAt, usdtRateAoa: current.usdtRateAoa, usdtWallet: current.usdtWallet, usdtMinDeposit: current.usdtMinDeposit },
+    update: { maintenanceMode: current.maintenanceMode, forceRealMarket: current.forceRealMarket, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, weekendPairs: current.weekendPairs, rankingResetAt: current.rankingResetAt, usdtRateAoa: current.usdtRateAoa, usdtWallet: current.usdtWallet, usdtMinDeposit: current.usdtMinDeposit },
   });
 
   cache = current;
@@ -109,5 +112,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { maintenanceMode: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
+export let settings: PlatformSettings = { maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13 };
 export async function loadSettings() { settings = await getSettings(); return settings; }

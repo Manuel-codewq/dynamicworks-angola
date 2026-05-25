@@ -154,6 +154,7 @@ model Settings {
   id              String    @id @default("singleton")
   otcMode         String    @default("auto")
   maintenanceMode Boolean   @default(false)
+  forceRealMarket Boolean   @default(false)
   winProbability  Json      @default("{}")
   payout          Json      @default("{}")
   activePairs     Json      @default("[]")

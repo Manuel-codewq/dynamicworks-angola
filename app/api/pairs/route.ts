@@ -6,13 +6,13 @@ import {
 } from "@/lib/derivWebSocket";
 
 export async function GET() {
-  const { activePairs, weekendPairs } = await getSettings();
-  const marketOpen = isRealMarketOpen();
+  const { activePairs, weekendPairs, forceRealMarket } = await getSettings();
+  const marketOpen = forceRealMarket || isRealMarketOpen();
 
   const allowedReal    = new Set(activePairs);
   const allowedSynth   = new Set(weekendPairs);
 
-  // Pares reais — só disponíveis durante horário de mercado
+  // Pares reais — disponíveis durante horário de mercado ou quando admin força
   const realPairs: DerivPair[] = marketOpen
     ? [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS].filter(p => !allowedReal.size || allowedReal.has(p.label))
     : CRYPTO_PAIRS.filter(p => !allowedReal.size || allowedReal.has(p.label));

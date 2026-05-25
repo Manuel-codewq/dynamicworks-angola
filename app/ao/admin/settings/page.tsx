@@ -40,6 +40,7 @@ const SYNTHETIC_OPTIONS = [
 interface Settings {
   payout:          Record<string, number>;
   maintenanceMode: boolean;
+  forceRealMarket: boolean;
   activePairs:     string[];
   weekendPairs:    string[];
 }
@@ -158,6 +159,20 @@ export default function AdminSettingsPage() {
             <button onClick={() => setDraft(d => d ? { ...d, maintenanceMode: !d.maintenanceMode } : d)}
               style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: draft.maintenanceMode ? "#ef4444" : "#1e2d50", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
               <span style={{ position: "absolute", top: 3, left: draft.maintenanceMode ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+            </button>
+          </div>
+
+          {/* Force real market */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#0a0f1e", borderRadius: 10, padding: "14px 18px", flex: 1, minWidth: 220, border: draft.forceRealMarket ? "1px solid rgba(34,197,94,0.3)" : "1px solid transparent" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Forçar pares reais</div>
+              <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
+                {draft.forceRealMarket ? "Pares reais activos fora de horas" : "Só activos Seg–Sex 07h–20h WAT"}
+              </div>
+            </div>
+            <button onClick={() => setDraft(d => d ? { ...d, forceRealMarket: !d.forceRealMarket } : d)}
+              style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: draft.forceRealMarket ? "#22c55e" : "#1e2d50", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+              <span style={{ position: "absolute", top: 3, left: draft.forceRealMarket ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
             </button>
           </div>
 
