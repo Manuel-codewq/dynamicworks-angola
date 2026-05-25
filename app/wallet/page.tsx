@@ -508,18 +508,28 @@ export default function WalletPage() {
               </div>
             ) : (
               filtered.map(tx => {
-                const isDeposit = tx.type === "deposit";
+                const isCredit = tx.type === "deposit" || tx.type === "bonus" || tx.type === "tournament_prize" || (tx.type === "adjustment" && tx.amount >= 0);
+                const color    = isCredit ? "#22c55e" : "#ef4444";
+                const bgColor  = isCredit ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)";
+                const icon     = isCredit ? <ArrowDownCircle size={20} color="#22c55e" /> : <ArrowUpCircle size={20} color="#ef4444" />;
+                const label    = tx.type === "deposit"          ? "Depósito"
+                               : tx.type === "withdrawal"       ? "Levantamento"
+                               : tx.type === "adjustment"       ? "Ajuste de Saldo"
+                               : tx.type === "bonus"            ? "Bónus"
+                               : tx.type === "tournament_prize" ? "Prémio de Torneio"
+                               : tx.type === "tournament_entry" ? "Inscrição em Torneio"
+                               : tx.type;
                 return (
                   <div key={tx.id} style={{ ...card, padding: "16px 18px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: isDeposit ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {isDeposit ? <ArrowDownCircle size={20} color="#22c55e" /> : <ArrowUpCircle size={20} color="#ef4444" />}
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: bgColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {icon}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{isDeposit ? "Depósito" : "Levantamento"}</span>
-                          <span style={{ color: isDeposit ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 15 }}>
-                            {isDeposit ? "+" : "−"}{formatKz(Math.abs(Math.floor(tx.amount)))}
+                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{label}</span>
+                          <span style={{ color, fontWeight: 800, fontSize: 15 }}>
+                            {isCredit ? "+" : "−"}{formatKz(Math.abs(Math.floor(tx.amount)))}
                           </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>
