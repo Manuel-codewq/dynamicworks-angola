@@ -38,11 +38,14 @@ const SYNTHETIC_OPTIONS = [
 ];
 
 interface Settings {
-  payout:          Record<string, number>;
-  maintenanceMode: boolean;
-  forceRealMarket: boolean;
-  activePairs:     string[];
-  weekendPairs:    string[];
+  payout:                   Record<string, number>;
+  maintenanceMode:          boolean;
+  forceRealMarket:          boolean;
+  activePairs:              string[];
+  weekendPairs:             string[];
+  largeTradePushThreshold:  number;
+  largeWithdrawalThreshold: number;
+  dailyLossLimitPct:        number;
 }
 
 // UI works in whole-number percentages; API uses fractions
@@ -239,6 +242,52 @@ export default function AdminSettingsPage() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Risk controls */}
+      <div style={card}>
+        <p style={sectionTitle}>Controlo de Risco</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+
+          <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px" }}>
+            <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Alerta operação grande (Kz)</div>
+            <div style={{ color: "#64748b", fontSize: 11, marginBottom: 10 }}>
+              Enviar notificação push ao admin quando uma operação real abrir acima deste valor. 0 = desativado.
+            </div>
+            <input type="number" min={0} step={10000}
+              value={draft.largeTradePushThreshold ?? 0}
+              onChange={e => setDraft(d => d ? { ...d, largeTradePushThreshold: Math.max(0, Number(e.target.value)) } : d)}
+              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 12px", color: "#f5a623", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
+          </div>
+
+          <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px" }}>
+            <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Alerta levantamento grande (Kz)</div>
+            <div style={{ color: "#64748b", fontSize: 11, marginBottom: 10 }}>
+              Enviar notificação push ao admin quando um levantamento acima deste valor for submetido. 0 = desativado.
+            </div>
+            <input type="number" min={0} step={50000}
+              value={draft.largeWithdrawalThreshold ?? 0}
+              onChange={e => setDraft(d => d ? { ...d, largeWithdrawalThreshold: Math.max(0, Number(e.target.value)) } : d)}
+              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 12px", color: "#f5a623", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
+          </div>
+
+          <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px" }}>
+            <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Limite diário de perda (%)</div>
+            <div style={{ color: "#64748b", fontSize: 11, marginBottom: 10 }}>
+              Bloquear operações reais se o utilizador perdeu X% do saldo inicial hoje. 0 = desativado.
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input type="range" min={0} max={100} step={5}
+                value={draft.dailyLossLimitPct ?? 0}
+                onChange={e => setDraft(d => d ? { ...d, dailyLossLimitPct: Number(e.target.value) } : d)}
+                style={{ flex: 1, accentColor: "#f5a623", cursor: "pointer" }} />
+              <span style={{ color: "#f5a623", fontWeight: 700, fontSize: 14, minWidth: 48, textAlign: "right" }}>
+                {draft.dailyLossLimitPct > 0 ? `${draft.dailyLossLimitPct}%` : "OFF"}
+              </span>
+            </div>
+          </div>
+
         </div>
       </div>
 

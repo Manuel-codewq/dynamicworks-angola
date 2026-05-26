@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
+import { sendPushToUser } from "@/lib/webPush";
 
 const ALLOWED_ASSETS = new Set([
   // Forex real
@@ -58,7 +59,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const { maintenanceMode, forceRealMarket } = await getSettings();
+  const cfg = await getSettings().catch(() => null);
+  const { maintenanceMode, forceRealMarket } = cfg ?? { maintenanceMode: false, forceRealMarket: false };
   if (maintenanceMode) {
     return NextResponse.json({ error: "Plataforma em manutenção. Tenta mais tarde." }, { status: 503 });
   }
@@ -141,8 +143,25 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
+  // Limite diário de perda (apenas conta real, fora de torneio)
+  const dailyLossLimitPct = cfg?.dailyLossLimitPct ?? 0;
+  if (!user.isDemo && !isTournamentTrade && dailyLossLimitPct > 0) {
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayLosses = await prisma.trade.aggregate({
+      where: { userId: user.id, isDemo: false, status: "lost", createdAt: { gte: todayStart } },
+      _sum: { amount: true },
+    });
+    const lostToday = todayLosses._sum.amount ?? 0;
+    const startBal  = currentBalance + lostToday;
+    const maxLoss   = startBal * (dailyLossLimitPct / 100);
+    if (lostToday >= maxLoss) {
+      return NextResponse.json({
+        error: `Limite diário de perda atingido (${dailyLossLimitPct}%). Tente amanhã.`,
+      }, { status: 403 });
+    }
+  }
+
   // Obter payout das definições (com fallback)
-  const cfg = await getSettings().catch(() => null);
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
   // Entry price: symbol do cliente validado contra lista de sintéticos conhecidos
@@ -211,6 +230,20 @@ export async function POST(req: NextRequest) {
       }).catch(() => {});
     }
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
+  }
+
+  // Notificar admins se operação real acima do threshold configurado
+  const largeTradePushThreshold = cfg?.largeTradePushThreshold ?? 0;
+  if (!user.isDemo && largeTradePushThreshold > 0 && amountNum >= largeTradePushThreshold) {
+    prisma.user.findMany({ where: { role: "admin" }, select: { id: true } }).then(admins => {
+      const kzFormatted = amountNum.toLocaleString("pt-PT") + " Kz";
+      admins.forEach(a => sendPushToUser(a.id, {
+        title: "💰 Operação grande aberta",
+        body:  `${user.name ?? user.email} abriu ${kzFormatted} em ${asset} (${direction.toUpperCase()})`,
+        url:   "/ao/admin/live",
+        tag:   "large-trade",
+      }).catch(() => {}));
+    }).catch(() => {});
   }
 
   const serverTime = Date.now();

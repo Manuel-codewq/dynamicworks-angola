@@ -161,10 +161,13 @@ model Settings {
   activePairs     Json      @default("[]")
   weekendPairs    Json      @default("[]")
   rankingResetAt  DateTime?
-  usdtRateAoa     Float     @default(0)
-  usdtWallet      String?
-  usdtMinDeposit  Float     @default(5)
-  updatedAt       DateTime  @updatedAt
+  usdtRateAoa              Float     @default(0)
+  usdtWallet               String?
+  usdtMinDeposit           Float     @default(5)
+  largeTradePushThreshold  Float     @default(0)
+  largeWithdrawalThreshold Float     @default(0)
+  dailyLossLimitPct        Float     @default(0)
+  updatedAt                DateTime  @updatedAt
 }
 
 model PriceCandle {

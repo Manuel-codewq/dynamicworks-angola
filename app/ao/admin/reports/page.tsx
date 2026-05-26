@@ -1,141 +1,254 @@
 "use client";
+import { useEffect, useState, useCallback } from "react";
+import { RefreshCw, TrendingUp, TrendingDown, BarChart2, Trophy } from "lucide-react";
 import { formatKz } from "@/lib/format";
-import { useEffect, useState } from "react";
-import { RefreshCw, TrendingUp, Users, BarChart2, Wallet } from "lucide-react";
 
-interface DayData {
-  date: string;
-  revenue: number;
-  trades: number;
-  newUsers: number;
-  deposits: number;
+interface WinRateRow {
+  asset: string; wins: number; total: number; winRate: number; configuredPct: number;
+}
+interface PnlRow {
+  date: string; profit: number; trades: number; winRate: number | null;
+}
+interface TopUser {
+  userId: string; name: string; email: string;
+  trades: number; wins: number; winRate: number;
+  totalBet: number; netWin: number;
 }
 
-function shortDate(d: string) {
-  const [, m, day] = d.split("-");
-  return `${day}/${m}`;
-}
+const DAYS_OPTIONS = [7, 14, 30, 60, 90];
 
-function BarChart({ data, key, color, label }: { data: DayData[]; key: keyof DayData; color: string; label: string }) {
-  const values = data.map(d => d[key] as number);
-  const max = Math.max(...values, 1);
+const sectionCard: React.CSSProperties = {
+  background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: 24, marginBottom: 24,
+};
+const th: React.CSSProperties = {
+  color: "#94a3b8", fontSize: 12, padding: "10px 14px", textAlign: "left",
+  borderBottom: "1px solid #1e2d50", fontWeight: 600, whiteSpace: "nowrap",
+};
+const td: React.CSSProperties = {
+  padding: "11px 14px", borderBottom: "1px solid rgba(30,45,80,0.4)", fontSize: 13,
+};
+
+function WinRateBar({ actual, configured }: { actual: number; configured: number }) {
+  const diff  = actual - configured;
+  const color = diff > 5 ? "#ef4444" : diff < -5 ? "#22c55e" : "#f5a623";
   return (
-    <div>
-      <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, marginBottom: 10 }}>{label}</div>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 120 }}>
-        {data.map((d, i) => {
-          const h = Math.max(2, ((d[key] as number) / max) * 110);
-          return (
-            <div key={i} title={`${shortDate(d.date)}: ${typeof d[key] === "number" && key !== "trades" && key !== "newUsers" ? formatKz(d[key] as number) : d[key]}`}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "default" }}>
-              <div style={{ width: "100%", height: h, background: color, borderRadius: "3px 3px 0 0", opacity: 0.85, transition: "height 0.3s" }} />
-            </div>
-          );
-        })}
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ width: 120, height: 8, background: "#1e2d50", borderRadius: 4, overflow: "hidden", position: "relative" }}>
+        <div style={{ position: "absolute", left: `${Math.min(configured, 100)}%`, top: 0, bottom: 0, width: 2, background: "#94a3b8", opacity: 0.5 }} />
+        <div style={{ height: "100%", width: `${Math.min(actual, 100)}%`, background: color, borderRadius: 4 }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-        <span style={{ color: "#334155", fontSize: 9 }}>{shortDate(data[0]?.date ?? "")}</span>
-        <span style={{ color: "#334155", fontSize: 9 }}>{shortDate(data[data.length - 1]?.date ?? "")}</span>
-      </div>
+      <span style={{ color, fontSize: 13, fontWeight: 700, minWidth: 36 }}>{actual}%</span>
+      <span style={{ color: "#64748b", fontSize: 11 }}>cfg: {configured}%</span>
+    </div>
+  );
+}
+
+function PnlChart({ data }: { data: PnlRow[] }) {
+  const maxAbs = Math.max(...data.map(d => Math.abs(d.profit)), 1);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 120, padding: "0 2px" }}>
+      {data.map((d, i) => {
+        const isPos = d.profit >= 0;
+        const barH  = Math.round((Math.abs(d.profit) / maxAbs) * 110);
+        return (
+          <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", cursor: "default" }}
+            title={`${d.date}\nLucro: ${d.profit.toLocaleString("pt-PT")} Kz\nOps: ${d.trades}`}>
+            <div style={{ width: "100%", height: Math.max(barH, d.profit !== 0 ? 3 : 1), background: isPos ? "#22c55e" : "#ef4444", borderRadius: "3px 3px 0 0", opacity: 0.85 }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ImpactBar({ value, max, positive }: { value: number; max: number; positive: boolean }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div style={{ height: 6, background: "#1e2d50", borderRadius: 3, minWidth: 80, overflow: "hidden" }}>
+      <div style={{ height: "100%", width: `${pct}%`, background: positive ? "#ef4444" : "#22c55e", borderRadius: 3 }} />
     </div>
   );
 }
 
 export default function AdminReportsPage() {
-  const [data, setData] = useState<DayData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [days,     setDays]     = useState(30);
+  const [winRate,  setWinRate]  = useState<WinRateRow[]>([]);
+  const [pnl,      setPnl]      = useState<PnlRow[]>([]);
+  const [topUsers, setTopUsers] = useState<TopUser[]>([]);
+  const [loading,  setLoading]  = useState(true);
 
-  async function load() {
+  const load = useCallback(async (d: number) => {
     setLoading(true);
-    const res = await fetch("/api/admin/reports");
-    if (res.ok) setData(await res.json());
-    setLoading(false);
-  }
+    try {
+      const [wr, pnlRes, tu] = await Promise.all([
+        fetch("/api/admin/reports/winrate").then(r => r.ok ? r.json() : []),
+        fetch(`/api/admin/reports/pnl?days=${d}`).then(r => r.ok ? r.json() : []),
+        fetch(`/api/admin/reports/top-users?days=${d}&limit=20`).then(r => r.ok ? r.json() : []),
+      ]);
+      setWinRate(wr);
+      setPnl(pnlRes);
+      setTopUsers(tu);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(days); }, [days, load]);
 
-  const totalRevenue  = data.reduce((s, d) => s + d.revenue, 0);
-  const totalTrades   = data.reduce((s, d) => s + d.trades, 0);
-  const totalUsers    = data.reduce((s, d) => s + d.newUsers, 0);
-  const totalDeposits = data.reduce((s, d) => s + d.deposits, 0);
-
-  const summaryCards = [
-    { label: "Receita (30 dias)",     value: formatKz(totalRevenue),        Icon: TrendingUp, color: "#22c55e" },
-    { label: "Operações (30 dias)",   value: totalTrades.toString(),         Icon: BarChart2,  color: "#f5a623" },
-    { label: "Novos users (30 dias)", value: totalUsers.toString(),          Icon: Users,      color: "#94a3b8" },
-    { label: "Depósitos (30 dias)",   value: formatKz(totalDeposits),       Icon: Wallet,     color: "#38bdf8" },
-  ];
+  const totalPnl    = pnl.reduce((s, d) => s + d.profit, 0);
+  const totalTrades = pnl.reduce((s, d) => s + d.trades, 0);
+  const maxBar      = Math.max(...topUsers.map(u => Math.abs(u.netWin)), 1);
 
   return (
-    <div style={{ padding: 28 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+    <div style={{ padding: 28, fontFamily: "system-ui, sans-serif" }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Relatórios</h1>
-          <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>Últimos 30 dias</p>
+          <p style={{ color: "#64748b", fontSize: 12, margin: "3px 0 0" }}>Análise de desempenho da corretora</p>
         </div>
-        <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
-          <RefreshCw size={14} /> Atualizar
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {DAYS_OPTIONS.map(d => (
+            <button key={d} onClick={() => setDays(d)}
+              style={{ padding: "6px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                background: days === d ? "#f5a623" : "#1e2d50", color: days === d ? "#000" : "#94a3b8" }}>
+              {d}d
+            </button>
+          ))}
+          <button onClick={() => load(days)}
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "#1e2d50", border: "none", borderRadius: 8, padding: "7px 12px", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
+            <RefreshCw size={13} /> Atualizar
+          </button>
+        </div>
       </div>
 
       {loading ? (
-        <p style={{ color: "#94a3b8" }}>A carregar...</p>
+        <div style={{ textAlign: "center", color: "#64748b", padding: 60 }}>A carregar...</div>
       ) : (
         <>
-          {/* Summary cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 28 }}>
-            {summaryCards.map((c, i) => (
-              <div key={i} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "18px 16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <c.Icon size={16} color={c.color} />
-                  <span style={{ color: "#94a3b8", fontSize: 12 }}>{c.label}</span>
-                </div>
-                <div style={{ color: c.color, fontSize: 20, fontWeight: 800 }}>{c.value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Charts */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            {[
-              { key: "revenue"  as keyof DayData, color: "#22c55e", label: "Receita diária (Kz)" },
-              { key: "trades"   as keyof DayData, color: "#f5a623", label: "Operações por dia" },
-              { key: "newUsers" as keyof DayData, color: "#94a3b8", label: "Novos utilizadores por dia" },
-              { key: "deposits" as keyof DayData, color: "#38bdf8", label: "Depósitos por dia (Kz)" },
-            ].map(({ key, color, label }) => (
-              <div key={key} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "18px 16px" }}>
-                <BarChart data={data} key={key} color={color} label={label} />
-              </div>
-            ))}
-          </div>
-
-          {/* Daily table */}
-          <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, marginTop: 16, overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid #1e2d50" }}>
-              <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Detalhe diário</span>
+          {/* P&L chart */}
+          <div style={sectionCard}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <BarChart2 size={17} color="#f5a623" />
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Lucro da Corretora — últimos {days} dias</span>
             </div>
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ display: "flex", gap: 32, marginBottom: 20, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>LUCRO TOTAL</div>
+                <div style={{ color: totalPnl >= 0 ? "#22c55e" : "#ef4444", fontSize: 26, fontWeight: 800 }}>
+                  {totalPnl >= 0 ? "+" : ""}{formatKz(totalPnl)}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>OPERAÇÕES FECHADAS</div>
+                <div style={{ color: "#f5a623", fontSize: 26, fontWeight: 800 }}>{totalTrades.toLocaleString("pt-PT")}</div>
+              </div>
+            </div>
+            {pnl.length > 0 ? (
+              <>
+                <PnlChart data={pnl} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, color: "#475569", fontSize: 10 }}>
+                  <span>{pnl[0]?.date}</span>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <span style={{ color: "#22c55e" }}>■ Lucro</span>
+                    <span style={{ color: "#ef4444" }}>■ Prejuízo</span>
+                  </div>
+                  <span>{pnl[pnl.length - 1]?.date}</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ color: "#64748b", textAlign: "center", padding: 20 }}>Sem operações fechadas neste período</div>
+            )}
+          </div>
+
+          {/* Win rate per pair */}
+          <div style={sectionCard}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <TrendingUp size={17} color="#f5a623" />
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Taxa de vitória por par</span>
+              <span style={{ color: "#64748b", fontSize: 12, marginLeft: 4 }}>(conta real · histórico completo)</span>
+            </div>
+            <div style={{ color: "#64748b", fontSize: 11, marginBottom: 14 }}>
+              Barra cinza = win rate configurado. Verde = corretora ganha mais do que o previsto. Vermelho = utilizadores ganham mais.
+            </div>
+            {winRate.length === 0 ? (
+              <div style={{ color: "#64748b", textAlign: "center", padding: 20 }}>Sem operações fechadas</div>
+            ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "#0d1526" }}>
-                    {["Data", "Receita", "Operações", "Novos Users", "Depósitos"].map(h => (
-                      <th key={h} style={{ padding: "10px 16px", color: "#64748b", fontSize: 11, fontWeight: 700, textAlign: "left", letterSpacing: 0.5 }}>{h.toUpperCase()}</th>
-                    ))}
+                  <tr>
+                    <th style={th}>Par</th>
+                    <th style={th}>Ops</th>
+                    <th style={th}>Vitórias</th>
+                    <th style={{ ...th, minWidth: 240 }}>Win Rate real vs configurado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[...data].reverse().map((d, i) => (
-                    <tr key={i} style={{ borderTop: "1px solid #1e2d50" }}>
-                      <td style={{ padding: "10px 16px", color: "#94a3b8", fontSize: 13 }}>{d.date}</td>
-                      <td style={{ padding: "10px 16px", color: "#22c55e", fontWeight: 700, fontSize: 13 }}>{formatKz(d.revenue)}</td>
-                      <td style={{ padding: "10px 16px", color: "#f5a623", fontSize: 13 }}>{d.trades}</td>
-                      <td style={{ padding: "10px 16px", color: "#94a3b8", fontSize: 13 }}>{d.newUsers}</td>
-                      <td style={{ padding: "10px 16px", color: "#38bdf8", fontSize: 13 }}>{formatKz(d.deposits)}</td>
+                  {winRate.map(r => (
+                    <tr key={r.asset}>
+                      <td style={{ ...td, color: "#fff", fontWeight: 700 }}>{r.asset}</td>
+                      <td style={{ ...td, color: "#94a3b8" }}>{r.total}</td>
+                      <td style={{ ...td, color: "#94a3b8" }}>{r.wins}</td>
+                      <td style={td}><WinRateBar actual={r.winRate} configured={r.configuredPct} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            )}
+          </div>
+
+          {/* Top winning users */}
+          <div style={sectionCard}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <Trophy size={17} color="#f5a623" />
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Utilizadores mais rentáveis</span>
+              <span style={{ color: "#64748b", fontSize: 12, marginLeft: 4 }}>(maior risco para a corretora)</span>
             </div>
+            {topUsers.length === 0 ? (
+              <div style={{ color: "#64748b", textAlign: "center", padding: 20 }}>Sem dados neste período</div>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={th}>#</th>
+                    <th style={th}>Utilizador</th>
+                    <th style={th}>Ops</th>
+                    <th style={th}>Win Rate</th>
+                    <th style={th}>Volume</th>
+                    <th style={th}>Ganho líquido</th>
+                    <th style={{ ...th, minWidth: 100 }}>Impacto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topUsers.map((u, i) => {
+                    const isRisk = u.netWin > 0;
+                    return (
+                      <tr key={u.userId}>
+                        <td style={{ ...td, color: "#64748b", fontWeight: 700 }}>#{i + 1}</td>
+                        <td style={td}>
+                          <div style={{ color: "#e2e8f0", fontWeight: 600 }}>{u.name}</div>
+                          <div style={{ color: "#64748b", fontSize: 11 }}>{u.email}</div>
+                        </td>
+                        <td style={{ ...td, color: "#94a3b8" }}>{u.trades}</td>
+                        <td style={td}>
+                          <span style={{ color: u.winRate >= 60 ? "#ef4444" : u.winRate >= 50 ? "#f5a623" : "#22c55e", fontWeight: 700 }}>
+                            {u.winRate}%
+                          </span>
+                        </td>
+                        <td style={{ ...td, color: "#94a3b8" }}>{formatKz(u.totalBet)}</td>
+                        <td style={{ ...td, color: isRisk ? "#ef4444" : "#22c55e", fontWeight: 700 }}>
+                          {isRisk ? "+" : ""}{formatKz(u.netWin)}
+                        </td>
+                        <td style={td}>
+                          <ImpactBar value={Math.abs(u.netWin)} max={maxBar} positive={isRisk} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </>
       )}

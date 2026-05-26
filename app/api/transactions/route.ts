@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { checkSuspiciousDeposit } from "@/lib/fraudDetection";
+import { getSettings } from "@/lib/settings";
+import { sendPushToUser } from "@/lib/webPush";
 
 export async function GET() {
   const session = await auth();
@@ -136,6 +138,23 @@ export async function POST(req: NextRequest) {
   // Detecção de fraude em depósitos (assíncrono)
   if (type === "deposit") {
     checkSuspiciousDeposit(session.user.id, amountNum).catch(() => {});
+  }
+
+  // Notificar admins se levantamento acima do threshold configurado
+  if (type === "withdrawal") {
+    getSettings().then(cfg => {
+      if (cfg.largeWithdrawalThreshold > 0 && amountNum >= cfg.largeWithdrawalThreshold) {
+        prisma.user.findMany({ where: { role: "admin" }, select: { id: true, name: true } }).then(admins => {
+          const kzFormatted = amountNum.toLocaleString("pt-PT") + " Kz";
+          admins.forEach(a => sendPushToUser(a.id, {
+            title: "⚠️ Levantamento grande",
+            body:  `Pedido de levantamento de ${kzFormatted} aguarda aprovação`,
+            url:   "/ao/admin/transactions",
+            tag:   "large-withdrawal",
+          }).catch(() => {}));
+        }).catch(() => {});
+      }
+    }).catch(() => {});
   }
 
   return NextResponse.json(tx, { status: 201 });
