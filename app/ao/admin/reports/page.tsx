@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, TrendingUp, TrendingDown, BarChart2, Trophy } from "lucide-react";
+import { RefreshCw, TrendingUp, BarChart2, Trophy, Download } from "lucide-react";
 import { formatKz } from "@/lib/format";
 
 interface WinRateRow {
   asset: string; wins: number; total: number; winRate: number; configuredPct: number;
 }
 interface PnlRow {
-  date: string; profit: number; trades: number; winRate: number | null;
+  date: string; profit: number; trades: number; wins: number; losses: number; volume: number; winRate: number | null;
 }
 interface TopUser {
   userId: string; name: string; email: string;
@@ -70,6 +70,21 @@ function ImpactBar({ value, max, positive }: { value: number; max: number; posit
   );
 }
 
+function exportCSV(pnl: PnlRow[], days: number) {
+  const header = "Data,Operações,Vitórias,Derrotas,Win Rate (%),Volume (Kz),Lucro/Prejuízo (Kz)";
+  const rows = [...pnl].reverse().map(d =>
+    `${d.date},${d.trades},${d.wins ?? ""},${d.losses ?? ""},${d.winRate ?? ""},${d.volume ?? ""},${d.profit}`
+  );
+  const csv  = [header, ...rows].join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `relatorio-${days}d-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AdminReportsPage() {
   const [days,     setDays]     = useState(30);
   const [winRate,  setWinRate]  = useState<WinRateRow[]>([]);
@@ -119,6 +134,10 @@ export default function AdminReportsPage() {
           <button onClick={() => load(days)}
             style={{ display: "flex", alignItems: "center", gap: 5, background: "#1e2d50", border: "none", borderRadius: 8, padding: "7px 12px", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
             <RefreshCw size={13} /> Atualizar
+          </button>
+          <button onClick={() => exportCSV(pnl, days)} disabled={pnl.length === 0}
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 8, padding: "7px 12px", color: "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+            <Download size={13} /> Exportar CSV
           </button>
         </div>
       </div>
@@ -249,6 +268,82 @@ export default function AdminReportsPage() {
                 </tbody>
               </table>
             )}
+          </div>
+
+          {/* Daily detail table */}
+          <div style={sectionCard}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <BarChart2 size={17} color="#f5a623" />
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Detalhe diário</span>
+              </div>
+              <button onClick={() => exportCSV(pnl, days)} disabled={pnl.length === 0}
+                style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 8, padding: "6px 12px", color: "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                <Download size={13} /> Exportar CSV
+              </button>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+                <thead>
+                  <tr>
+                    <th style={th}>Data</th>
+                    <th style={{ ...th, textAlign: "right" }}>Operações</th>
+                    <th style={{ ...th, textAlign: "right" }}>Vitórias</th>
+                    <th style={{ ...th, textAlign: "right" }}>Derrotas</th>
+                    <th style={{ ...th, textAlign: "right" }}>Win Rate</th>
+                    <th style={{ ...th, textAlign: "right" }}>Volume</th>
+                    <th style={{ ...th, textAlign: "right" }}>Lucro / Prejuízo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...pnl].reverse().map((d, i) => {
+                    const hasData = d.trades > 0;
+                    return (
+                      <tr key={i} style={{ opacity: hasData ? 1 : 0.35 }}>
+                        <td style={{ ...td, color: "#94a3b8", fontFamily: "monospace" }}>{d.date}</td>
+                        <td style={{ ...td, color: "#e2e8f0", textAlign: "right" }}>{hasData ? d.trades : "—"}</td>
+                        <td style={{ ...td, color: "#22c55e", textAlign: "right" }}>{hasData ? d.wins : "—"}</td>
+                        <td style={{ ...td, color: "#ef4444", textAlign: "right" }}>{hasData ? d.losses : "—"}</td>
+                        <td style={{ ...td, textAlign: "right" }}>
+                          {d.winRate !== null
+                            ? <span style={{ color: d.winRate >= 55 ? "#ef4444" : d.winRate >= 47 ? "#f5a623" : "#22c55e", fontWeight: 700 }}>{d.winRate}%</span>
+                            : <span style={{ color: "#334155" }}>—</span>}
+                        </td>
+                        <td style={{ ...td, color: "#94a3b8", textAlign: "right" }}>{hasData ? formatKz(d.volume) : "—"}</td>
+                        <td style={{ ...td, textAlign: "right", fontWeight: hasData ? 700 : 400 }}>
+                          {hasData
+                            ? <span style={{ color: d.profit >= 0 ? "#22c55e" : "#ef4444" }}>
+                                {d.profit >= 0 ? "+" : ""}{formatKz(d.profit)}
+                              </span>
+                            : <span style={{ color: "#334155" }}>—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: "2px solid #1e2d50" }}>
+                    <td style={{ ...td, color: "#fff", fontWeight: 800 }}>TOTAL</td>
+                    <td style={{ ...td, color: "#e2e8f0", fontWeight: 700, textAlign: "right" }}>{totalTrades}</td>
+                    <td style={{ ...td, color: "#22c55e", fontWeight: 700, textAlign: "right" }}>{pnl.reduce((s, d) => s + (d.wins ?? 0), 0)}</td>
+                    <td style={{ ...td, color: "#ef4444", fontWeight: 700, textAlign: "right" }}>{pnl.reduce((s, d) => s + (d.losses ?? 0), 0)}</td>
+                    <td style={{ ...td, textAlign: "right" }}>
+                      {totalTrades > 0
+                        ? <span style={{ color: "#f5a623", fontWeight: 700 }}>
+                            {Math.round((pnl.reduce((s, d) => s + (d.wins ?? 0), 0) / totalTrades) * 100)}%
+                          </span>
+                        : "—"}
+                    </td>
+                    <td style={{ ...td, color: "#94a3b8", fontWeight: 700, textAlign: "right" }}>{formatKz(pnl.reduce((s, d) => s + (d.volume ?? 0), 0))}</td>
+                    <td style={{ ...td, fontWeight: 800, textAlign: "right" }}>
+                      <span style={{ color: totalPnl >= 0 ? "#22c55e" : "#ef4444" }}>
+                        {totalPnl >= 0 ? "+" : ""}{formatKz(totalPnl)}
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
         </>
       )}

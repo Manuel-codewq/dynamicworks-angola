@@ -20,17 +20,18 @@ export async function GET(req: NextRequest) {
     select: { closedAt: true, result: true, amount: true, payout: true },
   });
 
-  const byDay: Record<string, { profit: number; trades: number; wins: number }> = {};
+  const byDay: Record<string, { profit: number; trades: number; wins: number; volume: number }> = {};
 
   for (const t of trades) {
     const day = (t.closedAt ?? new Date()).toISOString().slice(0, 10);
-    if (!byDay[day]) byDay[day] = { profit: 0, trades: 0, wins: 0 };
+    if (!byDay[day]) byDay[day] = { profit: 0, trades: 0, wins: 0, volume: 0 };
     byDay[day].trades++;
+    byDay[day].volume += t.amount;
     if (t.result === "win") {
       byDay[day].wins++;
-      byDay[day].profit -= t.amount * t.payout; // corretora paga
+      byDay[day].profit -= t.amount * t.payout;
     } else {
-      byDay[day].profit += t.amount; // corretora fica com o montante
+      byDay[day].profit += t.amount;
     }
   }
 
@@ -40,11 +41,14 @@ export async function GET(req: NextRequest) {
     const d = new Date(since);
     d.setDate(d.getDate() + i);
     const key  = d.toISOString().slice(0, 10);
-    const data = byDay[key] ?? { profit: 0, trades: 0, wins: 0 };
+    const data = byDay[key] ?? { profit: 0, trades: 0, wins: 0, volume: 0 };
     result.push({
       date:    key,
       profit:  Math.round(data.profit),
       trades:  data.trades,
+      wins:    data.wins,
+      losses:  data.trades - data.wins,
+      volume:  Math.round(data.volume),
       winRate: data.trades > 0 ? Math.round((data.wins / data.trades) * 100) : null,
     });
   }
