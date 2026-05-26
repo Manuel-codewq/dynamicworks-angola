@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
   Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
-  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart,
+  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity,
 } from "lucide-react";
 
 type NavItem = {
@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { href: "/ao/admin/users",          label: "Utilizadores",   Icon: Users },
   { href: "/ao/admin/kyc",            label: "KYC",            Icon: ScanFace,       badgeKey: "kyc" },
   { href: "/ao/admin/transactions",   label: "Transações",     Icon: ArrowLeftRight, badgeKey: "txn" },
+  { href: "/ao/admin/live",            label: "Ao Vivo",        Icon: Activity },
   { href: "/ao/admin/trades",         label: "Operações",      Icon: BarChart2 },
   { href: "/ao/admin/tournaments",    label: "Torneios",       Icon: Trophy },
   { href: "/ao/admin/notifications",  label: "Notificações",   Icon: Bell },
