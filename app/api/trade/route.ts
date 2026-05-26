@@ -16,9 +16,9 @@ const ALLOWED_ASSETS = new Set([
   "BTC/USD", "ETH/USD",
   "Prata/USD", "Paládio/USD", "Platina/USD",
   "XAG/USD",
-  "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
-  // Pares sintéticos (índices Deriv com labels de forex — 24/7)
-  // Usam os mesmos labels que os pares reais, disponíveis quando mercado fechado
+  // Pares sintéticos OTC (índices Deriv 24/7)
+  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
+  "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC", "EUR/JPY OTC", "GBP/JPY OTC",
 ]);
 
 // Símbolos sintéticos válidos (índices Deriv 24/7)

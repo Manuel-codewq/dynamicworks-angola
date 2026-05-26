@@ -10,8 +10,9 @@ const ALL_PAIRS = [
   "BTC/USD", "ETH/USD",
   // Metais (sem XAU/USD)
   "XAG/USD",
-  // Sintéticos DW (24/7)
-  "DW Index 10", "DW Index 25", "DW Index 50", "DW Index 75", "DW Index 100",
+  // Sintéticos OTC (24/7)
+  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
+  "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC", "EUR/JPY OTC", "GBP/JPY OTC",
 ] as const;
 
 // Labels de todos os pares reais (usado como default de activePairs)

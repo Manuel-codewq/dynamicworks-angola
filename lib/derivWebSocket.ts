@@ -49,19 +49,18 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXPTUSD", label: "Platina/USD", category: "Metal", decimals: 2 },
 ];
 
-// Pares sintéticos — índices Deriv 24/7 com labels de forex
-// O utilizador vê "EUR/USD", o sistema usa o índice Deriv internamente
+// Pares sintéticos — índices Deriv 24/7 disponíveis fora do horário de mercado
 export const SYNTHETIC_PAIRS: DerivPair[] = [
-  { symbol: "1HZ10V",  label: "EUR/USD", category: "Forex", decimals: 5 },
-  { symbol: "1HZ25V",  label: "GBP/USD", category: "Forex", decimals: 5 },
-  { symbol: "1HZ50V",  label: "USD/JPY", category: "Forex", decimals: 3 },
-  { symbol: "1HZ75V",  label: "AUD/USD", category: "Forex", decimals: 5 },
-  { symbol: "1HZ100V", label: "USD/CAD", category: "Forex", decimals: 5 },
-  { symbol: "R_10",    label: "EUR/GBP", category: "Forex", decimals: 5 },
-  { symbol: "R_25",    label: "USD/CHF", category: "Forex", decimals: 5 },
-  { symbol: "R_50",    label: "NZD/USD", category: "Forex", decimals: 5 },
-  { symbol: "R_75",    label: "EUR/JPY", category: "Forex", decimals: 3 },
-  { symbol: "R_100",   label: "GBP/JPY", category: "Forex", decimals: 3 },
+  { symbol: "1HZ10V",  label: "EUR/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "1HZ25V",  label: "GBP/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "1HZ50V",  label: "USD/JPY OTC", category: "Forex OTC", decimals: 3 },
+  { symbol: "1HZ75V",  label: "AUD/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "1HZ100V", label: "USD/CAD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "R_10",    label: "EUR/GBP OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "R_25",    label: "USD/CHF OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "R_50",    label: "NZD/USD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "R_75",    label: "EUR/JPY OTC", category: "Forex OTC", decimals: 3 },
+  { symbol: "R_100",   label: "GBP/JPY OTC", category: "Forex OTC", decimals: 3 },
 ];
 
 // Mapa: label → símbolo do índice (para resolução de preço server-side)
