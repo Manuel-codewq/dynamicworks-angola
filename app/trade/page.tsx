@@ -168,6 +168,7 @@ export default function TradePage() {
   const [walletData,      setWalletData]      = useState<{ balance: number; demoBalance: number; transactions: any[] } | null>(null);
   const [walletLoading,   setWalletLoading]   = useState(false);
   const [soundOn,         setSoundOn]         = useState(true);
+  const [traderStats,     setTraderStats]     = useState<{ today: { real: { pnl: number; wins: number; losses: number; total: number }; demo: { pnl: number; wins: number; losses: number; total: number } }; allTime: { real: { pnl: number; wins: number; losses: number; total: number }; demo: { pnl: number; wins: number; losses: number; total: number } } } | null>(null);
   const tradeMarkersRef   = useRef<any>(null);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
@@ -982,10 +983,13 @@ export default function TradePage() {
       });
       fetchBalance();
       fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => { if (d) setTournamentWins(d.tournamentWins ?? 0); });
+      const loadStats = () => fetch("/api/trade/stats").then(r => r.ok ? r.json() : null).then(d => { if (d) setTraderStats(d); });
+      loadStats();
+      const statsId = setInterval(loadStats, 30_000);
       const loadPos = () => fetch("/api/tournaments/position").then(r => r.ok ? r.json() : null).then(d => { setTournamentPositions(Array.isArray(d) ? d : []); });
       loadPos();
       const posInterval = setInterval(loadPos, 30_000);
-      return () => clearInterval(posInterval);
+      return () => { clearInterval(posInterval); clearInterval(statsId); };
     }
   }, [status, router, fetchBalance]);
 
@@ -1623,6 +1627,7 @@ export default function TradePage() {
         fetchBalance();
       } else if (t?.status === "closed") {
         fetchBalance(); // trade antigo — actualiza saldo silenciosamente
+        fetch("/api/trade/stats").then(r => r.ok ? r.json() : null).then(d => { if (d) setTraderStats(d); });
       }
     } catch {
       closeAttemptsRef.current.set(tradeId, attempts + 1);
@@ -1996,6 +2001,34 @@ export default function TradePage() {
         </div>
       </div>
 
+      {/* ── P&L hoje ── */}
+      {traderStats && (() => {
+        const s   = isDemo ? traderStats.today.demo : traderStats.today.real;
+        const all = isDemo ? traderStats.allTime.demo : traderStats.allTime.real;
+        if (s.total === 0 && all.total === 0) return null;
+        const pnlColor = s.pnl >= 0 ? "#22c55e" : "#ef4444";
+        return (
+          <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 10, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ color: "#64748b", fontSize: 9, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 2 }}>Hoje</div>
+              <div style={{ color: pnlColor, fontWeight: 800, fontSize: 13 }}>
+                {s.pnl >= 0 ? "+" : ""}{formatKz(Math.abs(s.pnl))}
+              </div>
+              {s.total > 0 && <div style={{ color: "#475569", fontSize: 10 }}>{s.wins}V·{s.losses}D</div>}
+            </div>
+            {all.total > 0 && (
+              <div style={{ textAlign: "right" }}>
+                <div style={{ color: "#64748b", fontSize: 9, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 2 }}>Total</div>
+                <div style={{ color: all.pnl >= 0 ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 13 }}>
+                  {all.pnl >= 0 ? "+" : ""}{formatKz(Math.abs(all.pnl))}
+                </div>
+                <div style={{ color: "#475569", fontSize: 10 }}>{all.total > 0 ? `${Math.round((all.wins / all.total) * 100)}% win` : ""}</div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── CALL / PUT buttons ── */}
       {(() => {
         const btnDisabled = loading || currentPrice === 0;
@@ -2013,7 +2046,7 @@ export default function TradePage() {
           transition: "opacity 0.15s, box-shadow 0.15s",
           letterSpacing: 0.5,
         }}>
-          {loading ? "..." : <><TrendingUp size={18} strokeWidth={2.5} /> ALTA</>}
+          {loading ? "..." : <><TrendingUp size={18} strokeWidth={2.5} /><span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.1 }}><span>ALTA</span><span style={{ fontSize: 10, fontWeight: 700, opacity: 0.8 }}>{formatKz(amount)}</span></span></>}
         </button>
         <button onClick={() => openTrade("put")} disabled={btnDisabled} style={{
           flex: 1, height: compact ? 52 : 60,
@@ -2027,7 +2060,7 @@ export default function TradePage() {
           transition: "opacity 0.15s, box-shadow 0.15s",
           letterSpacing: 0.5,
         }}>
-          {loading ? "..." : <><TrendingDown size={18} strokeWidth={2.5} /> BAIXA</>}
+          {loading ? "..." : <><TrendingDown size={18} strokeWidth={2.5} /><span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.1 }}><span>BAIXA</span><span style={{ fontSize: 10, fontWeight: 700, opacity: 0.8 }}>{formatKz(amount)}</span></span></>}
         </button>
       </div>
       ); })()}
@@ -3227,11 +3260,11 @@ export default function TradePage() {
               <div style={{ display: "flex", gap: 8, padding: "5px 12px 6px", flex: 1 }}>
                 <button onClick={() => openTrade("call")} disabled={btnDisabled}
                   style={{ flex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(150deg,#15803d,#22c55e)", color: "#fff", border: "none", borderRadius: 11, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: btnDisabled ? "none" : "0 3px 14px rgba(34,197,94,0.28)" }}>
-                  {loading ? "..." : <><TrendingUp size={16} strokeWidth={2.5} /> ALTA</>}
+                  {loading ? "..." : <><TrendingUp size={16} strokeWidth={2.5} /><span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.1 }}><span>ALTA</span><span style={{ fontSize: 10, fontWeight: 700, opacity: 0.8 }}>{formatKz(amount)}</span></span></>}
                 </button>
                 <button onClick={() => openTrade("put")} disabled={btnDisabled}
                   style={{ flex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(150deg,#b91c1c,#ef4444)", color: "#fff", border: "none", borderRadius: 11, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: btnDisabled ? "none" : "0 3px 14px rgba(239,68,68,0.28)" }}>
-                  {loading ? "..." : <><TrendingDown size={16} strokeWidth={2.5} /> BAIXA</>}
+                  {loading ? "..." : <><TrendingDown size={16} strokeWidth={2.5} /><span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.1 }}><span>BAIXA</span><span style={{ fontSize: 10, fontWeight: 700, opacity: 0.8 }}>{formatKz(amount)}</span></span></>}
                 </button>
               </div>
             </div>

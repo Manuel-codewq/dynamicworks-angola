@@ -97,6 +97,8 @@ export default function ProfilePage() {
   const [totalTrades, setTotalTrades] = useState(0);
   const [wins,        setWins]        = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
+  const [todayPnl,    setTodayPnl]    = useState(0);
+  const [bestAsset,   setBestAsset]   = useState<string | null>(null);
 
   const [avatar,        setAvatar]        = useState<string>("");
   const [avatarLoading, setAvatarLoading] = useState(false);
@@ -118,8 +120,9 @@ export default function ProfilePage() {
     Promise.all([
       fetch("/api/profile").then(r => r.json()),
       fetch("/api/profile/kyc").then(r => r.json()),
-      fetch("/api/trade?limit=500&page=1").then(r => r.json()),
-    ]).then(([profile, kyc, tradeData]) => {
+      fetch("/api/trade/stats").then(r => r.ok ? r.json() : null),
+      fetch("/api/trade?limit=50&page=1").then(r => r.ok ? r.json() : null),
+    ]).then(([profile, kyc, statsData, recentData]) => {
       setName(profile.name ?? "");
       setEmail(profile.email ?? "");
       setPhone(profile.phone ?? "");
@@ -138,15 +141,25 @@ export default function ProfilePage() {
       else if (kyc.kycAttempts > 0)          setKycStatus("pending");
       else                                   setKycStatus("unsubmitted");
 
-      // API returns { trades: [...], total, page, ... } — filter real trades only
-      const allTrades: any[] = Array.isArray(tradeData) ? tradeData : (tradeData.trades ?? []);
-      const realTrades = allTrades.filter((t: any) => !t.isDemo);
-      const closed = realTrades.filter((t: any) => t.status === "closed");
-      const w = closed.filter((t: any) => t.result === "win");
-      const profit = closed.reduce((s: number, t: any) => s + (t.profit ?? 0), 0);
-      setTotalTrades(closed.length);
-      setWins(w.length);
-      setTotalProfit(profit);
+      // Use efficient stats endpoint
+      if (statsData) {
+        const r = statsData.allTime.real;
+        setTotalTrades(r.total);
+        setWins(r.wins);
+        setTotalProfit(r.pnl);
+        setTodayPnl(statsData.today.real.pnl);
+      }
+
+      // Best asset: which asset has the most wins in recent 50 trades
+      if (recentData) {
+        const all: any[] = Array.isArray(recentData) ? recentData : (recentData.trades ?? []);
+        const assetWins: Record<string, number> = {};
+        all.filter(t => !t.isDemo && t.result === "win").forEach(t => {
+          assetWins[t.asset] = (assetWins[t.asset] ?? 0) + 1;
+        });
+        const best = Object.entries(assetWins).sort((a, b) => b[1] - a[1])[0];
+        if (best) setBestAsset(best[0]);
+      }
 
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -381,18 +394,20 @@ export default function ProfilePage() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: "Operações",   value: maskValue(String(totalTrades), !showValues),          icon: <BarChart2 size={16} color="#94a3b8" />,    color: "#fff"    },
-            { label: "Taxa vitória",value: maskValue(`${winRate}%`, !showValues),                 icon: <TrendingUp size={16} color="#22c55e" />,   color: "#22c55e" },
-            { label: "Lucro total", value: maskValue(formatKz(Math.floor(totalProfit)), !showValues), icon: totalProfit >= 0 ? <TrendingUp size={16} color="#22c55e" /> : <TrendingDown size={16} color="#ef4444" />, color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
+            { label: "Operações totais", value: maskValue(String(totalTrades), !showValues),               icon: <BarChart2  size={15} color="#94a3b8" />,  color: "#fff"    },
+            { label: "Taxa de vitória",  value: maskValue(`${winRate}%`, !showValues),                      icon: <TrendingUp size={15} color="#22c55e" />,  color: "#22c55e" },
+            { label: "Lucro total",      value: maskValue(formatKz(Math.floor(totalProfit)), !showValues),   icon: totalProfit >= 0 ? <TrendingUp size={15} color="#22c55e" /> : <TrendingDown size={15} color="#ef4444" />, color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
+            { label: "Hoje",             value: maskValue((todayPnl >= 0 ? "+" : "") + formatKz(Math.abs(Math.floor(todayPnl))), !showValues), icon: <BarChart2 size={15} color={todayPnl >= 0 ? "#22c55e" : "#ef4444"} />, color: todayPnl >= 0 ? "#22c55e" : "#ef4444" },
+            ...(bestAsset ? [{ label: "Melhor par", value: maskValue(bestAsset, !showValues), icon: <Trophy size={15} color="#f5a623" />, color: "#f5a623" }] : []),
           ].map(s => (
-            <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "14px 16px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".4px" }}>{s.label}</span>
+            <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "13px 15px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "#64748b", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".4px" }}>{s.label}</span>
                 {s.icon}
               </div>
-              <div style={{ color: s.color, fontWeight: 800, fontSize: 16 }}>{s.value}</div>
+              <div style={{ color: s.color, fontWeight: 800, fontSize: 15 }}>{s.value}</div>
             </div>
           ))}
         </div>

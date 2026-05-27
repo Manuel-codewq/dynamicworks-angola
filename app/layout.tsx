@@ -193,14 +193,14 @@ const GA_ID = "G-CQY1V53058";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-AO">
+    <html lang="pt-AO" suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body style={{ margin: 0, padding: 0, background: "#0a0f1e" }}>
+      <body style={{ margin: 0, padding: 0, background: "#0a0f1e" }} suppressHydrationWarning>
         <SessionProvider>
           {children}
           <HeartbeatTracker />
