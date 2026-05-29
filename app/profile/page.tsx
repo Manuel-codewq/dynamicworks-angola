@@ -441,7 +441,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Conquistas */}
-        <a href="/achievements" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
+        <a href="/ranking" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
           <div style={{ width: 42, height: 42, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Star size={20} color="#f5a623" />
           </div>
