@@ -63,7 +63,7 @@ export default function TradeShareButton({ trade, size = "md" }: Props) {
     ctx.fillStyle = "#f5a623";
     ctx.font      = "bold 18px system-ui";
     ctx.textAlign = "left";
-    ctx.fillText("Dynamics Works", 104, 72);
+    ctx.fillText("Dynamic Works", 104, 72);
 
     ctx.fillStyle = "#94a3b8";
     ctx.font      = "12px system-ui";

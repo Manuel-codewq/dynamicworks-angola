@@ -7,7 +7,7 @@ import {
   ChevronLeft, User, Shield, BarChart2, Lock,
   CheckCircle, Clock, XCircle, Save, ScanFace,
   TrendingUp, TrendingDown, Edit3, AlertTriangle,
-  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2, Gift, Trophy,
+  Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2, Gift, Trophy, Star,
 } from "lucide-react";
 import PageGuide from "@/app/components/PageGuide";
 
@@ -439,6 +439,18 @@ export default function ProfilePage() {
             </button>
           )}
         </div>
+
+        {/* Conquistas */}
+        <a href="/achievements" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
+          <div style={{ width: 42, height: 42, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Star size={20} color="#f5a623" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Conquistas</div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>Desbloqueia medalhas e acompanha o teu progresso</div>
+          </div>
+          <span style={{ color: "#334155", fontSize: 18 }}>›</span>
+        </a>
 
         {/* Referidos */}
         <a href="/referral" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
