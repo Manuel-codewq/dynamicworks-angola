@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight, BarChart2, Crown,
   Star, RefreshCw, Target, Flame, Dumbbell, Swords, Sparkles, Gem, Award,
-  Zap, Wallet, TrendingUp, CalendarDays, Globe, Banknote, Rocket,
+  Zap, Wallet, TrendingUp, CalendarDays, Globe, Banknote, Rocket, Check,
 } from "lucide-react";
 
 const ACH_ICON: Record<string, React.ReactNode> = {
@@ -351,7 +351,7 @@ export default function RankingPage() {
                         </>
                       )}
                       {a.unlocked && (
-                        <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700 }}>✓ Desbloqueado</div>
+                        <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}><Check size={10} /> Desbloqueado</div>
                       )}
                       <div style={{ position: "absolute", top: 10, right: 10, color: RARITY_COLOR[a.rarity], fontSize: 9, fontWeight: 700, textTransform: "uppercase", opacity: 0.8 }}>{a.rarity}</div>
                     </div>

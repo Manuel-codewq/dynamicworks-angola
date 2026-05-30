@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { formatKz } from "@/lib/format";
 import PageGuide from "@/app/components/PageGuide";
-import { Wallet as WalletIcon, ArrowDownCircle as DepositIcon, ArrowUpCircle as WithdrawIcon, Clock as HistoryIcon, ShieldAlert } from "lucide-react";
+import { Wallet as WalletIcon, ArrowDownCircle as DepositIcon, ArrowUpCircle as WithdrawIcon, Clock as HistoryIcon, ShieldAlert, Gift } from "lucide-react";
 
 const WALLET_GUIDE = [
   { icon: <WalletIcon   size={26} color="#f5a623" />, iconColor: "#f5a623", title: "A tua Carteira",        description: "Aqui podes ver o teu saldo real e demo, fazer depósitos, pedir levantamentos e consultar todo o histórico de transacções.", tip: "O saldo demo serve para praticar — não é dinheiro real." },
@@ -254,7 +254,7 @@ export default function WalletPage() {
             {/* Banner bónus */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,rgba(245,166,35,0.1),rgba(249,115,22,0.07))", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
               <div style={{ width: 36, height: 36, background: "rgba(245,166,35,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span style={{ fontSize: 18 }}>🎁</span>
+                <Gift size={18} color="#f5a623" />
               </div>
               <div>
                 <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>Bónus de boas-vindas +10%</div>

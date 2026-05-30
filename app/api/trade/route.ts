@@ -257,19 +257,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { isDemo: true } });
+  if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
+
   const { searchParams } = new URL(req.url);
   const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
   const skip  = (page - 1) * limit;
 
+  const where = { userId: session.user.id, isDemo: user.isDemo };
+
   const [trades, total] = await Promise.all([
     prisma.trade.findMany({
-      where:   { userId: session.user.id },
+      where,
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,
     }),
-    prisma.trade.count({ where: { userId: session.user.id } }),
+    prisma.trade.count({ where }),
   ]);
 
   const now = Date.now();

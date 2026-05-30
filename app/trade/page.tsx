@@ -4,13 +4,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  TrendingUp, TrendingDown, ChevronDown, Wallet,
+  TrendingUp, TrendingDown, ChevronDown, ChevronUp, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy, Check,
   Clock, History, Headphones, MessageCircle, Shield, Gift,
   PenLine, CandlestickChart, LineChart, AreaChart,
   Maximize2, Minimize2, Minus, Sliders, Trash2,
   Square, GitFork, BarChart, Activity,
-  Volume2, VolumeX,
+  Volume2, VolumeX, RefreshCw, Search, Banknote, Target, Medal,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -76,7 +76,7 @@ interface ActiveTrade {
   createdAt: string; payout: number;
   expiresAt: number; // client epoch ms — recalibrated by each poll
 }
-interface RecentWin { name: string; amount: number; time: number; }
+interface RecentWin { asset: string; amount: number; time: number; }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -140,8 +140,9 @@ export default function TradePage() {
   const [demoBalance,       setDemoBalance]        = useState(10000);
   const [tournamentBalance, setTournamentBalance] = useState<number | null>(null);
   const [tournamentName,    setTournamentName]    = useState<string | null>(null);
-  const [activeTrades,  setActiveTrades]  = useState<ActiveTrade[]>([]);
-  const [recentWins,    setRecentWins]    = useState<RecentWin[]>([]);
+  const [activeTrades,      setActiveTrades]      = useState<ActiveTrade[]>([]);
+  const [recentWins,        setRecentWins]        = useState<RecentWin[]>([]);
+  const [recentWinsFilter,  setRecentWinsFilter]  = useState<"real" | "demo">("real");
   const [sentiment,     setSentiment]     = useState(62);
   const [loading,       setLoading]       = useState(false);
   const [notification,  setNotification]  = useState<{ msg: string; type: "win" | "loss" | "info" } | null>(null);
@@ -191,6 +192,8 @@ export default function TradePage() {
 
   useEffect(() => { selectedPairRef.current = selectedPair; }, [selectedPair]);
   useEffect(() => { timeframeRef.current = timeframe; },       [timeframe]);
+  const isDemoRef = useRef(true);
+  useEffect(() => { isDemoRef.current = isDemo; }, [isDemo]);
 
   // ── Drawing tools ─────────────────────────────────────────────────────────
   type DrawingTool = "hline" | "trendline" | "fibonacci" | "rectangle" | null;
@@ -1154,17 +1157,17 @@ export default function TradePage() {
     if (pairs.length > 0) derivWS.subscribeToTicks(pairs.map(p => p.symbol));
   }, [pairs]);
 
-  // ── Real wins feed (polls every 15s) ─────────────────────────────────────
+  // ── Wins feed (polls every 15s, filtra por conta activa) ─────────────────
   useEffect(() => {
     function fetchWins() {
-      fetch("/api/recent-wins")
+      fetch(`/api/recent-wins?demo=${recentWinsFilter === "demo"}`)
         .then(r => r.ok ? r.json() : [])
-        .then((d: any[]) => setRecentWins(d.slice(0, 8).map(w => ({ name: w.name, amount: w.amount, time: new Date(w.time).getTime() }))));
+        .then((d: any[]) => setRecentWins(d.slice(0, 8).map(w => ({ asset: w.asset, amount: w.amount, time: new Date(w.time).getTime() }))));
     }
     fetchWins();
     const id = setInterval(fetchWins, 15_000);
     return () => clearInterval(id);
-  }, []);
+  }, [recentWinsFilter]);
 
   // ── Chart init / reinit ─────────────────────────────────────────────────
   useEffect(() => {
@@ -1393,23 +1396,47 @@ export default function TradePage() {
 
       const ro = new ResizeObserver(() => {
         if (el && chartApiRef.current) {
-          chartApiRef.current.applyOptions({ width: el.clientWidth });
+          chartApiRef.current.applyOptions({ width: el.clientWidth, height: el.clientHeight || undefined });
         }
       });
       ro.observe(el);
       (chartApiRef as any)._roDisconnect = () => ro.disconnect();
+
+      // Pedir velas após o gráfico estar pronto — garante que a série existe quando a resposta chega
+      reconnectingRef.current = true;
+      initialScrollDone.current = false;
+      const gran = GRANULARITY[timeframeRef.current] ?? 60;
+      if (selectedPairRef.current) {
+        derivWS.getCandles(selectedPairRef.current.symbol, gran, 300);
+      }
     }
 
-    const timer = isMobile ? setTimeout(initChart, 150) : (initChart(), undefined);
+    // Tenta initChart imediatamente; se o elemento não tiver altura ainda, retentar com rAF
+    function tryInit(attempt = 0) {
+      const el = chartRef.current;
+      if (el && el.clientHeight > 0) { initChart(); return; }
+      if (attempt < 20) requestAnimationFrame(() => tryInit(attempt + 1));
+    }
+
+    let rafCancelled = false;
+    const origTryInit = tryInit;
+    function tryInitGuarded(attempt = 0) {
+      if (rafCancelled) return;
+      const el = chartRef.current;
+      if (el && el.clientHeight > 0) { initChart(); return; }
+      if (attempt < 20) requestAnimationFrame(() => tryInitGuarded(attempt + 1));
+    }
+    tryInitGuarded();
 
     return () => {
-      clearTimeout(timer);
+      rafCancelled = true;
       if ((chartApiRef as any)._roDisconnect) {
         (chartApiRef as any)._roDisconnect();
         delete (chartApiRef as any)._roDisconnect;
       }
     };
-  }, [selectedPair, isMobile, windowHeight, chartType]); // eslint-disable-line react-hooks/exhaustive-deps
+    void origTryInit; // evita warning de unused
+  }, [selectedPair, isMobile, chartType]); // windowHeight removido — tratado pelo ResizeObserver
 
   // ── Fetch wallet data when mobile wallet tab opens ───────────────────────
   useEffect(() => {
@@ -1441,7 +1468,7 @@ export default function TradePage() {
         ...t,
         expiresAt: typeof t.expiresAt === "number" ? t.expiresAt : 0,
       }));
-      setActiveTrades(trades.filter((t: any) => t.status === "active"));
+      setActiveTrades(trades.filter((t: any) => t.status === "active" && t.isDemo === isDemoRef.current));
       const justClosed = trades.filter((t: any) => {
         if (t.status !== "closed") return false;
         return Date.now() - new Date(t.closedAt).getTime() < 6000;
@@ -1566,7 +1593,7 @@ export default function TradePage() {
       const res = await fetch("/api/trade?limit=30");
       if (!res.ok) return;
       const data = await res.json();
-      setTradeHistory((data.trades ?? []).filter((t: any) => t.status !== "active"));
+      setTradeHistory((data.trades ?? []).filter((t: any) => t.status !== "active" && t.isDemo === isDemo));
     } catch {}
   }
 
@@ -1731,9 +1758,9 @@ export default function TradePage() {
     if (accountInitialized.current) return;
     if (balance === 10000 && demoBalance === 10000 && tournamentBalance === null) return; // ainda não carregou
     accountInitialized.current = true;
-    if (!isDemo) setActiveAccount("real");
+    if (!isDemo) { setActiveAccount("real"); setRecentWinsFilter("real"); }
     else if (tournamentBalance !== null) setActiveAccount("tournament");
-    else setActiveAccount("demo");
+    else { setActiveAccount("demo"); setRecentWinsFilter("demo"); }
   }, [isDemo, balance, demoBalance, tournamentBalance]);
 
   async function selectAccount(type: "real" | "demo" | "tournament") {
@@ -1744,6 +1771,10 @@ export default function TradePage() {
         body: JSON.stringify({ isDemo: demo }),
       });
       if (res.ok) { const d = await res.json(); setIsDemo(d.isDemo); }
+      // Limpar dados da conta anterior imediatamente
+      setActiveTrades([]);
+      setTradeHistory([]);
+      setRecentWinsFilter(demo ? "demo" : "real");
     }
     setActiveAccount(type);
     setShowAccountModal(false);
@@ -1759,64 +1790,125 @@ export default function TradePage() {
   const accountModalJSX = showAccountModal ? (() => {
     const isReal = !isDemo && tournamentBalance === null;
     const isTournament = tournamentBalance !== null;
+    const todayReal = traderStats?.today.real;
+    const todayDemo = traderStats?.today.demo;
     const accs = [
-      { type: "real" as const,       label: "Conta Real",  bal: balance,               active: isReal,       show: true },
-      { type: "demo" as const,       label: "Conta Demo",  bal: demoBalance,            active: !isReal && !isTournament, show: true },
-      { type: "tournament" as const, label: "Torneio",     bal: tournamentBalance ?? 0, active: isTournament, show: isTournament },
+      {
+        type: "real" as const, label: "Conta Real", bal: balance,
+        active: isReal, show: true,
+        color: "#22c55e", colorBg: "rgba(34,197,94,0.08)", colorBorder: "rgba(34,197,94,0.35)",
+        colorGlow: "rgba(34,197,94,0.15)",
+        icon: "real",
+        pnl: todayReal?.pnl ?? 0, wins: todayReal?.wins ?? 0, losses: todayReal?.losses ?? 0,
+        description: "Dinheiro real · depósitos e levantamentos",
+      },
+      {
+        type: "demo" as const, label: "Conta Demo", bal: demoBalance,
+        active: !isReal && !isTournament, show: true,
+        color: "#f5a623", colorBg: "rgba(245,166,35,0.08)", colorBorder: "rgba(245,166,35,0.35)",
+        colorGlow: "rgba(245,166,35,0.15)",
+        icon: "demo",
+        pnl: todayDemo?.pnl ?? 0, wins: todayDemo?.wins ?? 0, losses: todayDemo?.losses ?? 0,
+        description: "Saldo virtual · sem risco",
+      },
+      {
+        type: "tournament" as const, label: "Torneio", bal: tournamentBalance ?? 0,
+        active: isTournament, show: isTournament,
+        color: "#6366f1", colorBg: "rgba(99,102,241,0.08)", colorBorder: "rgba(99,102,241,0.35)",
+        colorGlow: "rgba(99,102,241,0.15)",
+        icon: "tournament",
+        pnl: 0, wins: 0, losses: 0,
+        description: tournamentName ?? "Torneio activo",
+      },
     ];
     return (
       <div
         onMouseDown={() => setShowAccountModal(false)}
-        style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+        style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(2px)" }}
       >
         <div
           onMouseDown={e => e.stopPropagation()}
-          style={{ background: "#111827", borderRadius: "16px 16px 0 0", width: "100%", maxWidth: 480, padding: "20px 16px 32px" }}
+          style={{ background: "#0d1526", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "0 0 32px", animation: "slideUpModal 0.25s cubic-bezier(0.32,0.72,0,1)", overflow: "hidden" }}
         >
-          <div style={{ width: 40, height: 4, background: "#1e2d50", borderRadius: 2, margin: "0 auto 20px" }} />
-          <p style={{ color: "#94a3b8", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Seleccionar conta</p>
-          {accs.filter(a => a.show).map(a => (
-            <div key={a.type} style={{ marginBottom: 8 }}>
-              <button
-                type="button"
-                onClick={() => selectAccount(a.type)}
-                style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  width: "100%", padding: "14px 16px",
-                  background: a.active ? "#1e2d50" : "#0a0f1e",
-                  border: a.active ? "1px solid #f5a623" : "1px solid #1e2d50",
-                  borderRadius: a.type === "demo" ? "10px 10px 0 0" : 10,
-                  cursor: "pointer", color: "#fff",
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: 15 }}>{a.label}</span>
-                <span style={{ color: "#f5a623", fontWeight: 700, fontSize: 15 }}>
-                  {a.bal.toLocaleString("pt-AO")} Kz
-                </span>
-              </button>
-              {a.type === "demo" && (
+          {/* Header */}
+          <div style={{ padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ width: 40, height: 4, background: "#1e2d50", borderRadius: 2 }} />
+            </div>
+          </div>
+          <div style={{ padding: "12px 20px 16px", borderBottom: "1px solid #111827" }}>
+            <p style={{ color: "#fff", fontSize: 16, fontWeight: 800, margin: 0 }}>Seleccionar conta</p>
+            <p style={{ color: "#475569", fontSize: 12, margin: "2px 0 0" }}>Escolhe com que saldo queres operar</p>
+          </div>
+
+          {/* Cards */}
+          <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+            {accs.filter(a => a.show).map(a => (
+              <div key={a.type}>
                 <button
                   type="button"
-                  disabled={demoReloading}
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await resetDemo();
-                  }}
+                  onClick={() => selectAccount(a.type)}
                   style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    width: "100%", padding: "9px 16px",
-                    background: "#0a0f1e", border: "1px solid #1e2d50", borderTop: "none",
-                    borderRadius: "0 0 10px 10px", cursor: demoReloading ? "not-allowed" : "pointer",
-                    color: demoReloading ? "#475569" : "#94a3b8", fontSize: 12, fontWeight: 600,
+                    width: "100%", padding: "14px 16px", cursor: "pointer", color: "#fff", textAlign: "left",
+                    background: a.active ? a.colorBg : "#070d1a",
+                    border: `1px solid ${a.active ? a.color : "#1a2540"}`,
+                    borderRadius: a.type === "demo" ? "12px 12px 0 0" : 12,
+                    boxShadow: a.active ? `0 0 20px ${a.colorGlow}` : "none",
+                    transition: "all 0.15s ease",
                   }}
                 >
-                  <span style={{ fontSize: 14, lineHeight: 1 }}>↺</span>
-                  {demoReloading ? "A repor..." : "Repor saldo demo (10.000 Kz)"}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    {/* Left */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: a.colorBg, border: `1px solid ${a.colorBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {a.icon === "real"       && <Banknote size={18} color={a.color} />}
+                        {a.icon === "demo"       && <Target   size={18} color={a.color} />}
+                        {a.icon === "tournament" && <Trophy   size={18} color={a.color} />}
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{a.label}</span>
+                          {a.active && <span style={{ background: a.color, color: "#0a0f1e", borderRadius: 4, fontSize: 9, padding: "1px 6px", fontWeight: 900, letterSpacing: 0.5 }}>ACTIVA</span>}
+                        </div>
+                        <div style={{ color: "#475569", fontSize: 11, marginTop: 1 }}>{a.description}</div>
+                      </div>
+                    </div>
+                    {/* Right — balance */}
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: a.color, fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>
+                        {a.bal.toLocaleString("pt-AO")} <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>Kz</span>
+                      </div>
+                      {(a.wins > 0 || a.losses > 0) && (
+                        <div style={{ color: "#475569", fontSize: 10, marginTop: 2 }}>
+                          Hoje: <span style={{ color: a.pnl >= 0 ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{a.pnl >= 0 ? "+" : ""}{a.pnl.toLocaleString("pt-AO")} Kz</span>
+                          <span style={{ marginLeft: 6 }}>{a.wins}V · {a.losses}D</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </button>
-              )}
-            </div>
-          ))}
+                {a.type === "demo" && (
+                  <button
+                    type="button"
+                    disabled={demoReloading}
+                    onClick={async (e) => { e.stopPropagation(); await resetDemo(); }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                      width: "100%", padding: "8px 16px",
+                      background: "#070d1a", border: "1px solid #1a2540", borderTop: "none",
+                      borderRadius: "0 0 12px 12px", cursor: demoReloading ? "not-allowed" : "pointer",
+                      color: demoReloading ? "#334155" : "#64748b", fontSize: 12, fontWeight: 600,
+                    }}
+                  >
+                    <RefreshCw size={12} />
+                    {demoReloading ? "A repor..." : "Repor saldo demo (10.000 Kz)"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
+        <style>{`@keyframes slideUpModal{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
       </div>
     );
   })() : null;
@@ -1834,16 +1926,22 @@ export default function TradePage() {
     <div style={{
       position: "fixed", top: 72, left: "50%", transform: "translateX(-50%)",
       zIndex: 99999, pointerEvents: "none",
-      background: "#111827", border: `1px solid ${accountToastColor}`,
-      borderRadius: 12, padding: "10px 20px",
-      display: "flex", alignItems: "center", gap: 8,
-      boxShadow: `0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px ${accountToastColor}22`,
+      background: "#0d1526", border: `1px solid ${accountToastColor}`,
+      borderRadius: 14, padding: "10px 18px",
+      display: "flex", alignItems: "center", gap: 10,
+      boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px ${accountToastColor}33`,
       animation: "fadeInDown 0.2s ease",
     }}>
-      <div style={{ width: 8, height: 8, borderRadius: "50%", background: accountToastColor, flexShrink: 0 }} />
-      <span style={{ color: "#fff", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>
-        Agora em <span style={{ color: accountToastColor }}>{accountToast}</span>
-      </span>
+      <div style={{ width: 10, height: 10, borderRadius: "50%", background: accountToastColor, flexShrink: 0, boxShadow: `0 0 8px ${accountToastColor}` }} />
+      <div>
+        <div style={{ color: "#94a3b8", fontSize: 10, fontWeight: 600, letterSpacing: 0.5 }}>CONTA ACTIVA</div>
+        <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, whiteSpace: "nowrap" }}>
+          <span style={{ color: accountToastColor }}>{accountToast}</span>
+          <span style={{ color: "#475569", fontWeight: 500, fontSize: 12, marginLeft: 6 }}>
+            {formatKz(displayBalance)}
+          </span>
+        </div>
+      </div>
     </div>
   ) : null;
 
@@ -2119,17 +2217,39 @@ export default function TradePage() {
       )}
 
       {/* ── Recent wins ── */}
-      {recentWins.length > 0 && (
-        <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 12, padding: compact ? 10 : 12 }}>
-          <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>Vitórias recentes</div>
-          {recentWins.map((w, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < recentWins.length - 1 ? "1px solid #0d1526" : "none" }}>
-              <span style={{ color: "#94a3b8", fontSize: 12 }}>{w.name}</span>
-              <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12 }}>+{formatKz(w.amount)}</span>
-            </div>
-          ))}
+      <div style={{ background: "#080e1d", border: "1px solid #1e2d50", borderRadius: 12, padding: compact ? 10 : 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}>Os teus ganhos recentes</div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              onClick={() => setRecentWinsFilter("real")}
+              style={{ padding: "2px 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 800,
+                background: recentWinsFilter === "real" ? "rgba(34,197,94,0.15)" : "transparent",
+                color: recentWinsFilter === "real" ? "#22c55e" : "#475569",
+                outline: recentWinsFilter === "real" ? "1px solid rgba(34,197,94,0.4)" : "1px solid transparent",
+              }}
+            >Real</button>
+            <button
+              onClick={() => setRecentWinsFilter("demo")}
+              style={{ padding: "2px 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 800,
+                background: recentWinsFilter === "demo" ? "rgba(245,166,35,0.15)" : "transparent",
+                color: recentWinsFilter === "demo" ? "#f5a623" : "#475569",
+                outline: recentWinsFilter === "demo" ? "1px solid rgba(245,166,35,0.4)" : "1px solid transparent",
+              }}
+            >Demo</button>
+          </div>
         </div>
-      )}
+        {recentWins.length === 0 ? (
+          <div style={{ color: "#475569", fontSize: 11, textAlign: "center", padding: "8px 0" }}>Sem ganhos recentes</div>
+        ) : (
+          recentWins.map((w, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < recentWins.length - 1 ? "1px solid #0d1526" : "none" }}>
+              <span style={{ color: "#94a3b8", fontSize: 12 }}>{w.asset}</span>
+              <span style={{ color: recentWinsFilter === "demo" ? "#f5a623" : "#22c55e", fontWeight: 700, fontSize: 12 }}>+{formatKz(w.amount)}</span>
+            </div>
+          ))
+        )}
+      </div>
 
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
     </div>
@@ -2218,7 +2338,7 @@ export default function TradePage() {
             <button key={ind.key} onClick={() => toggle(ind.key)} style={{
               background: `${ind.color}22`, color: ind.color, border: `1px solid ${ind.color}`,
               borderRadius: 20, padding: "2px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
-            }}>✕ {ind.label.split(" ")[0]}</button>
+            }}><X size={9} style={{ marginRight: 3 }} />{ind.label.split(" ")[0]}</button>
           ))}
           {activeCount === 0 && <span style={{ color: "#334155", fontSize: 10 }}>Nenhum indicador activo</span>}
         </div>
@@ -2237,13 +2357,13 @@ export default function TradePage() {
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Indicadores</div>
               {activeCount > 0 && <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{activeCount} activo{activeCount !== 1 ? "s" : ""}</div>}
             </div>
-            <button onClick={() => setShowIndicators(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, color: "#94a3b8", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={() => setShowIndicators(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
           </div>
 
           {/* Search */}
           <div style={{ padding: "10px 18px", borderBottom: "1px solid #1a2540", flexShrink: 0 }}>
             <div style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 9, display: "flex", alignItems: "center", gap: 8, padding: "7px 12px" }}>
-              <span style={{ color: "#334155", fontSize: 13 }}>🔍</span>
+              <Search size={14} color="#334155" style={{ flexShrink: 0 }} />
               <input value={indSearch} onChange={e => setIndSearch(e.target.value)} placeholder="Pesquisar indicador..."
                 style={{ background: "none", border: "none", outline: "none", color: "#e2e8f0", fontSize: 13, width: "100%" }} />
             </div>
@@ -2267,7 +2387,7 @@ export default function TradePage() {
               {INDS.filter(i => isOn(i.key)).map(ind => (
                 <div key={ind.key} style={{ background: `${ind.color}18`, border: `1px solid ${ind.color}50`, borderRadius: 14, padding: "3px 10px", display: "flex", alignItems: "center", gap: 5 }}>
                   <span style={{ color: ind.color, fontSize: 11, fontWeight: 700 }}>{ind.label.split(" ")[0]}</span>
-                  <button onClick={() => toggle(ind.key)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 11, padding: 0, lineHeight: 1 }}>✕</button>
+                  <button onClick={() => toggle(ind.key)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}><X size={10} /></button>
                 </div>
               ))}
               <button onClick={() => setIndicators(DEFAULT_INDICATORS)} style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 14, padding: "3px 10px", color: "#ef4444", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Limpar tudo</button>
@@ -2403,7 +2523,7 @@ export default function TradePage() {
                 }}>
                   <span style={{ color: chartType === ct.id ? "#f5a623" : "#64748b" }}>{ct.icon}</span>
                   {ct.label}
-                  {chartType === ct.id && <span style={{ marginLeft: "auto", color: "#f5a623", fontSize: 13 }}>✓</span>}
+                  {chartType === ct.id && <Check size={13} color="#f5a623" style={{ marginLeft: "auto" }} />}
                 </button>
               ))}
             </div>
@@ -2617,7 +2737,7 @@ export default function TradePage() {
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{title}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {activeCount > 0 && <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{activeCount}</span>}
-            <button onClick={() => setLeftPanel(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 6, width: 26, height: 26, color: "#94a3b8", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={() => setLeftPanel(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 6, width: 26, height: 26, color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
           </div>
         </div>
 
@@ -2699,9 +2819,9 @@ export default function TradePage() {
                       <span style={{ flex: 1, color: isActive ? "#fff" : item.soon ? "#334155" : "#94a3b8", fontSize: 13, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
                       {item.soon && <span style={{ background: "rgba(100,116,139,0.1)", color: "#334155", borderRadius: 4, padding: "1px 6px", fontSize: 9, fontWeight: 600 }}>EM BREVE</span>}
                       {isActive && leftPanel === "indicators" && !item.soon && (
-                        <button onClick={e => { e.stopPropagation(); setIndicators(p => ({ ...p, [item.key]: { ...(p[item.key as keyof typeof indicators] as any), enabled: false } })); }} style={{ background: "rgba(239,68,68,0.1)", border: "none", borderRadius: 4, color: "#ef4444", fontSize: 10, cursor: "pointer", padding: "2px 6px", flexShrink: 0 }}>✕</button>
+                        <button onClick={e => { e.stopPropagation(); setIndicators(p => ({ ...p, [item.key]: { ...(p[item.key as keyof typeof indicators] as any), enabled: false } })); }} style={{ background: "rgba(239,68,68,0.1)", border: "none", borderRadius: 4, color: "#ef4444", cursor: "pointer", padding: "3px 6px", flexShrink: 0, display: "flex", alignItems: "center" }}><X size={10} /></button>
                       )}
-                      {!item.soon && <span style={{ color: "#334155", fontSize: 12 }}>{isExp ? "⌃" : "⌄"}</span>}
+                      {!item.soon && (isExp ? <ChevronUp size={13} color="#334155" /> : <ChevronDown size={13} color="#334155" />)}
                     </button>
                     {isExp && !item.soon && (
                       leftPanel === "indicators" ? renderIndSettings(item.key) : renderDrawingSettings(item.key)
@@ -2719,7 +2839,7 @@ export default function TradePage() {
                 if (leftPanel === "indicators") setIndicators(DEFAULT_INDICATORS);
                 else clearAllDrawings();
               }} style={{ width: "100%", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#ef4444", fontSize: 12, fontWeight: 700, padding: "9px 0", cursor: "pointer" }}>
-                🗑️ Apagar tudo
+                <Trash2 size={13} style={{ marginRight: 6 }} /> Apagar tudo
               </button>
             </div>
           )}
@@ -2734,13 +2854,14 @@ export default function TradePage() {
       <div style={{ position: "absolute", top: 4, right: 4, zIndex: 10, display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
         {tournamentPositions.map((tp: any) => {
           const pos = tp.position;
-          const medal = pos === 1 ? "🥇" : pos === 2 ? "🥈" : pos === 3 ? "🥉" : null;
+          const medalColor = pos === 1 ? "#f5c518" : pos === 2 ? "#94a3b8" : pos === 3 ? "#cd7f32" : "#f5a623";
           const profitColor = tp.profit >= 0 ? "#22c55e" : "#ef4444";
           return (
             <div key={tp.tournamentId} style={{ background: "rgba(10,15,30,0.82)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 7, padding: "4px 7px", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ fontSize: medal ? 12 : 10, fontWeight: 900, color: medal ? undefined : "#f5a623" }}>
-                {medal ?? `#${pos}`}
-              </span>
+              {pos <= 3
+                ? <Medal size={13} color={medalColor} />
+                : <span style={{ fontSize: 10, fontWeight: 900, color: "#f5a623" }}>{`#${pos}`}</span>
+              }
               <div>
                 <div style={{ color: "#f5a623", fontSize: 8, fontWeight: 700, letterSpacing: 0.3 }}>TORNEIO {tp.isDemo ? "DEMO" : "REAL"}</div>
                 <div style={{ color: profitColor, fontWeight: 800, fontSize: 10, fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>
@@ -2860,7 +2981,7 @@ export default function TradePage() {
             <button onClick={clearAllDrawings} title="Apagar tudo" style={{
               background: "transparent", color: "#ef4444", border: "1px solid #ef444440",
               borderRadius: 5, padding: compact ? "2px 6px" : "3px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer", flexShrink: 0,
-            }}>✕ Tudo</button>
+            }}><X size={9} style={{ marginRight: 3 }} />Tudo</button>
           )}
         </div>
 
@@ -2929,7 +3050,7 @@ export default function TradePage() {
                 <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 4, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 5, padding: "2px 6px" }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
                   <span style={{ color: "#94a3b8", fontSize: 10 }}>{label}</span>
-                  <button onClick={() => removeDrawing(d.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 11, padding: 0, lineHeight: 1 }}>✕</button>
+                  <button onClick={() => removeDrawing(d.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}><X size={11} /></button>
                 </div>
               );
             })}
@@ -2986,8 +3107,12 @@ export default function TradePage() {
             <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>Dynamics</span>
           </div>
 
-          <button onClick={() => setMobileTab("markets")} style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "5px 10px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700 }}>
-            {selectedPair?.label ?? "…"} <ChevronDown size={12} color="#94a3b8" />
+          <button onClick={() => setMobileTab("markets")} style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "5px 8px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+              {selectedPair?.label.replace(" OTC", "") ?? "…"}
+            </span>
+            {selectedPair?.label.includes("OTC") && <span style={{ fontSize: 8, color: "#f5a623", fontWeight: 900, background: "rgba(245,166,35,0.15)", borderRadius: 3, padding: "0px 3px", flexShrink: 0 }}>OTC</span>}
+            <ChevronDown size={11} color="#64748b" style={{ flexShrink: 0 }} />
           </button>
           <div style={{ flex: 1 }} />
 
