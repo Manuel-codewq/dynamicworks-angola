@@ -29,6 +29,8 @@ import {
   calcSMA, calcEMA, calcBB, calcRSI, calcMACD, calcStochastic,
   calcATR, calcCCI, calcWilliamsR, calcMomentum, calcAO, calcADX,
   calcAlligator, calcDonchian, calcKeltner, calcParabolicSAR, calcBearsBulls,
+  calcSupertrend, calcIchimoku, calcFractals, calcZigZag,
+  calcAroon, calcROC, calcSTC, calcVortex, calcDeMarker, calcVolumeOsc, calcWeisWaves,
 } from "@/lib/indicators";
 import { playOpen, playWin, playLoss, isSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 
@@ -196,10 +198,12 @@ export default function TradePage() {
   useEffect(() => { isDemoRef.current = isDemo; }, [isDemo]);
 
   // ── Drawing tools ─────────────────────────────────────────────────────────
-  type DrawingTool = "hline" | "trendline" | "fibonacci" | "rectangle" | null;
+  type DrawingTool = "hline" | "trendline" | "fibonacci" | "rectangle" | "vline" | "ray" | "extline" | null;
   interface HLineDrawing  { id: string; type: "hline";     price: number;    color: string; lineWidth: number; lineStyle: number; label: string; }
   interface TrendDrawing  { id: string; type: "trendline"; p1Time: number; p1Price: number; p2Time: number; p2Price: number; color: string; lineWidth: number; lineStyle: number; }
-  type Drawing = HLineDrawing | TrendDrawing;
+  interface VLineDrawing  { id: string; type: "vline"; time: number; color: string; lineWidth: number; lineStyle: number; }
+  interface RayDrawing    { id: string; type: "ray" | "extline"; p1Time: number; p1Price: number; p2Time: number; p2Price: number; color: string; lineWidth: number; lineStyle: number; }
+  type Drawing = HLineDrawing | TrendDrawing | VLineDrawing | RayDrawing;
 
   const TOOL_COLORS = ["#f5a623","#3b82f6","#22c55e","#ef4444","#a78bfa","#22d3ee","#e2e8f0"];
 
@@ -213,6 +217,7 @@ export default function TradePage() {
   const [pendingPoint,    setPendingPoint]    = useState<{ time: number; price: number } | null>(null);
   const [selectedTrendId, setSelectedTrendId] = useState<string | null>(null);
   const [handlePos,       setHandlePos]       = useState<{ p1: { x: number; y: number }; p2: { x: number; y: number } } | null>(null);
+  const [vlinePositions,  setVlinePositions]  = useState<Record<string, number>>({});
   const draggingHLine    = useRef<string | null>(null);
   const draggingHandle   = useRef<{ id: string; point: "p1" | "p2" } | null>(null);
   const selectedTrendRef = useRef<string | null>(null);
@@ -248,6 +253,17 @@ export default function TradePage() {
     ao:         { enabled: false },
     adx:        { enabled: false, period: 14 },
     bearsbulls: { enabled: false, period: 13 },
+    supertrend: { enabled: false, period: 10, mult: 3 },
+    ichimoku:   { enabled: false },
+    fractal:    { enabled: false },
+    zigzag:     { enabled: false, deviation: 5 },
+    aroon:      { enabled: false, period: 14 },
+    roc:        { enabled: false, period: 12 },
+    stc:        { enabled: false, fast: 23, slow: 50, k: 10 },
+    vortex:     { enabled: false, period: 14 },
+    demarker:   { enabled: false, period: 14 },
+    volume_osc: { enabled: false, fast: 5, slow: 10 },
+    weis:       { enabled: false },
   };
   type IndicatorState = typeof DEFAULT_INDICATORS;
   function loadIndicators(): IndicatorState {
@@ -279,6 +295,17 @@ export default function TradePage() {
           ao:         { ...DEFAULT_INDICATORS.ao,         ...(p.ao         ?? {}) },
           adx:        { ...DEFAULT_INDICATORS.adx,        ...(p.adx        ?? {}) },
           bearsbulls: { ...DEFAULT_INDICATORS.bearsbulls, ...(p.bearsbulls ?? {}) },
+          supertrend: { ...DEFAULT_INDICATORS.supertrend, ...(p.supertrend ?? {}) },
+          ichimoku:   { ...DEFAULT_INDICATORS.ichimoku,   ...(p.ichimoku   ?? {}) },
+          fractal:    { ...DEFAULT_INDICATORS.fractal,    ...(p.fractal    ?? {}) },
+          zigzag:     { ...DEFAULT_INDICATORS.zigzag,     ...(p.zigzag     ?? {}) },
+          aroon:      { ...DEFAULT_INDICATORS.aroon,      ...(p.aroon      ?? {}) },
+          roc:        { ...DEFAULT_INDICATORS.roc,        ...(p.roc        ?? {}) },
+          stc:        { ...DEFAULT_INDICATORS.stc,        ...(p.stc        ?? {}) },
+          vortex:     { ...DEFAULT_INDICATORS.vortex,     ...(p.vortex     ?? {}) },
+          demarker:   { ...DEFAULT_INDICATORS.demarker,   ...(p.demarker   ?? {}) },
+          volume_osc: { ...DEFAULT_INDICATORS.volume_osc, ...(p.volume_osc ?? {}) },
+          weis:       { ...DEFAULT_INDICATORS.weis,       ...(p.weis       ?? {}) },
         };
       }
     } catch {}
@@ -318,6 +345,17 @@ export default function TradePage() {
           ao:         { ...DEFAULT_INDICATORS.ao,         ...(p.ao         ?? {}) },
           adx:        { ...DEFAULT_INDICATORS.adx,        ...(p.adx        ?? {}) },
           bearsbulls: { ...DEFAULT_INDICATORS.bearsbulls, ...(p.bearsbulls ?? {}) },
+          supertrend: { ...DEFAULT_INDICATORS.supertrend, ...(p.supertrend ?? {}) },
+          ichimoku:   { ...DEFAULT_INDICATORS.ichimoku,   ...(p.ichimoku   ?? {}) },
+          fractal:    { ...DEFAULT_INDICATORS.fractal,    ...(p.fractal    ?? {}) },
+          zigzag:     { ...DEFAULT_INDICATORS.zigzag,     ...(p.zigzag     ?? {}) },
+          aroon:      { ...DEFAULT_INDICATORS.aroon,      ...(p.aroon      ?? {}) },
+          roc:        { ...DEFAULT_INDICATORS.roc,        ...(p.roc        ?? {}) },
+          stc:        { ...DEFAULT_INDICATORS.stc,        ...(p.stc        ?? {}) },
+          vortex:     { ...DEFAULT_INDICATORS.vortex,     ...(p.vortex     ?? {}) },
+          demarker:   { ...DEFAULT_INDICATORS.demarker,   ...(p.demarker   ?? {}) },
+          volume_osc: { ...DEFAULT_INDICATORS.volume_osc, ...(p.volume_osc ?? {}) },
+          weis:       { ...DEFAULT_INDICATORS.weis,       ...(p.weis       ?? {}) },
         });
       })
       .catch(() => {});
@@ -379,6 +417,27 @@ export default function TradePage() {
   const bearsSeriesRef    = useRef<ISeriesApi<"Histogram"> | null>(null);
   const bullsSeriesRef    = useRef<ISeriesApi<"Histogram"> | null>(null);
   const bearsbullsPaneRef = useRef<any>(null);
+  const supertrendUpRef   = useRef<ISeriesApi<"Line"> | null>(null);
+  const supertrendDownRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const ichimokuRefs      = useRef<Record<string, ISeriesApi<"Line"> | null>>({ tenkan: null, kijun: null, senkouA: null, senkouB: null, chikou: null });
+  const fractalMarkersRef = useRef<any>(null);
+  const zigzagRef         = useRef<ISeriesApi<"Line"> | null>(null);
+  const aroonUpRef        = useRef<ISeriesApi<"Line"> | null>(null);
+  const aroonDownRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const aroonPaneRef      = useRef<any>(null);
+  const rocSeriesRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const rocPaneRef        = useRef<any>(null);
+  const stcSeriesRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const stcPaneRef        = useRef<any>(null);
+  const vortexPlusRef     = useRef<ISeriesApi<"Line"> | null>(null);
+  const vortexMinusRef    = useRef<ISeriesApi<"Line"> | null>(null);
+  const vortexPaneRef     = useRef<any>(null);
+  const demarkerRef       = useRef<ISeriesApi<"Line"> | null>(null);
+  const demarkerPaneRef   = useRef<any>(null);
+  const volumeOscRef      = useRef<ISeriesApi<"Line"> | null>(null);
+  const volumeOscPaneRef  = useRef<any>(null);
+  const weisRef           = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const weisPaneRef       = useRef<any>(null);
   const recalcRef          = useRef<() => void>(() => {});
   const [legend, setLegend] = useState<{ label: string; value: string; color: string }[]>([]);
   const lastLegendRef      = useRef<{ label: string; value: string; color: string }[]>([]);
@@ -532,17 +591,84 @@ export default function TradePage() {
     trendSeriesMap.current.delete(id);
   }
 
+  function applyRay(d: RayDrawing) {
+    if (!chartApiRef.current) return;
+    const dt = d.p2Time - d.p1Time;
+    if (dt === 0) return;
+    const slope = (d.p2Price - d.p1Price) / dt;
+    const granSecs = GRANULARITY[timeframeRef.current] ?? 60;
+    const firstCandle = candleDataRef.current.length > 0 ? (candleDataRef.current[0].time as number) : d.p1Time;
+    const lastCandle  = candleDataRef.current.length > 0 ? (candleDataRef.current[candleDataRef.current.length - 1].time as number) : d.p2Time;
+    const tStart = Math.min(d.p1Time, d.p2Time) - 30 * granSecs;
+    const tEnd   = lastCandle + 500 * granSecs;
+    const startVal = d.p1Price + slope * (tStart - d.p1Time);
+    const endVal   = d.p1Price + slope * (tEnd   - d.p1Time);
+    if (!isFinite(startVal) || !isFinite(endVal) || Math.abs(startVal) > 1e10 || Math.abs(endVal) > 1e10) return;
+    void firstCandle;
+    let series = trendSeriesMap.current.get(d.id);
+    if (!series) {
+      const visibleLogicalRange = chartApiRef.current.timeScale().getVisibleLogicalRange();
+      series = chartApiRef.current.addSeries(LineSeries, {
+        color: d.color, lineWidth: d.lineWidth as any, lineStyle: d.lineStyle,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      });
+      trendSeriesMap.current.set(d.id, series);
+      if (visibleLogicalRange) {
+        requestAnimationFrame(() => { chartApiRef.current?.timeScale().setVisibleLogicalRange(visibleLogicalRange); });
+      }
+    }
+    series.setData([{ time: tStart as Time, value: startVal }, { time: tEnd as Time, value: endVal }]);
+  }
+
+  function applyExtLine(d: RayDrawing) {
+    if (!chartApiRef.current) return;
+    const dt = d.p2Time - d.p1Time;
+    if (dt === 0) return;
+    const slope = (d.p2Price - d.p1Price) / dt;
+    const granSecs = GRANULARITY[timeframeRef.current] ?? 60;
+    const firstCandle = candleDataRef.current.length > 0 ? (candleDataRef.current[0].time as number) : d.p1Time;
+    const lastCandle  = candleDataRef.current.length > 0 ? (candleDataRef.current[candleDataRef.current.length - 1].time as number) : d.p2Time;
+    const tStart = firstCandle - 500 * granSecs;
+    const tEnd   = lastCandle  + 500 * granSecs;
+    const startVal = d.p1Price + slope * (tStart - d.p1Time);
+    const endVal   = d.p1Price + slope * (tEnd   - d.p1Time);
+    if (!isFinite(startVal) || !isFinite(endVal) || Math.abs(startVal) > 1e10 || Math.abs(endVal) > 1e10) return;
+    let series = trendSeriesMap.current.get(d.id);
+    if (!series) {
+      const visibleLogicalRange = chartApiRef.current.timeScale().getVisibleLogicalRange();
+      series = chartApiRef.current.addSeries(LineSeries, {
+        color: d.color, lineWidth: d.lineWidth as any, lineStyle: d.lineStyle,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      });
+      trendSeriesMap.current.set(d.id, series);
+      if (visibleLogicalRange) {
+        requestAnimationFrame(() => { chartApiRef.current?.timeScale().setVisibleLogicalRange(visibleLogicalRange); });
+      }
+    }
+    series.setData([{ time: tStart as Time, value: startVal }, { time: tEnd as Time, value: endVal }]);
+  }
+
   function addDrawing(d: Drawing) {
     setDrawings(prev => [...prev, d]);
     drawingsRef.current = [...drawingsRef.current, d];
     if (d.type === "hline")     applyHLine(d);
     if (d.type === "trendline") applyTrendLine(d);
+    if (d.type === "ray")       applyRay(d as RayDrawing);
+    if (d.type === "extline")   applyExtLine(d as RayDrawing);
+    if (d.type === "vline") {
+      const vd = d as VLineDrawing;
+      if (chartApiRef.current) {
+        const x = chartApiRef.current.timeScale().timeToCoordinate(vd.time as Time);
+        if (x !== null) setVlinePositions(prev => ({ ...prev, [vd.id]: x }));
+      }
+    }
   }
   function removeDrawing(id: string) {
     const d = drawingsRef.current.find(x => x.id === id);
     if (!d) return;
     if (d.type === "hline")     removeHLine(id);
-    if (d.type === "trendline") removeTrendLine(id);
+    if (d.type === "trendline" || d.type === "ray" || d.type === "extline") removeTrendLine(id);
+    if (d.type === "vline")     setVlinePositions(prev => { const n = { ...prev }; delete n[id]; return n; });
     setDrawings(prev => prev.filter(x => x.id !== id));
     drawingsRef.current = drawingsRef.current.filter(x => x.id !== id);
     if (selectedTrendRef.current === id) {
@@ -554,8 +680,9 @@ export default function TradePage() {
   function clearAllDrawings() {
     drawingsRef.current.forEach(d => {
       if (d.type === "hline")     removeHLine(d.id);
-      if (d.type === "trendline") removeTrendLine(d.id);
+      if (d.type === "trendline" || d.type === "ray" || d.type === "extline") removeTrendLine(d.id);
     });
+    setVlinePositions({});
     setDrawings([]);
     drawingsRef.current = [];
   }
@@ -565,6 +692,8 @@ export default function TradePage() {
     drawingsRef.current.forEach(d => {
       if (d.type === "hline")     applyHLine(d);
       if (d.type === "trendline") applyTrendLine(d);
+      if (d.type === "ray")       applyRay(d as RayDrawing);
+      if (d.type === "extline")   applyExtLine(d as RayDrawing);
     });
   }
 
@@ -932,6 +1061,166 @@ export default function TradePage() {
       [bearsSeriesRef, bullsSeriesRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
       removePane(bearsbullsPaneRef);
     }
+
+    // ── Supertrend (overlay) ──
+    if (cfg.supertrend.enabled) {
+      if (!supertrendUpRef.current) {
+        supertrendUpRef.current   = chart.addSeries(LineSeries, { ...oLine, color: "#22c55e", lineWidth: 2 });
+        supertrendDownRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#ef4444", lineWidth: 2 });
+      }
+      const st = calcSupertrend(data, cfg.supertrend.period, cfg.supertrend.mult);
+      supertrendUpRef.current.setData(st.up);
+      supertrendDownRef.current!.setData(st.down);
+      if (st.line.length > 0) leg.push({ label: `ST`, value: st.line[st.line.length-1].value.toFixed(dec), color: "#22c55e" });
+    } else if (supertrendUpRef.current) {
+      [supertrendUpRef, supertrendDownRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+    }
+
+    // ── Ichimoku (overlay) ──
+    if (cfg.ichimoku.enabled) {
+      if (!ichimokuRefs.current.tenkan) {
+        ichimokuRefs.current.tenkan  = chart.addSeries(LineSeries, { ...oLine, color: "#ef4444", lineWidth: 1 });
+        ichimokuRefs.current.kijun   = chart.addSeries(LineSeries, { ...oLine, color: "#3b82f6", lineWidth: 1 });
+        ichimokuRefs.current.senkouA = chart.addSeries(LineSeries, { ...oLine, color: "#22c55e60", lineWidth: 1 });
+        ichimokuRefs.current.senkouB = chart.addSeries(LineSeries, { ...oLine, color: "#ef444460", lineWidth: 1 });
+        ichimokuRefs.current.chikou  = chart.addSeries(LineSeries, { ...oLine, color: "#a78bfa", lineWidth: 1 });
+      }
+      const ic = calcIchimoku(data);
+      ichimokuRefs.current.tenkan!.setData(ic.tenkan);
+      ichimokuRefs.current.kijun!.setData(ic.kijun);
+      ichimokuRefs.current.senkouA!.setData(ic.senkouA);
+      ichimokuRefs.current.senkouB!.setData(ic.senkouB);
+      ichimokuRefs.current.chikou!.setData(ic.chikou);
+    } else if (ichimokuRefs.current.tenkan) {
+      Object.keys(ichimokuRefs.current).forEach(k => {
+        const s = ichimokuRefs.current[k];
+        if (s) { try { chart.removeSeries(s); } catch {} ichimokuRefs.current[k] = null; }
+      });
+    }
+
+    // ── Fractals (markers) ──
+    if (cfg.fractal.enabled && candleSeriesRef.current) {
+      const fr = calcFractals(data);
+      const fractalMarkers = [...fr.up, ...fr.down].sort((a, b) => (a.time as number) - (b.time as number));
+      const tradeMarkers = tradeMarkersRef.current ? [] : [];
+      try {
+        if (fractalMarkersRef.current) {
+          fractalMarkersRef.current.setMarkers(fractalMarkers as any);
+        } else if (fractalMarkers.length > 0) {
+          fractalMarkersRef.current = createSeriesMarkers(candleSeriesRef.current, fractalMarkers as any);
+        }
+      } catch {}
+      void tradeMarkers;
+    } else if (fractalMarkersRef.current) {
+      try { fractalMarkersRef.current.setMarkers([]); } catch {}
+      fractalMarkersRef.current = null;
+    }
+
+    // ── Zig Zag (overlay) ──
+    if (cfg.zigzag.enabled) {
+      if (!zigzagRef.current) {
+        zigzagRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#f5a623", lineWidth: 2, lineStyle: 0 });
+      }
+      zigzagRef.current.setData(calcZigZag(data, cfg.zigzag.deviation));
+    } else if (zigzagRef.current) { chart.removeSeries(zigzagRef.current); zigzagRef.current = null; }
+
+    // ── Aroon (pane) ──
+    if (cfg.aroon.enabled) {
+      if (!aroonUpRef.current) {
+        const pi = chart.panes().length;
+        aroonUpRef.current   = chart.addSeries(LineSeries, { ...lineOpts, color: "#22c55e", lineWidth: 2 }, pi);
+        aroonDownRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#ef4444", lineWidth: 2, lastValueVisible: false }, pi);
+        aroonPaneRef.current = chart.panes()[pi];
+      }
+      const ar = calcAroon(data, cfg.aroon.period);
+      aroonUpRef.current.setData(ar.up);
+      aroonDownRef.current!.setData(ar.down);
+      if (ar.up.length > 0) leg.push({ label: `Aroon↑`, value: ar.up[ar.up.length-1].value.toFixed(1), color: "#22c55e" });
+    } else if (aroonUpRef.current) {
+      [aroonUpRef, aroonDownRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+      removePane(aroonPaneRef);
+    }
+
+    // ── ROC (pane) ──
+    if (cfg.roc.enabled) {
+      if (!rocSeriesRef.current) {
+        const pi = chart.panes().length;
+        rocSeriesRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#38bdf8", lineWidth: 2 }, pi);
+        rocPaneRef.current   = chart.panes()[pi];
+        rocSeriesRef.current.createPriceLine({ price: 0, color: "#64748b", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "0" });
+      }
+      const d = calcROC(data, cfg.roc.period);
+      rocSeriesRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `ROC ${cfg.roc.period}`, value: d[d.length-1].value.toFixed(2), color: "#38bdf8" });
+    } else if (rocSeriesRef.current) { chart.removeSeries(rocSeriesRef.current); rocSeriesRef.current = null; removePane(rocPaneRef); }
+
+    // ── STC (pane) ──
+    if (cfg.stc.enabled) {
+      if (!stcSeriesRef.current) {
+        const pi = chart.panes().length;
+        stcSeriesRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#f59e0b", lineWidth: 2 }, pi);
+        stcPaneRef.current   = chart.panes()[pi];
+        stcSeriesRef.current.createPriceLine({ price: 75, color: "#ef444470", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "75" });
+        stcSeriesRef.current.createPriceLine({ price: 25, color: "#22c55e70", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "25" });
+      }
+      const d = calcSTC(data, cfg.stc.fast, cfg.stc.slow, cfg.stc.k);
+      stcSeriesRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `STC`, value: d[d.length-1].value.toFixed(1), color: "#f59e0b" });
+    } else if (stcSeriesRef.current) { chart.removeSeries(stcSeriesRef.current); stcSeriesRef.current = null; removePane(stcPaneRef); }
+
+    // ── Vortex (pane) ──
+    if (cfg.vortex.enabled) {
+      if (!vortexPlusRef.current) {
+        const pi = chart.panes().length;
+        vortexPlusRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#22c55e", lineWidth: 2 }, pi);
+        vortexMinusRef.current = chart.addSeries(LineSeries, { ...lineOpts, color: "#ef4444", lineWidth: 2, lastValueVisible: false }, pi);
+        vortexPaneRef.current  = chart.panes()[pi];
+      }
+      const vx = calcVortex(data, cfg.vortex.period);
+      vortexPlusRef.current.setData(vx.viPlus);
+      vortexMinusRef.current!.setData(vx.viMinus);
+      if (vx.viPlus.length > 0) leg.push({ label: `VI+`, value: vx.viPlus[vx.viPlus.length-1].value.toFixed(2), color: "#22c55e" });
+    } else if (vortexPlusRef.current) {
+      [vortexPlusRef, vortexMinusRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
+      removePane(vortexPaneRef);
+    }
+
+    // ── DeMarker (pane) ──
+    if (cfg.demarker.enabled) {
+      if (!demarkerRef.current) {
+        const pi = chart.panes().length;
+        demarkerRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#c084fc", lineWidth: 2 }, pi);
+        demarkerPaneRef.current = chart.panes()[pi];
+        demarkerRef.current.createPriceLine({ price: 0.7, color: "#ef444470", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "0.7" });
+        demarkerRef.current.createPriceLine({ price: 0.3, color: "#22c55e70", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "0.3" });
+      }
+      const d = calcDeMarker(data, cfg.demarker.period);
+      demarkerRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `DeM`, value: d[d.length-1].value.toFixed(2), color: "#c084fc" });
+    } else if (demarkerRef.current) { chart.removeSeries(demarkerRef.current); demarkerRef.current = null; removePane(demarkerPaneRef); }
+
+    // ── Volume Oscillator (pane) ──
+    if (cfg.volume_osc.enabled) {
+      if (!volumeOscRef.current) {
+        const pi = chart.panes().length;
+        volumeOscRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#22d3ee", lineWidth: 2 }, pi);
+        volumeOscPaneRef.current = chart.panes()[pi];
+        volumeOscRef.current.createPriceLine({ price: 0, color: "#64748b", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "0" });
+      }
+      const d = calcVolumeOsc(data, cfg.volume_osc.fast, cfg.volume_osc.slow);
+      volumeOscRef.current.setData(d);
+      if (d.length > 0) leg.push({ label: `VolOsc`, value: d[d.length-1].value.toFixed(2), color: "#22d3ee" });
+    } else if (volumeOscRef.current) { chart.removeSeries(volumeOscRef.current); volumeOscRef.current = null; removePane(volumeOscPaneRef); }
+
+    // ── Weis Waves (pane) ──
+    if (cfg.weis.enabled) {
+      if (!weisRef.current) {
+        const pi = chart.panes().length;
+        weisRef.current  = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pi);
+        weisPaneRef.current = chart.panes()[pi];
+      }
+      weisRef.current.setData(calcWeisWaves(data));
+    } else if (weisRef.current) { chart.removeSeries(weisRef.current); weisRef.current = null; removePane(weisPaneRef); }
 
     if (visibleLogicalRange) {
       requestAnimationFrame(() => {
@@ -1319,14 +1608,34 @@ export default function TradePage() {
       rsiSeriesRef.current = null;  rsiPaneRef.current  = null;
       macdLineRef.current = null; macdSignalRef.current = null; macdHistRef.current = null; macdPaneRef.current = null;
       stochKRef.current = null; stochDRef.current = null; stochPaneRef.current = null;
+      supertrendUpRef.current = null; supertrendDownRef.current = null;
+      Object.keys(ichimokuRefs.current).forEach(k => { ichimokuRefs.current[k] = null; });
+      fractalMarkersRef.current = null;
+      zigzagRef.current = null;
+      aroonUpRef.current = null; aroonDownRef.current = null; aroonPaneRef.current = null;
+      rocSeriesRef.current = null; rocPaneRef.current = null;
+      stcSeriesRef.current = null; stcPaneRef.current = null;
+      vortexPlusRef.current = null; vortexMinusRef.current = null; vortexPaneRef.current = null;
+      demarkerRef.current = null; demarkerPaneRef.current = null;
+      volumeOscRef.current = null; volumeOscPaneRef.current = null;
+      weisRef.current = null; weisPaneRef.current = null;
       candleDataRef.current = [];
 
       // Re-apply drawings after chart reinit (refs were invalidated by chart.remove())
       reapplyDrawings();
 
-      // Keep trendline handles synced with chart scroll/zoom
+      // Keep trendline handles synced with chart scroll/zoom; update vline positions
       chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
         if (selectedTrendRef.current) refreshHandles(selectedTrendRef.current);
+        const vlines = drawingsRef.current.filter(d => d.type === "vline") as VLineDrawing[];
+        if (vlines.length > 0) {
+          const positions: Record<string, number> = {};
+          vlines.forEach(vl => {
+            const x = chartApiRef.current?.timeScale().timeToCoordinate(vl.time as Time);
+            if (x !== null && x !== undefined) positions[vl.id] = x;
+          });
+          setVlinePositions(positions);
+        }
       });
 
       // Chart click → place drawing
@@ -1388,6 +1697,22 @@ export default function TradePage() {
             addDrawing({ ...base, id: `rect_bot_${Date.now()}`, type: "hline", price: botPrice, label: "▼", lineStyle: 0 });
             pendingPointRef.current = null;
             setPendingPoint(null);
+          }
+        } else if (tool === "vline") {
+          addDrawing({ ...base, id: `vl_${Date.now()}`, type: "vline", time });
+          pendingPointRef.current = null;
+          setPendingPoint(null);
+          setActiveTool(null); activeToolRef.current = null;
+        } else if (tool === "ray" || tool === "extline") {
+          const pending = pendingPointRef.current;
+          if (!pending) {
+            pendingPointRef.current = { time, price };
+            setPendingPoint({ time, price });
+          } else {
+            addDrawing({ ...base, id: `${tool}_${Date.now()}`, type: tool, p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
+            pendingPointRef.current = null;
+            setPendingPoint(null);
+            setActiveTool(null); activeToolRef.current = null;
           }
         }
       });
@@ -2310,6 +2635,10 @@ export default function TradePage() {
       { key: "donchian",   label: "Donchian Channel",        color: "#fbbf24", cat: "trend",      sub: `Período ${indicators.donchian.period}` },
       { key: "keltner",    label: "Keltner Channel",         color: "#c084fc", cat: "trend",      sub: `Período ${indicators.keltner.period}` },
       { key: "sar",        label: "Parabolic SAR",           color: "#f97316", cat: "trend",      sub: `Step ${indicators.sar.step}` },
+      { key: "supertrend", label: "Supertrend",              color: "#22c55e", cat: "trend",      sub: `P${indicators.supertrend.period} M${indicators.supertrend.mult}` },
+      { key: "ichimoku",   label: "Ichimoku Cloud",          color: "#22d3ee", cat: "trend" },
+      { key: "fractal",    label: "Fractal",                 color: "#f5a623", cat: "trend" },
+      { key: "zigzag",     label: "Zig Zag",                 color: "#f59e0b", cat: "trend",      sub: `Dev ${indicators.zigzag.deviation}%` },
       { key: "rsi",        label: "RSI",                     color: "#f97316", cat: "oscillator", sub: `Período ${indicators.rsi.period}` },
       { key: "macd",       label: "MACD",                    color: "#22c55e", cat: "oscillator", sub: `${indicators.macd.fast}/${indicators.macd.slow}/${indicators.macd.signal}` },
       { key: "stoch",      label: "Stochastic",              color: "#fb923c", cat: "oscillator", sub: `K${indicators.stoch.kPeriod}/D${indicators.stoch.dPeriod}` },
@@ -2320,6 +2649,13 @@ export default function TradePage() {
       { key: "ao",         label: "Awesome Oscillator",      color: "#22c55e", cat: "oscillator" },
       { key: "adx",        label: "ADX",                     color: "#f5a623", cat: "oscillator", sub: `Período ${indicators.adx.period}` },
       { key: "bearsbulls", label: "Bears/Bulls Power",       color: "#ef4444", cat: "oscillator", sub: `Período ${indicators.bearsbulls.period}` },
+      { key: "aroon",      label: "Aroon",                   color: "#22c55e", cat: "oscillator", sub: `Período ${indicators.aroon.period}` },
+      { key: "roc",        label: "Rate of Change",          color: "#38bdf8", cat: "oscillator", sub: `Período ${indicators.roc.period}` },
+      { key: "stc",        label: "Schaff Trend Cycle",      color: "#f59e0b", cat: "oscillator", sub: `${indicators.stc.fast}/${indicators.stc.slow}/${indicators.stc.k}` },
+      { key: "vortex",     label: "Vortex",                  color: "#22c55e", cat: "oscillator", sub: `Período ${indicators.vortex.period}` },
+      { key: "demarker",   label: "DeMarker",                color: "#c084fc", cat: "oscillator", sub: `Período ${indicators.demarker.period}` },
+      { key: "volume_osc", label: "Volume Oscillator",       color: "#22d3ee", cat: "oscillator", sub: `${indicators.volume_osc.fast}/${indicators.volume_osc.slow}` },
+      { key: "weis",       label: "Weis Waves",              color: "#22c55e", cat: "oscillator" },
     ];
 
     const q = indSearch.toLowerCase();
@@ -2558,10 +2894,10 @@ export default function TradePage() {
         { key: "donchian",  label: "Donchian Channel",         icon: IND_ICON("#fbbf24") },
         { key: "keltner",   label: "Keltner Channel",          icon: IND_ICON("#c084fc") },
         { key: "sar",       label: "Parabolic SAR",            icon: IND_ICON("#f97316") },
-        { key: "ichimoku",  label: "Ichimoku Cloud",  soon: true, icon: IND_ICON("#64748b") },
-        { key: "supertrend",label: "Supertrend",      soon: true, icon: IND_ICON("#64748b") },
-        { key: "fractal",   label: "Fractal",         soon: true, icon: IND_ICON("#64748b") },
-        { key: "zigzag",    label: "Zig Zag",         soon: true, icon: IND_ICON("#64748b") },
+        { key: "ichimoku",  label: "Ichimoku Cloud",  icon: IND_ICON("#22d3ee") },
+        { key: "supertrend",label: "Supertrend",      icon: IND_ICON("#22c55e") },
+        { key: "fractal",   label: "Fractal",         icon: IND_ICON("#f5a623") },
+        { key: "zigzag",    label: "Zig Zag",         icon: IND_ICON("#f59e0b") },
       ]},
       { section: "OSCILADORES", items: [
         { key: "rsi",        label: "RSI",                icon: OSC_ICON("#f97316") },
@@ -2574,13 +2910,13 @@ export default function TradePage() {
         { key: "momentum",   label: "Momentum",           icon: OSC_ICON("#2dd4bf") },
         { key: "ao",         label: "Awesome Oscillator", icon: OSC_ICON("#22c55e") },
         { key: "bearsbulls", label: "Bears/Bulls Power",  icon: OSC_ICON("#ef4444") },
-        { key: "aroon",      label: "Aroon",          soon: true, icon: OSC_ICON("#64748b") },
-        { key: "roc",        label: "Rate of Change", soon: true, icon: OSC_ICON("#64748b") },
-        { key: "stc",        label: "Schaff Trend",   soon: true, icon: OSC_ICON("#64748b") },
-        { key: "vortex",     label: "Vortex",         soon: true, icon: OSC_ICON("#64748b") },
-        { key: "demarker",   label: "DeMarker",       soon: true, icon: OSC_ICON("#64748b") },
-        { key: "volume_osc", label: "Volume Oscillator", soon: true, icon: OSC_ICON("#64748b") },
-        { key: "weis",       label: "Weis Waves",     soon: true, icon: OSC_ICON("#64748b") },
+        { key: "aroon",      label: "Aroon",              icon: OSC_ICON("#22c55e") },
+        { key: "roc",        label: "Rate of Change",     icon: OSC_ICON("#38bdf8") },
+        { key: "stc",        label: "Schaff Trend",       icon: OSC_ICON("#f59e0b") },
+        { key: "vortex",     label: "Vortex",             icon: OSC_ICON("#22c55e") },
+        { key: "demarker",   label: "DeMarker",           icon: OSC_ICON("#c084fc") },
+        { key: "volume_osc", label: "Volume Oscillator",  icon: OSC_ICON("#22d3ee") },
+        { key: "weis",       label: "Weis Waves",         icon: OSC_ICON("#22c55e") },
       ]},
     ];
 
@@ -2590,9 +2926,9 @@ export default function TradePage() {
         { key: "trendline", label: "Linha de Tendência",     icon: <TrendingUp size={13} /> },
         { key: "fibonacci", label: "Fibonacci Retracement",  icon: <GitFork size={13} /> },
         { key: "rectangle", label: "Rectângulo",             icon: <Square size={13} /> },
-        { key: "vline",     label: "Linha Vertical",         icon: <Minus size={13} style={{ transform: "rotate(90deg)" }} />, soon: true },
-        { key: "ray",       label: "Ray",                    icon: <TrendingUp size={13} />, soon: true },
-        { key: "extline",   label: "Extended Line",          icon: <Activity size={13} />, soon: true },
+        { key: "vline",     label: "Linha Vertical",         icon: <Minus size={13} style={{ transform: "rotate(90deg)" }} /> },
+        { key: "ray",       label: "Ray",                    icon: <TrendingUp size={13} /> },
+        { key: "extline",   label: "Extended Line",          icon: <Activity size={13} /> },
         { key: "channel",   label: "Parallel Channel",       icon: <Sliders size={13} />, soon: true },
         { key: "pitchfork", label: "Pitchfork",              icon: <GitFork size={13} />, soon: true },
         { key: "fibfan",    label: "Fibonacci Fan",          icon: <GitFork size={13} />, soon: true },
@@ -3166,6 +3502,12 @@ export default function TradePage() {
               onTouchStart={e => { e.stopPropagation(); draggingHandle.current = { id: selectedTrendId, point: pt }; }}
               style={{ position: "absolute", left: handlePos[pt].x - 8, top: handlePos[pt].y - 8, width: 16, height: 16, borderRadius: "50%", background: "#fff", border: "2.5px solid #3b82f6", cursor: "grab", zIndex: 20, pointerEvents: "all", boxShadow: "0 0 6px rgba(59,130,246,0.6)" }} />
           ))}
+          {/* Vertical line overlays */}
+          {(drawings.filter(d => d.type === "vline") as VLineDrawing[]).map(vl => {
+            const x = vlinePositions[vl.id];
+            if (x === undefined) return null;
+            return <div key={vl.id} style={{ position: "absolute", left: x, top: 0, bottom: 0, width: vl.lineWidth, background: vl.color, opacity: 0.8, pointerEvents: "none", zIndex: 15 }} />;
+          })}
           {renderLegend()}
           {renderTournamentWidget()}
 
@@ -3990,6 +4332,12 @@ export default function TradePage() {
               onTouchStart={e => { e.stopPropagation(); draggingHandle.current = { id: selectedTrendId, point: pt }; }}
               style={{ position: "absolute", left: handlePos[pt].x - 8, top: handlePos[pt].y - 8, width: 16, height: 16, borderRadius: "50%", background: "#fff", border: "2.5px solid #3b82f6", cursor: "grab", zIndex: 20, pointerEvents: "all", boxShadow: "0 0 6px rgba(59,130,246,0.6)" }} />
           ))}
+          {/* Vertical line overlays */}
+          {(drawings.filter(d => d.type === "vline") as VLineDrawing[]).map(vl => {
+            const x = vlinePositions[vl.id];
+            if (x === undefined) return null;
+            return <div key={vl.id} style={{ position: "absolute", left: x, top: 0, bottom: 0, width: vl.lineWidth, background: vl.color, opacity: 0.8, pointerEvents: "none", zIndex: 15 }} />;
+          })}
             {renderLegend()}
           {renderTournamentWidget()}
             {/* Zoom controls — bottom centre, over time axis */}

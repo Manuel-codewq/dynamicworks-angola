@@ -311,3 +311,228 @@ export function calcBearsBulls(candles: CandlestickData[], period = 13): { bears
   });
   return { bears, bulls };
 }
+
+// ── New Indicators ─────────────────────────────────────────────────────────────
+
+export function calcSupertrend(candles: CandlestickData[], period = 10, mult = 3): { line: LV[]; up: LV[]; down: LV[] } {
+  const line: LV[] = [], up: LV[] = [], down: LV[] = [];
+  if (candles.length < period + 1) return { line, up, down };
+  const trs: number[] = [];
+  for (let i = 1; i < candles.length; i++) {
+    trs.push(Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - candles[i-1].close), Math.abs(candles[i].low - candles[i-1].close)));
+  }
+  let atr = trs.slice(0, period).reduce((s, v) => s + v, 0) / period;
+  const atrs: number[] = new Array(period).fill(0);
+  atrs.push(atr);
+  for (let i = period; i < trs.length; i++) {
+    atr = (atr * (period - 1) + trs[i]) / period;
+    atrs.push(atr);
+  }
+  let bull = true;
+  let upperBand = 0, lowerBand = 0;
+  for (let i = period; i < candles.length; i++) {
+    const hl2 = (candles[i].high + candles[i].low) / 2;
+    const a = atrs[i] ?? atr;
+    let ub = hl2 + mult * a;
+    let lb = hl2 - mult * a;
+    if (i > period) {
+      if (lb < lowerBand || candles[i-1].close < lowerBand) lb = lb;
+      else lb = lowerBand;
+      if (ub > upperBand || candles[i-1].close > upperBand) ub = ub;
+      else ub = upperBand;
+    }
+    upperBand = ub; lowerBand = lb;
+    if (bull) {
+      if (candles[i].close < lowerBand) bull = false;
+    } else {
+      if (candles[i].close > upperBand) bull = true;
+    }
+    const val = bull ? lowerBand : upperBand;
+    line.push({ time: candles[i].time, value: val });
+    if (bull) up.push({ time: candles[i].time, value: val });
+    else down.push({ time: candles[i].time, value: val });
+  }
+  return { line, up, down };
+}
+
+export function calcIchimoku(candles: CandlestickData[]): { tenkan: LV[]; kijun: LV[]; senkouA: LV[]; senkouB: LV[]; chikou: LV[] } {
+  const tenkan: LV[] = [], kijun: LV[] = [], senkouA: LV[] = [], senkouB: LV[] = [], chikou: LV[] = [];
+  const mid = (arr: CandlestickData[], from: number, len: number) => {
+    const sl = arr.slice(from, from + len);
+    return (Math.max(...sl.map(c => c.high)) + Math.min(...sl.map(c => c.low))) / 2;
+  };
+  for (let i = 0; i < candles.length; i++) {
+    if (i >= 8)  tenkan.push({ time: candles[i].time, value: mid(candles, i - 8, 9) });
+    if (i >= 25) kijun.push({ time: candles[i].time, value: mid(candles, i - 25, 26) });
+    if (i >= 25) {
+      const t = tenkan.find(x => (x.time as number) === (candles[i].time as number));
+      const k = kijun[kijun.length - 1];
+      if (t && k) senkouA.push({ time: candles[i].time, value: (t.value + k.value) / 2 });
+    }
+    if (i >= 51) senkouB.push({ time: candles[i].time, value: mid(candles, i - 51, 52) });
+    if (i + 26 < candles.length) chikou.push({ time: candles[i + 26].time, value: candles[i].close });
+  }
+  return { tenkan, kijun, senkouA, senkouB, chikou };
+}
+
+export function calcFractals(candles: CandlestickData[]): { up: Array<{time:Time;position:"aboveBar";shape:"arrowDown";color:string;size:1}>; down: Array<{time:Time;position:"belowBar";shape:"arrowUp";color:string;size:1}> } {
+  const up: Array<{time:Time;position:"aboveBar";shape:"arrowDown";color:string;size:1}> = [];
+  const down: Array<{time:Time;position:"belowBar";shape:"arrowUp";color:string;size:1}> = [];
+  for (let i = 2; i < candles.length - 2; i++) {
+    if (candles[i].high > candles[i-1].high && candles[i].high > candles[i-2].high && candles[i].high > candles[i+1].high && candles[i].high > candles[i+2].high)
+      up.push({ time: candles[i].time, position: "aboveBar", shape: "arrowDown", color: "#ef4444", size: 1 });
+    if (candles[i].low < candles[i-1].low && candles[i].low < candles[i-2].low && candles[i].low < candles[i+1].low && candles[i].low < candles[i+2].low)
+      down.push({ time: candles[i].time, position: "belowBar", shape: "arrowUp", color: "#22c55e", size: 1 });
+  }
+  return { up, down };
+}
+
+export function calcZigZag(candles: CandlestickData[], deviation = 5): LV[] {
+  const result: LV[] = [];
+  if (candles.length < 3) return result;
+  const dev = deviation / 100;
+  let lastPivotIdx = 0;
+  let lastPivotHigh = candles[0].high;
+  let lastPivotLow  = candles[0].low;
+  let trend: 1 | -1 = 1;
+  result.push({ time: candles[0].time, value: candles[0].close });
+  for (let i = 1; i < candles.length; i++) {
+    if (trend === 1) {
+      if (candles[i].high > lastPivotHigh) { lastPivotHigh = candles[i].high; lastPivotIdx = i; }
+      else if (candles[i].low < lastPivotHigh * (1 - dev)) {
+        result.push({ time: candles[lastPivotIdx].time, value: lastPivotHigh });
+        trend = -1; lastPivotLow = candles[i].low; lastPivotIdx = i;
+      }
+    } else {
+      if (candles[i].low < lastPivotLow) { lastPivotLow = candles[i].low; lastPivotIdx = i; }
+      else if (candles[i].high > lastPivotLow * (1 + dev)) {
+        result.push({ time: candles[lastPivotIdx].time, value: lastPivotLow });
+        trend = 1; lastPivotHigh = candles[i].high; lastPivotIdx = i;
+      }
+    }
+  }
+  result.push({ time: candles[candles.length - 1].time, value: trend === 1 ? lastPivotHigh : lastPivotLow });
+  return result;
+}
+
+export function calcAroon(candles: CandlestickData[], period = 14): { up: LV[]; down: LV[] } {
+  const up: LV[] = [], down: LV[] = [];
+  if (candles.length < period + 1) return { up, down };
+  for (let i = period; i < candles.length; i++) {
+    const slice = candles.slice(i - period, i + 1);
+    let hIdx = 0, lIdx = 0;
+    for (let j = 1; j <= period; j++) {
+      if (slice[j].high >= slice[hIdx].high) hIdx = j;
+      if (slice[j].low  <= slice[lIdx].low)  lIdx = j;
+    }
+    up.push({ time: candles[i].time, value: (hIdx / period) * 100 });
+    down.push({ time: candles[i].time, value: (lIdx / period) * 100 });
+  }
+  return { up, down };
+}
+
+export function calcROC(candles: CandlestickData[], period = 12): LV[] {
+  const result: LV[] = [];
+  for (let i = period; i < candles.length; i++) {
+    const prev = candles[i - period].close;
+    result.push({ time: candles[i].time, value: prev === 0 ? 0 : ((candles[i].close - prev) / prev) * 100 });
+  }
+  return result;
+}
+
+export function calcSTC(candles: CandlestickData[], fast = 23, slow = 50, k = 10): LV[] {
+  if (candles.length < slow + k * 2) return [];
+  const fastEMA = calcEMA(candles, fast);
+  const slowEMA = calcEMA(candles, slow);
+  const offset  = fastEMA.length - slowEMA.length;
+  const macdLine = slowEMA.map((s, i) => fastEMA[i + offset].value - s.value);
+  const stoch = (arr: number[], p: number): number[] => {
+    const out: number[] = [];
+    for (let i = p - 1; i < arr.length; i++) {
+      const sl = arr.slice(i - p + 1, i + 1);
+      const h = Math.max(...sl), l = Math.min(...sl);
+      out.push(h === l ? 50 : ((arr[i] - l) / (h - l)) * 100);
+    }
+    return out;
+  };
+  const smoothEMA = (arr: number[], p: number): number[] => {
+    if (arr.length < p) return [];
+    const ke = 2 / (p + 1);
+    let e = arr.slice(0, p).reduce((s, v) => s + v, 0) / p;
+    const out = [e];
+    for (let i = p; i < arr.length; i++) { e = arr[i] * ke + e * (1 - ke); out.push(e); }
+    return out;
+  };
+  const k1 = stoch(macdLine, k);
+  const d1 = smoothEMA(k1, 3);
+  const k2 = stoch(d1, k);
+  const d2 = smoothEMA(k2, 3);
+  const startIdx = slowEMA.length - d2.length;
+  return d2.map((v, i) => ({ time: slowEMA[startIdx + i].time, value: v }));
+}
+
+export function calcVortex(candles: CandlestickData[], period = 14): { viPlus: LV[]; viMinus: LV[] } {
+  const viPlus: LV[] = [], viMinus: LV[] = [];
+  if (candles.length < period + 1) return { viPlus, viMinus };
+  for (let i = period; i < candles.length; i++) {
+    let trSum = 0, vpSum = 0, vmSum = 0;
+    for (let j = i - period + 1; j <= i; j++) {
+      trSum += Math.max(candles[j].high - candles[j].low, Math.abs(candles[j].high - candles[j-1].close), Math.abs(candles[j].low - candles[j-1].close));
+      vpSum += Math.abs(candles[j].high - candles[j-1].low);
+      vmSum += Math.abs(candles[j].low  - candles[j-1].high);
+    }
+    viPlus.push({ time: candles[i].time, value: trSum === 0 ? 0 : vpSum / trSum });
+    viMinus.push({ time: candles[i].time, value: trSum === 0 ? 0 : vmSum / trSum });
+  }
+  return { viPlus, viMinus };
+}
+
+export function calcDeMarker(candles: CandlestickData[], period = 14): LV[] {
+  const result: LV[] = [];
+  if (candles.length < period + 1) return result;
+  const deMax: number[] = [], deMin: number[] = [];
+  for (let i = 1; i < candles.length; i++) {
+    deMax.push(Math.max(0, candles[i].high - candles[i-1].high));
+    deMin.push(Math.max(0, candles[i-1].low - candles[i].low));
+  }
+  for (let i = period - 1; i < deMax.length; i++) {
+    const sumMax = deMax.slice(i - period + 1, i + 1).reduce((s, v) => s + v, 0);
+    const sumMin = deMin.slice(i - period + 1, i + 1).reduce((s, v) => s + v, 0);
+    result.push({ time: candles[i + 1].time, value: (sumMax + sumMin) === 0 ? 0.5 : sumMax / (sumMax + sumMin) });
+  }
+  return result;
+}
+
+export function calcVolumeOsc(candles: CandlestickData[], fast = 5, slow = 10): LV[] {
+  const vols = candles.map(c => (c as any).volume != null ? (c as any).volume as number : c.high - c.low);
+  const emaV = (arr: number[], p: number): number[] => {
+    if (arr.length < p) return [];
+    const k = 2 / (p + 1);
+    let e = arr.slice(0, p).reduce((s, v) => s + v, 0) / p;
+    const out: number[] = [e];
+    for (let i = p; i < arr.length; i++) { e = arr[i] * k + e * (1 - k); out.push(e); }
+    return out;
+  };
+  const fastEMA = emaV(vols, fast);
+  const slowEMA = emaV(vols, slow);
+  const off = fastEMA.length - slowEMA.length;
+  return slowEMA.map((s, i) => {
+    const f = fastEMA[i + off];
+    return { time: candles[candles.length - slowEMA.length + i].time, value: s === 0 ? 0 : ((f - s) / s) * 100 };
+  });
+}
+
+export function calcWeisWaves(candles: CandlestickData[]): Array<{time:Time;value:number;color:string}> {
+  const result: Array<{time:Time;value:number;color:string}> = [];
+  if (candles.length < 2) return result;
+  let dir = candles[1].close >= candles[0].close ? 1 : -1;
+  let acc = 0;
+  for (let i = 1; i < candles.length; i++) {
+    const vol = (candles[i] as any).volume != null ? (candles[i] as any).volume as number : (candles[i].high - candles[i].low);
+    const newDir = candles[i].close >= candles[i-1].close ? 1 : -1;
+    if (newDir !== dir) { acc = 0; dir = newDir; }
+    acc += vol;
+    result.push({ time: candles[i].time, value: acc, color: dir === 1 ? "#22c55e80" : "#ef444480" });
+  }
+  return result;
+}
