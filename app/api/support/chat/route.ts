@@ -5,7 +5,10 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { sendPushToAdmins } from "@/lib/webPush";
 import Anthropic from "@anthropic-ai/sdk";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getClient(): Anthropic | null {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
 const SYSTEM_PROMPT = `És o assistente de suporte da Dynamic Works, uma plataforma de trading de opções binárias angolana.
 
@@ -62,12 +65,23 @@ export async function POST(req: NextRequest) {
     content: String(m.content ?? "").slice(0, 1000),
   }));
 
-  const response = await client.messages.create({
+  const client = getClient();
+  if (!client) {
+    return NextResponse.json({ error: "Assistente temporariamente indisponível. Usa o suporte manual." }, { status: 503 });
+  }
+
+  let response: Awaited<ReturnType<typeof client.messages.create>>;
+  try {
+    response = await client.messages.create({
     model:      "claude-haiku-4-5-20251001",
     max_tokens: 512,
     system:     SYSTEM_PROMPT,
-    messages:   history,
-  });
+      messages:   history,
+    });
+  } catch (err) {
+    console.error("[support/chat] Anthropic error:", err);
+    return NextResponse.json({ error: "Erro ao contactar o assistente. Tenta novamente." }, { status: 502 });
+  }
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   const shouldEscalate = text.trimStart().startsWith("ESCALAR");

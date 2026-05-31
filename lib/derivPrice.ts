@@ -24,6 +24,8 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "1HZ10V": "1HZ10V", "1HZ25V": "1HZ25V", "1HZ50V": "1HZ50V",
   "1HZ75V": "1HZ75V", "1HZ100V": "1HZ100V",
   "R_10": "R_10", "R_25": "R_25", "R_50": "R_50", "R_75": "R_75", "R_100": "R_100",
+  "1HZ150V": "1HZ150V", "1HZ200V": "1HZ200V", "1HZ250V": "1HZ250V", "1HZ300V": "1HZ300V",
+  "STPIDX": "STPIDX", "RDBEAR": "RDBEAR", "RDBULL": "RDBULL",
 };
 
 export function isOtcAsset(_asset: string): boolean {
