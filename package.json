@@ -16,6 +16,7 @@
     "@prisma/client": "^7.8.0",
     "@types/qrcode": "^1.5.6",
     "bcryptjs": "^3.0.3",
+    "botid": "^1.5.11",
     "cloudinary": "^2.10.0",
     "date-fns": "^4.1.0",
     "jsonwebtoken": "^9.0.3",

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { formatKz } from "@/lib/format";
 import PageGuide from "@/app/components/PageGuide";
+import { Skeleton, SkeletonTable } from "@/app/components/Skeleton";
 import { Wallet as WalletIcon, ArrowDownCircle as DepositIcon, ArrowUpCircle as WithdrawIcon, Clock as HistoryIcon, ShieldAlert, Gift } from "lucide-react";
 
 const WALLET_GUIDE = [
@@ -176,8 +177,18 @@ export default function WalletPage() {
   const filterBtn = (active: boolean): React.CSSProperties => ({ padding: "6px 12px", background: active ? "rgba(245,166,35,0.15)" : "rgba(255,255,255,0.04)", color: active ? "#f5a623" : "#64748b", border: `1px solid ${active ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer" });
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+    <div style={{ minHeight: "100vh", background: "#070d1a", padding: "24px 16px", maxWidth: 600, margin: "0 auto" }}>
+      <Skeleton height={22} width={140} radius={8} style={{ marginBottom: 20 }} />
+      <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20, marginBottom: 14 }}>
+        <Skeleton height={12} width="40%" radius={5} style={{ marginBottom: 10 }} />
+        <Skeleton height={32} width="55%" radius={8} style={{ marginBottom: 6 }} />
+        <Skeleton height={10} width="30%" radius={5} />
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <Skeleton height={38} radius={10} style={{ flex: 1 }} />
+        <Skeleton height={38} radius={10} style={{ flex: 1 }} />
+      </div>
+      <SkeletonTable rows={6} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );

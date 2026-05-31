@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { formatKz } from "@/lib/format";
 import PageGuide from "@/app/components/PageGuide";
+import { SkeletonStatCard, SkeletonCard } from "@/app/components/Skeleton";
 
 const DASHBOARD_GUIDE = [
   { icon: <BarChart2   size={26} color="#f5a623" />, iconColor: "#f5a623", title: "O teu Dashboard",        description: "Aqui encontras todas as estatísticas das tuas operações reais — taxa de vitória, lucro total, volume e evolução ao longo do tempo.", tip: "As estatísticas são actualizadas em tempo real após cada trade." },
@@ -74,8 +75,12 @@ export default function DashboardPage() {
   const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20, marginBottom: 14 };
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+    <div style={{ minHeight: "100vh", background: "#070d1a", padding: "24px 16px", maxWidth: 600, margin: "0 auto" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+        <SkeletonStatCard /><SkeletonStatCard /><SkeletonStatCard /><SkeletonStatCard />
+      </div>
+      <SkeletonCard rows={4} style={{ marginBottom: 14 }} />
+      <SkeletonCard rows={5} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );

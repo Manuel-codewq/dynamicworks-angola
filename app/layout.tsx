@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import Script from "next/script";
-import SupportWidget from "./components/SupportWidget";
+import AiSupportChat from "./components/AiSupportChat";
+import OnboardingBar from "./components/OnboardingBar";
 import NotificationToast from "./components/NotificationToast";
 import HeartbeatTracker from "./components/HeartbeatTracker";
 import PushManager from "./components/PushManager";
@@ -202,9 +203,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ margin: 0, padding: 0, background: "#0a0f1e" }} suppressHydrationWarning>
         <SessionProvider>
+          <OnboardingBar />
           {children}
           <HeartbeatTracker />
-          <SupportWidget />
+          <AiSupportChat />
           <NotificationToast />
           <PushManager />
           <PwaInstallPrompt />

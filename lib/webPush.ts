@@ -20,6 +20,11 @@ function ensureVapid() {
   vapidConfigured = true;
 }
 
+export async function sendPushToAdmins(payload: PushPayload): Promise<void> {
+  const admins = await prisma.user.findMany({ where: { role: "admin" }, select: { id: true } });
+  await Promise.allSettled(admins.map(a => sendPushToUser(a.id, payload)));
+}
+
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
   ensureVapid();
   if (!vapidConfigured) return; // VAPID não configurado — ignorar silenciosamente
