@@ -18,12 +18,8 @@ export async function POST(req: NextRequest) {
       where: { email },
     });
 
-    if (!user || user.pwdOtpCode !== code) {
-      return NextResponse.json({ error: "Código inválido" }, { status: 400 });
-    }
-
-    if (user.pwdOtpExpires && user.pwdOtpExpires < new Date()) {
-      return NextResponse.json({ error: "O código expirou" }, { status: 400 });
+    if (!user || user.pwdOtpCode !== code || !user.pwdOtpExpires || user.pwdOtpExpires < new Date()) {
+      return NextResponse.json({ error: "Código inválido ou expirado" }, { status: 400 });
     }
 
     // Hash da nova senha

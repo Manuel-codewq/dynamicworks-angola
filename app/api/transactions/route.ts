@@ -79,27 +79,21 @@ export async function POST(req: NextRequest) {
         if (existing) throw Object.assign(new Error("PENDING_EXISTS"), { code: "PENDING_EXISTS" });
       }
 
-      // Validar OTP (constant-time) — separado do verifyCode de email
-      const { timingSafeEqual } = await import("crypto");
+      // Validar e invalidar OTP atomicamente — um único updateMany cujo WHERE inclui o código
+      // Se dois requests concorrentes chegarem com o mesmo OTP, só um consegue fazer o update
       const otpTrimmed = otp.trim();
-      const storedOtp  = user.otpCode ?? "";
-      const len        = Math.max(otpTrimmed.length, storedOtp.length, 1);
-      const otpMatch   =
-        storedOtp.length === otpTrimmed.length &&
-        timingSafeEqual(
-          Buffer.from(otpTrimmed.padEnd(len, "\0")),
-          Buffer.from(storedOtp.padEnd(len, "\0")),
-        );
+      const invalidated = await dbTx.user.updateMany({
+        where: {
+          id:         user.id,
+          otpCode:    otpTrimmed,
+          otpExpires: { gte: new Date() },
+        },
+        data: { otpCode: null, otpExpires: null },
+      });
 
-      if (!otpMatch || !user.otpExpires || user.otpExpires < new Date()) {
+      if (invalidated.count === 0) {
         throw Object.assign(new Error("OTP_INVALID"), { code: "OTP_INVALID" });
       }
-
-      // Invalidar OTP imediatamente após verificação
-      await dbTx.user.update({
-        where: { id: user.id },
-        data:  { otpCode: null, otpExpires: null },
-      });
 
       const WITHDRAWAL_FEE_RATE = 0.05;
       let txRef: string | null;

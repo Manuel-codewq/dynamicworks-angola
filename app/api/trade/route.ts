@@ -168,10 +168,6 @@ export async function POST(req: NextRequest) {
   // isSynthetic determina a fonte do preço (índice vs par real) — o preço vem sempre do servidor
   let entryPrice = await fetchServerEntryPrice(asset, isSynthetic);
   if (!entryPrice) {
-    const clientPrice = Number(body?.entryPrice);
-    if (clientPrice > 0) entryPrice = clientPrice;
-  }
-  if (!entryPrice) {
     return NextResponse.json(
       { error: "Preço de mercado indisponível. Tente novamente em instantes." },
       { status: 503 },

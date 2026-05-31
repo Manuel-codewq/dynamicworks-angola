@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
-import { checkRateLimit, resetFailCount } from "./rateLimit";
+import { checkRateLimit, resetFailCount, incrementFailCount } from "./rateLimit";
 import { parseDevice } from "./parseDevice";
 import { sendNewLoginEmail } from "./email";
 import { checkIpCollision } from "./fraudDetection";
@@ -129,6 +129,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             if (!otpValid) {
               await logAccess("2fa_fail", { userId: user.id, email, ip, userAgent });
+              // Após 5 falhas de OTP, invalidar o código — força o utilizador a pedir um novo
+              const otpFails = await incrementFailCount(`2fa_otp:${user.id}`, 10 * 60_000);
+              if (otpFails >= 5 && user.twoFactorMethod === "email") {
+                await prisma.user.update({
+                  where: { id: user.id },
+                  data:  { twoFaCode: null, twoFaExpires: null },
+                });
+              }
               throw new Error("2FA_INVALID");
             }
             await logAccess("2fa_ok", { userId: user.id, email, ip, userAgent });

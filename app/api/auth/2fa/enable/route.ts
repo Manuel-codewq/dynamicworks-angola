@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyTotpToken } from "@/lib/totp";
-import { randomInt } from "crypto";
+import { randomInt, timingSafeEqual } from "crypto";
 import { send2FAEmail } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -49,9 +49,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ codeSent: true });
     }
 
-    // Verificar código
+    // Verificar código com comparação timing-safe
+    const storedCode = user.twoFaCode ?? "";
+    const codeMatch =
+      storedCode.length > 0 &&
+      storedCode.length === token.length &&
+      timingSafeEqual(Buffer.from(storedCode), Buffer.from(token));
     const valid =
-      user.twoFaCode === token &&
+      codeMatch &&
       user.twoFaExpires instanceof Date &&
       user.twoFaExpires > new Date();
 
