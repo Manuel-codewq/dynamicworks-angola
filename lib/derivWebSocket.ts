@@ -49,29 +49,29 @@ export const COMMODITY_PAIRS: DerivPair[] = [
   { symbol: "frxXPTUSD", label: "Platina/USD", category: "Metal", decimals: 2 },
 ];
 
-// Pares sintéticos — índices Deriv 24/7 com movimento suave e contínuo
+// Pares sintéticos — índices Deriv 24/7 confirmados com preço activo
 export const SYNTHETIC_PAIRS: DerivPair[] = [
-  // Volatility Index 1s — tick suave e contínuo
+  // Volatility Index 1s (confirmados)
   { symbol: "1HZ10V",  label: "EUR/USD OTC", category: "Forex OTC", decimals: 5 },
   { symbol: "1HZ25V",  label: "GBP/USD OTC", category: "Forex OTC", decimals: 5 },
   { symbol: "1HZ50V",  label: "USD/JPY OTC", category: "Forex OTC", decimals: 3 },
   { symbol: "1HZ75V",  label: "AUD/USD OTC", category: "Forex OTC", decimals: 5 },
   { symbol: "1HZ100V", label: "USD/CAD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "1HZ150V", label: "EUR/CAD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "1HZ200V", label: "GBP/AUD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "1HZ250V", label: "AUD/NZD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "1HZ300V", label: "EUR/NZD OTC", category: "Forex OTC", decimals: 5 },
-  // Volatility Index — movimento contínuo e estável
+  // Volatility Index (confirmados)
   { symbol: "R_10",  label: "EUR/GBP OTC", category: "Forex OTC", decimals: 5 },
   { symbol: "R_25",  label: "USD/CHF OTC", category: "Forex OTC", decimals: 5 },
   { symbol: "R_50",  label: "NZD/USD OTC", category: "Forex OTC", decimals: 5 },
   { symbol: "R_75",  label: "EUR/JPY OTC", category: "Forex OTC", decimals: 3 },
   { symbol: "R_100", label: "GBP/JPY OTC", category: "Forex OTC", decimals: 3 },
-  // Step Index — movimento previsível em degraus
-  { symbol: "STPIDX", label: "AUD/JPY OTC", category: "Forex OTC", decimals: 3 },
-  // Range Break — oscila dentro de intervalos bem definidos
+  // Range Break (confirmados)
   { symbol: "RDBEAR", label: "EUR/CHF OTC", category: "Forex OTC", decimals: 5 },
   { symbol: "RDBULL", label: "AUD/CHF OTC", category: "Forex OTC", decimals: 5 },
+  // World Indices Deriv — movimento suave (a testar)
+  { symbol: "WLDAUD", label: "AUD/JPY OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "WLDEUR", label: "EUR/CAD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "WLDGBP", label: "GBP/CAD OTC", category: "Forex OTC", decimals: 5 },
+  { symbol: "WLDUSD", label: "USD/MXN OTC", category: "Forex OTC", decimals: 3 },
+  { symbol: "WLDXAU", label: "Ouro/USD OTC", category: "Forex OTC", decimals: 2 },
 ];
 
 // Mapa: label → símbolo do índice (para resolução de preço server-side)
