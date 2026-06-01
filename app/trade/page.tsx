@@ -132,7 +132,7 @@ export default function TradePage() {
   const [currentPrice,  setCurrentPrice]  = useState(0);
   const [priceUp,       setPriceUp]       = useState(true);
   const [amount,        setAmount]        = useState(1000);
-  const [expiry,        setExpiry]        = useState(EXPIRY_OPTIONS[0]);
+  const [expiry,        setExpiry]        = useState(EXPIRY_OPTIONS[1]);
   const [comutacaoActive, setComutacaoActive] = useState(false);
   const [expirySheetOpen, setExpirySheetOpen] = useState(false);
   const [sheetManualMins, setSheetManualMins] = useState("1");
