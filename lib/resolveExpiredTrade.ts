@@ -6,6 +6,8 @@ import { sendPushToUser } from "@/lib/webPush";
 const SYNTHETIC_SYMBOLS = new Set([
   "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V",
   "R_10", "R_25", "R_50", "R_75", "R_100",
+  "RDBEAR", "RDBULL",
+  "WLDAUD", "WLDEUR", "WLDGBP", "WLDUSD", "WLDXAU",
 ]);
 
 async function getClosePriceForAsset(asset: string, symbol?: string | null): Promise<number | null> {

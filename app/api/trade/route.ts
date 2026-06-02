@@ -33,20 +33,23 @@ const SYNTHETIC_SYMBOLS = new Set([
 ]);
 
 async function fetchServerEntryPrice(asset: string, isSynthetic: boolean): Promise<number | null> {
-  // 1. Try PriceCandle DB — 90s cobre um ciclo completo do cron (1/min)
+  // 1. DB — janela de 5 minutos
   try {
-    const cutoff = new Date(Date.now() - 90_000);
+    const cutoff = new Date(Date.now() - 1_800_000); // 30 min
     const candle = await prisma.priceCandle.findFirst({
       where:   { asset, timestamp: { gte: cutoff } },
       orderBy: { timestamp: "desc" },
       select:  { close: true },
     });
+    console.log(`[price] DB ${asset}:`, candle?.close ?? "NOT FOUND");
     if (candle?.close && candle.close > 0) return candle.close;
-  } catch { /* DB unavailable — fall through to WS */ }
+  } catch (e) { console.error("[price] DB error:", e); }
 
-  // 2. Fallback: live Deriv WS tick
-  // forceReal=true apenas para pares reais — sintéticos usam sempre o índice Deriv
-  return getDerivPrice(asset, !isSynthetic);
+  // 2. Fallback REST Deriv
+  console.log(`[price] REST fallback ${asset} isSynthetic=${isSynthetic}`);
+  const price = await getDerivPrice(asset, !isSynthetic);
+  console.log(`[price] REST result ${asset}:`, price);
+  return price;
 }
 
 
@@ -78,7 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { asset, symbol, direction, amount, expirySecs, skipTournament } = body ?? {};
+  const { asset, symbol, direction, amount, expirySecs, skipTournament, entryPrice: clientEntryPrice } = body ?? {};
   const isSynthetic = typeof symbol === "string" && SYNTHETIC_SYMBOLS.has(symbol);
 
   if (!ALLOWED_ASSETS.has(asset)) {
@@ -168,14 +171,30 @@ export async function POST(req: NextRequest) {
   // Obter payout das definições (com fallback)
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: symbol do cliente validado contra lista de sintéticos conhecidos
-  // isSynthetic determina a fonte do preço (índice vs par real) — o preço vem sempre do servidor
+  // Entry price: servidor primeiro; fallback para o preço enviado pelo cliente (WebSocket em tempo real)
   let entryPrice = await fetchServerEntryPrice(asset, isSynthetic);
+  const clientPrice = typeof clientEntryPrice === "number" ? clientEntryPrice : parseFloat(clientEntryPrice);
+  const clientValid = isFinite(clientPrice) && clientPrice > 0;
+
+  if (entryPrice && clientValid) {
+    const pctDiff = Math.abs(clientPrice - entryPrice) / entryPrice;
+    if (pctDiff > 0.01) {
+      return NextResponse.json(
+        { error: "Preço desatualizado. Recarrega e tenta novamente." },
+        { status: 409 },
+      );
+    }
+  }
+
   if (!entryPrice) {
-    return NextResponse.json(
-      { error: "Preço de mercado indisponível. Tente novamente em instantes." },
-      { status: 503 },
-    );
+    if (clientValid) {
+      entryPrice = clientPrice;
+    } else {
+      return NextResponse.json(
+        { error: "Preço de mercado indisponível. Tente novamente em instantes." },
+        { status: 503 },
+      );
+    }
   }
 
   // Débito atómico
