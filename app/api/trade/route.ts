@@ -13,19 +13,23 @@ const ALLOWED_ASSETS = new Set([
   "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
   "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
   "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
-  // Cripto + Metais (sem XAU/USD)
+  // Cripto + Metais
   "BTC/USD", "ETH/USD",
   "Prata/USD", "Paládio/USD", "Platina/USD",
   "XAG/USD",
-  // Pares sintéticos OTC (índices Deriv 24/7)
+  // Pares sintéticos OTC — todos os 17 (índices Deriv 24/7)
   "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
   "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC", "EUR/JPY OTC", "GBP/JPY OTC",
+  "EUR/CHF OTC", "AUD/CHF OTC",
+  "AUD/JPY OTC", "EUR/CAD OTC", "GBP/CAD OTC", "USD/MXN OTC", "Ouro/USD OTC",
 ]);
 
-// Símbolos sintéticos válidos (índices Deriv 24/7)
+// Símbolos sintéticos válidos (índices Deriv 24/7) — todos os 17 confirmados
 const SYNTHETIC_SYMBOLS = new Set([
   "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V",
   "R_10", "R_25", "R_50", "R_75", "R_100",
+  "RDBEAR", "RDBULL",
+  "WLDAUD", "WLDEUR", "WLDGBP", "WLDUSD", "WLDXAU",
 ]);
 
 async function fetchServerEntryPrice(asset: string, isSynthetic: boolean): Promise<number | null> {

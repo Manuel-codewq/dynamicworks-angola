@@ -22,16 +22,27 @@ const FOREX_PAIRS = [
 const ALWAYS_ON_PAIRS = [
   { asset: "BTC/USD",       symbol: "cryBTCUSD"  },
   { asset: "ETH/USD",       symbol: "cryETHUSD"  },
-  { asset: "XRP/USD",       symbol: "cryXRPUSD"  },
-  { asset: "LTC/USD",       symbol: "cryLTCUSD"  },
-  { asset: "XAU/USD",       symbol: "frxXAUUSD"  },
-  { asset: "XAG/USD",       symbol: "frxXAGUSD"  },
-  // Sintéticos DW (24/7)
-  { asset: "DW Index 10",  symbol: "R_10"  },
-  { asset: "DW Index 25",  symbol: "R_25"  },
-  { asset: "DW Index 50",  symbol: "R_50"  },
-  { asset: "DW Index 75",  symbol: "R_75"  },
-  { asset: "DW Index 100", symbol: "R_100" },
+  { asset: "Prata/USD",     symbol: "frxXAGUSD"  },
+  { asset: "Paládio/USD",   symbol: "frxXPDUSD"  },
+  { asset: "Platina/USD",   symbol: "frxXPTUSD"  },
+  // Sintéticos OTC — todos os 17 confirmados (labels exactos do UI)
+  { asset: "EUR/USD OTC",   symbol: "1HZ10V"  },
+  { asset: "GBP/USD OTC",   symbol: "1HZ25V"  },
+  { asset: "USD/JPY OTC",   symbol: "1HZ50V"  },
+  { asset: "AUD/USD OTC",   symbol: "1HZ75V"  },
+  { asset: "USD/CAD OTC",   symbol: "1HZ100V" },
+  { asset: "EUR/GBP OTC",   symbol: "R_10"    },
+  { asset: "USD/CHF OTC",   symbol: "R_25"    },
+  { asset: "NZD/USD OTC",   symbol: "R_50"    },
+  { asset: "EUR/JPY OTC",   symbol: "R_75"    },
+  { asset: "GBP/JPY OTC",   symbol: "R_100"   },
+  { asset: "EUR/CHF OTC",   symbol: "RDBEAR"  },
+  { asset: "AUD/CHF OTC",   symbol: "RDBULL"  },
+  { asset: "AUD/JPY OTC",   symbol: "WLDAUD"  },
+  { asset: "EUR/CAD OTC",   symbol: "WLDEUR"  },
+  { asset: "GBP/CAD OTC",   symbol: "WLDGBP"  },
+  { asset: "USD/MXN OTC",   symbol: "WLDUSD"  },
+  { asset: "Ouro/USD OTC",  symbol: "WLDXAU"  },
 ];
 
 const TIMEFRAMES = [
