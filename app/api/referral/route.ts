@@ -38,7 +38,7 @@ export async function GET() {
   const referredUsers = await prisma.user.findMany({
     where:   { referredBy: session.user.id },
     select:  { id: true, name: true, createdAt: true, kycStatus: true,
-               _count: { select: { transactions: true } } },
+               transactions: { where: { type: "deposit", status: "completed" }, select: { id: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -50,7 +50,7 @@ export async function GET() {
       name:      u.name,
       joinedAt:  u.createdAt,
       kycStatus: u.kycStatus,
-      deposits:  u._count.transactions,
+      deposits:  u.transactions.length,
     })),
   });
 }
