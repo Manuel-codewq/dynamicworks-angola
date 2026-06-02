@@ -33,9 +33,9 @@ const SYNTHETIC_SYMBOLS = new Set([
 ]);
 
 async function fetchServerEntryPrice(asset: string, isSynthetic: boolean): Promise<number | null> {
-  // 1. Try PriceCandle DB (recorded in the last 30s by price-recorder)
+  // 1. Try PriceCandle DB — 90s cobre um ciclo completo do cron (1/min)
   try {
-    const cutoff = new Date(Date.now() - 30_000);
+    const cutoff = new Date(Date.now() - 90_000);
     const candle = await prisma.priceCandle.findFirst({
       where:   { asset, timestamp: { gte: cutoff } },
       orderBy: { timestamp: "desc" },
