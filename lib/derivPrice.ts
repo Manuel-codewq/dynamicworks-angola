@@ -1,7 +1,4 @@
-import WebSocket from "ws";
 import { SYNTHETIC_LABEL_TO_SYMBOL, isRealMarketOpen } from "./derivWebSocket";
-
-const DERIV_WS_URL = "wss://ws.binaryws.com/websockets/v3?app_id=127916";
 
 const ASSET_TO_SYMBOL: Record<string, string> = {
   // Forex real
@@ -15,56 +12,45 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
   "GBP/NOK": "frxGBPNOK", "GBP/NZD": "frxGBPNZD", "NZD/JPY": "frxNZDJPY",
   "USD/MXN": "frxUSDMXN", "USD/NOK": "frxUSDNOK", "USD/PLN": "frxUSDPLN",
   "USD/SEK": "frxUSDSEK", "BTC/USD": "cryBTCUSD", "ETH/USD": "cryETHUSD",
-  "Ouro/USD": "frxXAUUSD", "Prata/USD": "frxXAGUSD",
-  "Paládio/USD": "frxXPDUSD", "Platina/USD": "frxXPTUSD",
-  "XAU/USD": "frxXAUUSD", "XAG/USD": "frxXAGUSD",
-  "DW Index 10": "R_10", "DW Index 25": "R_25", "DW Index 50": "R_50",
-  "DW Index 75": "R_75", "DW Index 100": "R_100",
-  // Índices Deriv directos (símbolo = símbolo Deriv)
+  "Prata/USD": "frxXAGUSD", "Paládio/USD": "frxXPDUSD", "Platina/USD": "frxXPTUSD",
+  "XAG/USD": "frxXAGUSD",
+  // Sintéticos directos
   "1HZ10V": "1HZ10V", "1HZ25V": "1HZ25V", "1HZ50V": "1HZ50V",
   "1HZ75V": "1HZ75V", "1HZ100V": "1HZ100V",
   "R_10": "R_10", "R_25": "R_25", "R_50": "R_50", "R_75": "R_75", "R_100": "R_100",
   "RDBEAR": "RDBEAR", "RDBULL": "RDBULL",
-  "WLDAUD": "WLDAUD", "WLDEUR": "WLDEUR", "WLDGBP": "WLDGBP", "WLDUSD": "WLDUSD", "WLDXAU": "WLDXAU",
+  "WLDAUD": "WLDAUD", "WLDEUR": "WLDEUR", "WLDGBP": "WLDGBP",
+  "WLDUSD": "WLDUSD", "WLDXAU": "WLDXAU",
 };
 
 export function isOtcAsset(_asset: string): boolean {
-  return false; // Pares OTC removidos — todos os pares agora têm preço server-side
+  return false;
 }
 
+// HTTP REST — mais fiável que WebSocket em ambiente serverless
 async function fetchDerivSymbolPrice(symbol: string): Promise<number | null> {
-  return new Promise((resolve) => {
-    let resolved = false;
-    const done = (val: number | null) => {
-      if (resolved) return;
-      resolved = true;
-      try { ws.terminate(); } catch {}
-      resolve(val);
-    };
-    const ws = new WebSocket(DERIV_WS_URL);
-    const timeout = setTimeout(() => done(null), 8000);
-    ws.on("open", () => {
-      ws.send(JSON.stringify({ ticks_history: symbol, count: 1, end: "latest", style: "ticks" }));
+  try {
+    const url = `https://api.deriv.com/api/v1/ticks_history` +
+      `?ticks_history=${symbol}&count=1&end=latest&style=ticks`;
+    const res = await fetch(url, {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(8000),
     });
-    ws.on("message", (raw: Buffer) => {
-      try {
-        const msg = JSON.parse(raw.toString());
-        if (msg.error) { clearTimeout(timeout); done(null); return; }
-        if (Array.isArray(msg.history?.prices) && msg.history.prices.length > 0) {
-          clearTimeout(timeout);
-          const price = parseFloat(msg.history.prices[msg.history.prices.length - 1]);
-          done(isFinite(price) && price > 0 ? price : null);
-        }
-      } catch { clearTimeout(timeout); done(null); }
-    });
-    ws.on("error", () => { clearTimeout(timeout); done(null); });
-  });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const prices: string[] = json?.history?.prices ?? [];
+    if (prices.length === 0) return null;
+    const price = parseFloat(prices[prices.length - 1]);
+    return isFinite(price) && price > 0 ? price : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getDerivPrice(asset: string, forceReal = false): Promise<number | null> {
   const synthSymbol = SYNTHETIC_LABEL_TO_SYMBOL[asset];
 
-  // Mercado fechado + par tem versão sintética + não forçado real → usar índice Deriv directamente
+  // Mercado fechado + par tem versão sintética + não forçado real → usar índice Deriv
   if (synthSymbol && !isRealMarketOpen() && !forceReal) {
     return fetchDerivSymbolPrice(synthSymbol);
   }
@@ -75,7 +61,7 @@ export async function getDerivPrice(asset: string, forceReal = false): Promise<n
   const price = await fetchDerivSymbolPrice(symbol);
   if (price) return price;
 
-  // Fallback: tentar índice sintético se preço real falhou (só quando mercado fechado sem override)
+  // Fallback: tentar índice sintético se preço real falhou
   if (synthSymbol && synthSymbol !== symbol && !forceReal) {
     return fetchDerivSymbolPrice(synthSymbol);
   }
