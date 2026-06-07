@@ -1439,6 +1439,43 @@ export default function TradePage() {
     lastPriceRef.current = 0;
     initialScrollDone.current = false; // reset ao mudar par/timeframe → scroll ao carregar novas velas
     derivWS.getCandles(selectedPair.symbol, gran, 300);
+
+    // Fallback: se o WebSocket não entregar candles em 2s, buscar da DB
+    const label = selectedPair.label;
+    const tf    = timeframe;
+    const fallbackTimer = setTimeout(async () => {
+      if (candleDataRef.current.length > 0) return;
+      if (!candleSeriesRef.current) return;
+      try {
+        const res = await fetch(`/api/market-candles?asset=${encodeURIComponent(label)}&timeframe=${tf}&count=300`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.hasData || !data.candles?.length) return;
+        if (candleDataRef.current.length > 0) return; // WS entregou entretanto
+        const candles: CandlestickData[] = data.candles;
+        const ct = chartTypeRef.current;
+        if (ct === "line" || ct === "area") {
+          candleSeriesRef.current?.setData(candles.map((c: any) => ({ time: c.time, value: c.close })) as any);
+        } else {
+          candleSeriesRef.current?.setData(candles);
+        }
+        candleDataRef.current = candles;
+        recalcRef.current?.();
+        currentCandleRef.current = candles[candles.length - 1];
+        if (!initialScrollDone.current) {
+          initialScrollDone.current = true;
+          chartApiRef.current?.timeScale().scrollToRealTime();
+        }
+        const last = candles[candles.length - 1].close;
+        if (lastPriceRef.current === 0) {
+          lastPriceRef.current = last;
+          setCurrentPrice(last);
+        }
+        reconnectingRef.current = false;
+      } catch { /* silent */ }
+    }, 2000);
+
+    return () => clearTimeout(fallbackTimer);
   }, [selectedPair, timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Re-subscribe ticks when pairs list changes (ticker strip) ─────────────
