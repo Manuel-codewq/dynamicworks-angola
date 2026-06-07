@@ -21,6 +21,7 @@ export default function OnboardingBar() {
   const [data,       setData]       = useState<{ steps: Record<string, boolean>; completed: number; total: number } | null>(null);
   const [dismissed,  setDismissed]  = useState(true);
   const [minimised,  setMinimised]  = useState(false);
+  const [visible,    setVisible]    = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,7 +32,10 @@ export default function OnboardingBar() {
   useEffect(() => {
     if (status !== "authenticated" || dismissed) return;
     fetch("/api/onboarding").then(r => r.ok ? r.json() : null).then(d => {
-      if (d) setData(d);
+      if (d) {
+        setData(d);
+        setTimeout(() => setVisible(true), 50);
+      }
     });
   }, [status, dismissed]);
 
@@ -45,8 +49,11 @@ export default function OnboardingBar() {
   const nextStep = STEPS.find(s => !data.steps[s.key]);
 
   function dismiss() {
-    localStorage.setItem(STORAGE_KEY, "1");
-    setDismissed(true);
+    setVisible(false);
+    setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, "1");
+      setDismissed(true);
+    }, 400);
   }
 
   return (
@@ -60,7 +67,10 @@ export default function OnboardingBar() {
         background: "#070d1a", borderBottom: "1px solid #1e2d50",
         padding: minimised ? "8px 16px" : "12px 16px",
         position: "sticky", top: 0, zIndex: 50,
-        transition: "all .3s ease",
+        transition: "opacity 0.4s ease, max-height 0.4s ease, padding 0.3s ease",
+        opacity: visible ? 1 : 0,
+        maxHeight: visible ? "200px" : "0px",
+        overflow: "hidden",
       }}>
         {/* Barra de progresso */}
         <div className="ob-progress" style={{ height: 3, borderRadius: 2, marginBottom: minimised ? 0 : 10, transition: "margin .3s" }} />
