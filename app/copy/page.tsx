@@ -125,9 +125,12 @@ export default function CopyTradingPage() {
         <div style={{ ...CARD, background: "linear-gradient(135deg,#1a2544 0%,#0f1c38 100%)", marginBottom: 20, textAlign: "center", padding: "28px 20px" }}>
           <Copy size={36} color="#f5a623" style={{ marginBottom: 10 }} />
           <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>Copy Trading</h1>
-          <p style={{ color: "#94a3b8", fontSize: 14, margin: 0, lineHeight: 1.6 }}>
+          <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 14px", lineHeight: 1.6 }}>
             Copia automaticamente as operações dos melhores traders em tempo real. Cada vez que um expert abre uma operação, a tua posição é aberta com o teu montante configurado.
           </p>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: "8px 14px" }}>
+            <span style={{ fontSize: 13, color: "#f5a623", fontWeight: 700 }}>⚠ Apenas conta real — requer depósito activo</span>
+          </div>
         </div>
 
         {/* Tabs */}

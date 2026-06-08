@@ -65,6 +65,9 @@ async function replicateToFollowers(
   payout: number,
   cfg: any,
 ) {
+  // Copy trading só funciona em conta real — ignorar trades demo e torneio
+  if (expert.isDemo || masterTrade.tournamentParticipantId) return;
+
   const traderProfile = await prisma.copyTrader.findUnique({
     where: { userId: expert.id },
     select: { id: true, status: true, commission: true },
@@ -83,18 +86,18 @@ async function replicateToFollowers(
     try {
       const follower = await prisma.user.findUnique({
         where: { id: follow.followerId },
-        select: { id: true, balance: true, demoBalance: true, isDemo: true, status: true },
+        select: { id: true, balance: true, isDemo: true, status: true },
       });
+      // Só seguidores em conta real com saldo suficiente
       if (!follower || follower.status === "blocked") continue;
+      if (follower.isDemo) continue;
 
-      const balanceField = follower.isDemo ? "demoBalance" : "balance";
-      const currentBalance = follower[balanceField] ?? 0;
-      const copyAmount = Math.min(follow.amount, currentBalance);
+      const copyAmount = Math.min(follow.amount, follower.balance ?? 0);
       if (copyAmount < 1000) continue;
 
       const deducted = await prisma.user.updateMany({
-        where: { id: follower.id, [balanceField]: { gte: copyAmount } },
-        data: { [balanceField]: { decrement: copyAmount } },
+        where: { id: follower.id, balance: { gte: copyAmount } },
+        data: { balance: { decrement: copyAmount } },
       });
       if (deducted.count === 0) continue;
 
@@ -110,7 +113,7 @@ async function replicateToFollowers(
           expirySecs: expiry,
           expiresAt,
           status: "active",
-          isDemo: follower.isDemo,
+          isDemo: false,
         },
       });
 
