@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, ChevronUp, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy, Check,
-  Clock, History, Headphones, MessageCircle, Shield, Gift,
+  Clock, History, Headphones, MessageCircle, Shield, Gift, Copy,
   PenLine, CandlestickChart, LineChart, AreaChart,
   Maximize2, Minimize2, Minus, Sliders, Trash2,
   Square, GitFork, BarChart, Activity,
@@ -4136,6 +4136,7 @@ export default function TradePage() {
               {/* Nav links */}
               {[
                 { href: "/profile",   icon: <User size={16} color="#f5a623" />,       label: "Perfil",             desc: "Editar dados pessoais" },
+                { href: "/copy",      icon: <Copy size={16} color="#38bdf8" />,        label: "Copy Trading",       desc: "Copia experts · torna-te expert" },
                 { href: "/referral",  icon: <Gift size={16} color="#22c55e" />,        label: "Referidos",          desc: "Convida amigos · ganha 2%" },
                 { href: "/security",  icon: <Shield size={16} color="#f5a623" />,      label: "Segurança",          desc: "2FA, sessões e log de acessos" },
                 { href: "/dashboard", icon: <BarChart2 size={16} color="#f5a623" />,   label: "Dashboard",          desc: "Estatísticas das operações" },

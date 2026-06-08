@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
   Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
-  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal,
+  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal, Copy,
 } from "lucide-react";
 
 type NavItem = {
@@ -27,6 +27,7 @@ const NAV: NavItem[] = [
   { href: "/ao/admin/ranking",       label: "Ranking",        Icon: Medal },
   { href: "/ao/admin/notifications",  label: "Notificações",   Icon: Bell },
   { href: "/ao/admin/bonuses",        label: "Bónus",          Icon: Gift },
+  { href: "/ao/admin/copy",            label: "Copy Trading",   Icon: Copy },
   { href: "/ao/admin/audit",          label: "Auditoria",      Icon: ShieldCheck },
   { href: "/ao/admin/support",        label: "Suporte",        Icon: MessageCircle, badgeKey: "support" },
   { href: "/ao/admin/settings",       label: "Configurações",  Icon: Settings },
@@ -94,11 +95,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Logo */}
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #1e2d50" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <TrendingUp size={18} color="#000" strokeWidth={2.5} />
-            </div>
+            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 34, height: 34, objectFit: "contain", borderRadius: 8, background: "#0a0f1e", flexShrink: 0 }} />
             <div>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Dynamics Works</div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Dynamic Works</div>
               <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>ADMIN PANEL</div>
             </div>
           </div>
