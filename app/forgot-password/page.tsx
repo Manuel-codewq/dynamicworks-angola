@@ -60,12 +60,8 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, background: "#f5a623", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <TrendingUp size={28} color="#0a0f1e" strokeWidth={2.5} />
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>
-              Dynamics Works
-            </div>
+            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10 }} />
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>Dynamic Works</div>
           </div>
         </div>
 

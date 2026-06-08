@@ -128,19 +128,10 @@ function LoginContent() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <div style={{
-              width: 48, height: 48, background: "#f5a623",
-              borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <TrendingUp size={28} color="#0a0f1e" strokeWidth={2.5} />
-            </div>
+            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10 }} />
             <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>
-                Dynamics Works
-              </div>
-              <div style={{ fontSize: 12, color: "#f5a623", letterSpacing: 1 }}>
-                PLATAFORMA DE NEGOCIAÇÃO
-              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>Dynamic Works</div>
+              <div style={{ fontSize: 12, color: "#f5a623", letterSpacing: 1 }}>PLATAFORMA DE NEGOCIAÇÃO</div>
             </div>
           </div>
         </div>

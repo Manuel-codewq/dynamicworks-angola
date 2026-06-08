@@ -26,10 +26,8 @@ export default function MaintenancePage() {
       <div style={{ textAlign: "center", maxWidth: 480 }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 36 }}>
-          <div style={{ width: 40, height: 40, background: "#f5a623", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <TrendingUp size={22} color="#0a0f1e" strokeWidth={2.5} />
-          </div>
-          <span style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>Dynamics Works</span>
+          <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 9 }} />
+          <span style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>Dynamic Works</span>
         </div>
 
         {/* Ícone animado */}

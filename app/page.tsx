@@ -85,11 +85,9 @@ function StatCard({ label, target, format }: { label: string; target: number; fo
 
 const Logo = () => (
   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-    <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(245,166,35,0.4)" }}>
-      <TrendingUp size={20} color="#0a0f1e" strokeWidth={2.5} />
-    </div>
+    <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 9 }} />
     <span style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, background: "linear-gradient(90deg,#fff,#94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-      Dynamics Works
+      Dynamic Works
     </span>
   </div>
 );

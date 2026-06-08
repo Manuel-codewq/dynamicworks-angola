@@ -4242,10 +4242,8 @@ export default function TradePage() {
       {/* Desktop Topbar */}
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, zIndex: 100, background: "#080e1d", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 16px", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 150 }}>
-          <div style={{ width: 30, height: 30, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 12px rgba(245,166,35,0.3)" }}>
-            <TrendingUp size={16} color="#0a0f1e" strokeWidth={2.5} />
-          </div>
-          <span style={{ color: "#fff", fontWeight: 900, fontSize: 14, letterSpacing: 0.3 }}>Dynamics Works</span>
+          <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ height: 30, width: 30, objectFit: "cover", borderRadius: 6 }} />
+          <span style={{ color: "#fff", fontWeight: 900, fontSize: 14, letterSpacing: 0.3 }}>Dynamic Works</span>
         </div>
 
         {renderAssetDropdown()}
