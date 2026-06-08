@@ -51,6 +51,8 @@ model User {
   sessions          UserSession[]
   accessLogs        AccessLog[]
   priceAlerts       PriceAlert[]
+  copyTrader        CopyTrader?
+  copyFollowing     CopyFollow[]     @relation("CopyFollower")
 }
 
 model UserSession {
@@ -331,6 +333,36 @@ model PromoRedemption {
 
   @@unique([promoCodeId, userId])
   @@index([userId])
+}
+
+model CopyTrader {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String       @default("pending") // pending | approved | rejected
+  bio         String?
+  commission  Float        @default(0.10)      // 10% dos lucros dos seguidores
+  totalFollowers Int       @default(0)
+  totalCopied  Int         @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  followers   CopyFollow[]
+
+  @@index([status])
+}
+
+model CopyFollow {
+  id         String     @id @default(cuid())
+  followerId String
+  follower   User       @relation("CopyFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  traderId   String
+  trader     CopyTrader @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  amount     Float      @default(1000)   // Kz por trade copiado
+  active     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+
+  @@unique([followerId, traderId])
+  @@index([traderId, active])
 }
 
 model PriceAlert {

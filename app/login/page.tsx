@@ -128,7 +128,7 @@ function LoginContent() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10 }} />
+            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 10, background: "#111827" }} />
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>Dynamic Works</div>
               <div style={{ fontSize: 12, color: "#f5a623", letterSpacing: 1 }}>PLATAFORMA DE NEGOCIAÇÃO</div>
@@ -223,7 +223,7 @@ function LoginContent() {
                 Entrar na conta
               </h1>
               <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 24px" }}>
-                Bem-vindo de volta ao Dynamics Works
+                Bem-vindo de volta ao Dynamic Works
               </p>
 
               {isVerified && (
@@ -317,7 +317,7 @@ function LoginContent() {
         </div>
 
         <p style={{ textAlign: "center", color: "#4a5568", fontSize: 12, marginTop: 20 }}>
-          © 2025 Dynamics Works · Angola ·{" "}
+          © 2025 Dynamic Works · Angola ·{" "}
           <a href="/terms" style={{ color: "#94a3b8", textDecoration: "none" }}>Termos de Uso</a>
         </p>
       </div>

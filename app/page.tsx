@@ -85,7 +85,7 @@ function StatCard({ label, target, format }: { label: string; target: number; fo
 
 const Logo = () => (
   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-    <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 9 }} />
+    <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 9, background: "#111827" }} />
     <span style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, background: "linear-gradient(90deg,#fff,#94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
       Dynamic Works
     </span>
@@ -316,7 +316,7 @@ export default function LandingPage() {
       <div style={{ position: "relative", zIndex: 1 }}>
         <section style={{ maxWidth: 960, margin: "0 auto", padding: "70px 24px" }}>
           <FadeIn>
-            <h2 style={{ textAlign: "center", fontSize: "clamp(20px,3vw,26px)", fontWeight: 800, marginBottom: 10, letterSpacing: -0.5 }}>Porque escolher a Dynamics Works?</h2>
+            <h2 style={{ textAlign: "center", fontSize: "clamp(20px,3vw,26px)", fontWeight: 800, marginBottom: 10, letterSpacing: -0.5 }}>Porque escolher a Dynamic Works?</h2>
             <p style={{ textAlign: "center", color: "#4b5563", fontSize: 14, marginBottom: 44 }}>Tudo o que precisas para negociar com confiança</p>
           </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 16 }}>
@@ -467,7 +467,7 @@ export default function LandingPage() {
           {/* Bottom */}
           <div style={{ borderTop: "1px solid rgba(30,45,80,0.5)", paddingTop: 20, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
             <p style={{ color: "#1e2d50", fontSize: 12, margin: 0 }}>
-              © {new Date().getFullYear()} Dynamics Works · Angola · Todos os direitos reservados
+              © {new Date().getFullYear()} Dynamic Works · Angola · Todos os direitos reservados
             </p>
             <p style={{ color: "#1e2d50", fontSize: 12, margin: 0 }}>
               Opções binárias envolvem risco. Negocie com responsabilidade.

@@ -71,7 +71,7 @@ function RegisterContent() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10 }} />
+            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 10, background: "#111827" }} />
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff" }}>Dynamic Works</div>
               <div style={{ fontSize: 12, color: "#f5a623", letterSpacing: 1 }}>PLATAFORMA DE NEGOCIAÇÃO</div>

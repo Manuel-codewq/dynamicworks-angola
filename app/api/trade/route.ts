@@ -54,6 +54,74 @@ async function fetchServerEntryPrice(asset: string, isSynthetic: boolean): Promi
 
 
 
+async function replicateToFollowers(
+  expert: any,
+  masterTrade: any,
+  asset: string,
+  symbol: string | null,
+  direction: string,
+  expiry: number,
+  entryPrice: number,
+  payout: number,
+  cfg: any,
+) {
+  const traderProfile = await prisma.copyTrader.findUnique({
+    where: { userId: expert.id },
+    select: { id: true, status: true, commission: true },
+  });
+  if (!traderProfile || traderProfile.status !== "approved") return;
+
+  const follows = await prisma.copyFollow.findMany({
+    where: { traderId: traderProfile.id, active: true },
+    select: { followerId: true, amount: true },
+  });
+  if (!follows.length) return;
+
+  const expiresAt = new Date(Date.now() + expiry * 1000);
+
+  for (const follow of follows) {
+    try {
+      const follower = await prisma.user.findUnique({
+        where: { id: follow.followerId },
+        select: { id: true, balance: true, demoBalance: true, isDemo: true, status: true },
+      });
+      if (!follower || follower.status === "blocked") continue;
+
+      const balanceField = follower.isDemo ? "demoBalance" : "balance";
+      const currentBalance = follower[balanceField] ?? 0;
+      const copyAmount = Math.min(follow.amount, currentBalance);
+      if (copyAmount < 1000) continue;
+
+      const deducted = await prisma.user.updateMany({
+        where: { id: follower.id, [balanceField]: { gte: copyAmount } },
+        data: { [balanceField]: { decrement: copyAmount } },
+      });
+      if (deducted.count === 0) continue;
+
+      await prisma.trade.create({
+        data: {
+          userId: follower.id,
+          asset,
+          symbol: typeof symbol === "string" ? symbol : null,
+          direction,
+          amount: copyAmount,
+          entryPrice,
+          payout,
+          expirySecs: expiry,
+          expiresAt,
+          status: "active",
+          isDemo: follower.isDemo,
+        },
+      });
+
+      await prisma.copyTrader.update({
+        where: { id: traderProfile.id },
+        data: { totalCopied: { increment: 1 } },
+      });
+    } catch { /* continuar com próximo seguidor */ }
+  }
+}
+
 export async function POST(req: NextRequest) {
   let session: any;
   try {
@@ -250,6 +318,9 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ error: "Erro ao registar operação. Tente novamente." }, { status: 500 });
   }
+
+  // Copy trading — replicar para seguidores activos (fire-and-forget)
+  replicateToFollowers(user, trade, asset, symbol, direction, expiry, entryPrice, payout, cfg).catch(() => {});
 
   // Notificar admins se operação real acima do threshold configurado
   const largeTradePushThreshold = cfg?.largeTradePushThreshold ?? 0;

@@ -52,9 +52,9 @@ export const metadata: Metadata = {
     images:      ["/og-image.png"],
   },
   icons: [
-    { url: "/favicon.svg", type: "image/svg+xml" },
-    { url: "/icon-192",    sizes: "192x192", type: "image/png" },
-    { url: "/icon-512",    sizes: "512x512", type: "image/png" },
+    { url: "/logo-icon.jpeg", type: "image/jpeg" },
+    { url: "/logo-icon.jpeg", sizes: "192x192", type: "image/jpeg" },
+    { url: "/logo-icon.jpeg", sizes: "512x512", type: "image/jpeg" },
   ],
   manifest:     "/manifest.json",
   verification: { google: "1frD-5CSI74OUUeLfAug4yD7hI7AeHT-IEDKLY6-znY" },

@@ -3474,10 +3474,8 @@ export default function TradePage() {
         {/* ── Topbar (chart tab only) ── */}
         {mobileTab === "chart" && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#080e1d", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            <div style={{ width: 24, height: 24, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 10px rgba(245,166,35,0.35)" }}>
-              <TrendingUp size={12} color="#0a0f1e" strokeWidth={2.5} />
-            </div>
-            <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>Dynamics</span>
+            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 24, height: 24, objectFit: "contain", borderRadius: 5, background: "#1e2d50" }} />
+            <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>Dynamic Works</span>
           </div>
 
           <button onClick={() => setMobileTab("markets")} style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "5px 8px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
@@ -4242,7 +4240,7 @@ export default function TradePage() {
       {/* Desktop Topbar */}
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, zIndex: 100, background: "#080e1d", borderBottom: "1px solid #1e2d50", display: "flex", alignItems: "center", padding: "0 16px", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 150 }}>
-          <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ height: 30, width: 30, objectFit: "cover", borderRadius: 6 }} />
+          <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ height: 30, width: 30, objectFit: "contain", borderRadius: 6, background: "#1e2d50" }} />
           <span style={{ color: "#fff", fontWeight: 900, fontSize: 14, letterSpacing: 0.3 }}>Dynamic Works</span>
         </div>
 

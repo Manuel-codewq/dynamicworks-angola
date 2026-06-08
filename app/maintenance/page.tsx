@@ -26,7 +26,7 @@ export default function MaintenancePage() {
       <div style={{ textAlign: "center", maxWidth: 480 }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 36 }}>
-          <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 9 }} />
+          <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 9, background: "#111827" }} />
           <span style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>Dynamic Works</span>
         </div>
 
@@ -64,7 +64,7 @@ export default function MaintenancePage() {
         </div>
 
         <p style={{ color: "#374151", fontSize: 12, marginTop: 28 }}>
-          Dynamics Works © {new Date().getFullYear()} · Angola
+          Dynamic Works © {new Date().getFullYear()} · Angola
         </p>
       </div>
     </div>
