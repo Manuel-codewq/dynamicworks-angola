@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { DerivWSClient, type DerivCandle } from "@/lib/derivServerWS";
 
 const FOREX_PAIRS = [
   { asset: "EUR/USD", symbol: "frxEURUSD" },
@@ -61,38 +62,8 @@ function isMarketOpen(): boolean {
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-interface DerivCandle {
-  epoch: number;
-  open:  string | number;
-  high:  string | number;
-  low:   string | number;
-  close: string | number;
-}
-
-async function fetchDerivCandles(
-  symbol: string,
-  granularity: number,
-  count = 5,
-): Promise<DerivCandle[]> {
-  const url =
-    `https://api.deriv.com/api/v1/ticks_history` +
-    `?ticks_history=${symbol}&count=${count}&end=latest&style=candles&granularity=${granularity}`;
-
-  const res = await fetch(url, {
-    headers: { "Accept": "application/json" },
-    signal: AbortSignal.timeout(8000),
-  });
-
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${symbol}`);
-
-  const json = await res.json();
-
-  // Deriv response: { candles: [...] }
-  const candles: DerivCandle[] = json?.candles ?? json?.history?.candles ?? [];
-  return candles;
-}
-
 async function recordPairs(
+  client: DerivWSClient,
   pairList: { asset: string; symbol: string }[],
   saved: { count: number },
   assets: string[],
@@ -101,7 +72,7 @@ async function recordPairs(
     const results = await Promise.allSettled(
       pairList.map(async (pair, idx) => {
         await delay(idx * 200);
-        const candles = await fetchDerivCandles(pair.symbol, tf.granularity, 5);
+        const candles = await client.fetchCandles(pair.symbol, tf.granularity, 5);
         const upserts = await Promise.allSettled(
           candles.map(c => {
             const ts    = new Date(Number(c.epoch) * 1000);
@@ -148,12 +119,19 @@ export async function GET(req: NextRequest) {
   const saved  = { count: 0 };
   const assets: string[] = [];
 
-  // Always record crypto and commodities (24/7 markets)
-  await recordPairs(ALWAYS_ON_PAIRS, saved, assets);
+  const client = new DerivWSClient();
+  try {
+    await client.connect();
 
-  // Only record forex during market hours
-  if (isMarketOpen()) {
-    await recordPairs(FOREX_PAIRS, saved, assets);
+    // Always record crypto and commodities (24/7 markets)
+    await recordPairs(client, ALWAYS_ON_PAIRS, saved, assets);
+
+    // Only record forex during market hours
+    if (isMarketOpen()) {
+      await recordPairs(client, FOREX_PAIRS, saved, assets);
+    }
+  } finally {
+    client.close();
   }
 
   return NextResponse.json({ saved: saved.count, assets });

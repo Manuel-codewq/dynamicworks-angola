@@ -1,4 +1,5 @@
 import { SYNTHETIC_LABEL_TO_SYMBOL } from "./derivWebSocket";
+import { fetchDerivCandlesWS } from "./derivServerWS";
 
 const ASSET_TO_SYMBOL: Record<string, string> = {
   "EUR/USD": "frxEURUSD", "GBP/USD": "frxGBPUSD", "USD/JPY": "frxUSDJPY",
@@ -19,22 +20,11 @@ export function isOtcAsset(asset: string): boolean {
   return typeof asset === "string" && asset.endsWith(" OTC");
 }
 
-// Mesmo formato que o price-recorder — comprovado a funcionar
 async function fetchDerivSymbolPrice(symbol: string): Promise<number | null> {
   try {
-    const url = `https://api.deriv.com/api/v1/ticks_history` +
-      `?ticks_history=${symbol}&count=1&end=latest&style=candles&granularity=60`;
-    const res = await fetch(url, {
-      headers: { "Accept": "application/json" },
-      signal: AbortSignal.timeout(10000),
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const candles: any[] = json?.candles ?? json?.history?.candles ?? [];
+    const candles = await fetchDerivCandlesWS(symbol, 60, 1);
     if (candles.length === 0) return null;
-    const close = parseFloat(candles[candles.length - 1]?.close);
-    return isFinite(close) && close > 0 ? close : null;
+    return candles[candles.length - 1].close;
   } catch {
     return null;
   }
