@@ -550,7 +550,6 @@ export default function WalletPage() {
                               multicaixa_express:  "Multicaixa Express",
                               transferencia_bancaria: "Transferência Bancária",
                               usdt_trc20:          "USDT TRC-20",
-                              crypto_nowpayments:  "USDT TRC-20",
                             }[tx.method] ?? tx.method}</span>}
                             <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{formatDate(tx.createdAt)}</div>
                           </div>

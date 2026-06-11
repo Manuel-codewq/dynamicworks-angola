@@ -18,7 +18,7 @@ interface AdminTransaction {
 }
 
 const TYPE_LABEL:   Record<string, string> = { deposit: "Depósito", withdrawal: "Levantamento" };
-const METHOD_LABEL: Record<string, string> = { multicaixa: "Multicaixa Express", multicaixa_express: "Multicaixa Express", multicaixa_ref: "Multicaixa Ref.", transferencia_bancaria: "Transf. Bancária", usdt_trc20: "USDT TRC-20", crypto_nowpayments: "USDT TRC-20" };
+const METHOD_LABEL: Record<string, string> = { multicaixa: "Multicaixa Express", multicaixa_express: "Multicaixa Express", multicaixa_ref: "Multicaixa Ref.", transferencia_bancaria: "Transf. Bancária", usdt_trc20: "USDT TRC-20" };
 const TYPE_COLOR: Record<string, string>  = { deposit: "#22c55e",     withdrawal: "#f5a623" };
 const TYPE_BG:    Record<string, string>  = { deposit: "rgba(34,197,94,0.12)", withdrawal: "rgba(245,166,35,0.12)" };
 

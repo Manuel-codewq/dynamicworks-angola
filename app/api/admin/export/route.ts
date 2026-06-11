@@ -15,7 +15,6 @@ const METHOD_LABEL: Record<string, string> = {
   multicaixa_ref:        "Multicaixa Ref.",
   transferencia_bancaria:"Transf. Bancária",
   usdt_trc20:            "USDT TRC-20",
-  crypto_nowpayments:    "USDT TRC-20",
 };
 
 const STATUS_LABEL: Record<string, string> = {

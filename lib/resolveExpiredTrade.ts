@@ -49,14 +49,19 @@ export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss";
 
 /**
  * Resolve uma operação expirada.
+ *
+ * O preço de fecho é SEMPRE determinado pelo servidor — nunca pelo cliente.
+ * Aceitar o preço enviado pelo browser permitiria ao utilizador forjar um
+ * `exitPrice` do lado vencedor da entrada e ganhar praticamente todas as
+ * operações (o resultado depende apenas de qual lado da entrada o preço fica).
+ *
  * Ordem de prioridade para o preço de fecho:
  *   1. PriceCandle DB (gravado pelo price-recorder, < 90s)
  *   2. Deriv WS em tempo real
- *   3. Loss automático após 30s sem preço (sem aceitar clientPrice — manipulável)
+ *   3. Sem preço após 30s → loss automático (fallback de segurança)
  */
 export async function resolveExpiredTrade(
   trade: TradeToResolve,
-  clientPrice?: number,
 ): Promise<ResolveOutcome> {
   if (trade.status !== "active") return "already_closed";
 
@@ -70,26 +75,8 @@ export async function resolveExpiredTrade(
   let profit:       number;
   let returnAmount: number;
 
-  // Preço de fecho: PriceCandle DB → Deriv WS → clientPrice
-  // O clientPrice é o tick exacto no momento de expiração (WebSocket em tempo real).
-  // O PriceCandle é o close do candle de 1 minuto — pode diferir do tick exacto.
-  // Estratégia: usar clientPrice quando está próximo do servidor (< 0.5% de diferença)
-  // porque representa o preço REAL que o utilizador vê no ecrã no momento da expiração.
-  let resolvedPrice: number | null = await getClosePriceForAsset(trade.asset, trade.symbol);
-
-  if (clientPrice && clientPrice > 0) {
-    if (!resolvedPrice) {
-      // Sem preço do servidor — usar client
-      resolvedPrice = clientPrice;
-    } else {
-      // Usar clientPrice se estiver dentro de 0.5% do servidor
-      // (mesmo tick, latência diferente — client é mais preciso no momento exacto)
-      const pctDiff = Math.abs(clientPrice - resolvedPrice) / resolvedPrice;
-      if (pctDiff < 0.005) {
-        resolvedPrice = clientPrice;
-      }
-    }
-  }
+  // Preço de fecho: PriceCandle DB → Deriv WS. Apenas fontes do servidor.
+  const resolvedPrice: number | null = await getClosePriceForAsset(trade.asset, trade.symbol);
 
   const expiredForMs = Date.now() - expiresAt.getTime();
 

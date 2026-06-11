@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveExpiredTrade } from "@/lib/resolveExpiredTrade";
 
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
@@ -30,17 +30,10 @@ export async function POST(
     return NextResponse.json({ result: trade.result, trade });
   }
 
-  // Aceita o preço actual enviado pelo browser como fallback quando o servidor
-  // não consegue aceder ao Deriv WS (mercado fechado, rede, etc.)
-  let clientPrice: number | undefined;
-  try {
-    const body = await req.json();
-    if (typeof body?.exitPrice === "number" && body.exitPrice > 0) {
-      clientPrice = body.exitPrice;
-    }
-  } catch { /* body vazio — ok */ }
-
-  const outcome = await resolveExpiredTrade(trade, clientPrice);
+  // O preço de fecho é determinado exclusivamente pelo servidor (DB/Deriv WS).
+  // O valor enviado pelo browser é ignorado — confiar nele permitiria forjar o
+  // resultado da operação.
+  const outcome = await resolveExpiredTrade(trade);
 
   if (outcome === "pending") {
     return NextResponse.json({ error: "A operação ainda não expirou" }, { status: 400 });

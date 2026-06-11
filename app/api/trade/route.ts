@@ -242,28 +242,24 @@ export async function POST(req: NextRequest) {
   // Obter payout das definições (com fallback)
   const payout = cfg?.payout?.[asset] ?? 0.85;
 
-  // Entry price: servidor primeiro; fallback para o preço enviado pelo cliente (WebSocket em tempo real)
-  let entryPrice = await fetchServerEntryPrice(asset, isSynthetic);
-  const clientPrice = typeof clientEntryPrice === "number" ? clientEntryPrice : parseFloat(clientEntryPrice);
-  const clientValid = isFinite(clientPrice) && clientPrice > 0;
+  // Entry price determinado exclusivamente pelo servidor. O preço enviado pelo
+  // cliente serve apenas para detectar um ecrã desatualizado — nunca define a
+  // entrada (confiar nele permitiria abrir operações a um preço escolhido).
+  const entryPrice = await fetchServerEntryPrice(asset, isSynthetic);
+  if (!entryPrice) {
+    return NextResponse.json(
+      { error: "Preço de mercado indisponível. Tente novamente em instantes." },
+      { status: 503 },
+    );
+  }
 
-  if (entryPrice && clientValid) {
+  const clientPrice = typeof clientEntryPrice === "number" ? clientEntryPrice : parseFloat(clientEntryPrice);
+  if (isFinite(clientPrice) && clientPrice > 0) {
     const pctDiff = Math.abs(clientPrice - entryPrice) / entryPrice;
     if (pctDiff > 0.01) {
       return NextResponse.json(
         { error: "Preço desatualizado. Recarrega e tenta novamente." },
         { status: 409 },
-      );
-    }
-  }
-
-  if (!entryPrice) {
-    if (clientValid) {
-      entryPrice = clientPrice;
-    } else {
-      return NextResponse.json(
-        { error: "Preço de mercado indisponível. Tente novamente em instantes." },
-        { status: 503 },
       );
     }
   }
