@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { CheckCircle, ChevronRight, X, Mail, User, Wallet, TrendingUp, ArrowRight } from "lucide-react";
 
-const HIDDEN_PATHS = ["/login", "/register", "/kyc", "/verify-email", "/terms", "/maintenance", "/", "/trade", "/ao"];
+const ALLOWED_PATHS = ["/dashboard"];
 const STORAGE_KEY  = "dw_onboarding_dismissed";
 
 const STEPS = [
@@ -36,7 +36,7 @@ export default function OnboardingBar() {
   }, [status, dismissed]);
 
   if (status !== "authenticated") return null;
-  if (HIDDEN_PATHS.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
+  if (!ALLOWED_PATHS.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
   if (dismissed) return null;
   if (!data) return null;
   if (data.completed === data.total) return null;
