@@ -2,6 +2,7 @@
 import { useState, Suspense, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { TrendingUp, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Shield } from "lucide-react";
 
 type Step = "credentials" | "2fa_email" | "2fa_totp";
@@ -17,6 +18,7 @@ function LoginContent() {
   const [step, setStep] = useState<Step>("credentials");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstile] = useState<string | null>(null);
   const isVerified = params.get("verified") === "1";
   const [failedAttempts, setFailedAttempts] = useState(0);
   const MAX_ATTEMPTS = 5;
@@ -32,10 +34,15 @@ function LoginContent() {
 
     // ── Passo 1: credenciais (usa endpoint dedicado para 2FA fiável) ──────────
     if (step === "credentials") {
+      if (!turnstileToken) {
+        setError("Por favor completa a verificação de segurança.");
+        setLoading(false);
+        return;
+      }
       const res  = await fetch("/api/auth/2fa/initiate", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, password }),
+        body:    JSON.stringify({ email, password, turnstileToken }),
       });
       const data = await res.json();
       setLoading(false);
@@ -61,6 +68,7 @@ function LoginContent() {
       if (data.needs2fa) {
         setStep(data.method === "totp" ? "2fa_totp" : "2fa_email");
         setOtp("");
+        setTurnstile(null);
         return;
       }
 
@@ -282,14 +290,25 @@ function LoginContent() {
                   </div>
                 </div>
 
+                {/* Verificação Turnstile — apenas no passo de credenciais */}
+                <div style={{ marginBottom: 16 }}>
+                  <Turnstile
+                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
+                    onSuccess={setTurnstile}
+                    onExpire={() => setTurnstile(null)}
+                    onError={() => setTurnstile(null)}
+                    options={{ theme: "dark", language: "pt" }}
+                  />
+                </div>
+
                 <button
                   type="submit"
-                  disabled={btnDisabled}
+                  disabled={btnDisabled || !turnstileToken}
                   style={{
-                    width: "100%", background: btnDisabled ? "#7a5118" : "#f5a623",
+                    width: "100%", background: (btnDisabled || !turnstileToken) ? "#7a5118" : "#f5a623",
                     color: "#0a0f1e", border: "none", borderRadius: 8,
                     padding: "10px 16px", fontSize: 14, fontWeight: 700,
-                    cursor: btnDisabled ? "not-allowed" : "pointer",
+                    cursor: (btnDisabled || !turnstileToken) ? "not-allowed" : "pointer",
                     transition: "background 0.2s",
                   }}
                 >

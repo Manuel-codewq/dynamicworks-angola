@@ -38,7 +38,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   const data: any = { status: action === "approve" ? "approved" : "rejected" };
-  if (commission != null) data.commission = Number(commission);
+  if (commission != null) {
+    const commissionNum = Number(commission);
+    if (!isFinite(commissionNum) || commissionNum < 0 || commissionNum > 100) {
+      return NextResponse.json({ error: "Comissão inválida. Deve estar entre 0 e 100." }, { status: 400 });
+    }
+    data.commission = commissionNum;
+  }
 
   const trader = await prisma.copyTrader.update({
     where: { id: traderId },

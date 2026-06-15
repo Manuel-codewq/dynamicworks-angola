@@ -5,6 +5,7 @@ import { sendVerificationEmail } from "@/lib/email";
 import { randomInt, createHash } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
+import { verifyTurnstile } from "@/lib/verifyTurnstile";
 
 async function isPwnedPassword(password: string): Promise<boolean> {
   try {
@@ -43,7 +44,57 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, password, phone, province, ref } = body;
+    const { email, password, phone, province, ref, nifNumero, turnstileToken } = body;
+
+    // Verificar CAPTCHA Turnstile (fail-closed — rejeitar se falhar)
+    const captchaOk = await verifyTurnstile(turnstileToken ?? "", ip);
+    if (!captchaOk) {
+      return NextResponse.json({ error: "Verificação de segurança falhou. Tente novamente." }, { status: 400 });
+    }
+
+    // Validar NIF (obrigatório)
+    const nif = typeof nifNumero === "string" ? nifNumero.replace(/\s/g, "").toUpperCase() : "";
+    if (!nif || !/^[A-Z0-9]{9,14}$/i.test(nif)) {
+      return NextResponse.json({ error: "NIF inválido ou em falta" }, { status: 400 });
+    }
+
+    // Verificar unicidade do NIF
+    const existingNif = await prisma.user.findFirst({ where: { nifNumero: nif }, select: { id: true } });
+    if (existingNif) {
+      return NextResponse.json({ error: "Este NIF já está registado" }, { status: 409 });
+    }
+
+    // Verificar NIF via cache ou API digital.ao
+    let nomeOficial: string | null = null;
+    const cached = await prisma.nifCache.findUnique({ where: { nif } });
+    if (cached && cached.expiresAt > new Date() && cached.valid) {
+      nomeOficial = cached.nome;
+    } else {
+      try {
+        const nifRes = await fetch(
+          `https://digital.ao/ao/actions/nif.ajcall.php?nif=${encodeURIComponent(nif)}`,
+          { signal: AbortSignal.timeout(8000), headers: { "Accept": "application/json" } },
+        );
+        if (nifRes.ok) {
+          const nifJson = await nifRes.json();
+          if (nifJson.sucess === true && typeof nifJson.data?.nome === "string" && nifJson.data.nome.trim() !== "") {
+            nomeOficial = String(nifJson.data.nome).trim();
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60_000);
+            try {
+              await prisma.nifCache.upsert({
+                where:  { nif },
+                create: { nif, nome: nomeOficial, valid: true, expiresAt },
+                update: { nome: nomeOficial, valid: true, expiresAt },
+              });
+            } catch { /* cache best-effort */ }
+          }
+        }
+      } catch { /* fail open — tratar abaixo */ }
+    }
+
+    if (!nomeOficial) {
+      return NextResponse.json({ error: "NIF inválido. Verifique o número e tente novamente." }, { status: 400 });
+    }
 
     // Gerar código de referido único (ex: DW-A3X9)
     function genCode(): string {
@@ -66,11 +117,8 @@ export async function POST(req: NextRequest) {
       if (referrer) referredBy = referrer.id;
     }
 
-    if (!name || !email || !password) {
+    if (!email || !password) {
       return NextResponse.json({ error: "Campos obrigatórios em falta" }, { status: 400 });
-    }
-    if (String(name).length > 120) {
-      return NextResponse.json({ error: "Nome demasiado longo" }, { status: 400 });
     }
     if (String(email).length > 254) {
       return NextResponse.json({ error: "Email inválido" }, { status: 400 });
@@ -106,11 +154,14 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        name,
+        name: nomeOficial,
         email: normalizedEmail,
         password: hashed,
         phone,
         province,
+        nifNumero: nif,
+        nomeOficial,
+        kycNifValidado: true,
         verifyCode: code,
         verifyExpires,
         emailVerified: false,

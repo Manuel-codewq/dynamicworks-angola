@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
         const fee = Math.round(amountNum * WITHDRAWAL_FEE_RATE);
         const net = amountNum - fee;
         const feeNote = ` | Taxa 5%: ${fee.toLocaleString("pt-PT")} Kz | A enviar: ${net.toLocaleString("pt-PT")} Kz`;
-        const baseRef = reference ? String(reference).slice(0, 150) : "";
-        txRef = (baseRef + feeNote).trim() || null;
+        const rawRef = reference ? String(reference).replace(/[<>"'&]/g, "").trim().slice(0, 150) : "";
+        txRef = (rawRef + feeNote).trim() || null;
       }
       const txMethod = type === "deposit" ? "multicaixa_ref" : (method ? String(method).slice(0, 100) : null);
 

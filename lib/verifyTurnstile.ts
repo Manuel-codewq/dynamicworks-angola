@@ -17,11 +17,13 @@ export async function verifyTurnstile(token: string, ip?: string): Promise<boole
     const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
       body,
+      signal: AbortSignal.timeout(5000),
     });
     const data = await res.json();
     return data.success === true;
   } catch {
-    // Em caso de falha de rede, deixar passar para não bloquear utilizadores legítimos
-    return true;
+    // Falha de rede ou timeout: bloquear por segurança (fail-closed)
+    console.error("[turnstile] verificação falhou — pedido bloqueado por segurança");
+    return false;
   }
 }

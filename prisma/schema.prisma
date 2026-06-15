@@ -7,64 +7,64 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  name         String
-  email        String        @unique
-  password     String
-  phone        String?
-  province     String?
-  avatar       String?
-  biNumber     String?
-  balance      Float         @default(0)
-  demoBalance  Float         @default(10000)
-  isDemo       Boolean       @default(true)
-  role         String        @default("user")
-  status       String        @default("active")
-  kycStatus      String        @default("none")
-  kycAttempts    Int           @default(0)
-  kycBlockedUntil DateTime?
-  emailVerified  Boolean       @default(false)
-  verifyCode     String?
-  verifyExpires  DateTime?
-  otpCode        String?    // OTP de transação (depósito/levantamento)
-  otpExpires     DateTime?
-  pwdOtpCode     String?    // OTP de alteração de senha (separado para não conflituar)
-  pwdOtpExpires  DateTime?
+  id                String                  @id @default(cuid())
+  name              String
+  email             String                  @unique
+  password          String
+  phone             String?
+  province          String?
+  biNumber          String?
+  balance           Float                   @default(0)
+  demoBalance       Float                   @default(10000)
+  isDemo            Boolean                 @default(true)
+  role              String                  @default("user")
+  status            String                  @default("active")
+  kycStatus         String                  @default("none")
+  createdAt         DateTime                @default(now())
+  emailVerified     Boolean                 @default(false)
+  verifyCode        String?
+  verifyExpires     DateTime?
+  otpCode           String?
+  otpExpires        DateTime?
   indicatorPrefs    Json?
+  kycAttempts       Int                     @default(0)
+  kycBlockedUntil   DateTime?
+  avatar            String?
   lastSeenAt        DateTime?
-  createdAt         DateTime      @default(now())
-  twoFactorEnabled  Boolean       @default(false)
-  twoFactorMethod   String?
-  twoFactorSecret   String?
+  pwdOtpCode        String?
+  pwdOtpExpires     DateTime?
   twoFaCode         String?
   twoFaExpires      DateTime?
-  referralCode      String?       @unique
+  twoFactorEnabled  Boolean                 @default(false)
+  twoFactorMethod   String?
+  twoFactorSecret   String?
+  referralCode      String?                 @unique
+  referralEarnings  Float                   @default(0)
   referredBy        String?
-  referralEarnings  Float         @default(0)
+  accessLogs        AccessLog[]
+  copyFollowing     CopyFollow[]            @relation("CopyFollower")
+  copyTrader        CopyTrader?
+  kycSubmission     KycSubmission?
+  notifications     Notification[]
+  priceAlerts       PriceAlert[]
+  pushSubscriptions PushSubscription[]
+  supportTickets    SupportTicket[]
+  tournaments       TournamentParticipant[]
   trades            Trade[]
   transactions      Transaction[]
-  notifications     Notification[]
-  kycSubmission     KycSubmission?
-  tournaments       TournamentParticipant[]
-  supportTickets    SupportTicket[]
-  pushSubscriptions PushSubscription[]
   sessions          UserSession[]
-  accessLogs        AccessLog[]
-  priceAlerts       PriceAlert[]
-  copyTrader        CopyTrader?
-  copyFollowing     CopyFollow[]     @relation("CopyFollower")
 }
 
 model UserSession {
   id           String   @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   ip           String?
   userAgent    String?
   device       String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   lastActiveAt DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, isActive])
@@ -73,12 +73,12 @@ model UserSession {
 model AccessLog {
   id        String   @id @default(cuid())
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   email     String?
   ip        String?
   userAgent String?
   action    String
   createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([createdAt])
@@ -87,34 +87,33 @@ model AccessLog {
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   endpoint  String   @unique
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-
 model Trade {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id])
-  asset      String
-  direction  String
-  amount     Float
-  symbol     String?
-  entryPrice Float
-  closePrice Float?
-  payout     Float     @default(0.85)
-  result     String?
-  profit     Float?
-  expirySecs Int
-  expiresAt  DateTime?
-  status                String    @default("active")
-  isDemo                Boolean   @default(false)
+  id                      String    @id @default(cuid())
+  userId                  String
+  asset                   String
+  direction               String
+  amount                  Float
+  entryPrice              Float
+  closePrice              Float?
+  payout                  Float     @default(0.85)
+  result                  String?
+  profit                  Float?
+  expirySecs              Int
+  status                  String    @default("active")
+  createdAt               DateTime  @default(now())
+  closedAt                DateTime?
+  isDemo                  Boolean   @default(false)
+  expiresAt               DateTime?
   tournamentParticipantId String?
-  createdAt             DateTime  @default(now())
-  closedAt              DateTime?
+  symbol                  String?
+  user                    User      @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -123,17 +122,17 @@ model Trade {
 model Transaction {
   id          String   @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
   type        String
   amount      Float
   method      String?
   status      String   @default("pending")
   reference   String?
-  usdtTxid    String?  @unique
-  usdtAmount  Float?
-  usdtAddress String?
-  usdtRate    Float?
   createdAt   DateTime @default(now())
+  usdtAddress String?
+  usdtAmount  Float?
+  usdtRate    Float?
+  usdtTxid    String?  @unique
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -143,33 +142,33 @@ model Transaction {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   type      String
   title     String
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
 }
 
 model Settings {
-  id              String    @id @default("singleton")
-  otcMode         String    @default("auto")
-  maintenanceMode Boolean   @default(false)
-  forceRealMarket Boolean   @default(false)
-  winProbability  Json      @default("{}")
-  payout          Json      @default("{}")
-  activePairs     Json      @default("[]")
-  weekendPairs    Json      @default("[]")
-  rankingResetAt  DateTime?
+  id                       String    @id @default("singleton")
+  otcMode                  String    @default("auto")
+  maintenanceMode          Boolean   @default(false)
+  winProbability           Json      @default("{}")
+  payout                   Json      @default("{}")
+  updatedAt                DateTime  @updatedAt
+  activePairs              Json      @default("[]")
+  rankingResetAt           DateTime?
+  usdtMinDeposit           Float     @default(5)
   usdtRateAoa              Float     @default(0)
   usdtWallet               String?
-  usdtMinDeposit           Float     @default(5)
+  weekendPairs             Json      @default("[]")
+  forceRealMarket          Boolean   @default(false)
+  dailyLossLimitPct        Float     @default(0)
   largeTradePushThreshold  Float     @default(0)
   largeWithdrawalThreshold Float     @default(0)
-  dailyLossLimitPct        Float     @default(0)
-  updatedAt                DateTime  @updatedAt
 }
 
 model PriceCandle {
@@ -184,20 +183,20 @@ model PriceCandle {
   timestamp DateTime
   createdAt DateTime @default(now())
 
-  @@index([asset, timeframe, timestamp])
   @@unique([asset, timeframe, timestamp])
+  @@index([asset, timeframe, timestamp])
 }
 
 model SupportTicket {
   id        String           @id @default(cuid())
   userId    String
-  user      User             @relation(fields: [userId], references: [id])
   subject   String
   category  String           @default("outro")
   status    String           @default("open")
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   messages  SupportMessage[]
+  user      User             @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -206,18 +205,18 @@ model SupportTicket {
 model SupportMessage {
   id        String        @id @default(cuid())
   ticketId  String
-  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   body      String
   isAdmin   Boolean       @default(false)
   createdAt DateTime      @default(now())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, createdAt])
 }
 
 model RateLimit {
-  key       String   @id
-  count     Int      @default(0)
-  resetAt   DateTime
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
 
   @@index([resetAt])
 }
@@ -236,51 +235,51 @@ model WhatsappLog {
 }
 
 model KycSubmission {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  faceFront String
-  faceRight String
-  faceLeft  String
-  biFront   String
-  biBack    String
-  livenessScore Float @default(0)
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  faceFront     String
+  faceRight     String
+  faceLeft      String
+  biFront       String
+  biBack        String
+  createdAt     DateTime @default(now())
+  livenessScore Float    @default(0)
+  user          User     @relation(fields: [userId], references: [id])
 }
 
 model Tournament {
-  id              String   @id @default(cuid())
+  id              String                  @id @default(cuid())
   name            String
   description     String?
-  rules           String?
   startDate       DateTime
   endDate         DateTime
-  prizePool       Float    @default(0)
-  prizes          Json     @default("[]")
-  status          String   @default("upcoming")
-  isFree          Boolean  @default(true)
-  isDemo          Boolean  @default(false)
-  entryFee        Float    @default(0)
+  prizePool       Float                   @default(0)
+  prizes          Json                    @default("[]")
+  status          String                  @default("upcoming")
+  createdAt       DateTime                @default(now())
+  bannerColor     String                  @default("#f5a623")
+  entryFee        Float                   @default(0)
+  isFree          Boolean                 @default(true)
   maxParticipants Int?
-  bannerColor     String   @default("#f5a623")
-  startingBalance Float    @default(10000)
-  createdAt       DateTime @default(now())
+  rules           String?
+  isDemo          Boolean                 @default(false)
+  startingBalance Float                   @default(10000)
   participants    TournamentParticipant[]
 
   @@index([status, startDate])
 }
 
 model TournamentParticipant {
-  id           String     @id @default(cuid())
-  tournamentId String
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User       @relation(fields: [userId], references: [id])
+  id                String     @id @default(cuid())
+  tournamentId      String
+  userId            String
   profit            Float      @default(0)
   trades            Int        @default(0)
   wins              Int        @default(0)
-  tournamentBalance Float      @default(10000)
   joinedAt          DateTime   @default(now())
+  tournamentBalance Float      @default(10000)
+  tournament        Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user              User       @relation(fields: [userId], references: [id])
 
   @@unique([tournamentId, userId])
   @@index([tournamentId, profit])
@@ -312,41 +311,41 @@ model SystemConfig {
 }
 
 model PromoCode {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  type        String   @default("balance")
+  id          String            @id @default(cuid())
+  code        String            @unique
+  type        String            @default("balance")
   value       Float
-  maxUses     Int      @default(1)
-  usedCount   Int      @default(0)
+  maxUses     Int               @default(1)
+  usedCount   Int               @default(0)
   expiresAt   DateTime?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
   redemptions PromoRedemption[]
 }
 
 model PromoRedemption {
   id          String    @id @default(cuid())
   promoCodeId String
-  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
   userId      String
   redeemedAt  DateTime  @default(now())
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
 
   @@unique([promoCodeId, userId])
   @@index([userId])
 }
 
 model CopyTrader {
-  id          String       @id @default(cuid())
-  userId      String       @unique
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status      String       @default("pending") // pending | approved | rejected
-  bio         String?
-  commission  Float        @default(0.10)      // 10% dos lucros dos seguidores
-  totalFollowers Int       @default(0)
-  totalCopied  Int         @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  followers   CopyFollow[]
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  status         String       @default("pending")
+  bio            String?
+  commission     Float        @default(0.10)
+  totalFollowers Int          @default(0)
+  totalCopied    Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  followers      CopyFollow[]
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
 }
@@ -354,12 +353,12 @@ model CopyTrader {
 model CopyFollow {
   id         String     @id @default(cuid())
   followerId String
-  follower   User       @relation("CopyFollower", fields: [followerId], references: [id], onDelete: Cascade)
   traderId   String
-  trader     CopyTrader @relation(fields: [traderId], references: [id], onDelete: Cascade)
-  amount     Float      @default(1000)   // Kz por trade copiado
+  amount     Float      @default(1000)
   active     Boolean    @default(true)
   createdAt  DateTime   @default(now())
+  follower   User       @relation("CopyFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  trader     CopyTrader @relation(fields: [traderId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, traderId])
   @@index([traderId, active])
@@ -368,12 +367,12 @@ model CopyFollow {
 model PriceAlert {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   asset     String
   price     Float
-  direction String   // "above" | "below"
+  direction String
   triggered Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([triggered])

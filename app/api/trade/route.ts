@@ -35,7 +35,7 @@ const SYNTHETIC_SYMBOLS = new Set([
 async function fetchServerEntryPrice(asset: string, isSynthetic: boolean): Promise<number | null> {
   // 1. DB — janela de 5 minutos
   try {
-    const cutoff = new Date(Date.now() - 1_800_000); // 30 min
+    const cutoff = new Date(Date.now() - 300_000); // 5 min
     const candle = await prisma.priceCandle.findFirst({
       where:   { asset, timestamp: { gte: cutoff } },
       orderBy: { timestamp: "desc" },

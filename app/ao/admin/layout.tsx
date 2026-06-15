@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
   Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
-  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal, Copy,
+  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal, Copy, Trash2,
 } from "lucide-react";
 
 type NavItem = {
@@ -31,6 +31,7 @@ const NAV: NavItem[] = [
   { href: "/ao/admin/audit",          label: "Auditoria",      Icon: ShieldCheck },
   { href: "/ao/admin/support",        label: "Suporte",        Icon: MessageCircle, badgeKey: "support" },
   { href: "/ao/admin/settings",       label: "Configurações",  Icon: Settings },
+  { href: "/ao/admin/reset",          label: "Reset Servidor", Icon: Trash2 },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -106,21 +107,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Nav */}
         <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
           {NAV.map(({ href, label, Icon, badgeKey }) => {
-            const active  = pathname === href || pathname.startsWith(href + "/");
-            const count   = badgeKey ? (badges[badgeKey] ?? 0) : 0;
-            const isKyc   = badgeKey === "kyc";
+            const active     = pathname === href || pathname.startsWith(href + "/");
+            const count      = badgeKey ? (badges[badgeKey] ?? 0) : 0;
+            const isKyc      = badgeKey === "kyc";
             const badgeColor = isKyc ? "#f5a623" : "#ef4444";
+            const isDanger   = href === "/ao/admin/reset";
             return (
               <a key={href} href={href}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "10px 12px", borderRadius: 8, marginBottom: 2,
-                  background:  active ? "rgba(245,166,35,0.12)" : "transparent",
-                  color:       active ? "#f5a623" : "#94a3b8",
-                  borderLeft:  active ? "3px solid #f5a623" : "3px solid transparent",
+                  background:  active
+                    ? (isDanger ? "rgba(239,68,68,0.15)" : "rgba(245,166,35,0.12)")
+                    : "transparent",
+                  color:       active
+                    ? (isDanger ? "#ef4444" : "#f5a623")
+                    : (isDanger ? "#ef4444" : "#94a3b8"),
+                  borderLeft:  active
+                    ? `3px solid ${isDanger ? "#ef4444" : "#f5a623"}`
+                    : "3px solid transparent",
                   textDecoration: "none", fontSize: 14, fontWeight: active ? 700 : 500,
                   transition: "background 0.15s, color 0.15s",
                   boxSizing: "border-box",
+                  opacity: isDanger ? (active ? 1 : 0.75) : 1,
                 }}>
                 <Icon size={17} style={{ flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>{label}</span>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const OTC_TO_LIVE: Record<string, string> = {
@@ -20,6 +21,11 @@ const VALID_TIMEFRAMES = ["1m", "5m", "15m", "1h"];
 const MIN_CANDLES = 50;
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const asset     = searchParams.get("asset")     ?? "";
   const timeframe = searchParams.get("timeframe") ?? "1m";

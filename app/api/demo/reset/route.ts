@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rateLimit";
 
 const DEMO_RESET_AMOUNT = 10000;
 
@@ -11,22 +10,10 @@ export async function POST() {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  // 3 resets por utilizador por hora
-  if (!await checkRateLimit("demo-reset", session.user.id, 3, 60 * 60_000)) {
-    return NextResponse.json({ error: "Limite de resets atingido. Tente mais tarde." }, { status: 429 });
-  }
-
-  await prisma.$transaction([
-    // Fecha todas as operações demo ativas antes de repor o saldo
-    prisma.trade.updateMany({
-      where:  { userId: session.user.id, isDemo: true, status: "active" },
-      data:   { status: "closed", result: "loss", closedAt: new Date() },
-    }),
-    prisma.user.update({
-      where: { id: session.user.id },
-      data:  { demoBalance: DEMO_RESET_AMOUNT },
-    }),
-  ]);
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data:  { demoBalance: DEMO_RESET_AMOUNT },
+  });
 
   return NextResponse.json({ ok: true, demoBalance: DEMO_RESET_AMOUNT });
 }

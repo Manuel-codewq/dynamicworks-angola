@@ -1,156 +1,237 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  X, ChevronRight, ChevronLeft,
-  BarChart2, Clock, Wallet, BookOpen, CheckCircle,
-  CandlestickChart, Zap, ShieldCheck, TrendingUp, ArrowUp, ArrowDown,
+  X, ChevronRight, ChevronLeft, CheckCircle,
+  CandlestickChart, TrendingUp, TrendingDown, Wallet,
+  Clock, BarChart2, Zap, ArrowUp, ArrowDown, BookOpen,
 } from "lucide-react";
 
-const STORAGE_KEY = "dw_onboarding_done_v2";
+const STORAGE_KEY = "dw_onboarding_v3";
+const PAD = 10; // spotlight padding em px
 
-interface Step {
+interface TourStep {
+  target?: string;        // data-tour="..."
+  placement?: "top" | "bottom" | "left" | "right" | "center";
   Icon: React.ElementType;
   accent: string;
   title: string;
-  description: string;
+  body: string;
   tip?: string;
-  visual?: React.ReactNode;
 }
 
-function MiniCandles() {
-  const bars = [
-    { o: 60, c: 75, h: 80, l: 55 },
-    { o: 75, c: 65, h: 77, l: 60 },
-    { o: 65, c: 80, h: 85, l: 62 },
-    { o: 80, c: 72, h: 83, l: 68 },
-    { o: 72, c: 88, h: 90, l: 70 },
-  ];
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 60, justifyContent: "center" }}>
-      {bars.map((b, i) => {
-        const up   = b.c >= b.o;
-        const body = Math.abs(b.c - b.o);
-        const topW  = b.h - Math.max(b.o, b.c);
-        const botW  = Math.min(b.o, b.c) - b.l;
-        const color = up ? "#22c55e" : "#ef4444";
-        return (
-          <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
-            <div style={{ width: 1, height: topW * 0.5, background: color }} />
-            <div style={{ width: 10, height: Math.max(body * 0.5, 3), background: color, borderRadius: 2 }} />
-            <div style={{ width: 1, height: botW * 0.5, background: color }} />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function MiniBtns() {
-  return (
-    <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-      <div style={{ background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 10, padding: "10px 20px", display: "flex", alignItems: "center", gap: 6 }}>
-        <ArrowUp size={14} color="#22c55e" />
-        <span style={{ color: "#22c55e", fontWeight: 800, fontSize: 13 }}>ALTA</span>
-      </div>
-      <div style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 10, padding: "10px 20px", display: "flex", alignItems: "center", gap: 6 }}>
-        <ArrowDown size={14} color="#ef4444" />
-        <span style={{ color: "#ef4444", fontWeight: 800, fontSize: 13 }}>BAIXA</span>
-      </div>
-    </div>
-  );
-}
-
-const STEPS: Step[] = [
+const STEPS: TourStep[] = [
   {
+    placement: "center",
     Icon: BookOpen,
     accent: "#f5a623",
     title: "Bem-vindo à Dynamic Works!",
-    description: "A primeira plataforma de opções binárias angolana. Opera Forex, Cripto, Metais e Índices em Kwanza — com depósitos rápidos via Multicaixa.",
-    tip: "Começa sempre em modo Demo — são 10.000 Kz virtuais para praticar sem risco.",
-    visual: (
-      <div style={{ textAlign: "center" }}>
-        <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 64, height: 64, objectFit: "contain", borderRadius: 14, background: "#0a0f1e", margin: "0 auto" }} />
-      </div>
-    ),
+    body: "A primeira corretora de opções binárias angolana. Vamos fazer um tour rápido para saber como tudo funciona.",
+    tip: "Podes fechar o tutorial a qualquer momento e repetir mais tarde.",
   },
   {
+    target: "dw-chart",
+    placement: "center",
     Icon: CandlestickChart,
     accent: "#38bdf8",
-    title: "O Gráfico de Velas",
-    description: "Cada vela mostra como o preço se moveu num período. Vela verde = preço subiu. Vela vermelha = preço desceu. Usa 1m, 5m, 15m, 1h ou 1D para mudar o intervalo.",
-    tip: "Velas com mecha longa indicam indecisão do mercado.",
-    visual: <MiniCandles />,
+    title: "O Gráfico de Preços",
+    body: "Aqui vês o movimento do preço em tempo real. Vela verde = preço subiu. Vela vermelha = preço desceu. Usa os botões de timeframe (1m, 5m, 15m…) para mudar o intervalo.",
+    tip: "Dica: analisa o gráfico antes de abrir qualquer operação.",
   },
   {
-    Icon: TrendingUp,
-    accent: "#22c55e",
-    title: "ALTA ou BAIXA?",
-    description: "Prevê se o preço vai subir (ALTA) ou descer (BAIXA) no tempo que escolheres. Se acertares, recebes o payout indicado. Se errares, perdes o valor investido.",
-    tip: "O payout típico é 85% — investe 1.000 Kz, recebe 1.850 Kz se ganhar.",
-    visual: <MiniBtns />,
-  },
-  {
-    Icon: Clock,
-    accent: "#f5a623",
-    title: "Tempo de Expiração",
-    description: "Define por quanto tempo a operação vai estar activa. Quanto menor o tempo, maior a volatilidade e o risco. Disponível de 30 segundos a 60 minutos.",
-    tip: "Para iniciantes, começa com 5 minutos — tempo suficiente para analisar.",
-  },
-  {
+    target: "dw-pair",
+    placement: "bottom",
     Icon: BarChart2,
     accent: "#a78bfa",
-    title: "Indicadores Técnicos",
-    description: "Activa MA, EMA, Bollinger Bands, RSI, MACD ou Estocástico tocando em IND no painel. Ajudam a identificar tendências e pontos de entrada.",
-    tip: "RSI acima de 70 = mercado sobrecomprado. RSI abaixo de 30 = sobresoldado.",
+    title: "Par e Preço Actual",
+    body: "Aqui vês o ativo selecionado, o preço em tempo real e o payout da operação. Clica no nome do ativo no topo para mudar para outro par.",
+    tip: "Payout de 85% significa: investes 1.000 Kz e recebes 1.850 Kz se ganhares.",
   },
   {
+    target: "dw-amount",
+    placement: "top",
     Icon: Wallet,
     accent: "#22c55e",
-    title: "Conta Demo vs Real",
-    description: "Podes alternar entre Demo e Real a qualquer momento. Na Demo usas saldo virtual. Na Real usas o teu saldo depositado. Treina em Demo antes de ir a Real.",
-    tip: "Repõe o saldo demo sempre que ficar abaixo de 5.000 Kz.",
+    title: "Valor do Investimento",
+    body: "Define quanto queres investir nesta operação. Usa os botões − / + ou clica nos atalhos rápidos (1k, 5k, 10k, 25k).",
+    tip: "Regra de ouro: nunca invistas mais de 5% do teu saldo numa única operação.",
   },
   {
-    Icon: ShieldCheck,
-    accent: "#22c55e",
-    title: "Gestão de Risco",
-    description: "Nunca invistas mais de 5% do teu saldo numa única operação. Mantém um diário de trades para aprender com os teus erros. Disciplina é a chave do sucesso.",
-    tip: "Perder faz parte. O segredo é perder pouco e ganhar consistentemente.",
+    target: "dw-trade-btns",
+    placement: "top",
+    Icon: TrendingUp,
+    accent: "#0ecb81",
+    title: "ALTA ou BAIXA?",
+    body: "ALTA (verde) = apostas que o preço vai subir. BAIXA (vermelho) = apostas que vai descer. Se o preço no exato momento de expiração estiver do lado correto da tua entrada, ganhas!",
+    tip: "Só importa o preço no momento exato de expiração — não o movimento durante a operação.",
   },
   {
+    target: "dw-payout",
+    placement: "top",
+    Icon: Zap,
+    accent: "#f5a623",
+    title: "Retorno Potencial",
+    body: "Antes de clicar ALTA ou BAIXA, este painel mostra exatamente quanto vais receber se a previsão estiver correta.",
+    tip: "O retorno é calculado automaticamente com base no valor investido e no payout do par.",
+  },
+  {
+    target: "dw-account",
+    placement: "bottom",
+    Icon: Wallet,
+    accent: "#f5a623",
+    title: "Demo vs Conta Real",
+    body: "Clica aqui para alternar entre conta Demo (saldo virtual de 10.000 Kz) e conta Real (o teu dinheiro depositado). Começa sempre em Demo!",
+    tip: "Podes repor o saldo Demo sempre que quiser — sem custos.",
+  },
+  {
+    placement: "center",
     Icon: CheckCircle,
     accent: "#22c55e",
-    title: "Pronto para começar!",
-    description: "Já tens tudo o que precisas. Vai à secção Mercados para escolher um ativo, usa o modo Demo para praticar, e o suporte está sempre disponível.",
-    tip: "Boa sorte! A equipa Dynamic Works está contigo.",
-    visual: (
-      <div style={{ display: "flex", justifyContent: "center", gap: 20 }}>
-        {[
-          { label: "Ativos", value: "17+" },
-          { label: "Payout", value: "85%" },
-          { label: "Demo", value: "10k Kz" },
-        ].map(s => (
-          <div key={s.label} style={{ textAlign: "center" }}>
-            <div style={{ color: "#f5a623", fontWeight: 900, fontSize: 20 }}>{s.value}</div>
-            <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-    ),
+    title: "Estás pronto!",
+    body: "Já sabes tudo o que precisas para começar. Vai ao modo Demo, pratica algumas operações e sente como a plataforma funciona.",
+    tip: "A equipa de suporte está sempre disponível no botão de chat. Boa sorte!",
   },
 ];
+
+// ── Spotlight geometry ────────────────────────────────────────────────────────
+
+interface Rect { top: number; left: number; width: number; height: number; }
+
+function getTargetRect(target?: string): Rect | null {
+  if (!target) return null;
+  const el = document.querySelector(`[data-tour="${target}"]`);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 };
+}
+
+// ── Tooltip positioning ───────────────────────────────────────────────────────
+
+const TT_H_EST  = 290; // altura estimada do tooltip em px
+const SAFE_TOP  = 8;
+const SAFE_BOT  = 90;  // margem inferior: barra de navegação do browser mobile
+const GAP       = 10;
+
+function tooltipStyle(rect: Rect | null, placement: TourStep["placement"]): React.CSSProperties {
+  if (!rect || placement === "center") {
+    return {
+      position: "fixed",
+      top: "50%", left: "50%",
+      transform: "translate(-50%,-50%)",
+      width: "min(92vw, 360px)",
+    };
+  }
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const TT_W = Math.min(vw * 0.92, 340);
+
+  // Centrar horizontalmente no elemento alvo, clamped
+  const centerX = rect.left + rect.width / 2;
+  const left = Math.max(8, Math.min(centerX - TT_W / 2, vw - TT_W - 8));
+
+  const spaceBelow = vh - (rect.top + rect.height) - SAFE_BOT;
+  const spaceAbove = rect.top - SAFE_TOP;
+
+  // Escolher a melhor direcção (flip automático se não couber)
+  let dir = placement === "top" || placement === "bottom" ? placement : "bottom";
+  if (dir === "bottom" && spaceBelow < TT_H_EST && spaceAbove > spaceBelow) dir = "top";
+  if (dir === "top"    && spaceAbove < TT_H_EST && spaceBelow > spaceAbove) dir = "bottom";
+
+  // Se nenhuma direcção tem espaço suficiente → pin ao fundo do ecrã
+  const noRoom = (dir === "bottom" && spaceBelow < 100) || (dir === "top" && spaceAbove < 100);
+  if (noRoom) {
+    return {
+      position: "fixed",
+      bottom: SAFE_BOT - 20,
+      left,
+      width: TT_W,
+      maxHeight: vh * 0.45,
+      overflowY: "auto" as const,
+    };
+  }
+
+  if (dir === "bottom") {
+    const top = Math.min(rect.top + rect.height + GAP, vh - TT_H_EST - SAFE_BOT);
+    return { position: "fixed", top: Math.max(SAFE_TOP, top), left, width: TT_W };
+  }
+
+  // top
+  const bottom = Math.min(vh - rect.top + GAP, vh - SAFE_TOP - TT_H_EST);
+  return { position: "fixed", bottom: Math.max(SAFE_BOT, bottom), left, width: TT_W };
+}
+
+// ── Spotlight overlay (4 quads) ──────────────────────────────────────────────
+
+function Spotlight({ rect }: { rect: Rect | null }) {
+  if (!rect) return null;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
+  const { top, left, width, height } = rect;
+
+  const quad: React.CSSProperties = { position: "fixed", background: "rgba(0,0,0,0.78)", zIndex: 9100 };
+  return (
+    <>
+      {/* top */}
+      <div style={{ ...quad, top: 0, left: 0, right: 0, height: Math.max(0, top) }} />
+      {/* bottom */}
+      <div style={{ ...quad, top: top + height, left: 0, right: 0, bottom: 0 }} />
+      {/* left */}
+      <div style={{ ...quad, top, left: 0, width: Math.max(0, left), height }} />
+      {/* right */}
+      <div style={{ ...quad, top, left: left + width, right: 0, height }} />
+      {/* border glow */}
+      <div style={{
+        position: "fixed", zIndex: 9101,
+        top: top - 2, left: left - 2,
+        width: width + 4, height: height + 4,
+        borderRadius: 12, border: "2px solid rgba(245,166,35,0.7)",
+        boxShadow: "0 0 0 4px rgba(245,166,35,0.15), 0 0 30px rgba(245,166,35,0.2)",
+        pointerEvents: "none",
+      }} />
+    </>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function OnboardingTutorial() {
   const [visible, setVisible] = useState(false);
   const [step,    setStep]    = useState(0);
   const [exiting, setExiting] = useState(false);
+  const [rect,    setRect]    = useState<Rect | null>(null);
+  const [ttStyle, setTtStyle] = useState<React.CSSProperties>({});
+  const [touchX,  setTouchX]  = useState<number | null>(null);
+  const animRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem(STORAGE_KEY)) {
-      const t = setTimeout(() => setVisible(true), 1400);
+      const t = setTimeout(() => setVisible(true), 1200);
       return () => clearTimeout(t);
     }
   }, []);
+
+  const updateGeometry = useCallback(() => {
+    const s = STEPS[step];
+    const r = getTargetRect(s.target);
+    setRect(r);
+    setTtStyle(tooltipStyle(r, s.placement));
+  }, [step]);
+
+  useEffect(() => {
+    if (!visible) return;
+    updateGeometry();
+    const onResize = () => updateGeometry();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
+    // poll briefly to handle layout shifts (charts loading etc.)
+    let polls = 0;
+    const id = setInterval(() => { if (++polls < 8) updateGeometry(); else clearInterval(id); }, 300);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
+      clearInterval(id);
+    };
+  }, [visible, step, updateGeometry]);
 
   function finish() {
     setExiting(true);
@@ -158,7 +239,7 @@ export default function OnboardingTutorial() {
       localStorage.setItem(STORAGE_KEY, "1");
       setVisible(false);
       setExiting(false);
-    }, 280);
+    }, 260);
   }
 
   const next = useCallback(() => {
@@ -168,40 +249,44 @@ export default function OnboardingTutorial() {
 
   const prev = useCallback(() => { if (step > 0) setStep(s => s - 1); }, [step]);
 
-  // Swipe support
-  const [touchX, setTouchX] = useState<number | null>(null);
-
   if (!visible) return null;
 
-  const s = STEPS[step];
+  const s      = STEPS[step];
   const isLast = step === STEPS.length - 1;
-  const pct = Math.round(((step + 1) / STEPS.length) * 100);
+  const pct    = Math.round(((step + 1) / STEPS.length) * 100);
+  const hasTarget = !!s.target && !!rect;
 
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 9200,
-        background: "rgba(0,0,0,0.82)",
-        display: "flex", alignItems: "flex-end", justifyContent: "center",
-        padding: "0 0 env(safe-area-inset-bottom,0)",
-        transition: "opacity 0.28s",
-        opacity: exiting ? 0 : 1,
-      }}
-      onClick={e => { if (e.target === e.currentTarget) finish(); }}
-    >
-      <style>{`@keyframes slideUp { from { transform: translateY(40px); opacity:0; } to { transform: translateY(0); opacity:1; } }`}</style>
+    <>
+      <style>{`
+        @keyframes dwTourIn  { from { opacity:0; transform:translateY(8px) scale(0.97); } to { opacity:1; transform:none; } }
+        @keyframes dwTourOut { from { opacity:1; } to { opacity:0; } }
+        @keyframes dwPulse   { 0%,100% { box-shadow:0 0 0 0 rgba(245,166,35,0.4); } 50% { box-shadow:0 0 0 8px rgba(245,166,35,0); } }
+      `}</style>
 
+      {/* Dark backdrop — only full when no target */}
+      {!hasTarget && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(0,0,0,0.82)", transition: "opacity 0.26s", opacity: exiting ? 0 : 1 }}
+          onClick={e => { if (e.target === e.currentTarget) finish(); }}
+        />
+      )}
+
+      {/* Spotlight quads */}
+      {hasTarget && <Spotlight rect={rect} />}
+
+      {/* Tooltip card */}
       <div
         style={{
+          ...ttStyle,
+          zIndex: 9200,
           background: "#0d1526",
-          border: "1px solid #1e2d50",
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          width: "100%",
-          maxWidth: 520,
-          boxShadow: "0 -20px 60px rgba(0,0,0,0.8)",
-          animation: "slideUp 0.32s cubic-bezier(0.34,1.56,0.64,1)",
+          border: "1px solid #1e3a5f",
+          borderRadius: 18,
+          boxShadow: "0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px rgba(245,166,35,0.12)",
           overflow: "hidden",
+          animation: exiting ? "dwTourOut 0.26s ease forwards" : "dwTourIn 0.32s cubic-bezier(0.34,1.2,0.64,1)",
+          transition: "top 0.35s ease, bottom 0.35s ease, left 0.35s ease, right 0.35s ease",
         }}
         onTouchStart={e => setTouchX(e.touches[0].clientX)}
         onTouchEnd={e => {
@@ -212,94 +297,85 @@ export default function OnboardingTutorial() {
           setTouchX(null);
         }}
       >
-        {/* Handle */}
-        <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 6 }}>
-          <div style={{ width: 40, height: 4, background: "#1e2d50", borderRadius: 2 }} />
+        {/* Progress bar */}
+        <div style={{ height: 3, background: "#1e2d50" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#f5a623,#e8940f)", transition: "width 0.4s ease" }} />
         </div>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 24, height: 24, objectFit: "contain", borderRadius: 5, background: "#1e2d50" }} />
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>Tutorial</span>
-            <span style={{ color: "#334155", fontSize: 12 }}>— {step + 1}/{STEPS.length}</span>
+            <img src="/logo-icon.jpeg" alt="DW" style={{ width: 20, height: 20, borderRadius: 5, objectFit: "contain" }} />
+            <span style={{ color: "#64748b", fontSize: 12, fontWeight: 700 }}>Tutorial</span>
+            <span style={{ color: "#334155", fontSize: 11 }}>{step + 1}/{STEPS.length}</span>
           </div>
-          <button onClick={finish} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 4, display: "flex" }}>
-            <X size={18} />
+          <button onClick={finish} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 2, display: "flex", lineHeight: 1 }}>
+            <X size={16} />
           </button>
         </div>
 
-        {/* Progress bar */}
-        <div style={{ height: 3, background: "#1e2d50", marginBottom: 20 }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#f5a623,#e8940f)", borderRadius: 2, transition: "width 0.4s ease" }} />
-        </div>
-
-        {/* Content */}
-        <div style={{ padding: "0 24px 20px" }}>
-          {/* Icon */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+        {/* Body */}
+        <div style={{ padding: "14px 18px 0" }}>
+          {/* Icon + title */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
             <div style={{
-              width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-              background: `${s.accent}18`, border: `1px solid ${s.accent}40`,
+              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              background: `${s.accent}18`, border: `1px solid ${s.accent}35`,
               display: "flex", alignItems: "center", justifyContent: "center",
+              animation: "dwPulse 2s ease infinite",
             }}>
-              <s.Icon size={24} color={s.accent} />
+              <s.Icon size={20} color={s.accent} />
             </div>
-            <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, margin: 0, lineHeight: 1.25 }}>{s.title}</h2>
+            <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 16, margin: 0, lineHeight: 1.25 }}>{s.title}</h2>
           </div>
 
-          <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.7, margin: "0 0 16px" }}>{s.description}</p>
+          <p style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.7, margin: "0 0 12px" }}>{s.body}</p>
 
-          {/* Visual */}
-          {s.visual && (
-            <div style={{ background: "#070d1a", border: "1px solid #1e2d50", borderRadius: 12, padding: 16, marginBottom: 14 }}>
-              {s.visual}
-            </div>
-          )}
-
-          {/* Tip */}
           {s.tip && (
-            <div style={{ background: `${s.accent}0d`, border: `1px solid ${s.accent}30`, borderRadius: 10, padding: "10px 14px", display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 4 }}>
-              <Zap size={13} color={s.accent} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span style={{ color: s.accent, fontSize: 13, lineHeight: 1.5 }}>{s.tip}</span>
+            <div style={{ background: `${s.accent}0e`, border: `1px solid ${s.accent}28`, borderRadius: 9, padding: "9px 12px", display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
+              <Zap size={12} color={s.accent} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span style={{ color: s.accent, fontSize: 12, lineHeight: 1.55 }}>{s.tip}</span>
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <div style={{ padding: "0 24px 16px", display: "flex", gap: 10 }}>
+        <div style={{ padding: "14px 18px 10px", display: "flex", gap: 8 }}>
           {step > 0 && (
-            <button onClick={prev} style={{ width: 48, height: 48, background: "#1e2d50", border: "none", borderRadius: 12, color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <ChevronLeft size={20} />
+            <button onClick={prev} style={{ width: 44, height: 44, background: "#141c2e", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "border-color 0.15s" }}>
+              <ChevronLeft size={18} />
             </button>
           )}
           <button onClick={next} style={{
-            flex: 1, height: 48,
-            background: isLast ? "linear-gradient(135deg,#22c55e,#16a34a)" : "linear-gradient(135deg,#f5a623,#e8940f)",
-            border: "none", borderRadius: 12, color: "#0a0f1e",
-            fontWeight: 800, fontSize: 15, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            flex: 1, height: 44,
+            background: isLast
+              ? "linear-gradient(135deg,#22c55e,#16a34a)"
+              : "linear-gradient(135deg,#f5a623,#e8940f)",
+            border: "none", borderRadius: 10,
+            color: "#0a0f1e", fontWeight: 800, fontSize: 14,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
           }}>
-            {isLast ? <><CheckCircle size={17} /> Começar a negociar!</> : <>Próximo <ChevronRight size={17} /></>}
+            {isLast ? <><CheckCircle size={16} /> Começar a negociar!</> : <>Próximo <ChevronRight size={16} /></>}
           </button>
         </div>
 
         {/* Dots + skip */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px 16px" }}>
           <div style={{ display: "flex", gap: 5 }}>
             {STEPS.map((_, i) => (
-              <button key={i} onClick={() => setStep(i)}
-                style={{ width: i === step ? 18 : 6, height: 6, borderRadius: 3, border: "none", cursor: "pointer", padding: 0, background: i <= step ? "#f5a623" : "#1e2d50", transition: "all 0.3s" }} />
+              <button key={i} onClick={() => setStep(i)} style={{
+                width: i === step ? 16 : 6, height: 6,
+                borderRadius: 3, border: "none", cursor: "pointer", padding: 0,
+                background: i <= step ? "#f5a623" : "#1e2d50",
+                transition: "all 0.3s ease",
+              }} />
             ))}
           </div>
-          <button onClick={finish} style={{ background: "none", border: "none", color: "#334155", fontSize: 12, cursor: "pointer", padding: 0 }}>
+          <button onClick={finish} style={{ background: "none", border: "none", color: "#334155", fontSize: 11, cursor: "pointer", padding: 0 }}>
             Saltar
           </button>
         </div>
-
-        {/* safe area spacer for iPhone notch */}
-        <div style={{ height: "env(safe-area-inset-bottom,0)" }} />
       </div>
-    </div>
+    </>
   );
 }

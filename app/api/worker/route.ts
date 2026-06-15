@@ -15,6 +15,10 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 export async function GET(req: NextRequest) {
+  if (!process.env.WORKER_SECRET && !process.env.CRON_SECRET) {
+    console.error("[worker] CRÍTICO: WORKER_SECRET e CRON_SECRET não estão configuradas. O endpoint está inacessível e as operações não serão resolvidas.");
+  }
+
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }

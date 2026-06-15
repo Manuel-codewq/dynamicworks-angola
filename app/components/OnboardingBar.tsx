@@ -2,26 +2,25 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckCircle, Circle, ChevronRight, X, Mail, User, Wallet, TrendingUp } from "lucide-react";
+import { CheckCircle, ChevronRight, X, Mail, User, Wallet, TrendingUp, ArrowRight } from "lucide-react";
 
-const HIDDEN_PATHS = ["/login", "/register", "/kyc", "/verify-email", "/terms", "/maintenance", "/"];
+const HIDDEN_PATHS = ["/login", "/register", "/kyc", "/verify-email", "/terms", "/maintenance", "/", "/trade"];
 const STORAGE_KEY  = "dw_onboarding_dismissed";
 
 const STEPS = [
-  { key: "emailVerified",   label: "Verificar email",   icon: Mail,        href: "/verify-email", desc: "Confirma o teu endereço de email" },
-  { key: "profileComplete", label: "Completar perfil",  icon: User,        href: "/profile",      desc: "Adiciona o teu nome completo"     },
-  { key: "depositMade",     label: "Primeiro depósito", icon: Wallet,      href: "/wallet",       desc: "Deposita para começar a operar"   },
-  { key: "tradeMade",       label: "Primeira operação", icon: TrendingUp,  href: "/trade",        desc: "Faz o teu primeiro trade real"    },
+  { key: "emailVerified",   label: "Email",     fullLabel: "Verificar email",   icon: Mail,       href: "/verify-email", desc: "Confirma o teu endereço de email"  },
+  { key: "profileComplete", label: "Perfil",    fullLabel: "Completar perfil",  icon: User,       href: "/profile",      desc: "Completa os teus dados pessoais"   },
+  { key: "depositMade",     label: "Depósito",  fullLabel: "Primeiro depósito", icon: Wallet,     href: "/wallet",       desc: "Deposita Kz para começar a operar" },
+  { key: "tradeMade",       label: "Operação",  fullLabel: "Primeira operação", icon: TrendingUp, href: "/trade",        desc: "Faz o teu primeiro trade real"     },
 ];
 
 export default function OnboardingBar() {
-  const { status }   = useSession();
-  const pathname     = usePathname();
-  const router       = useRouter();
-  const [data,       setData]       = useState<{ steps: Record<string, boolean>; completed: number; total: number } | null>(null);
-  const [dismissed,  setDismissed]  = useState(true);
-  const [minimised,  setMinimised]  = useState(false);
-  const [visible,    setVisible]    = useState(false);
+  const { status } = useSession();
+  const pathname   = usePathname();
+  const router     = useRouter();
+  const [data,      setData]      = useState<{ steps: Record<string, boolean>; completed: number; total: number } | null>(null);
+  const [dismissed, setDismissed] = useState(true);
+  const [visible,   setVisible]   = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -32,10 +31,7 @@ export default function OnboardingBar() {
   useEffect(() => {
     if (status !== "authenticated" || dismissed) return;
     fetch("/api/onboarding").then(r => r.ok ? r.json() : null).then(d => {
-      if (d) {
-        setData(d);
-        setTimeout(() => setVisible(true), 50);
-      }
+      if (d) { setData(d); setTimeout(() => setVisible(true), 80); }
     });
   }, [status, dismissed]);
 
@@ -45,101 +41,134 @@ export default function OnboardingBar() {
   if (!data) return null;
   if (data.completed === data.total) return null;
 
-  const pct = Math.round((data.completed / data.total) * 100);
   const nextStep = STEPS.find(s => !data.steps[s.key]);
+  const NextIcon = nextStep?.icon ?? TrendingUp;
 
   function dismiss() {
     setVisible(false);
-    setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, "1");
-      setDismissed(true);
-    }, 400);
+    setTimeout(() => { localStorage.setItem(STORAGE_KEY, "1"); setDismissed(true); }, 350);
   }
 
   return (
     <>
       <style>{`
-        @keyframes shimmer-ob { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
-        .ob-progress { background: linear-gradient(90deg, #f5a623 ${pct}%, #1e2d50 ${pct}%); transition: background 0.6s ease; }
+        @keyframes ob-slide { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+        .ob-cta:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .ob-cta { transition: all 0.18s ease; }
       `}</style>
 
       <div style={{
-        background: "#070d1a", borderBottom: "1px solid #1e2d50",
-        padding: minimised ? "8px 16px" : "12px 16px",
+        background: "linear-gradient(135deg, #0a0f1e 0%, #0d1526 100%)",
+        borderBottom: "1px solid #1a2540",
         position: "sticky", top: 0, zIndex: 50,
-        transition: "opacity 0.4s ease, max-height 0.4s ease, padding 0.3s ease",
         opacity: visible ? 1 : 0,
-        maxHeight: visible ? "200px" : "0px",
+        maxHeight: visible ? "160px" : "0px",
         overflow: "hidden",
+        transition: "opacity 0.35s ease, max-height 0.4s ease",
+        animation: visible ? "ob-slide 0.35s ease both" : "none",
       }}>
-        {/* Barra de progresso */}
-        <div className="ob-progress" style={{ height: 3, borderRadius: 2, marginBottom: minimised ? 0 : 10, transition: "margin .3s" }} />
+        {/* Linha de progresso animada */}
+        <div style={{ height: 2, background: "#111827" }}>
+          <div style={{
+            height: "100%",
+            width: `${Math.round((data.completed / data.total) * 100)}%`,
+            background: "linear-gradient(90deg, #f5a623, #fb923c)",
+            transition: "width 0.6s ease",
+            borderRadius: "0 2px 2px 0",
+          }} />
+        </div>
 
-        {minimised ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setMinimised(false)}>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>
-              Configuração da conta — <strong style={{ color: "#f5a623" }}>{data.completed}/{data.total} passos</strong>
-            </span>
-            <ChevronRight size={14} color="#64748b" style={{ transform: "rotate(90deg)" }} />
-          </div>
-        ) : (
-          <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Configura a tua conta</span>
-                <span style={{ fontSize: 12, color: "#64748b", marginLeft: 8 }}>{data.completed} de {data.total} passos completos</span>
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => setMinimised(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 2 }}>
-                  <ChevronRight size={16} style={{ transform: "rotate(-90deg)" }} />
-                </button>
-                <button onClick={dismiss} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 2 }}>
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Passos */}
-            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
+        <div style={{ padding: "10px 16px 12px" }}>
+          {/* Linha superior: stepper + fechar */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            {/* Stepper */}
+            <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
               {STEPS.map((step, i) => {
                 const done   = data.steps[step.key];
                 const active = !done && nextStep?.key === step.key;
-                const Icon   = step.icon;
+                const isLast = i === STEPS.length - 1;
                 return (
-                  <button
-                    key={step.key}
-                    onClick={() => done ? null : router.push(step.href)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 7,
-                      background: done ? "rgba(34,197,94,0.08)" : active ? "rgba(245,166,35,0.1)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${done ? "rgba(34,197,94,0.25)" : active ? "rgba(245,166,35,0.3)" : "#1e2d50"}`,
-                      borderRadius: 10, padding: "7px 12px", cursor: done ? "default" : "pointer",
-                      flexShrink: 0, transition: "all .2s",
-                      opacity: !done && !active ? 0.6 : 1,
-                    }}>
+                  <div key={step.key} style={{ display: "flex", alignItems: "center" }}>
+                    {/* Dot */}
                     <div style={{
-                      width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-                      background: done ? "rgba(34,197,94,0.15)" : active ? "rgba(245,166,35,0.15)" : "#1e2d50",
-                      display: "flex", alignItems: "center", justifyContent: "center",
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
                     }}>
-                      {done
-                        ? <CheckCircle size={13} color="#22c55e" />
-                        : <Icon size={13} color={active ? "#f5a623" : "#64748b"} />
-                      }
-                    </div>
-                    <div style={{ textAlign: "left" }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: done ? "#22c55e" : active ? "#f5a623" : "#94a3b8", whiteSpace: "nowrap" }}>
-                        {i + 1}. {step.label}
+                      <div style={{
+                        width: active ? 28 : 22, height: active ? 28 : 22,
+                        borderRadius: "50%",
+                        background: done   ? "#22c55e"
+                                  : active ? "linear-gradient(135deg,#f5a623,#e8940f)"
+                                           : "#141c2e",
+                        border: `2px solid ${done ? "#22c55e" : active ? "#f5a623" : "#1e2d50"}`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "all 0.3s ease",
+                        flexShrink: 0,
+                        boxShadow: active ? "0 0 12px rgba(245,166,35,0.4)" : "none",
+                      }}>
+                        {done
+                          ? <CheckCircle size={13} color="#fff" />
+                          : <span style={{ fontSize: active ? 11 : 10, fontWeight: 800, color: active ? "#0a0f1e" : "#334155" }}>{i + 1}</span>
+                        }
                       </div>
-                      {active && <div style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>{step.desc}</div>}
+                      <span style={{
+                        fontSize: 9, fontWeight: active ? 800 : 600,
+                        color: done ? "#22c55e" : active ? "#f5a623" : "#334155",
+                        whiteSpace: "nowrap",
+                      }}>{step.label}</span>
                     </div>
-                    {active && <ChevronRight size={12} color="#f5a623" />}
-                  </button>
+                    {/* Connector */}
+                    {!isLast && (
+                      <div style={{
+                        width: 32, height: 2, margin: "0 4px",
+                        marginBottom: 16,
+                        background: done ? "#22c55e" : "#1e2d50",
+                        transition: "background 0.4s ease",
+                        flexShrink: 0,
+                      }} />
+                    )}
+                  </div>
                 );
               })}
             </div>
-          </>
-        )}
+
+            {/* Fechar */}
+            <button onClick={dismiss} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 4, flexShrink: 0, marginBottom: 14 }}>
+              <X size={15} />
+            </button>
+          </div>
+
+          {/* CTA do próximo passo */}
+          {nextStep && (
+            <button
+              className="ob-cta"
+              onClick={() => router.push(nextStep.href)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, width: "100%",
+                background: "rgba(245,166,35,0.07)",
+                border: "1px solid rgba(245,166,35,0.25)",
+                borderRadius: 10, padding: "8px 12px",
+                cursor: "pointer", textAlign: "left",
+              }}
+            >
+              <div style={{
+                width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+                background: "rgba(245,166,35,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <NextIcon size={15} color="#f5a623" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#f5a623", marginBottom: 1 }}>
+                  {nextStep.fullLabel}
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {nextStep.desc}
+                </div>
+              </div>
+              <ArrowRight size={14} color="#f5a623" style={{ flexShrink: 0 }} />
+            </button>
+          )}
+        </div>
       </div>
     </>
   );

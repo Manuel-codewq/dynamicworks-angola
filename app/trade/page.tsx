@@ -73,6 +73,7 @@ const DW_ANIM_CSS = `
 .dw-ping { position: relative; }
 .dw-ping::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: dwPing 1.8s cubic-bezier(0,0,0.2,1) infinite; }
 @media (prefers-reduced-motion: reduce) { .dw-stagger > *, .dw-ping::after { animation: none !important; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 `;
 
 
@@ -181,7 +182,8 @@ export default function TradePage() {
   const [tournamentWins,     setTournamentWins]     = useState(0);
   const [tournamentPositions, setTournamentPositions] = useState<any[]>([]);
   const [demoReloading,  setDemoReloading]  = useState(false);
-  const [showDemoHelp,   setShowDemoHelp]   = useState(false);
+  const [showDemoReset,  setShowDemoReset]  = useState(false);
+  const [demoResetError, setDemoResetError] = useState<string | null>(null);
   const [candleTimer,    setCandleTimer]    = useState("");
   const [candleRemSecs,  setCandleRemSecs]  = useState(0);
   const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
@@ -2124,13 +2126,19 @@ export default function TradePage() {
     setLoading(false);
   }
 
-  async function resetDemo() {
+  async function resetDemo(): Promise<boolean> {
     setDemoReloading(true);
     try {
       const res = await fetch("/api/demo/reset", { method: "POST" });
-      if (res.ok) { const d = await res.json(); setDemoBalance(d.demoBalance); }
-    } catch { /* silent */ }
+      const d = await res.json();
+      if (res.ok && d.ok) {
+        setDemoBalance(d.demoBalance);
+        setDemoReloading(false);
+        return true;
+      }
+    } catch {}
     setDemoReloading(false);
+    return false;
   }
 
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -2278,7 +2286,7 @@ export default function TradePage() {
                   <button
                     type="button"
                     disabled={demoReloading}
-                    onClick={async (e) => { e.stopPropagation(); await resetDemo(); }}
+                    onClick={(e) => { e.stopPropagation(); setShowDemoReset(true); }}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                       width: "100%", padding: "8px 16px",
@@ -2337,7 +2345,7 @@ export default function TradePage() {
     <div className="dw-stagger" style={{ display: "flex", flexDirection: "column", gap: compact ? 10 : 12 }}>
 
       {/* ── Cabeçalho: par + payout + preço ── */}
-      <div style={{
+      <div data-tour="dw-pair" style={{
         background: "#1c2130", border: "1px solid #262d40",
         borderRadius: 10, padding: "10px 12px",
       }}>
@@ -2357,7 +2365,7 @@ export default function TradePage() {
       </div>
 
       {/* ── Investimento (stepper − / +) ── */}
-      <div style={{ background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, padding: compact ? 10 : "10px 12px" }}>
+      <div data-tour="dw-amount" style={{ background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, padding: compact ? 10 : "10px 12px" }}>
         <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>Investimento</div>
         <div style={{ display: "flex", gap: 6, marginBottom: 7 }}>
           <button className="dw-btn" onClick={() => setAmount(a => Math.max(1000, (a || 1000) - 1000))}
@@ -2474,7 +2482,7 @@ export default function TradePage() {
       </div>
 
       {/* ── Retorno potencial ── */}
-      <div style={{ background: "linear-gradient(90deg,rgba(245,166,35,0.12) 0%,rgba(245,166,35,0.04) 100%)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
+      <div data-tour="dw-payout" style={{ background: "linear-gradient(90deg,rgba(245,166,35,0.12) 0%,rgba(245,166,35,0.04) 100%)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
         <div style={{ color: "#f5a623", fontWeight: 900, fontSize: compact ? 18 : 21, fontVariantNumeric: "tabular-nums" }}>
           +{formatKz(Math.round(profit))}
         </div>
@@ -2487,7 +2495,7 @@ export default function TradePage() {
       {(() => {
         const btnDisabled = loading || currentPrice === 0;
       return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      <div data-tour="dw-trade-btns" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         <button className="dw-btn dw-btn-call" onClick={() => openTrade("call")} disabled={btnDisabled} style={{
           width: "100%", height: compact ? 50 : 54,
           background: "linear-gradient(135deg,#0aa56a 0%,#0ecb81 100%)",
@@ -3474,6 +3482,62 @@ export default function TradePage() {
     );
   }
 
+  // ── Modal repor saldo demo (partilhado entre mobile e desktop) ───────────
+  const demoResetModalJSX = showDemoReset ? (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+      onClick={() => { if (!demoReloading) { setShowDemoReset(false); setDemoResetError(null); } }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#0d1526", border: "1px solid #1e3a5f", borderRadius: 18, padding: 24, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(0,0,0,0.8)" }}
+      >
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <RefreshCw size={24} color="#f5a623" style={{ animation: demoReloading ? "spin 1s linear infinite" : "none" }} />
+          </div>
+        </div>
+
+        <h3 style={{ color: "#fff", fontWeight: 800, fontSize: 17, margin: "0 0 8px", textAlign: "center" }}>Repor saldo Demo?</h3>
+        <p style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.65, margin: "0 0 16px", textAlign: "center" }}>
+          O teu saldo demo será reposto para <strong style={{ color: "#f5a623" }}>10.000 Kz</strong>.
+        </p>
+
+        {demoResetError && (
+          <div style={{ background: "rgba(246,70,93,0.1)", border: "1px solid rgba(246,70,93,0.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, color: "#f6465d", fontSize: 13, textAlign: "center" }}>
+            {demoResetError}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            disabled={demoReloading}
+            onClick={() => { setShowDemoReset(false); setDemoResetError(null); }}
+            style={{ flex: 1, height: 44, background: "#141c2e", border: "1px solid #1e2d50", borderRadius: 10, color: "#94a3b8", fontSize: 14, fontWeight: 600, cursor: demoReloading ? "not-allowed" : "pointer" }}
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={demoReloading}
+            onClick={async () => {
+              setDemoResetError(null);
+              const ok = await resetDemo();
+              if (ok) {
+                setShowDemoReset(false);
+                setShowAccountModal(false);
+              } else {
+                setDemoResetError("Não foi possível repor o saldo. Tenta novamente.");
+              }
+            }}
+            style={{ flex: 1, height: 44, background: demoReloading ? "#7a5118" : "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 10, color: "#0a0f1e", fontSize: 14, fontWeight: 800, cursor: demoReloading ? "not-allowed" : "pointer" }}
+          >
+            {demoReloading ? "A repor..." : "Repor saldo"}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // ── MOBILE RENDER ─────────────────────────────────────────────────────────
   if (isMobile) {
     const TOPBAR_H      = 48;
@@ -3491,6 +3555,9 @@ export default function TradePage() {
         <style>{DW_ANIM_CSS}</style>
 
         <OnboardingTutorial />
+
+        {/* Modal de confirmação — repor saldo demo */}
+        {demoResetModalJSX}
 
         {/* Modal de selecção de conta — bottom sheet mobile / dropdown desktop */}
         {accountModalJSX}
@@ -3523,7 +3590,7 @@ export default function TradePage() {
 
           <NotificationBell />
 
-          <button onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
+          <button data-tour="dw-account" onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
             {activeAccount === "tournament" ? <Trophy size={11} color="#6366f1" /> : <Wallet size={11} color={activeAccount === "demo" ? "#f5a623" : "#0ecb81"} />}
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
             <span style={{ background: activeAccount === "tournament" ? "#6366f1" : activeAccount === "demo" ? "#f5a623" : "#0ecb81", color: activeAccount === "tournament" ? "#fff" : "#11141d", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>{activeAccount === "tournament" ? "Torneio" : activeAccount === "demo" ? "Demo" : "Real"}</span>
@@ -3554,7 +3621,7 @@ export default function TradePage() {
         {leftPanel && renderSlideInPanel()}
 
         {/* ── Chart ── */}
-        <div style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
+        <div data-tour="dw-chart" style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
           <div ref={chartRef}
             style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHandle.current ? "grabbing" : draggingHLine.current ? "ns-resize" : "default" }}
             onMouseDown={e => onChartPointerDown(e.clientY)}
@@ -4270,6 +4337,7 @@ export default function TradePage() {
         />
       )}
 
+      {demoResetModalJSX}
       {accountModalJSX}
       {accountToastJSX}
 
