@@ -1,8 +1,8 @@
 "use client";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useRef } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Turnstile } from "@marsidev/react-turnstile";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { TrendingUp, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Shield } from "lucide-react";
 
 type Step = "credentials" | "2fa_email" | "2fa_totp";
@@ -19,6 +19,7 @@ function LoginContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstile] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const isVerified = params.get("verified") === "1";
   const [failedAttempts, setFailedAttempts] = useState(0);
   const MAX_ATTEMPTS = 5;
@@ -48,14 +49,20 @@ function LoginContent() {
       setLoading(false);
 
       if (res.status === 429) {
+        turnstileRef.current?.reset();
+        setTurnstile(null);
         setError(data.error || "Demasiadas tentativas. Aguarda antes de tentar de novo.");
         return;
       }
       if (!res.ok || !data.valid) {
+        turnstileRef.current?.reset();
+        setTurnstile(null);
         const newAttempts = failedAttempts + 1;
         setFailedAttempts(newAttempts);
         const remaining = MAX_ATTEMPTS - newAttempts;
-        if (remaining <= 0) {
+        if (res.status === 500) {
+          setError("Erro interno. Tenta novamente.");
+        } else if (remaining <= 0) {
           setError("Conta temporariamente bloqueada. Recupera a senha ou tenta mais tarde.");
         } else if (remaining <= 2) {
           setError(`Email ou senha incorretos — ${remaining} tentativa${remaining === 1 ? "" : "s"} restante${remaining === 1 ? "" : "s"}.`);
@@ -78,6 +85,8 @@ function LoginContent() {
       });
       setLoading(false);
       if (!result?.error) { router.push("/trade"); return; }
+      turnstileRef.current?.reset();
+      setTurnstile(null);
       setError("Erro ao autenticar. Tenta novamente.");
       return;
     }
@@ -293,6 +302,7 @@ function LoginContent() {
                 {/* Verificação Turnstile — apenas no passo de credenciais */}
                 <div style={{ marginBottom: 16 }}>
                   <Turnstile
+                    ref={turnstileRef}
                     siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
                     onSuccess={setTurnstile}
                     onExpire={() => setTurnstile(null)}
