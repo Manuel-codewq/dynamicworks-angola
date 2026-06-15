@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { CheckCircle, ChevronRight, X, Mail, User, Wallet, TrendingUp, ArrowRight } from "lucide-react";
 
-const HIDDEN_PATHS = ["/login", "/register", "/kyc", "/verify-email", "/terms", "/maintenance", "/", "/trade"];
+const HIDDEN_PATHS = ["/login", "/register", "/kyc", "/verify-email", "/terms", "/maintenance", "/", "/trade", "/ao"];
 const STORAGE_KEY  = "dw_onboarding_dismissed";
 
 const STEPS = [
