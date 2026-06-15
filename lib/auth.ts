@@ -5,7 +5,6 @@ import { checkRateLimit, resetFailCount, incrementFailCount } from "./rateLimit"
 import { parseDevice } from "./parseDevice";
 import { sendNewLoginEmail } from "./email";
 import { checkIpCollision } from "./fraudDetection";
-import { authConfig } from "../auth.config";
 
 const DUMMY_HASH =
   "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a";
@@ -54,7 +53,10 @@ async function logAccess(
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
+  session: { strategy: "jwt", maxAge: 7 * 24 * 3600 },
+  pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({
       name: "credentials",
