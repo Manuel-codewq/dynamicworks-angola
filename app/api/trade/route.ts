@@ -33,23 +33,24 @@ const SYNTHETIC_SYMBOLS = new Set([
 ]);
 
 async function fetchServerEntryPrice(asset: string, isSynthetic: boolean): Promise<number | null> {
-  // 1. DB — janela de 5 minutos
+  // 1. Tick ao vivo da Deriv — preço sub-segundo, igual ao que o utilizador vê no gráfico
   try {
-    const cutoff = new Date(Date.now() - 300_000); // 5 min
+    const price = await getDerivPrice(asset, !isSynthetic);
+    if (price && price > 0) return price;
+  } catch { /* fallback abaixo */ }
+
+  // 2. Fallback: PriceCandle DB (pode ter até ~90s de atraso — apenas para resiliência)
+  try {
+    const cutoff = new Date(Date.now() - 300_000);
     const candle = await prisma.priceCandle.findFirst({
       where:   { asset, timestamp: { gte: cutoff } },
       orderBy: { timestamp: "desc" },
       select:  { close: true },
     });
-    console.log(`[price] DB ${asset}:`, candle?.close ?? "NOT FOUND");
     if (candle?.close && candle.close > 0) return candle.close;
-  } catch (e) { console.error("[price] DB error:", e); }
+  } catch { /* silent */ }
 
-  // 2. Fallback REST Deriv
-  console.log(`[price] REST fallback ${asset} isSynthetic=${isSynthetic}`);
-  const price = await getDerivPrice(asset, !isSynthetic);
-  console.log(`[price] REST result ${asset}:`, price);
-  return price;
+  return null;
 }
 
 
