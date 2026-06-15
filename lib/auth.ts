@@ -196,9 +196,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id          = user.id;
-        token.role        = (user as any).role;
         token.sessionId   = (user as any).sessionId;
-        token.refreshedAt = Date.now();
+        token.refreshedAt = 0; // força refresh imediato da DB no bloco abaixo
       }
 
       const age = Date.now() - ((token.refreshedAt as number) ?? 0);
