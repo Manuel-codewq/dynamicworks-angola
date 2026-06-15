@@ -1,7 +1,8 @@
 "use client";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useRef } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { TrendingUp, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Shield } from "lucide-react";
 
 type Step = "credentials" | "2fa_email" | "2fa_totp";
@@ -17,6 +18,8 @@ function LoginContent() {
   const [step, setStep] = useState<Step>("credentials");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstile] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const isVerified = params.get("verified") === "1";
   const [failedAttempts, setFailedAttempts] = useState(0);
   const MAX_ATTEMPTS = 5;
@@ -32,19 +35,28 @@ function LoginContent() {
 
     // ── Passo 1: credenciais (usa endpoint dedicado para 2FA fiável) ──────────
     if (step === "credentials") {
+      if (!turnstileToken) {
+        setError("Por favor completa a verificação de segurança.");
+        setLoading(false);
+        return;
+      }
       const res  = await fetch("/api/auth/2fa/initiate", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, password }),
+        body:    JSON.stringify({ email, password, turnstileToken }),
       });
       const data = await res.json();
       setLoading(false);
 
       if (res.status === 429) {
+        turnstileRef.current?.reset();
+        setTurnstile(null);
         setError(data.error || "Demasiadas tentativas. Aguarda antes de tentar de novo.");
         return;
       }
       if (!res.ok || !data.valid) {
+        turnstileRef.current?.reset();
+        setTurnstile(null);
         const newAttempts = failedAttempts + 1;
         setFailedAttempts(newAttempts);
         const remaining = MAX_ATTEMPTS - newAttempts;
@@ -63,6 +75,7 @@ function LoginContent() {
       if (data.needs2fa) {
         setStep(data.method === "totp" ? "2fa_totp" : "2fa_email");
         setOtp("");
+        setTurnstile(null);
         return;
       }
 
@@ -72,6 +85,8 @@ function LoginContent() {
       });
       setLoading(false);
       if (!result?.error) { router.push("/trade"); return; }
+      turnstileRef.current?.reset();
+      setTurnstile(null);
       setError("Erro ao autenticar. Tenta novamente.");
       return;
     }
@@ -117,7 +132,7 @@ function LoginContent() {
   };
 
   const is2FAStep = step === "2fa_email" || step === "2fa_totp";
-  const btnDisabled = loading;
+  const btnDisabled = loading || !turnstileToken;
 
   return (
     <div style={{
@@ -281,6 +296,18 @@ function LoginContent() {
                       {showPass ? <EyeOff size={16} color="#94a3b8" /> : <Eye size={16} color="#94a3b8" />}
                     </button>
                   </div>
+                </div>
+
+                {/* Verificação Turnstile */}
+                <div style={{ marginBottom: 16 }}>
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
+                    onSuccess={setTurnstile}
+                    onExpire={() => setTurnstile(null)}
+                    onError={() => setTurnstile(null)}
+                    options={{ theme: "dark", language: "pt" }}
+                  />
                 </div>
 
                 <button
