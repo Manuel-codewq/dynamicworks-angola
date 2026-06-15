@@ -3,8 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/lib/getClientIp";
 import { checkRateLimit, incrementFailCount, getFailCount } from "@/lib/rateLimit";
 import { send2FAEmail } from "@/lib/email";
-import { verifyTurnstile } from "@/lib/verifyTurnstile";
-
 const MAX_FAIL = 10;
 const FAIL_WINDOW_MS = 15 * 60_000; // 15 minutos
 
@@ -12,14 +10,9 @@ const DUMMY_HASH = "$2a$12$CwTycUXWue0Thq9StjUM0uJ8.GJ6JfQ6vBz0Y1pX9P5kQZ4Zk9w0a
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, turnstileToken } = await req.json();
+    const { email, password } = await req.json();
     const ip = getClientIp(req);
     const normalizedEmail = (email as string).toLowerCase().trim();
-
-    const captchaOk = await verifyTurnstile(turnstileToken ?? "", ip);
-    if (!captchaOk) {
-      return NextResponse.json({ error: "Verificação de segurança falhou. Tente novamente." }, { status: 400 });
-    }
 
     // Bloqueio por falhas acumuladas (independente do rate limit por IP)
     const failCount = await getFailCount(`login:${normalizedEmail}`);

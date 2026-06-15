@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Turnstile } from "@marsidev/react-turnstile";
 import {
   TrendingUp, User, Mail, Lock, Phone, MapPin,
   Eye, EyeOff, AlertCircle, CheckCircle, Gift,
@@ -36,7 +35,6 @@ function RegisterContent() {
   const [error, setError]               = useState("");
   const [success, setSuccess]           = useState(false);
   const [loading, setLoading]           = useState(false);
-  const [turnstileToken, setTurnstile]  = useState<string | null>(null);
   const nifTimeout                      = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function update(field: string, value: string) {
@@ -82,10 +80,6 @@ function RegisterContent() {
       setError("Verifique o NIF antes de continuar.");
       return;
     }
-    if (!turnstileToken) {
-      setError("Por favor completa a verificação de segurança.");
-      return;
-    }
     setError("");
     setLoading(true);
     try {
@@ -93,12 +87,11 @@ function RegisterContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nifNumero:      form.nif,
-          email:          form.email,
-          password:       form.password,
-          phone:          form.phone,
-          province:       form.province,
-          turnstileToken,
+          nifNumero: form.nif,
+          email:     form.email,
+          password:  form.password,
+          phone:     form.phone,
+          province:  form.province,
           ...(refCode ? { ref: refCode } : {}),
         }),
       });
@@ -325,26 +318,15 @@ function RegisterContent() {
               </div>
             </div>
 
-            {/* Verificação Turnstile */}
-            <div style={{ marginBottom: 16 }}>
-              <Turnstile
-                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
-                onSuccess={setTurnstile}
-                onExpire={() => setTurnstile(null)}
-                onError={() => setTurnstile(null)}
-                options={{ theme: "dark", language: "pt" }}
-              />
-            </div>
-
             <button
               type="submit"
-              disabled={loading || nifState !== "valid" || !turnstileToken}
+              disabled={loading || nifState !== "valid"}
               style={{
                 width: "100%",
-                background: loading || nifState !== "valid" || !turnstileToken ? "#7a5118" : "#f5a623",
+                background: loading || nifState !== "valid" ? "#7a5118" : "#f5a623",
                 color: "#0a0f1e", border: "none", borderRadius: 8,
                 padding: "10px 16px", fontSize: 14, fontWeight: 700,
-                cursor: loading || nifState !== "valid" || !turnstileToken ? "not-allowed" : "pointer",
+                cursor: loading || nifState !== "valid" ? "not-allowed" : "pointer",
               }}
             >
               {loading ? "A criar conta..." : "Criar conta gratuita"}

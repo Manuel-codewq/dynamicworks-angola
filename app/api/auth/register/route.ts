@@ -5,8 +5,6 @@ import { sendVerificationEmail } from "@/lib/email";
 import { randomInt, createHash } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
-import { verifyTurnstile } from "@/lib/verifyTurnstile";
-
 async function isPwnedPassword(password: string): Promise<boolean> {
   try {
     const hash   = createHash("sha1").update(password).digest("hex").toUpperCase();
@@ -44,12 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { email, password, phone, province, ref, nifNumero, turnstileToken } = body;
-
-    const captchaOk = await verifyTurnstile(turnstileToken ?? "", ip);
-    if (!captchaOk) {
-      return NextResponse.json({ error: "Verificação de segurança falhou. Tente novamente." }, { status: 400 });
-    }
+    const { email, password, phone, province, ref, nifNumero } = body;
 
     // Validar NIF (obrigatório)
     const nif = typeof nifNumero === "string" ? nifNumero.replace(/\s/g, "").toUpperCase() : "";
