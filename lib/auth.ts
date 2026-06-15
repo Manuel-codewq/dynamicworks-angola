@@ -25,9 +25,17 @@ function extractIp(req: Request | undefined): string {
   return "unknown";
 }
 
+function extractGeo(req: Request | undefined): { country: string | null; city: string | null } {
+  if (!req) return { country: null, city: null };
+  const h = req.headers;
+  const country = (h as any).get?.("x-vercel-ip-country")?.trim() ?? null;
+  const city    = (h as any).get?.("x-vercel-ip-city")?.trim() ?? null;
+  return { country, city };
+}
+
 async function logAccess(
   action: string,
-  opts: { userId?: string; email?: string; ip?: string; userAgent?: string },
+  opts: { userId?: string; email?: string; ip?: string; userAgent?: string; country?: string | null; city?: string | null },
 ) {
   try {
     await prisma.accessLog.create({
@@ -37,6 +45,8 @@ async function logAccess(
         email:     opts.email,
         ip:        opts.ip,
         userAgent: opts.userAgent,
+        country:   opts.country ?? null,
+        city:      opts.city ?? null,
       },
     });
   } catch { /* non-critical */ }
@@ -63,16 +73,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const ip        = extractIp(req as unknown as Request);
           const userAgent = (req as any)?.headers?.get?.("user-agent") ?? "";
           const otp       = (credentials.otp as string | undefined)?.trim();
+          const { country, city } = extractGeo(req as unknown as Request);
 
           if (!await checkRateLimit("login_ip", ip, 30, 15 * 60_000)) {
-            await logAccess("login_fail_ratelimit", { email, ip, userAgent });
+            await logAccess("login_fail_ratelimit", { email, ip, userAgent, country, city });
             return null;
           }
 
           const user = await prisma.user.findUnique({ where: { email } });
 
           if (!await checkRateLimit("login_email", email, 10, 15 * 60_000)) {
-            await logAccess("login_fail_ratelimit", { email, ip, userAgent });
+            await logAccess("login_fail_ratelimit", { email, ip, userAgent, country, city });
             return null;
           }
 
@@ -81,7 +92,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const valid = await bcrypt.compare(credentials.password as string, hashToCompare);
 
           if (!user || !valid || user.status === "blocked" || user.emailVerified === false) {
-            await logAccess("login_fail", { email, ip, userAgent });
+            await logAccess("login_fail", { email, ip, userAgent, country, city });
             return null;
           }
 
@@ -121,7 +132,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
 
             if (!otpValid) {
-              await logAccess("2fa_fail", { userId: user.id, email, ip, userAgent });
+              await logAccess("2fa_fail", { userId: user.id, email, ip, userAgent, country, city });
               // Após 5 falhas de OTP, invalidar o código — força o utilizador a pedir um novo
               const otpFails = await incrementFailCount(`2fa_otp:${user.id}`, 10 * 60_000);
               if (otpFails >= 5 && user.twoFactorMethod === "email") {
@@ -132,7 +143,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               }
               throw new Error("2FA_INVALID");
             }
-            await logAccess("2fa_ok", { userId: user.id, email, ip, userAgent });
+            await logAccess("2fa_ok", { userId: user.id, email, ip, userAgent, country, city });
           }
 
           // ── Criar sessão ─────────────────────────────────────────────────────
@@ -141,7 +152,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             data: { userId: user.id, ip, userAgent, device, isActive: true },
           });
 
-          await logAccess("login_ok", { userId: user.id, email, ip, userAgent });
+          await logAccess("login_ok", { userId: user.id, email, ip, userAgent, country, city });
 
           // Limpar contador de falhas após login bem-sucedido
           resetFailCount(`login:${email}`).catch(() => {});

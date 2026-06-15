@@ -35,9 +35,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
-    "@netlify/functions": "^5.2.0",
-    "@netlify/plugin-nextjs": "^5.15.10",
-    "@types/bcryptjs": "^2.4.6",
+"@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",

@@ -88,11 +88,14 @@ model AccessLog {
   ip        String?
   userAgent String?
   action    String
+  country   String?
+  city      String?
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([action, createdAt])
 }
 
 model PushSubscription {
