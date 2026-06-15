@@ -42,8 +42,7 @@ function RegisterContent() {
   }
 
   function handleNifChange(value: string) {
-    // NIF angolano: dígitos e letras (ex: 005904881UE046)
-    const nif = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 14);
+    const nif = value.replace(/[^0-9]/g, "").slice(0, 14);
     setForm(f => ({ ...f, nif, name: "" }));
     setNifState("idle");
     setNifError("");
@@ -195,8 +194,9 @@ function RegisterContent() {
               <div style={{ position: "relative" }}>
                 <Hash size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
                 <input
-                  type="text"
+                  type="tel"
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   value={form.nif}
                   onChange={e => handleNifChange(e.target.value)}
                   placeholder="Ex: 5000012345"
