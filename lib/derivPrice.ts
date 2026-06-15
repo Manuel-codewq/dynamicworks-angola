@@ -1,5 +1,5 @@
 import { SYNTHETIC_LABEL_TO_SYMBOL } from "./derivWebSocket";
-import { fetchDerivCandlesWS } from "./derivServerWS";
+import { fetchDerivLatestTickWS, fetchDerivCandlesWS } from "./derivServerWS";
 
 const ASSET_TO_SYMBOL: Record<string, string> = {
   "EUR/USD": "frxEURUSD", "GBP/USD": "frxGBPUSD", "USD/JPY": "frxUSDJPY",
@@ -22,12 +22,16 @@ export function isOtcAsset(asset: string): boolean {
 
 async function fetchDerivSymbolPrice(symbol: string): Promise<number | null> {
   try {
+    // Tick mais recente — sem atraso de vela de 60s
+    const tick = await fetchDerivLatestTickWS(symbol);
+    if (tick && tick > 0) return tick;
+  } catch { /* fallback para vela abaixo */ }
+  try {
+    // Fallback: fecho da última vela de 60s
     const candles = await fetchDerivCandlesWS(symbol, 60, 1);
-    if (candles.length === 0) return null;
-    return candles[candles.length - 1].close;
-  } catch {
-    return null;
-  }
+    if (candles.length > 0) return candles[candles.length - 1].close;
+  } catch { /* silent */ }
+  return null;
 }
 
 export async function getDerivPrice(asset: string, forceReal = false): Promise<number | null> {

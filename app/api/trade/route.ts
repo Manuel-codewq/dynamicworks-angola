@@ -256,7 +256,7 @@ export async function POST(req: NextRequest) {
   const clientPrice = typeof clientEntryPrice === "number" ? clientEntryPrice : parseFloat(clientEntryPrice);
   if (isFinite(clientPrice) && clientPrice > 0) {
     const pctDiff = Math.abs(clientPrice - entryPrice) / entryPrice;
-    if (pctDiff > 0.01) {
+    if (pctDiff > 0.02) {
       return NextResponse.json(
         { error: "Preço desatualizado. Recarrega e tenta novamente." },
         { status: 409 },

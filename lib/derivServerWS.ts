@@ -100,6 +100,20 @@ export class DerivWSClient {
       .filter(c => isFinite(c.close) && c.close > 0);
   }
 
+  // Retorna o tick mais recente — muito mais atual do que o fecho de uma vela de 60s
+  async fetchLatestTick(symbol: string): Promise<number | null> {
+    const res = await this.request({
+      ticks_history: symbol,
+      end:   "latest",
+      count: 1,
+      style: "ticks",
+    });
+    const prices: number[] = res?.history?.prices ?? [];
+    if (prices.length === 0) return null;
+    const p = Number(prices[prices.length - 1]);
+    return isFinite(p) && p > 0 ? p : null;
+  }
+
   close() {
     this.ws?.close();
     this.ws = null;
@@ -116,6 +130,17 @@ export async function fetchDerivCandlesWS(
   await client.connect();
   try {
     return await client.fetchCandles(symbol, granularity, count);
+  } finally {
+    client.close();
+  }
+}
+
+// Tick mais recente — sub-segundo, sem atraso de vela de 60s.
+export async function fetchDerivLatestTickWS(symbol: string): Promise<number | null> {
+  const client = new DerivWSClient();
+  await client.connect();
+  try {
+    return await client.fetchLatestTick(symbol);
   } finally {
     client.close();
   }
