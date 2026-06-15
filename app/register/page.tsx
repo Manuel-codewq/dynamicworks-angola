@@ -190,7 +190,7 @@ function RegisterContent() {
             {/* NIF */}
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>
-                NIF (Número de Identificação Fiscal) <span style={{ color: "#ef4444" }}>*</span>
+                Nº Bilhete de Identidade <span style={{ color: "#ef4444" }}>*</span>
               </label>
               <div style={{ position: "relative" }}>
                 <Hash size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
