@@ -1,6 +1,7 @@
 {
   "crons": [
-    { "path": "/api/worker",         "schedule": "* * * * *" },
-    { "path": "/api/price-recorder", "schedule": "* * * * *" }
+    { "path": "/api/worker",              "schedule": "* * * * *" },
+    { "path": "/api/price-recorder",      "schedule": "* * * * *" },
+    { "path": "/api/cron/price-alerts",   "schedule": "* * * * *" }
   ]
 }

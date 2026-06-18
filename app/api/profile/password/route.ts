@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { timingSafeEqual } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function PATCH(req: NextRequest) {
@@ -38,7 +39,10 @@ export async function PATCH(req: NextRequest) {
     if (new Date() > user.pwdOtpExpires) {
       return NextResponse.json({ error: "Código expirado. Solicite um novo." }, { status: 400 });
     }
-    if (String(otpCode).trim() !== user.pwdOtpCode) {
+    const provided = Buffer.from(String(otpCode).trim().padEnd(user.pwdOtpCode.length));
+    const stored   = Buffer.from(user.pwdOtpCode);
+    const match    = provided.length === stored.length && timingSafeEqual(provided, stored);
+    if (!match) {
       return NextResponse.json({ error: "Código incorreto." }, { status: 400 });
     }
 

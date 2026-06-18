@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, TrendingUp, BarChart2, Trophy, Download } from "lucide-react";
+import { RefreshCw, TrendingUp, BarChart2, Trophy, Download, FileText } from "lucide-react";
 import { formatKz } from "@/lib/format";
 
 interface WinRateRow {
@@ -138,6 +138,10 @@ export default function AdminReportsPage() {
           <button onClick={() => exportCSV(pnl, days)} disabled={pnl.length === 0}
             style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 8, padding: "7px 12px", color: "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
             <Download size={13} /> Exportar CSV
+          </button>
+          <button onClick={() => window.open(`/ao/admin/reports/print?days=${days}`, "_blank")}
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, padding: "7px 12px", color: "#f5a623", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+            <FileText size={13} /> Exportar PDF
           </button>
         </div>
       </div>

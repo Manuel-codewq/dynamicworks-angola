@@ -1,5 +1,37 @@
 import type { NextConfig } from "next";
 
+// Fontes externas legítimas usadas pela aplicação
+const ALLOWED_IMG_SRCS = [
+  "blob:",
+  "data:",
+  "https://res.cloudinary.com",   // avatares e documentos KYC
+].join(" ");
+
+const ALLOWED_CONNECT_SRCS = [
+  "'self'",
+  "https://api.anthropic.com",    // IA do chat
+  "wss://ws.binaryws.com",        // Deriv WebSocket
+  "wss://frontend.binaryws.com",
+  "https://api.pwnedpasswords.com", // verificação de senhas
+  "https://digital.ao",           // validação NIF
+  "https://api.resend.com",       // email
+].join(" ");
+
+// Content Security Policy — bloqueia XSS e injeção de recursos externos
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com`,
+  `style-src 'self' 'unsafe-inline'`,
+  `img-src 'self' ${ALLOWED_IMG_SRCS}`,
+  `font-src 'self' data:`,
+  `connect-src ${ALLOWED_CONNECT_SRCS}`,
+  `frame-src https://challenges.cloudflare.com`,
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
+
 const SECURITY_HEADERS = [
   { key: "X-Frame-Options",              value: "DENY" },
   { key: "X-Content-Type-Options",       value: "nosniff" },
@@ -10,14 +42,12 @@ const SECURITY_HEADERS = [
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   { key: "Cross-Origin-Opener-Policy",   value: "same-origin" },
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+  { key: "Content-Security-Policy",      value: CSP },
 ];
 
 const nextConfig: NextConfig = {
   compress: true,
   serverExternalPackages: ["bcryptjs", "qrcode", "web-push"],
-  env: {
-    NEXT_PUBLIC_TWELVEDATA_API_KEY: process.env.TWELVEDATA_API_KEY ?? "",
-  },
   async headers() {
     return [
       {

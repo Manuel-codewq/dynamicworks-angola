@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 import { Users, TrendingUp, Copy, CheckCircle, XCircle, Plus, Minus, ChevronLeft, Award, AlertCircle } from "lucide-react";
 
 type Expert = {
@@ -28,6 +29,7 @@ const CARD: React.CSSProperties = {
 export default function CopyTradingPage() {
   const { status } = useSession();
   const router = useRouter();
+  const t = useT();
 
   const [experts, setExperts] = useState<Expert[]>([]);
   const [myProfile, setMyProfile] = useState<MyProfile | null>(null);
@@ -65,7 +67,7 @@ export default function CopyTradingPage() {
 
   async function handleFollow(expert: Expert) {
     const amt = Number(followAmount[expert.id] ?? "1000");
-    if (!amt || amt < 1000) { showToast("Mínimo 1.000 Kz"); return; }
+    if (!amt || amt < 1000) { showToast(t("copy.minAmount")); return; }
     setBusy(expert.id);
     const res = await fetch("/api/copy/follow", {
       method: "POST",
@@ -74,8 +76,8 @@ export default function CopyTradingPage() {
     });
     const data = await res.json();
     setBusy(null);
-    if (!res.ok) { showToast(data.error ?? "Erro"); return; }
-    showToast(`A copiar ${expert.name}!`);
+    if (!res.ok) { showToast(data.error ?? t("common.error")); return; }
+    showToast(`${t("copy.startedCopying")} ${expert.name}!`);
     loadAll();
   }
 
@@ -83,8 +85,8 @@ export default function CopyTradingPage() {
     setBusy(expert.id);
     const res = await fetch(`/api/copy/follow?traderId=${expert.id}`, { method: "DELETE" });
     setBusy(null);
-    if (!res.ok) { showToast("Erro ao parar"); return; }
-    showToast("Copiação parada.");
+    if (!res.ok) { showToast(t("common.error")); return; }
+    showToast(t("copy.stopped"));
     loadAll();
   }
 
@@ -98,15 +100,15 @@ export default function CopyTradingPage() {
     });
     const data = await res.json();
     setApplyBusy(false);
-    if (!res.ok) { setApplyError(data.error ?? "Erro"); return; }
+    if (!res.ok) { setApplyError(data.error ?? t("common.error")); return; }
     setApplyDone(true);
     loadAll();
   }
 
   const statusMap: Record<string, { label: string; color: string }> = {
-    pending:  { label: "Em análise", color: "#f5a623" },
-    approved: { label: "Aprovado",   color: "#22c55e" },
-    rejected: { label: "Rejeitado",  color: "#ef4444" },
+    pending:  { label: t("copy.status.pending"),  color: "#f5a623" },
+    approved: { label: t("copy.status.approved"), color: "#22c55e" },
+    rejected: { label: t("copy.status.rejected"), color: "#ef4444" },
   };
 
   return (
@@ -126,35 +128,35 @@ export default function CopyTradingPage() {
           <Copy size={36} color="#f5a623" style={{ marginBottom: 10 }} />
           <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>Copy Trading</h1>
           <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 14px", lineHeight: 1.6 }}>
-            Copia automaticamente as operações dos melhores traders em tempo real. Cada vez que um expert abre uma operação, a tua posição é aberta com o teu montante configurado.
+            {t("copy.heroDesc")}
           </p>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: "8px 14px" }}>
-            <span style={{ fontSize: 13, color: "#f5a623", fontWeight: 700 }}>⚠ Apenas conta real — requer depósito activo</span>
+            <span style={{ fontSize: 13, color: "#f5a623", fontWeight: 700 }}>{t("copy.realOnly")}</span>
           </div>
         </div>
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {(["experts", "my"] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
+          {(["experts", "my"] as const).map(tabKey => (
+            <button key={tabKey} onClick={() => setTab(tabKey)}
               style={{
                 flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14,
-                background: tab === t ? "#f5a623" : "#111827",
-                color: tab === t ? "#0a0f1e" : "#94a3b8",
+                background: tab === tabKey ? "#f5a623" : "#111827",
+                color: tab === tabKey ? "#0a0f1e" : "#94a3b8",
               }}>
-              {t === "experts" ? "Experts" : "Os Meus Follows"}
+              {tabKey === "experts" ? t("copy.tab.experts") : t("copy.tab.myFollows")}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>A carregar...</div>
+          <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>{t("common.loading")}</div>
         ) : tab === "experts" ? (
           <>
             {experts.length === 0 ? (
               <div style={{ ...CARD, textAlign: "center", padding: 40, color: "#64748b" }}>
                 <Users size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
-                <p style={{ margin: 0 }}>Ainda não há experts aprovados.</p>
+                <p style={{ margin: 0 }}>{t("copy.noExperts")}</p>
               </div>
             ) : (
               experts.map(expert => {
@@ -181,9 +183,9 @@ export default function CopyTradingPage() {
                     {/* Estatísticas */}
                     <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
                       {[
-                        { label: "Seguidores", value: expert.totalFollowers },
-                        { label: "Trades copiados", value: expert.totalCopied },
-                        { label: "Comissão", value: `${(expert.commission * 100).toFixed(0)}%` },
+                        { label: t("copy.followers"),   value: expert.totalFollowers },
+                        { label: t("copy.copied"),      value: expert.totalCopied },
+                        { label: t("copy.commission"),  value: `${(expert.commission * 100).toFixed(0)}%` },
                       ].map(s => (
                         <div key={s.label} style={{ flex: 1, background: "#0a0f1e", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
                           <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 16 }}>{s.value}</div>
@@ -196,25 +198,25 @@ export default function CopyTradingPage() {
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                         <div style={{ flex: 1, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
                           <CheckCircle size={16} color="#22c55e" />
-                          <span style={{ color: "#22c55e", fontSize: 13, fontWeight: 700 }}>A copiar · {(expert.following!.amount).toLocaleString("pt-PT")} Kz/trade</span>
+                          <span style={{ color: "#22c55e", fontSize: 13, fontWeight: 700 }}>{t("copy.copying")} · {(expert.following!.amount).toLocaleString("pt-PT")} Kz/trade</span>
                         </div>
                         <button onClick={() => handleUnfollow(expert)} disabled={busy === expert.id}
                           style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 14px", color: "#ef4444", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
-                          {busy === expert.id ? "..." : "Parar"}
+                          {busy === expert.id ? "..." : t("copy.stop")}
                         </button>
                       </div>
                     ) : (
                       <div style={{ display: "flex", gap: 10 }}>
                         <input
                           type="number"
-                          placeholder="Kz por trade"
+                          placeholder={t("copy.kzPerTrade")}
                           value={followAmount[expert.id] ?? "1000"}
                           onChange={e => setFollowAmount(p => ({ ...p, [expert.id]: e.target.value }))}
                           style={{ flex: 1, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 12px", color: "#fff", fontSize: 14, outline: "none" }}
                         />
                         <button onClick={() => handleFollow(expert)} disabled={busy === expert.id}
                           style={{ background: "#f5a623", border: "none", borderRadius: 8, padding: "10px 18px", color: "#0a0f1e", cursor: "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
-                          {busy === expert.id ? "..." : "Copiar"}
+                          {busy === expert.id ? "..." : t("copy.copyBtn")}
                         </button>
                       </div>
                     )}
@@ -224,13 +226,13 @@ export default function CopyTradingPage() {
             )}
           </>
         ) : (
-          /* Aba "Os Meus Follows" */
+          /* My Follows tab */
           <>
-            {/* Perfil de Expert */}
+            {/* Expert application */}
             <div style={{ ...CARD, marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                 <TrendingUp size={18} color="#f5a623" />
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Candidatura a Expert</span>
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>{t("copy.applyTitle")}</span>
               </div>
               {myProfile?.traderProfile ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -240,19 +242,19 @@ export default function CopyTradingPage() {
                   </span>
                   {myProfile.traderProfile.status === "approved" && (
                     <span style={{ color: "#64748b", fontSize: 13, marginLeft: 4 }}>
-                      · {myProfile.traderProfile.totalFollowers} seguidores · {myProfile.traderProfile.totalCopied} trades copiados
+                      · {myProfile.traderProfile.totalFollowers} {t("copy.followersStats")} · {myProfile.traderProfile.totalCopied} trades
                     </span>
                   )}
                 </div>
               ) : applyDone ? (
-                <div style={{ color: "#22c55e", fontSize: 14 }}>Candidatura submetida! Em análise.</div>
+                <div style={{ color: "#22c55e", fontSize: 14 }}>{t("copy.applied")}</div>
               ) : (
                 <>
                   <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 14px", lineHeight: 1.5 }}>
-                    Tens bons resultados? Candidata-te a expert e os outros poderão copiar as tuas operações.
+                    {t("copy.applyDesc")}
                   </p>
                   <textarea
-                    placeholder="Descreve a tua estratégia de trading (opcional)..."
+                    placeholder={t("copy.bioPlaceholder")}
                     value={applyBio}
                     onChange={e => setApplyBio(e.target.value)}
                     rows={3}
@@ -265,20 +267,20 @@ export default function CopyTradingPage() {
                   )}
                   <button onClick={handleApply} disabled={applyBusy}
                     style={{ width: "100%", background: applyBusy ? "#1e2d50" : "#f5a623", color: applyBusy ? "#64748b" : "#0a0f1e", border: "none", borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: 14, cursor: applyBusy ? "not-allowed" : "pointer" }}>
-                    {applyBusy ? "A enviar..." : "Candidatar-me a Expert"}
+                    {applyBusy ? t("copy.sending") : t("copy.applyBtn")}
                   </button>
                 </>
               )}
             </div>
 
-            {/* Lista de follows */}
+            {/* Follows list */}
             <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Experts que sigo ({myProfile?.follows?.length ?? 0})
+              {t("copy.following")} ({myProfile?.follows?.length ?? 0})
             </div>
             {(!myProfile?.follows?.length) ? (
               <div style={{ ...CARD, textAlign: "center", padding: 32, color: "#64748b" }}>
                 <Copy size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
-                <p style={{ margin: 0 }}>Ainda não segues nenhum expert.</p>
+                <p style={{ margin: 0 }}>{t("copy.noFollows")}</p>
               </div>
             ) : (
               myProfile.follows.map((f: any) => (
@@ -292,11 +294,11 @@ export default function CopyTradingPage() {
                   )}
                   <div style={{ flex: 1 }}>
                     <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{f.trader.user.name}</div>
-                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.amount.toLocaleString("pt-PT")} Kz por trade</div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.amount.toLocaleString("pt-PT")} {t("copy.kzPerTrade")}</div>
                   </div>
                   <button onClick={() => handleUnfollow({ ...f.trader, id: f.traderId, following: f } as any)} disabled={busy === f.traderId}
                     style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "8px 12px", color: "#ef4444", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
-                    {busy === f.traderId ? "..." : "Parar"}
+                    {busy === f.traderId ? "..." : t("copy.stop")}
                   </button>
                 </div>
               ))

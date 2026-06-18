@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
 
   // ─── Tabelas globais (sem ligação a utilizadores) ─────────────────────────
   await prisma.rateLimit.deleteMany({});
-  await prisma.whatsappLog.deleteMany({});
 
   // Registar o reset na auditoria (depois de limpar auditLogs antigos)
   await prisma.auditLog.deleteMany({});

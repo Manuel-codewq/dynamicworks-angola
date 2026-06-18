@@ -25,7 +25,6 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; bg: string; color: st
   admin:                { icon: <Info         size={20} color="#38bdf8" />, bg: "rgba(56,189,248,0.12)",  color: "#38bdf8" },
   referral_commission:  { icon: <Gift          size={20} color="#22c55e" />, bg: "rgba(34,197,94,0.12)",   color: "#22c55e" },
   info:                 { icon: <Info          size={20} color="#f5a623" />, bg: "rgba(245,166,35,0.12)",  color: "#f5a623" },
-  whatsapp_invite:      { icon: <MessageCircle size={20} color="#25d366" />, bg: "rgba(37,211,102,0.12)",  color: "#25d366" },
 };
 
 function timeAgo(dateStr: string): string {

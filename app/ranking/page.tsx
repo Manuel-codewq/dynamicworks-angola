@@ -3,6 +3,7 @@ import { formatKz } from "@/lib/format";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 import {
   ChevronLeft, Trophy, Medal, Calendar, Users, ChevronRight, BarChart2, Crown,
   Star, RefreshCw, Target, Flame, Dumbbell, Swords, Sparkles, Gem, Award,
@@ -57,12 +58,6 @@ const MEDAL: Record<number, { icon: React.ReactNode; color: string }> = {
   3: { icon: <Medal  size={18} />, color: "#cd7f32" },
 };
 
-const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  upcoming: { label: "Próximo",   color: "#f5a623", bg: "rgba(245,166,35,0.12)" },
-  active:   { label: "Activo",    color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
-  finished: { label: "Terminado", color: "#64748b", bg: "rgba(100,116,139,0.12)"},
-};
-
 const RARITY_COLOR: Record<string, string> = {
   common:    "#94a3b8",
   rare:      "#3b82f6",
@@ -71,10 +66,10 @@ const RARITY_COLOR: Record<string, string> = {
 };
 
 const PERIOD_OPTIONS = [
-  { key: "today", label: "Hoje" },
-  { key: "week",  label: "Semana" },
-  { key: "month", label: "Mês" },
-  { key: "all",   label: "Tudo" },
+  { key: "today" },
+  { key: "week"  },
+  { key: "month" },
+  { key: "all"   },
 ] as const;
 
 type PeriodKey = typeof PERIOD_OPTIONS[number]["key"];
@@ -82,6 +77,7 @@ type PeriodKey = typeof PERIOD_OPTIONS[number]["key"];
 export default function RankingPage() {
   const { status, data: session } = useSession();
   const router = useRouter();
+  const t = useT();
   const [tab, setTab]               = useState<"ranking" | "tournaments" | "conquistas">("ranking");
   const [ranking, setRanking]       = useState<RankEntry[]>([]);
   const [myPosition, setMyPosition] = useState<number | null>(null);
@@ -111,11 +107,11 @@ export default function RankingPage() {
       fetch(`/api/ranking?period=${period}`).then(r => r.json()),
       fetch("/api/tournaments").then(r => r.json()),
       fetch("/api/achievements").then(r => r.json()),
-    ]).then(([r, t, a]) => {
+    ]).then(([r, tour, a]) => {
       setRanking(r.ranking ?? []);
       setMyPosition(r.myPosition ?? null);
       setMyRankEntry(r.myRankEntry ?? null);
-      setTournaments(t);
+      setTournaments(tour);
       setAchievements(a.achievements ?? []);
       setAchUnlocked(a.unlocked ?? 0);
       setAchTotal(a.total ?? 0);
@@ -130,15 +126,14 @@ export default function RankingPage() {
     return () => clearInterval(id);
   }, [tab, period, loadRanking]);
 
-  const activeTournaments   = tournaments.filter(t => t.status === "active");
-  const upcomingTournaments = tournaments.filter(t => t.status === "upcoming");
-  const finishedTournaments = tournaments.filter(t => t.status === "finished");
+  const activeTournaments   = tournaments.filter(tour => tour.status === "active");
+  const upcomingTournaments = tournaments.filter(tour => tour.status === "upcoming");
+  const finishedTournaments = tournaments.filter(tour => tour.status === "finished");
 
   const achByCategory: Record<string, any[]> = {};
   for (const a of achievements) {
     (achByCategory[a.category] ??= []).push(a);
   }
-  const catLabels: Record<string, string> = { trades: "Operações", wins: "Vitórias", streak: "Sequências", volume: "Volume", special: "Especial" };
 
   const timeSince = Math.floor((Date.now() - lastRefresh) / 1000);
 
@@ -152,7 +147,7 @@ export default function RankingPage() {
         <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Trophy size={18} color="#0a0f1e" strokeWidth={2.5} />
         </div>
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>Ranking & Conquistas</span>
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>{t("ranking.title")}</span>
         {tab === "ranking" && (
           <button onClick={() => loadRanking(period)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
             <RefreshCw size={13} /> {timeSince}s
@@ -163,13 +158,13 @@ export default function RankingPage() {
       {/* Tabs */}
       <div style={{ display: "flex", background: "#111827", borderBottom: "1px solid #1e2d50" }}>
         {([
-          { key: "ranking",    label: "Ranking",     icon: <BarChart2 size={13} /> },
-          { key: "tournaments",label: "Torneios",    icon: <Trophy    size={13} /> },
-          { key: "conquistas", label: "Conquistas",  icon: <Star      size={13} /> },
-        ] as const).map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            style={{ flex: 1, padding: "13px 0", background: "none", border: "none", borderBottom: `2px solid ${tab === t.key ? "#f5a623" : "transparent"}`, color: tab === t.key ? "#f5a623" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-            {t.icon}{t.label}
+          { key: "ranking",    tKey: "ranking.tab.ranking",      icon: <BarChart2 size={13} /> },
+          { key: "tournaments",tKey: "ranking.tab.tournaments",  icon: <Trophy    size={13} /> },
+          { key: "conquistas", tKey: "ranking.tab.achievements", icon: <Star      size={13} /> },
+        ] as const).map(ti => (
+          <button key={ti.key} onClick={() => setTab(ti.key)}
+            style={{ flex: 1, padding: "13px 0", background: "none", border: "none", borderBottom: `2px solid ${tab === ti.key ? "#f5a623" : "transparent"}`, color: tab === ti.key ? "#f5a623" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            {ti.icon}{t(ti.tKey)}
           </button>
         ))}
       </div>
@@ -184,7 +179,7 @@ export default function RankingPage() {
               {PERIOD_OPTIONS.map(p => (
                 <button key={p.key} onClick={() => setPeriod(p.key)}
                   style={{ flex: 1, padding: "7px 0", background: period === p.key ? "#f5a623" : "transparent", color: period === p.key ? "#0a0f1e" : "#64748b", border: "none", borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                  {p.label}
+                  {t(`ranking.period.${p.key}`)}
                 </button>
               ))}
             </div>
@@ -192,7 +187,7 @@ export default function RankingPage() {
             {/* My position banner */}
             {myPosition && (
               <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ color: "#94a3b8", fontSize: 13 }}>A tua posição</span>
+                <span style={{ color: "#94a3b8", fontSize: 13 }}>{t("ranking.myPosition")}</span>
                 <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 18 }}>#{myPosition}</span>
               </div>
             )}
@@ -203,19 +198,19 @@ export default function RankingPage() {
                 <div style={{ flex: 1, background: ranking[1].isMe ? "rgba(245,166,35,0.08)" : "#111827", border: `1px solid ${ranking[1].isMe ? "rgba(245,166,35,0.35)" : "#1e2d50"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
                   <AvatarCircle entry={ranking[1]} size={44} medal="#94a3b8" />
                   <div style={{ color: "#94a3b8", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>2º</div>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[1].isMe ? "Tu" : ranking[1].name.split(" ")[0]}</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[1].isMe ? t("ranking.me") : ranking[1].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 13 }}>{ranking[1].profit >= 0 ? "+" : ""}{formatKz(ranking[1].profit)}</div>
                 </div>
                 <div style={{ flex: 1, background: ranking[0].isMe ? "rgba(245,166,35,0.12)" : "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "20px 12px", textAlign: "center" }}>
                   <AvatarCircle entry={ranking[0]} size={54} medal="#f5a623" crown />
                   <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>1º</div>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{ranking[0].isMe ? "Tu" : ranking[0].name.split(" ")[0]}</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{ranking[0].isMe ? t("ranking.me") : ranking[0].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 14 }}>{ranking[0].profit >= 0 ? "+" : ""}{formatKz(ranking[0].profit)}</div>
                 </div>
                 <div style={{ flex: 1, background: ranking[2].isMe ? "rgba(245,166,35,0.08)" : "#111827", border: `1px solid ${ranking[2].isMe ? "rgba(245,166,35,0.35)" : "#1e2d50"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
                   <AvatarCircle entry={ranking[2]} size={44} medal="#cd7f32" />
                   <div style={{ color: "#cd7f32", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>3º</div>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[2].isMe ? "Tu" : ranking[2].name.split(" ")[0]}</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[2].isMe ? t("ranking.me") : ranking[2].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 13 }}>{ranking[2].profit >= 0 ? "+" : ""}{formatKz(ranking[2].profit)}</div>
                 </div>
               </div>
@@ -227,8 +222,8 @@ export default function RankingPage() {
                 <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>TRADER</span>
                 <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>LUCRO · WIN RATE</span>
               </div>
-              {loading && <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>A carregar...</div>}
-              {!loading && ranking.length === 0 && <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Sem dados para este período.</div>}
+              {loading && <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>{t("common.loading")}</div>}
+              {!loading && ranking.length === 0 && <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>{t("ranking.noData")}</div>}
               {ranking.map(e => {
                 const medal = MEDAL[e.position];
                 return (
@@ -243,8 +238,8 @@ export default function RankingPage() {
                       }
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: e.isMe ? "#f5a623" : "#fff", fontWeight: 600, fontSize: 14 }}>{e.isMe ? "Tu" : e.name}</div>
-                      <div style={{ color: "#64748b", fontSize: 11 }}>{e.wins}/{e.total} vitórias</div>
+                      <div style={{ color: e.isMe ? "#f5a623" : "#fff", fontWeight: 600, fontSize: 14 }}>{e.isMe ? t("ranking.me") : e.name}</div>
+                      <div style={{ color: "#64748b", fontSize: 11 }}>{e.wins}/{e.total} {t("ranking.wins")}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ color: e.profit >= 0 ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 14 }}>{e.profit >= 0 ? "+" : ""}{formatKz(e.profit)}</div>
@@ -268,8 +263,8 @@ export default function RankingPage() {
                       <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 14 }}>T</span>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 14 }}>Tu</div>
-                      <div style={{ color: "#64748b", fontSize: 11 }}>{myRankEntry.wins}/{myRankEntry.total} vitórias</div>
+                      <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 14 }}>{t("ranking.me")}</div>
+                      <div style={{ color: "#64748b", fontSize: 11 }}>{myRankEntry.wins}/{myRankEntry.total} {t("ranking.wins")}</div>
                     </div>
                     <div style={{ color: myRankEntry.profit >= 0 ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 14 }}>
                       {myRankEntry.profit >= 0 ? "+" : ""}{formatKz(myRankEntry.profit)}
@@ -278,36 +273,36 @@ export default function RankingPage() {
                 </>
               )}
             </div>
-            <p style={{ color: "#4b5563", fontSize: 11, textAlign: "center", marginTop: 14 }}>Actualizado automaticamente a cada 30s · só operações reais</p>
+            <p style={{ color: "#4b5563", fontSize: 11, textAlign: "center", marginTop: 14 }}>{t("ranking.autoUpdate")}</p>
           </div>
         )}
 
         {/* ── TOURNAMENTS TAB ── */}
         {tab === "tournaments" && (
           <div>
-            {loading && <div style={{ textAlign: "center", color: "#64748b", padding: 40 }}>A carregar...</div>}
+            {loading && <div style={{ textAlign: "center", color: "#64748b", padding: 40 }}>{t("common.loading")}</div>}
             {activeTournaments.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                <h3 style={{ color: "#22c55e", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>EM CURSO</h3>
-                {activeTournaments.map(t => <TournamentCard key={t.id} t={t} router={router} />)}
+                <h3 style={{ color: "#22c55e", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>{t("ranking.status.active")}</h3>
+                {activeTournaments.map(tour => <TournamentCard key={tour.id} tour={tour} router={router} />)}
               </div>
             )}
             {upcomingTournaments.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                <h3 style={{ color: "#f5a623", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>PRÓXIMOS</h3>
-                {upcomingTournaments.map(t => <TournamentCard key={t.id} t={t} router={router} />)}
+                <h3 style={{ color: "#f5a623", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>{t("ranking.status.upcoming")}</h3>
+                {upcomingTournaments.map(tour => <TournamentCard key={tour.id} tour={tour} router={router} />)}
               </div>
             )}
             {finishedTournaments.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                <h3 style={{ color: "#64748b", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>TERMINADOS</h3>
-                {finishedTournaments.map(t => <TournamentCard key={t.id} t={t} router={router} />)}
+                <h3 style={{ color: "#64748b", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>{t("ranking.status.finished")}</h3>
+                {finishedTournaments.map(tour => <TournamentCard key={tour.id} tour={tour} router={router} />)}
               </div>
             )}
             {!loading && tournaments.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
                 <Trophy size={48} color="#1e2d50" style={{ marginBottom: 16 }} />
-                <p style={{ color: "#64748b", fontSize: 15, margin: 0 }}>Nenhum torneio disponível ainda.</p>
+                <p style={{ color: "#64748b", fontSize: 15, margin: 0 }}>{t("ranking.noTournaments")}</p>
               </div>
             )}
           </div>
@@ -319,20 +314,20 @@ export default function RankingPage() {
             {/* Progress bar */}
             <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>As tuas conquistas</span>
+                <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{t("ranking.yourAchievements")}</span>
                 <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 16 }}>{achUnlocked}/{achTotal}</span>
               </div>
               <div style={{ height: 8, background: "#1e2d50", borderRadius: 4, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${achTotal ? Math.round(achUnlocked / achTotal * 100) : 0}%`, background: "linear-gradient(90deg, #f5a623, #fb923c)", borderRadius: 4, transition: "width 0.6s ease" }} />
               </div>
-              <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>{achTotal ? Math.round(achUnlocked / achTotal * 100) : 0}% completo</div>
+              <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>{achTotal ? Math.round(achUnlocked / achTotal * 100) : 0}{t("ranking.pctComplete")}</div>
             </div>
 
-            {loading && <div style={{ textAlign: "center", color: "#64748b", padding: 40 }}>A carregar...</div>}
+            {loading && <div style={{ textAlign: "center", color: "#64748b", padding: 40 }}>{t("common.loading")}</div>}
 
             {Object.entries(achByCategory).map(([cat, items]) => (
               <div key={cat} style={{ marginBottom: 20 }}>
-                <h3 style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>{catLabels[cat] ?? cat}</h3>
+                <h3 style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>{t(`ranking.cat.${cat}`) ?? cat}</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {items.map((a: any) => (
                     <div key={a.id} style={{ background: a.unlocked ? "rgba(245,166,35,0.06)" : "#111827", border: `1px solid ${a.unlocked ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 12, padding: "14px 14px", opacity: a.unlocked ? 1 : 0.6, position: "relative", overflow: "hidden" }}>
@@ -351,7 +346,7 @@ export default function RankingPage() {
                         </>
                       )}
                       {a.unlocked && (
-                        <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}><Check size={10} /> Desbloqueado</div>
+                        <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}><Check size={10} /> {t("ranking.unlocked")}</div>
                       )}
                       <div style={{ position: "absolute", top: 10, right: 10, color: RARITY_COLOR[a.rarity], fontSize: 9, fontWeight: 700, textTransform: "uppercase", opacity: 0.8 }}>{a.rarity}</div>
                     </div>
@@ -363,7 +358,7 @@ export default function RankingPage() {
             {!loading && achievements.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
                 <Star size={48} color="#1e2d50" style={{ marginBottom: 16 }} />
-                <p style={{ color: "#64748b", fontSize: 15, margin: 0 }}>Faz o primeiro trade para desbloquear conquistas!</p>
+                <p style={{ color: "#64748b", fontSize: 15, margin: 0 }}>{t("ranking.noAchievements")}</p>
               </div>
             )}
           </div>
@@ -373,34 +368,47 @@ export default function RankingPage() {
   );
 }
 
-function TournamentCard({ t, router }: { t: any; router: any }) {
-  const s = STATUS_STYLE[t.status] ?? STATUS_STYLE.upcoming;
-  const prizes = Array.isArray(t.prizes) ? t.prizes : [];
+function TournamentCard({ tour, router }: { tour: any; router: any }) {
+  const t = useT();
+  const STATUS_LABEL: Record<string, string> = {
+    upcoming: t("ranking.statusLabel.upcoming"),
+    active:   t("ranking.statusLabel.active"),
+    finished: t("ranking.statusLabel.finished"),
+  };
+  const STATUS_COLOR: Record<string, { color: string; bg: string }> = {
+    upcoming: { color: "#f5a623", bg: "rgba(245,166,35,0.12)" },
+    active:   { color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
+    finished: { color: "#64748b", bg: "rgba(100,116,139,0.12)"},
+  };
+  const s = STATUS_COLOR[tour.status] ?? STATUS_COLOR.upcoming;
+  const prizes = Array.isArray(tour.prizes) ? tour.prizes : [];
   return (
-    <div onClick={() => router.push(`/tournaments/${t.id}`)}
+    <div onClick={() => router.push(`/tournaments/${tour.id}`)}
       style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "16px 18px", marginBottom: 10, cursor: "pointer" }}
       onMouseEnter={e => (e.currentTarget.style.borderColor = "#f5a623")}
       onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e2d50")}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Trophy size={16} color={t.status === "active" ? "#22c55e" : "#f5a623"} />
-          <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{t.name}</span>
+          <Trophy size={16} color={tour.status === "active" ? "#22c55e" : "#f5a623"} />
+          <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{tour.name}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ background: s.bg, color: s.color, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>{s.label}</span>
+          <span style={{ background: s.bg, color: s.color, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>{STATUS_LABEL[tour.status] ?? tour.status}</span>
           <ChevronRight size={16} color="#4b5563" />
         </div>
       </div>
-      {t.description && <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 10px", lineHeight: 1.5 }}>{t.description}</p>}
+      {tour.description && <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 10px", lineHeight: 1.5 }}>{tour.description}</p>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 12, color: "#64748b" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <Calendar size={12} />
-          {new Date(t.startDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })} → {new Date(t.endDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })}
+          {new Date(tour.startDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })} → {new Date(tour.endDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })}
         </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Users size={12} />{t._count?.participants ?? 0} participantes</span>
-        {t.status !== "finished" && (
-          <span style={{ color: t.status === "active" ? "#22c55e" : "#f5a623" }}>
-            {t.status === "active" ? `${Math.max(0, Math.ceil((new Date(t.endDate).getTime() - Date.now()) / 86400000))} dias restantes` : `Começa em ${Math.max(0, Math.ceil((new Date(t.startDate).getTime() - Date.now()) / 86400000))} dias`}
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Users size={12} />{tour._count?.participants ?? 0} {t("ranking.participants")}</span>
+        {tour.status !== "finished" && (
+          <span style={{ color: tour.status === "active" ? "#22c55e" : "#f5a623" }}>
+            {tour.status === "active"
+              ? `${Math.max(0, Math.ceil((new Date(tour.endDate).getTime() - Date.now()) / 86400000))} ${t("ranking.daysLeft")}`
+              : `${t("ranking.startsIn")} ${Math.max(0, Math.ceil((new Date(tour.startDate).getTime() - Date.now()) / 86400000))} ${t("ranking.days")}`}
           </span>
         )}
       </div>

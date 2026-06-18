@@ -3,6 +3,7 @@ import { useState, Suspense, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TrendingUp, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Shield } from "lucide-react";
+import { useT, useI18n } from "@/lib/i18n";
 
 type Step = "credentials" | "2fa_email" | "2fa_totp";
 
@@ -10,6 +11,8 @@ function LoginContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { status } = useSession();
+  const t      = useT();
+  const { locale } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -41,7 +44,7 @@ function LoginContent() {
       setLoading(false);
 
       if (res.status === 429) {
-        setError(data.error || "Demasiadas tentativas. Aguarda antes de tentar de novo.");
+        setError(data.error || t("login.error.tooMany"));
         return;
       }
       if (!res.ok || !data.valid) {
@@ -49,13 +52,13 @@ function LoginContent() {
         setFailedAttempts(newAttempts);
         const remaining = MAX_ATTEMPTS - newAttempts;
         if (res.status === 500) {
-          setError("Erro interno. Tenta novamente.");
+          setError(t("login.error.internal"));
         } else if (remaining <= 0) {
-          setError("Conta temporariamente bloqueada. Recupera a senha ou tenta mais tarde.");
+          setError(t("login.error.blocked"));
         } else if (remaining <= 2) {
-          setError(`Email ou senha incorretos — ${remaining} tentativa${remaining === 1 ? "" : "s"} restante${remaining === 1 ? "" : "s"}.`);
+          setError(`${t("login.error.generic")} — ${remaining} ${remaining === 1 ? t("login.attempts") : t("login.attemptsPlural")}.`);
         } else {
-          setError("Email ou senha incorretos");
+          setError(t("login.error.generic"));
         }
         return;
       }
@@ -71,8 +74,8 @@ function LoginContent() {
         email, password, otp: "", redirect: false,
       });
       setLoading(false);
-      if (!result?.error) { router.push("/trade"); return; }
-      setError("Erro ao autenticar. Tenta novamente.");
+      if (!result?.error) { router.push(`/${locale}/trade`); return; }
+      setError(t("login.error.internal"));
       return;
     }
 
@@ -87,12 +90,12 @@ function LoginContent() {
     setLoading(false);
 
     if (!result?.error) {
-      router.push("/trade");
+      router.push(`/${locale}/trade`);
       return;
     }
 
     if (result.error === "2FA_INVALID") {
-      setError("Código inválido. Tenta novamente.");
+      setError(t("2fa.invalid"));
       setOtp("");
       return;
     }
@@ -102,11 +105,11 @@ function LoginContent() {
     setFailedAttempts(newAttempts);
     const remaining = MAX_ATTEMPTS - newAttempts;
     if (remaining <= 0) {
-      setError("Conta temporariamente bloqueada por excesso de tentativas. Tenta mais tarde ou recupera a senha.");
+      setError(t("login.error.blocked"));
     } else if (remaining <= 2) {
-      setError(`Email ou senha incorretos — ${remaining} tentativa${remaining === 1 ? "" : "s"} restante${remaining === 1 ? "" : "s"}.`);
+      setError(`${t("login.error.generic")} — ${remaining} ${remaining === 1 ? t("login.attempts") : t("login.attemptsPlural")}.`);
     } else {
-      setError("Email ou senha incorretos");
+      setError(t("login.error.generic"));
     }
   }
 
@@ -132,7 +135,7 @@ function LoginContent() {
             <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 10, background: "#111827" }} />
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>Dynamic Works</div>
-              <div style={{ fontSize: 12, color: "#f5a623", letterSpacing: 1 }}>PLATAFORMA DE NEGOCIAÇÃO</div>
+              <div style={{ fontSize: 12, color: "#f5a623", letterSpacing: 1 }}>{t("common.tradingPlatform")}</div>
             </div>
           </div>
         </div>
@@ -153,12 +156,10 @@ function LoginContent() {
                   <Shield size={24} color="#f5a623" />
                 </div>
                 <h1 style={{ color: "#ffffff", fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>
-                  Verificação em dois passos
+                  {t("2fa.title")}
                 </h1>
                 <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>
-                  {step === "2fa_email"
-                    ? "Introduz o código de 6 dígitos enviado para o teu email."
-                    : "Introduz o código do teu Google Authenticator."}
+                  {step === "2fa_email" ? t("2fa.emailDesc") : t("2fa.totpDesc")}
                 </p>
               </div>
 
@@ -202,7 +203,7 @@ function LoginContent() {
                     cursor: (loading || otp.length < 6) ? "not-allowed" : "pointer",
                   }}
                 >
-                  {loading ? "A verificar..." : "Verificar"}
+                  {loading ? t("2fa.verifying") : t("2fa.verify")}
                 </button>
 
                 <button
@@ -214,17 +215,17 @@ function LoginContent() {
                     marginTop: 12, padding: "8px",
                   }}
                 >
-                  ← Voltar ao login
+                  {t("2fa.back")}
                 </button>
               </form>
             </>
           ) : (
             <>
               <h1 style={{ color: "#ffffff", fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>
-                Entrar na conta
+                {t("login.title")}
               </h1>
               <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 24px" }}>
-                Bem-vindo de volta ao Dynamic Works
+                {t("login.subtitle")}
               </p>
 
               {isVerified && (
@@ -234,7 +235,7 @@ function LoginContent() {
                   display: "flex", alignItems: "center", gap: 8,
                 }}>
                   <CheckCircle size={16} color="#22c55e" />
-                  <span style={{ color: "#22c55e", fontSize: 14 }}>Email verificado! Podes entrar agora.</span>
+                  <span style={{ color: "#22c55e", fontSize: 14 }}>{t("login.verified")}</span>
                 </div>
               )}
 
@@ -251,7 +252,7 @@ function LoginContent() {
 
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>Email</label>
+                  <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 6 }}>{t("login.email")}</label>
                   <div style={{ position: "relative" }}>
                     <Mail size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
                     <input
@@ -263,9 +264,9 @@ function LoginContent() {
 
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <label style={{ color: "#94a3b8", fontSize: 13 }}>Senha</label>
+                    <label style={{ color: "#94a3b8", fontSize: 13 }}>{t("login.password")}</label>
                     <a href="/forgot-password" style={{ color: "#f5a623", fontSize: 13, textDecoration: "none" }}>
-                      Esqueci a senha
+                      {t("login.forgotPassword")}
                     </a>
                   </div>
                   <div style={{ position: "relative" }}>
@@ -294,23 +295,23 @@ function LoginContent() {
                     transition: "background 0.2s",
                   }}
                 >
-                  {loading ? "A entrar..." : "Entrar"}
+                  {loading ? t("login.submitting") : t("login.submit")}
                 </button>
               </form>
 
               {failedAttempts >= 3 && failedAttempts < MAX_ATTEMPTS && (
                 <div style={{ background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: "10px 14px", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={{ color: "#f5a623", fontSize: 13 }}>
-                    {MAX_ATTEMPTS - failedAttempts} tentativa{MAX_ATTEMPTS - failedAttempts === 1 ? "" : "s"} restante{MAX_ATTEMPTS - failedAttempts === 1 ? "" : "s"}
+                    {MAX_ATTEMPTS - failedAttempts} {MAX_ATTEMPTS - failedAttempts === 1 ? t("login.attempts") : t("login.attemptsPlural")}
                   </span>
-                  <a href="/forgot-password" style={{ color: "#f5a623", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Recuperar senha →</a>
+                  <a href="/forgot-password" style={{ color: "#f5a623", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>{t("login.recoverPassword")}</a>
                 </div>
               )}
 
               <p style={{ textAlign: "center", color: "#94a3b8", fontSize: 14, marginTop: 20, margin: "20px 0 0" }}>
-                Não tem conta?{" "}
+                {t("login.noAccount")}{" "}
                 <a href="/register" style={{ color: "#f5a623", textDecoration: "none", fontWeight: 600 }}>
-                  Registar
+                  {t("login.register")}
                 </a>
               </p>
             </>
@@ -318,8 +319,8 @@ function LoginContent() {
         </div>
 
         <p style={{ textAlign: "center", color: "#4a5568", fontSize: 12, marginTop: 20 }}>
-          © 2025 Dynamic Works · Angola ·{" "}
-          <a href="/terms" style={{ color: "#94a3b8", textDecoration: "none" }}>Termos de Uso</a>
+          {t("common.copyright")} ·{" "}
+          <a href="/terms" style={{ color: "#94a3b8", textDecoration: "none" }}>{t("common.terms")}</a>
         </p>
       </div>
     </div>

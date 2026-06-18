@@ -10,6 +10,7 @@ import {
   Eye, EyeOff, BadgeCheck, Mail, Send, KeyRound, Camera, Loader2, Gift, Trophy, Star,
 } from "lucide-react";
 import PageGuide from "@/app/components/PageGuide";
+import { useT } from "@/lib/i18n";
 
 const PROFILE_GUIDE = [
   { icon: <User    size={26} color="#f5a623" />, iconColor: "#f5a623", title: "O teu Perfil",            description: "Aqui podes editar os teus dados pessoais, ver o teu saldo, verificar o estado KYC e alterar a senha da conta.", tip: "Mantém o teu número de telefone actualizado para facilitar o suporte." },
@@ -71,6 +72,7 @@ function KycRedirectBanner() {
 export default function ProfilePage() {
   const { status } = useSession();
   const router = useRouter();
+  const t = useT();
 
   const [name,        setName]        = useState("");
   const [email,       setEmail]       = useState("");
@@ -112,7 +114,11 @@ export default function ProfilePage() {
   const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
+    if (status === "unauthenticated") {
+      const loc = window.location.pathname.split("/")[1];
+      const locale = ["pt","en","fr"].includes(loc) ? loc : "pt";
+      router.push(`/${locale}/login`);
+    }
   }, [status, router]);
 
   useEffect(() => {
@@ -219,12 +225,12 @@ export default function ProfilePage() {
       const d = await res.json();
       if (res.ok) {
         setAvatar(d.avatar);
-        setProfileMsg({ text: "Foto de perfil actualizada!", ok: true });
+        setProfileMsg({ text: t("profile.msg.avatarOk"), ok: true });
       } else {
-        setProfileMsg({ text: d.error ?? "Erro ao guardar foto.", ok: false });
+        setProfileMsg({ text: d.error ?? t("profile.msg.avatarErr"), ok: false });
       }
     } catch {
-      setProfileMsg({ text: "Erro ao fazer upload. Tente novamente.", ok: false });
+      setProfileMsg({ text: t("profile.msg.avatarErr"), ok: false });
     }
     setAvatarLoading(false);
   }
@@ -236,7 +242,7 @@ export default function ProfilePage() {
       body: JSON.stringify({ name, phone, province }),
     });
     const d = await res.json();
-    setProfileMsg(res.ok ? { text: "Perfil atualizado!", ok: true } : { text: d.error, ok: false });
+    setProfileMsg(res.ok ? { text: t("profile.msg.updated"), ok: true } : { text: d.error, ok: false });
     setProfileBusy(false);
     if (res.ok) setEditMode(false);
   }
@@ -248,18 +254,18 @@ export default function ProfilePage() {
     if (res.ok) {
       setPwdStep("verify");
       setOtpTimer(600);
-      setPasswordMsg({ text: `Código enviado para ${maskEmail(email)}`, ok: true });
+      setPasswordMsg({ text: maskEmail(email), ok: true });
     } else {
-      setPasswordMsg({ text: d.error || "Erro ao enviar código", ok: false });
+      setPasswordMsg({ text: d.error || t("profile.msg.otpRequired"), ok: false });
     }
     setSendingOtp(false);
   }
 
   async function confirmPassword() {
     setPasswordMsg(null);
-    if (newPwd.length < 8)    { setPasswordMsg({ text: "Mínimo 8 caracteres", ok: false }); return; }
-    if (newPwd !== confPwd)   { setPasswordMsg({ text: "As senhas não coincidem", ok: false }); return; }
-    if (!otpInput.trim())     { setPasswordMsg({ text: "Introduza o código recebido", ok: false }); return; }
+    if (newPwd.length < 8)    { setPasswordMsg({ text: t("profile.msg.pwdMin"), ok: false }); return; }
+    if (newPwd !== confPwd)   { setPasswordMsg({ text: t("profile.msg.pwdMismatch"), ok: false }); return; }
+    if (!otpInput.trim())     { setPasswordMsg({ text: t("profile.msg.otpRequired"), ok: false }); return; }
     setPasswordBusy(true);
     const res = await fetch("/api/profile/password", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -267,7 +273,7 @@ export default function ProfilePage() {
     });
     const d = await res.json();
     if (res.ok) {
-      setPasswordMsg({ text: "Senha alterada com sucesso!", ok: true });
+      setPasswordMsg({ text: t("profile.msg.pwdChanged"), ok: true });
       setPwdStep("idle"); setOtpInput(""); setNewPwd(""); setConfPwd(""); setOtpTimer(0);
     } else {
       setPasswordMsg({ text: d.error, ok: false });
@@ -275,7 +281,13 @@ export default function ProfilePage() {
     setPasswordBusy(false);
   }
 
-  const kyc = KYC_CFG[kycStatus as keyof typeof KYC_CFG] ?? KYC_CFG.unsubmitted;
+  const KYC_CFG_T = {
+    pending:     { color: "#f5a623", bg: "rgba(245,166,35,0.10)", border: "rgba(245,166,35,0.25)", Icon: Clock,         label: t("kyc.pending.label"),  desc: t("kyc.pending.desc")  },
+    approved:    { color: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.25)",  Icon: CheckCircle,   label: t("kyc.approved.label"), desc: t("kyc.approved.desc") },
+    rejected:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.25)",  Icon: XCircle,       label: t("kyc.rejected.label"), desc: t("kyc.rejected.desc") },
+    unsubmitted: { color: "#64748b", bg: "rgba(100,116,139,0.10)",border: "rgba(100,116,139,0.25)",Icon: AlertTriangle, label: t("kyc.none.label"),     desc: t("kyc.none.desc")     },
+  };
+  const kyc = KYC_CFG_T[kycStatus as keyof typeof KYC_CFG_T] ?? KYC_CFG_T.unsubmitted;
   const winRate = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
 
   const inp: React.CSSProperties = {
@@ -315,11 +327,11 @@ export default function ProfilePage() {
         <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>Meu Perfil</span>
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>{t("profile.title")}</span>
 
         {/* Toggle ocultar valores */}
         <button onClick={() => setShowValues(v => !v)}
-          title={showValues ? "Ocultar valores" : "Mostrar valores"}
+          title={showValues ? t("common.hide") : t("common.show")}
           style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8", marginRight: 4 }}>
           {showValues ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
@@ -341,7 +353,7 @@ export default function ProfilePage() {
           <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarChange} />
           <div
             onClick={() => !avatarLoading && avatarInputRef.current?.click()}
-            title="Clica para alterar a foto"
+            title={t("profile.changePhoto")}
             style={{ position: "relative", width: 84, height: 84, borderRadius: "50%", margin: "0 auto 14px", cursor: avatarLoading ? "default" : "pointer" }}>
             {/* Photo or initials */}
             {avatar
@@ -364,11 +376,11 @@ export default function ProfilePage() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
             <h2 style={{ color: "#fff", margin: 0, fontSize: 20, fontWeight: 800 }}>{name}</h2>
             {kycStatus === "approved" && (
-              <span title="Identidade verificada"><BadgeCheck size={22} color="#22c55e" /></span>
+              <span title={t("kyc.approved.label")}><BadgeCheck size={22} color="#22c55e" /></span>
             )}
             {tournamentWins >= 1 && (
-              <span title={`Campeão de ${tournamentWins} torneio(s)`} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "linear-gradient(135deg,rgba(245,166,35,0.2),rgba(245,166,35,0.08))", border: "1px solid rgba(245,166,35,0.4)", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 800, color: "#f5a623" }}>
-                <Trophy size={12} /> {tournamentWins === 1 ? "Campeão" : `${tournamentWins}× Campeão`}
+              <span title={t("profile.champion")} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "linear-gradient(135deg,rgba(245,166,35,0.2),rgba(245,166,35,0.08))", border: "1px solid rgba(245,166,35,0.4)", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 800, color: "#f5a623" }}>
+                <Trophy size={12} /> {tournamentWins === 1 ? t("profile.champion") : `${tournamentWins}${t("profile.championX")}`}
               </span>
             )}
           </div>
@@ -381,7 +393,7 @@ export default function ProfilePage() {
           {/* Saldo */}
           <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 12, padding: "10px 24px" }}>
             <div>
-              <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px" }}>Saldo Real</div>
+              <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px" }}>{t("profile.realBalance")}</div>
               <div style={{ color: "#f5a623", fontSize: 22, fontWeight: 800 }}>
                 {maskValue(formatKz(Math.floor(balance)), !showValues)}
               </div>
@@ -389,18 +401,18 @@ export default function ProfilePage() {
           </div>
 
           {createdAt && (
-            <p style={{ color: "#374151", fontSize: 11, margin: "14px 0 0" }}>Membro desde {formatDate(createdAt)}</p>
+            <p style={{ color: "#374151", fontSize: 11, margin: "14px 0 0" }}>{t("profile.memberSince")} {formatDate(createdAt)}</p>
           )}
         </div>
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: "Operações totais", value: maskValue(String(totalTrades), !showValues),               icon: <BarChart2  size={15} color="#94a3b8" />,  color: "#fff"    },
-            { label: "Taxa de vitória",  value: maskValue(`${winRate}%`, !showValues),                      icon: <TrendingUp size={15} color="#22c55e" />,  color: "#22c55e" },
-            { label: "Lucro total",      value: maskValue(formatKz(Math.floor(totalProfit)), !showValues),   icon: totalProfit >= 0 ? <TrendingUp size={15} color="#22c55e" /> : <TrendingDown size={15} color="#ef4444" />, color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
-            { label: "Hoje",             value: maskValue((todayPnl >= 0 ? "+" : "") + formatKz(Math.abs(Math.floor(todayPnl))), !showValues), icon: <BarChart2 size={15} color={todayPnl >= 0 ? "#22c55e" : "#ef4444"} />, color: todayPnl >= 0 ? "#22c55e" : "#ef4444" },
-            ...(bestAsset ? [{ label: "Melhor par", value: maskValue(bestAsset, !showValues), icon: <Trophy size={15} color="#f5a623" />, color: "#f5a623" }] : []),
+            { label: t("profile.totalTrades"), value: maskValue(String(totalTrades), !showValues),               icon: <BarChart2  size={15} color="#94a3b8" />,  color: "#fff"    },
+            { label: t("profile.winRateStat"), value: maskValue(`${winRate}%`, !showValues),                      icon: <TrendingUp size={15} color="#22c55e" />,  color: "#22c55e" },
+            { label: t("profile.totalProfit"), value: maskValue(formatKz(Math.floor(totalProfit)), !showValues),   icon: totalProfit >= 0 ? <TrendingUp size={15} color="#22c55e" /> : <TrendingDown size={15} color="#ef4444" />, color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
+            { label: t("profile.today"),       value: maskValue((todayPnl >= 0 ? "+" : "") + formatKz(Math.abs(Math.floor(todayPnl))), !showValues), icon: <BarChart2 size={15} color={todayPnl >= 0 ? "#22c55e" : "#ef4444"} />, color: todayPnl >= 0 ? "#22c55e" : "#ef4444" },
+            ...(bestAsset ? [{ label: t("profile.bestPair"), value: maskValue(bestAsset, !showValues), icon: <Trophy size={15} color="#f5a623" />, color: "#f5a623" }] : []),
           ].map(s => (
             <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "13px 15px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -416,10 +428,10 @@ export default function ProfilePage() {
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-              <ScanFace size={17} color="#f5a623" /> Verificação KYC
+              <ScanFace size={17} color="#f5a623" /> {t("profile.kyc")}
             </p>
             {kycAttempts > 0 && kycStatus !== "approved" && (
-              <span style={{ color: kycAttempts >= 2 ? "#ef4444" : "#f5a623", fontSize: 12, fontWeight: 600 }}>{kycAttempts}/2 tentativas</span>
+              <span style={{ color: kycAttempts >= 2 ? "#ef4444" : "#f5a623", fontSize: 12, fontWeight: 600 }}>{kycAttempts}/2 {t("profile.kycAttempts")}</span>
             )}
           </div>
           <div style={{ background: kyc.bg, border: `1px solid ${kyc.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: kycStatus !== "approved" ? 14 : 0 }}>
@@ -429,25 +441,25 @@ export default function ProfilePage() {
             <div>
               <div style={{ color: kyc.color, fontWeight: 700, fontSize: 14 }}>{kyc.label}</div>
               <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{kyc.desc}</div>
-              {blockedUntil && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4, fontWeight: 600 }}>Bloqueado até {blockedUntil.toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}</div>}
+              {blockedUntil && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4, fontWeight: 600 }}>{t("profile.kycBlocked")} {blockedUntil.toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}</div>}
             </div>
           </div>
           {kycStatus !== "approved" && !blockedUntil && (
             <button onClick={() => router.push("/kyc")} style={{ width: "100%", background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <ScanFace size={17} />
-              {kycStatus === "unsubmitted" ? "Iniciar Verificação" : kycStatus === "rejected" ? "Submeter Novamente" : "Ver estado da verificação"}
+              {kycStatus === "unsubmitted" ? t("profile.kycStart") : kycStatus === "rejected" ? t("profile.kycResubmit") : t("profile.kycViewStatus")}
             </button>
           )}
         </div>
 
         {/* Conquistas */}
-        <a href="/ranking" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
+        <a href="/achievements" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
           <div style={{ width: 42, height: 42, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Star size={20} color="#f5a623" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Conquistas</div>
-            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>Desbloqueia medalhas e acompanha o teu progresso</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t("profile.achievements")}</div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{t("profile.achievementsDesc")}</div>
           </div>
           <span style={{ color: "#334155", fontSize: 18 }}>›</span>
         </a>
@@ -458,8 +470,8 @@ export default function ProfilePage() {
             <Gift size={20} color="#22c55e" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Programa de Referidos</div>
-            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>Convida amigos · ganha 2% do primeiro depósito</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t("profile.referral")}</div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{t("profile.referralDesc")}</div>
           </div>
           <span style={{ color: "#334155", fontSize: 18 }}>›</span>
         </a>
@@ -470,8 +482,8 @@ export default function ProfilePage() {
             <Shield size={20} color="#f5a623" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Segurança</div>
-            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>2FA, sessões activas e log de acessos</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t("profile.securityLabel")}</div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{t("profile.securityDesc")}</div>
           </div>
           <span style={{ color: "#334155", fontSize: 18 }}>›</span>
         </a>
@@ -480,11 +492,11 @@ export default function ProfilePage() {
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
             <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-              <User size={17} color="#f5a623" /> Dados pessoais
+              <User size={17} color="#f5a623" /> {t("profile.personalData")}
             </p>
             {!editMode && (
               <button onClick={() => setEditMode(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: "6px 12px", color: "#f5a623", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                <Edit3 size={13} /> Editar
+                <Edit3 size={13} /> {t("profile.editProfile")}
               </button>
             )}
           </div>
@@ -492,10 +504,10 @@ export default function ProfilePage() {
           {!editMode ? (
             <div style={{ display: "flex", flexDirection: "column" }}>
               {[
-                { label: "Nome completo", value: name || "—" },
-                { label: "Email", value: maskEmail(email) },
-                { label: "Telefone", value: phone || "—" },
-                { label: "Província", value: province || "—" },
+                { label: t("profile.fullName"),  value: name || "—" },
+                { label: t("login.email"),       value: maskEmail(email) },
+                { label: t("profile.phone"),     value: phone || "—" },
+                { label: t("profile.province"),  value: province || "—" },
               ].map((row, i, arr) => (
                 <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: i < arr.length - 1 ? "1px solid rgba(30,45,80,0.5)" : "none" }}>
                   <span style={{ color: "#64748b", fontSize: 13 }}>{row.label}</span>
@@ -506,22 +518,22 @@ export default function ProfilePage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={lbl}>Nome completo</label>
+                <label style={lbl}>{t("profile.fullName")}</label>
                 <input value={name} onChange={e => setName(e.target.value)} style={inp} />
               </div>
               <div>
-                <label style={lbl}>Email</label>
+                <label style={lbl}>{t("login.email")}</label>
                 <input value={email} readOnly style={{ ...inp, color: "#64748b", cursor: "not-allowed" }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={lbl}>Telefone</label>
+                  <label style={lbl}>{t("profile.phone")}</label>
                   <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+244 9XX XXX XXX" style={inp} />
                 </div>
                 <div>
-                  <label style={lbl}>Província</label>
+                  <label style={lbl}>{t("profile.province")}</label>
                   <select value={province} onChange={e => setProvince(e.target.value)} style={{ ...inp, cursor: "pointer", colorScheme: "dark" }}>
-                    <option value="">Selecionar...</option>
+                    <option value="">{t("profile.selectProvince")}</option>
                     {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
@@ -529,10 +541,10 @@ export default function ProfilePage() {
               <Msg fb={profileMsg} />
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={saveProfile} disabled={profileBusy} style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: profileBusy ? "not-allowed" : "pointer", opacity: profileBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-                  <Save size={15} /> {profileBusy ? "A guardar..." : "Guardar"}
+                  <Save size={15} /> {profileBusy ? t("profile.saving") : t("profile.save")}
                 </button>
                 <button onClick={() => { setEditMode(false); setProfileMsg(null); }} style={{ padding: "12px 18px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
               </div>
             </div>
@@ -542,17 +554,14 @@ export default function ProfilePage() {
         {/* Segurança — Alterar senha via OTP */}
         <div style={card}>
           <p style={{ margin: "0 0 18px", color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-            <Lock size={17} color="#f5a623" /> Alterar senha
+            <Lock size={17} color="#f5a623" /> {t("profile.changePassword")}
           </p>
 
           {pwdStep === "idle" && (
             <div>
-              <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 16px", lineHeight: 1.6 }}>
-                Por segurança, vamos enviar um código de verificação para <strong style={{ color: "#fff" }}>{maskEmail(email)}</strong> antes de alterar a senha.
-              </p>
               <button onClick={sendOtp} disabled={sendingOtp}
                 style={{ width: "100%", background: "#1e2d50", color: "#fff", border: "1px solid #2d3f6b", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: sendingOtp ? "not-allowed" : "pointer", opacity: sendingOtp ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <Send size={16} /> {sendingOtp ? "A enviar código..." : "Enviar código por email"}
+                <Send size={16} /> {sendingOtp ? t("profile.sending") : t("profile.sendOtpBtn")}
               </button>
               <Msg fb={passwordMsg} />
             </div>
@@ -563,13 +572,13 @@ export default function ProfilePage() {
               <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8 }}>
                 <Mail size={15} color="#22c55e" />
                 <span style={{ color: "#94a3b8", fontSize: 13 }}>
-                  Código enviado para <strong style={{ color: "#fff" }}>{maskEmail(email)}</strong>
-                  {otpTimer > 0 && <span style={{ color: "#64748b" }}> · expira em {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, "0")}</span>}
+                  <strong style={{ color: "#fff" }}>{maskEmail(email)}</strong>
+                  {otpTimer > 0 && <span style={{ color: "#64748b" }}> · {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, "0")}</span>}
                 </span>
               </div>
 
               <div>
-                <label style={lbl}>Código recebido no email</label>
+                <label style={lbl}>{t("profile.otpCode")}</label>
                 <input
                   value={otpInput} onChange={e => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="000000" maxLength={6}
@@ -578,12 +587,12 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label style={lbl}>Nova senha</label>
-                <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Mínimo 8 caracteres" style={inp} />
+                <label style={lbl}>{t("profile.newPassword")}</label>
+                <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} style={inp} />
               </div>
 
               <div>
-                <label style={lbl}>Confirmar nova senha</label>
+                <label style={lbl}>{t("profile.confirmNewPassword")}</label>
                 <input type="password" value={confPwd} onChange={e => setConfPwd(e.target.value)} style={inp} />
               </div>
 
@@ -592,17 +601,17 @@ export default function ProfilePage() {
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={confirmPassword} disabled={passwordBusy}
                   style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: passwordBusy ? "not-allowed" : "pointer", opacity: passwordBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <KeyRound size={16} /> {passwordBusy ? "A confirmar..." : "Confirmar nova senha"}
+                  <KeyRound size={16} /> {passwordBusy ? t("profile.confirming") : t("profile.confirmNewPassword")}
                 </button>
                 <button onClick={() => { setPwdStep("idle"); setPasswordMsg(null); setOtpInput(""); setNewPwd(""); setConfPwd(""); }}
                   style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
               </div>
 
               {otpTimer === 0 && (
                 <button onClick={sendOtp} disabled={sendingOtp} style={{ background: "none", border: "none", color: "#f5a623", fontSize: 13, cursor: "pointer", padding: "4px 0", textDecoration: "underline" }}>
-                  Reenviar código
+                  {t("profile.otpResend")}
                 </button>
               )}
             </div>

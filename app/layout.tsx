@@ -8,6 +8,7 @@ import NotificationToast from "./components/NotificationToast";
 import HeartbeatTracker from "./components/HeartbeatTracker";
 import PushManager from "./components/PushManager";
 import PwaInstallPrompt from "./components/PwaInstallPrompt";
+import { I18nProvider } from "@/lib/i18n";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
@@ -203,13 +204,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ margin: 0, padding: 0, background: "#0a0f1e" }} suppressHydrationWarning>
         <SessionProvider>
-          <OnboardingBar />
-          {children}
-          <HeartbeatTracker />
-          <AiSupportChat />
-          <NotificationToast />
-          <PushManager />
-          <PwaInstallPrompt />
+          <I18nProvider>
+            <OnboardingBar />
+            {children}
+            <HeartbeatTracker />
+            <AiSupportChat />
+            <NotificationToast />
+            <PushManager />
+            <PwaInstallPrompt />
+          </I18nProvider>
         </SessionProvider>
 
         {/* PWA Service Worker */}

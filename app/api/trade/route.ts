@@ -122,6 +122,16 @@ async function replicateToFollowers(
         where: { id: traderProfile.id },
         data: { totalCopied: { increment: 1 } },
       });
+
+      // Notificar o seguidor que a sua trade foi copiada
+      const dir = direction === "call" ? "▲ CALL" : "▼ PUT";
+      const kz  = copyAmount.toLocaleString("pt-PT") + " Kz";
+      sendPushToUser(follower.id, {
+        title: `Trade copiada — ${asset}`,
+        body:  `${dir} · ${kz} · ${expiry}s`,
+        url:   "/trade",
+        tag:   `copy-trade-${masterTrade.id}-${follower.id}`,
+      }).catch(() => {});
     } catch { /* continuar com próximo seguidor */ }
   }
 }

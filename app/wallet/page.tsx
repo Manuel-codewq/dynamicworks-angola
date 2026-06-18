@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 import {
   ChevronLeft, Wallet, ArrowDownCircle, ArrowUpCircle,
   Clock, CheckCircle, XCircle, Filter, RefreshCw,
@@ -27,11 +28,11 @@ type Tx = {
 type Filter = "all" | "deposit" | "withdrawal";
 type StatusFilter = "all" | "pending" | "completed" | "rejected";
 
-const STATUS_CFG: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
-  pending:   { label: "Pendente",  color: "#f5a623", bg: "rgba(245,166,35,0.1)",  Icon: Clock        },
-  approved:  { label: "Aprovado",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
-  completed: { label: "Aprovado",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
-  rejected:  { label: "Rejeitado", color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle      },
+const STATUS_CFG: Record<string, { tKey: string; color: string; bg: string; Icon: any }> = {
+  pending:   { tKey: "wallet.status.pending",  color: "#f5a623", bg: "rgba(245,166,35,0.1)",  Icon: Clock        },
+  approved:  { tKey: "wallet.status.approved", color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
+  completed: { tKey: "wallet.status.approved", color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
+  rejected:  { tKey: "wallet.status.rejected", color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle      },
 };
 
 function formatDate(s: string) {
@@ -39,10 +40,11 @@ function formatDate(s: string) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useT();
   const cfg = STATUS_CFG[status] ?? STATUS_CFG.pending;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: cfg.bg, color: cfg.color, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
-      <cfg.Icon size={11} /> {cfg.label}
+      <cfg.Icon size={11} /> {t(cfg.tKey)}
     </span>
   );
 }
@@ -50,6 +52,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function WalletPage() {
   const { status } = useSession();
   const router = useRouter();
+  const t = useT();
 
   const [balance,     setBalance]     = useState(0);
   const [demoBalance, setDemoBalance] = useState(0);
@@ -72,7 +75,7 @@ export default function WalletPage() {
   const [copied,      setCopied]      = useState(false);
   const [copiedRef,   setCopiedRef]   = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<{ amount: number } | null>(null);
-  // Campos levantamento
+  // Withdrawal fields
   const [withdrawMethod, setWithdrawMethod] = useState<"multicaixa_express" | "transferencia" | "">("");
   const [wPhone,   setWPhone]   = useState("");
   const [wBank,    setWBank]    = useState("");
@@ -98,7 +101,6 @@ export default function WalletPage() {
 
   useEffect(() => { if (status === "authenticated") load(); }, [status, load]);
 
-  // Auto-refresh a cada 10 segundos para actualizar estados de transacções
   useEffect(() => {
     if (status !== "authenticated") return;
     const id = setInterval(load, 10_000);
@@ -120,7 +122,7 @@ export default function WalletPage() {
     });
     const d = await r.json();
     setBusy(false);
-    if (r.ok) { setOtpSent(true); setFormMsg({ text: "Código enviado para o teu email.", ok: true }); }
+    if (r.ok) { setOtpSent(true); setFormMsg({ text: t("wallet.otpSent"), ok: true }); }
     else setFormMsg({ text: d.error ?? "Erro ao enviar código.", ok: false });
   }
 
@@ -151,7 +153,7 @@ export default function WalletPage() {
         setFormMsg(null);
         load();
       } else {
-        setFormMsg({ text: "Pedido de levantamento submetido!", ok: true });
+        setFormMsg({ text: t("wallet.withdrawSuccess"), ok: true });
         setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false);
         setTab("history"); load();
       }
@@ -165,15 +167,15 @@ export default function WalletPage() {
     setWithdrawMethod(""); setWPhone(""); setWBank(""); setWAccount(""); setWHolder("");
   }
 
-  const filtered = transactions.filter(t => {
-    if (typeFilter !== "all" && t.type !== typeFilter) return false;
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+  const filtered = transactions.filter(tx => {
+    if (typeFilter !== "all" && tx.type !== typeFilter) return false;
+    if (statusFilter !== "all" && tx.status !== statusFilter) return false;
     return true;
   });
 
   const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 22, marginBottom: 14 };
   const inp: React.CSSProperties  = { width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" };
-  const tabBtn = (t: string): React.CSSProperties => ({ flex: 1, padding: "10px 0", background: tab === t ? "#f5a623" : "none", color: tab === t ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" });
+  const tabBtn = (tabKey: string): React.CSSProperties => ({ flex: 1, padding: "10px 0", background: tab === tabKey ? "#f5a623" : "none", color: tab === tabKey ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" });
   const filterBtn = (active: boolean): React.CSSProperties => ({ padding: "6px 12px", background: active ? "rgba(245,166,35,0.15)" : "rgba(255,255,255,0.04)", color: active ? "#f5a623" : "#64748b", border: `1px solid ${active ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer" });
 
   if (loading) return (
@@ -200,7 +202,7 @@ export default function WalletPage() {
         <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>Carteira</span>
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>{t("wallet.title")}</span>
         <button onClick={() => setShowBalance(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>
           {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
@@ -212,16 +214,16 @@ export default function WalletPage() {
       <PageGuide storageKey="dw_guide_wallet" steps={WALLET_GUIDE} />
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px" }}>
 
-        {/* Saldo cards */}
+        {/* Balance cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
           <div style={{ ...card, marginBottom: 0, background: "linear-gradient(135deg,#111827,#0f1e38)" }}>
-            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Saldo Real</div>
+            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{t("wallet.realBalance")}</div>
             <div style={{ color: "#f5a623", fontSize: 22, fontWeight: 900 }}>
               {showBalance ? formatKz(Math.floor(balance)) : "••••••"}
             </div>
           </div>
           <div style={{ ...card, marginBottom: 0 }}>
-            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Saldo Demo</div>
+            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{t("wallet.demoBalance")}</div>
             <div style={{ color: "#94a3b8", fontSize: 22, fontWeight: 900 }}>
               {showBalance ? formatKz(Math.floor(demoBalance)) : "••••••"}
             </div>
@@ -231,45 +233,43 @@ export default function WalletPage() {
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 20 }}>
           <button style={tabBtn("deposit")}   onClick={() => { setTab("deposit");  resetForm(); }}>
-            <ArrowDownCircle size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Depósito
+            <ArrowDownCircle size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> {t("wallet.tab.deposit")}
           </button>
           <button style={tabBtn("withdraw")}  onClick={() => { setTab("withdraw"); resetForm(); }}>
-            <ArrowUpCircle  size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Levantamento
+            <ArrowUpCircle  size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> {t("wallet.tab.withdraw")}
           </button>
           <button style={tabBtn("history")}   onClick={() => setTab("history")}>
-            <Clock size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Histórico
+            <Clock size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> {t("wallet.tab.history")}
           </button>
         </div>
 
-        {/* ── Depósito ─────────────────────────────────────────────────────────── */}
+        {/* ── Deposit ── */}
         {tab === "deposit" && (
           <div style={card}>
-            {/* Bloqueio KYC */}
+            {/* KYC block */}
             {kycStatus !== "approved" && (
               <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 14, padding: "24px 20px", textAlign: "center", marginBottom: 20 }}>
                 <ShieldAlert size={40} color="#ef4444" style={{ marginBottom: 12 }} />
-                <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 16, marginBottom: 8 }}>Verificação de Identidade Necessária</div>
+                <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 16, marginBottom: 8 }}>{t("wallet.kyc.required")}</div>
                 <div style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
-                  Para efectuar depósitos precisas de completar a verificação de identidade (KYC).<br />
-                  {kycStatus === "pending"
-                    ? "O teu KYC está a ser analisado. Aguarda a aprovação."
-                    : "Submete os teus documentos no teu Perfil."}
+                  {t("wallet.kyc.desc")}<br />
+                  {kycStatus === "pending" ? t("wallet.kyc.pending") : t("wallet.kyc.submit")}
                 </div>
                 {kycStatus !== "pending" && (
                   <a href="/profile" style={{ display: "inline-block", background: "#ef4444", color: "#fff", borderRadius: 10, padding: "10px 24px", fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
-                    Verificar Identidade
+                    {t("wallet.kyc.verify")}
                   </a>
                 )}
               </div>
             )}
-            {/* Banner bónus */}
+            {/* Bonus banner */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,rgba(245,166,35,0.1),rgba(249,115,22,0.07))", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
               <div style={{ width: 36, height: 36, background: "rgba(245,166,35,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Gift size={18} color="#f5a623" />
               </div>
               <div>
-                <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>Bónus de boas-vindas +10%</div>
-                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>No primeiro depósito de <strong style={{ color: "#fff" }}>50.000 Kz ou mais</strong>, recbes +10% directo no saldo.</div>
+                <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>{t("wallet.bonus")}</div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>{t("wallet.bonusDesc")}</div>
               </div>
             </div>
 
@@ -278,21 +278,20 @@ export default function WalletPage() {
                 <ArrowDownCircle size={20} color="#22c55e" />
               </div>
               <div>
-                <div style={{ color: "#fff", fontWeight: 700 }}>Pedido de Depósito</div>
-                <div style={{ color: "#64748b", fontSize: 12 }}>Mínimo: 5.000 Kz · Máximo: 5.000.000 Kz</div>
+                <div style={{ color: "#fff", fontWeight: 700 }}>{t("wallet.depositRequest")}</div>
+                <div style={{ color: "#64748b", fontSize: 12 }}>{t("wallet.depositLimits")}</div>
               </div>
             </div>
 
-            {/* Formulário só disponível com KYC aprovado */}
             {kycStatus !== "approved" ? null : paymentInfo ? (
               <div>
                 <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 14, padding: "20px", marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
                     <CheckCircle size={18} color="#22c55e" />
-                    <span style={{ color: "#22c55e", fontWeight: 800, fontSize: 15 }}>Pedido criado! Efectua o pagamento</span>
+                    <span style={{ color: "#22c55e", fontWeight: 800, fontSize: 15 }}>{t("wallet.paymentDone")}</span>
                   </div>
                   <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 18, lineHeight: 1.6 }}>
-                    Vai ao <strong style={{ color: "#fff" }}>ATM Multicaixa</strong> ou <strong style={{ color: "#fff" }}>banca online</strong> e usa os dados abaixo para pagar:
+                    {t("wallet.paymentInstr")}
                   </div>
                   {[
                     { label: "Entidade",   value: MULTICAIXA_ENTITY, copy: false },
@@ -307,7 +306,7 @@ export default function WalletPage() {
                       {item.copy && (
                         <button onClick={() => { navigator.clipboard.writeText(item.value); setCopiedRef(true); setTimeout(() => setCopiedRef(false), 2000); }}
                           style={{ background: copiedRef ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${copiedRef ? "rgba(34,197,94,0.4)" : "#1e2d50"}`, borderRadius: 8, padding: "8px 12px", color: copiedRef ? "#22c55e" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700 }}>
-                          {copiedRef ? <Check size={13} /> : <Copy size={13} />} {copiedRef ? "Copiado" : "Copiar"}
+                          {copiedRef ? <Check size={13} /> : <Copy size={13} />} {copiedRef ? t("referral.copied") : t("referral.copy")}
                         </button>
                       )}
                     </div>
@@ -318,15 +317,15 @@ export default function WalletPage() {
                 </div>
                 <button onClick={() => { setPaymentInfo(null); setTab("history"); }}
                   style={{ width: "100%", background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
-                  Ver histórico
+                  {t("wallet.tab.history")}
                 </button>
               </div>
             ) : (
               <>
                 {formMsg && (
-                  <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                    <AlertCircle size={14} color="#ef4444" />
-                    <span style={{ color: "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
+                  <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                    {formMsg.ok ? <CheckCircle size={14} color="#22c55e" /> : <AlertCircle size={14} color="#ef4444" />}
+                    <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
                   </div>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -336,12 +335,12 @@ export default function WalletPage() {
                   </div>
                   {!otpSent ? (
                     <button onClick={sendOtp} disabled={busy} style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
-                      {busy ? "A enviar código..." : "Gerar referência de pagamento"}
+                      {busy ? t("common.loading") : "Gerar referência de pagamento"}
                     </button>
                   ) : (
                     <>
                       <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "10px 14px", color: "#22c55e", fontSize: 13, fontWeight: 600 }}>
-                        Código enviado para o teu email. Introduz abaixo para confirmar.
+                        {t("wallet.otpSent")}
                       </div>
                       <div>
                         <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (6 dígitos)</label>
@@ -350,9 +349,9 @@ export default function WalletPage() {
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
-                          {busy ? "A gerar referência..." : "Confirmar e gerar referência"}
+                          {busy ? t("common.loading") : "Confirmar e gerar referência"}
                         </button>
-                        <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>Cancelar</button>
+                        <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>{t("common.cancel")}</button>
                       </div>
                     </>
                   )}
@@ -362,7 +361,7 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* ── Levantamento ──────────────────────────────────────────────────────── */}
+        {/* ── Withdraw ── */}
         {tab === "withdraw" && (
           <div style={card}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
@@ -384,7 +383,7 @@ export default function WalletPage() {
                   Faz um depósito primeiro.
                 </div>
                 <button onClick={() => setTab("deposit")} style={{ marginTop: 16, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
-                  Fazer Depósito
+                  {t("wallet.tab.deposit")}
                 </button>
               </div>
             ) : (
@@ -402,13 +401,13 @@ export default function WalletPage() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Valor */}
+              {/* Amount */}
               <div>
                 <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor (Kz)</label>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 25000" style={inp} disabled={otpSent} />
               </div>
 
-              {/* Taxa de levantamento */}
+              {/* Withdrawal fee */}
               {Number(amount) >= 10000 && (
                 <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: 13 }}>
@@ -422,13 +421,13 @@ export default function WalletPage() {
                 </div>
               )}
 
-              {/* Método */}
+              {/* Method */}
               <div>
                 <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Método de levantamento</label>
                 <div style={{ display: "flex", gap: 10 }}>
                   {[
-                    { value: "multicaixa_express", label: "Multicaixa Express", icon: "MXE" },
-                    { value: "transferencia",      label: "Transferência Bancária", icon: "TRF" },
+                    { value: "multicaixa_express", label: t("wallet.method.multicaixa"), icon: "MXE" },
+                    { value: "transferencia",      label: t("wallet.method.transfer"),   icon: "TRF" },
                   ].map(opt => (
                     <button key={opt.value} onClick={() => !otpSent && setWithdrawMethod(opt.value as any)}
                       style={{ flex: 1, padding: "12px 8px", border: `2px solid ${withdrawMethod === opt.value ? "#ef4444" : "#1e2d50"}`, borderRadius: 10, background: withdrawMethod === opt.value ? "rgba(239,68,68,0.08)" : "#0a0f1e", color: withdrawMethod === opt.value ? "#ef4444" : "#64748b", fontWeight: 700, fontSize: 13, cursor: otpSent ? "not-allowed" : "pointer", textAlign: "center" }}>
@@ -439,27 +438,27 @@ export default function WalletPage() {
                 </div>
               </div>
 
-              {/* Campos Multicaixa Express */}
+              {/* Multicaixa Express fields */}
               {withdrawMethod === "multicaixa_express" && (
                 <div>
-                  <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Número de telefone</label>
+                  <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("wallet.withdraw.phone")}</label>
                   <input value={wPhone} onChange={e => setWPhone(e.target.value)} placeholder="9XX XXX XXX" style={inp} disabled={otpSent} />
                 </div>
               )}
 
-              {/* Campos Transferência Bancária */}
+              {/* Bank transfer fields */}
               {withdrawMethod === "transferencia" && (
                 <>
                   <div>
-                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Banco</label>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("wallet.withdraw.bank")}</label>
                     <input value={wBank} onChange={e => setWBank(e.target.value)} placeholder="ex: BFA, BIC, BAI, BDA..." style={inp} disabled={otpSent} />
                   </div>
                   <div>
-                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Número de conta</label>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("wallet.withdraw.account")}</label>
                     <input value={wAccount} onChange={e => setWAccount(e.target.value)} placeholder="ex: 00000000000000000" style={inp} disabled={otpSent} />
                   </div>
                   <div>
-                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Nome do titular</label>
+                    <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("wallet.withdraw.holder")}</label>
                     <input value={wHolder} onChange={e => setWHolder(e.target.value)} placeholder="Nome completo" style={inp} disabled={otpSent} />
                   </div>
                 </>
@@ -467,12 +466,12 @@ export default function WalletPage() {
 
               {!otpSent ? (
                 <button onClick={sendOtp} disabled={busy || !withdrawMethod} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || !withdrawMethod) ? "not-allowed" : "pointer", opacity: (busy || !withdrawMethod) ? 0.6 : 1 }}>
-                  {busy ? "A enviar código..." : "Continuar → Confirmar com código"}
+                  {busy ? t("common.loading") : "Continuar → Confirmar com código"}
                 </button>
               ) : (
                 <>
                   <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "10px 14px", color: "#22c55e", fontSize: 13, fontWeight: 600 }}>
-                    Código enviado para o teu email. Introduz abaixo para confirmar.
+                    {t("wallet.otpSent")}
                   </div>
                   <div>
                     <label style={{ color: "#64748b", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Código OTP (6 dígitos)</label>
@@ -481,9 +480,9 @@ export default function WalletPage() {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
-                      {busy ? "A submeter..." : "Confirmar Levantamento"}
+                      {busy ? t("common.loading") : "Confirmar Levantamento"}
                     </button>
-                    <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>Cancelar</button>
+                    <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>{t("common.cancel")}</button>
                   </div>
                 </>
               )}
@@ -493,21 +492,21 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* ── Histórico ─────────────────────────────────────────────────────────── */}
+        {/* ── History ── */}
         {tab === "history" && (
           <>
-            {/* Filtros */}
+            {/* Filters */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
               <Filter size={14} color="#64748b" style={{ alignSelf: "center" }} />
               {(["all","deposit","withdrawal"] as Filter[]).map(f => (
                 <button key={f} onClick={() => setTypeFilter(f)} style={filterBtn(typeFilter === f)}>
-                  {f === "all" ? "Todos" : f === "deposit" ? "Depósitos" : "Levantamentos"}
+                  {f === "all" ? t("wallet.filter.all") : f === "deposit" ? t("wallet.filter.deposits") : t("wallet.filter.withdrawals")}
                 </button>
               ))}
               <div style={{ width: 1, background: "#1e2d50", margin: "0 4px" }} />
-              {(["all","pending","completed","rejected"] as StatusFilter[]).map(s => (
-                <button key={s} onClick={() => setStatusFilter(s)} style={filterBtn(statusFilter === s)}>
-                  {s === "all" ? "Todos" : STATUS_CFG[s]?.label ?? s}
+              {(["all","pending","completed","rejected"] as StatusFilter[]).map(sf => (
+                <button key={sf} onClick={() => setStatusFilter(sf)} style={filterBtn(statusFilter === sf)}>
+                  {sf === "all" ? t("wallet.filterStatus.all") : t(STATUS_CFG[sf]?.tKey ?? "wallet.status.pending")}
                 </button>
               ))}
             </div>
@@ -515,7 +514,7 @@ export default function WalletPage() {
             {filtered.length === 0 ? (
               <div style={{ textAlign: "center", color: "#475569", padding: "48px 0" }}>
                 <Wallet size={40} color="#1e2d50" style={{ marginBottom: 12 }} />
-                <div style={{ fontSize: 14 }}>Nenhuma transacção encontrada.</div>
+                <div style={{ fontSize: 14 }}>{t("wallet.noTransactions")}</div>
               </div>
             ) : (
               filtered.map(tx => {
@@ -523,8 +522,8 @@ export default function WalletPage() {
                 const color    = isCredit ? "#22c55e" : "#ef4444";
                 const bgColor  = isCredit ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)";
                 const icon     = isCredit ? <ArrowDownCircle size={20} color="#22c55e" /> : <ArrowUpCircle size={20} color="#ef4444" />;
-                const label    = tx.type === "deposit"          ? "Depósito"
-                               : tx.type === "withdrawal"       ? "Levantamento"
+                const label    = tx.type === "deposit"          ? t("wallet.type.deposit")
+                               : tx.type === "withdrawal"       ? t("wallet.type.withdrawal")
                                : tx.type === "adjustment"       ? "Ajuste de Saldo"
                                : tx.type === "bonus"            ? "Bónus"
                                : tx.type === "tournament_prize" ? "Prémio de Torneio"
@@ -546,10 +545,10 @@ export default function WalletPage() {
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>
                           <div>
                             {tx.method && <span style={{ color: "#64748b", fontSize: 12 }}>{{
-                              multicaixa_ref:      "Multicaixa (Ent/Ref)",
-                              multicaixa_express:  "Multicaixa Express",
-                              transferencia_bancaria: "Transferência Bancária",
-                              usdt_trc20:          "USDT TRC-20",
+                              multicaixa_ref:         "Multicaixa (Ent/Ref)",
+                              multicaixa_express:     t("wallet.method.multicaixa"),
+                              transferencia_bancaria: t("wallet.method.transfer"),
+                              usdt_trc20:             "USDT TRC-20",
                             }[tx.method] ?? tx.method}</span>}
                             <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{formatDate(tx.createdAt)}</div>
                           </div>

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 import {
   ChevronLeft, Gift, Copy, Check, Users, TrendingUp,
   CheckCircle, Clock, XCircle, RefreshCw,
@@ -11,13 +12,6 @@ import { formatKz } from "@/lib/format";
 type ReferredUser = { name: string; joinedAt: string; kycStatus: string; deposits: number };
 type Data = { code: string | null; earnings: number; referred: number; referredUsers: ReferredUser[] };
 
-const KYC_STYLE: Record<string, { label: string; color: string; Icon: any }> = {
-  approved: { label: "Verificado",   color: "#22c55e", Icon: CheckCircle },
-  pending:  { label: "Em análise",   color: "#f5a623", Icon: Clock       },
-  rejected: { label: "Rejeitado",    color: "#ef4444", Icon: XCircle     },
-  none:     { label: "Não iniciado", color: "#64748b", Icon: Clock       },
-};
-
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" });
 }
@@ -25,6 +19,7 @@ function formatDate(s: string) {
 export default function ReferralPage() {
   const { status } = useSession();
   const router     = useRouter();
+  const t          = useT();
   const [data,    setData]    = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied,  setCopied]  = useState(false);
@@ -53,6 +48,13 @@ export default function ReferralPage() {
     });
   }
 
+  const KYC_STYLE: Record<string, { label: string; color: string; Icon: any }> = {
+    approved: { label: t("kyc.approved.label"), color: "#22c55e", Icon: CheckCircle },
+    pending:  { label: t("kyc.pending.label"),  color: "#f5a623", Icon: Clock       },
+    rejected: { label: t("kyc.rejected.label"), color: "#ef4444", Icon: XCircle     },
+    none:     { label: t("kyc.none.label"),      color: "#64748b", Icon: Clock       },
+  };
+
   const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 22, marginBottom: 14 };
 
   if (loading) return (
@@ -76,20 +78,20 @@ export default function ReferralPage() {
           <Gift size={18} color="#f5a623" />
         </div>
         <div>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Programa de Referidos</div>
-          <div style={{ color: "#64748b", fontSize: 12 }}>Convida amigos e ganha comissões</div>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{t("referral.title")}</div>
+          <div style={{ color: "#64748b", fontSize: 12 }}>{t("referral.subtitle")}</div>
         </div>
       </div>
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px" }}>
 
-        {/* Como funciona */}
+        {/* How it works */}
         <div style={{ ...card, background: "linear-gradient(135deg,#111827,#0f1e38)", marginBottom: 20 }}>
-          <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 15, marginBottom: 16 }}>Como funciona</div>
+          <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 15, marginBottom: 16 }}>{t("referral.howItWorks")}</div>
           {[
-            { n: "1", text: "Partilha o teu link ou código único com amigos" },
-            { n: "2", text: "O amigo regista-se e faz o primeiro depósito" },
-            { n: "3", text: "Recebes automaticamente 2% do valor depositado no teu saldo real" },
+            { n: "1", text: t("referral.step1") },
+            { n: "2", text: t("referral.step2") },
+            { n: "3", text: t("referral.step3") },
           ].map(s => (
             <div key={s.n} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#f5a623", color: "#0a0f1e", fontWeight: 900, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.n}</div>
@@ -103,18 +105,18 @@ export default function ReferralPage() {
           <div style={{ ...card, marginBottom: 0, textAlign: "center" }}>
             <Users size={22} color="#38bdf8" style={{ marginBottom: 6 }} />
             <div style={{ color: "#38bdf8", fontSize: 26, fontWeight: 900 }}>{data?.referred ?? 0}</div>
-            <div style={{ color: "#64748b", fontSize: 12 }}>Utilizadores convidados</div>
+            <div style={{ color: "#64748b", fontSize: 12 }}>{t("referral.invited")}</div>
           </div>
           <div style={{ ...card, marginBottom: 0, textAlign: "center" }}>
             <TrendingUp size={22} color="#22c55e" style={{ marginBottom: 6 }} />
             <div style={{ color: "#22c55e", fontSize: 22, fontWeight: 900 }}>{formatKz(Math.floor(data?.earnings ?? 0))}</div>
-            <div style={{ color: "#64748b", fontSize: 12 }}>Total ganho em comissões</div>
+            <div style={{ color: "#64748b", fontSize: 12 }}>{t("referral.totalEarned")}</div>
           </div>
         </div>
 
-        {/* Código */}
+        {/* Code */}
         <div style={card}>
-          <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>O teu código</div>
+          <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>{t("referral.yourCode")}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             <div style={{ flex: 1, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: "14px 18px", textAlign: "center" }}>
               <span style={{ color: "#f5a623", fontSize: 28, fontWeight: 900, letterSpacing: 6 }}>{data?.code ?? "—"}</span>
@@ -125,22 +127,22 @@ export default function ReferralPage() {
             </button>
           </div>
 
-          <div style={{ color: "#64748b", fontSize: 12, marginBottom: 8 }}>Ou partilha este link directamente:</div>
+          <div style={{ color: "#64748b", fontSize: 12, marginBottom: 8 }}>{t("referral.shareLink")}</div>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 12px", color: "#64748b", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {link}
             </div>
             <button onClick={copyLink}
               style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-              {copied ? <><Check size={14} /> Copiado</> : <><Copy size={14} /> Copiar</>}
+              {copied ? <><Check size={14} /> {t("referral.copied")}</> : <><Copy size={14} /> {t("referral.copy")}</>}
             </button>
           </div>
         </div>
 
-        {/* Lista de convidados */}
+        {/* Referred users list */}
         {(data?.referredUsers?.length ?? 0) > 0 && (
           <div style={card}>
-            <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>Utilizadores convidados</div>
+            <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>{t("referral.invited")}</div>
             {data!.referredUsers.map((u, i) => {
               const kyc = KYC_STYLE[u.kycStatus] ?? KYC_STYLE.none;
               return (
@@ -151,14 +153,16 @@ export default function ReferralPage() {
                     </div>
                     <div>
                       <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>{u.name}</div>
-                      <div style={{ color: "#475569", fontSize: 11 }}>Registado em {formatDate(u.joinedAt)}</div>
+                      <div style={{ color: "#475569", fontSize: 11 }}>{t("referral.joinedAt")} {formatDate(u.joinedAt)}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: kyc.color, fontSize: 11, fontWeight: 700 }}>
                       <kyc.Icon size={11} /> {kyc.label}
                     </span>
-                    <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{u.deposits} depósito{u.deposits !== 1 ? "s" : ""}</div>
+                    <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
+                      {u.deposits} {u.deposits !== 1 ? t("referral.depositsPlural") : t("referral.deposits")}
+                    </div>
                   </div>
                 </div>
               );
@@ -169,8 +173,8 @@ export default function ReferralPage() {
         {(data?.referred ?? 0) === 0 && (
           <div style={{ textAlign: "center", color: "#475569", padding: "32px 0" }}>
             <Gift size={40} color="#1e2d50" style={{ marginBottom: 12 }} />
-            <div style={{ fontSize: 14 }}>Ainda não convidaste ninguém.</div>
-            <div style={{ fontSize: 12, marginTop: 6 }}>Partilha o teu código e começa a ganhar!</div>
+            <div style={{ fontSize: 14 }}>{t("referral.noReferrals")}</div>
+            <div style={{ fontSize: 12, marginTop: 6 }}>{t("referral.noReferralsDesc")}</div>
           </div>
         )}
       </div>

@@ -9,6 +9,7 @@ import {
 import { formatKz } from "@/lib/format";
 import PageGuide from "@/app/components/PageGuide";
 import { SkeletonStatCard, SkeletonCard } from "@/app/components/Skeleton";
+import { useT } from "@/lib/i18n";
 
 const DASHBOARD_GUIDE = [
   { icon: <BarChart2   size={26} color="#f5a623" />, iconColor: "#f5a623", title: "O teu Dashboard",        description: "Aqui encontras todas as estatísticas das tuas operações reais — taxa de vitória, lucro total, volume e evolução ao longo do tempo.", tip: "As estatísticas são actualizadas em tempo real após cada trade." },
@@ -58,6 +59,7 @@ function MiniChart({ data }: { data: { date: string; cumulative: number }[] }) {
 export default function DashboardPage() {
   const { status } = useSession();
   const router = useRouter();
+  const t = useT();
   const [stats,   setStats]   = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -108,10 +110,10 @@ export default function DashboardPage() {
         {!s || s.total === 0 ? (
           <div style={{ ...card, textAlign: "center", padding: 48 }}>
             <BarChart2 size={48} color="#1e2d50" style={{ marginBottom: 16 }} />
-            <div style={{ color: "#94a3b8", fontSize: 15 }}>Ainda não tens operações reais fechadas.</div>
-            <div style={{ color: "#64748b", fontSize: 13, marginTop: 8 }}>As estatísticas aparecem aqui depois do primeiro trade real.</div>
+            <div style={{ color: "#94a3b8", fontSize: 15 }}>{t("dash.noTrades")}</div>
+            <div style={{ color: "#64748b", fontSize: 13, marginTop: 8 }}>{t("dash.noTradesDesc")}</div>
             <button onClick={() => router.push("/trade")} style={{ marginTop: 20, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
-              Ir Operar
+              {t("dash.goTrade")}
             </button>
           </div>
         ) : (
@@ -119,10 +121,10 @@ export default function DashboardPage() {
             {/* KPIs */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
               {[
-                { label: "Taxa de Vitória",    value: `${s.winRate}%`,                           icon: <Trophy  size={18} color="#f5a623" />, color: "#f5a623" },
-                { label: "Total de Trades",    value: String(s.total),                           icon: <Zap     size={18} color="#38bdf8" />, color: "#38bdf8" },
-                { label: "Lucro / Prejuízo",   value: formatKz(Math.floor(s.totalProfit)),       icon: s.totalProfit >= 0 ? <TrendingUp size={18} color="#22c55e" /> : <TrendingDown size={18} color="#ef4444" />, color: s.totalProfit >= 0 ? "#22c55e" : "#ef4444" },
-                { label: "Volume Total",       value: formatKz(Math.floor(s.totalVolume)),       icon: <Target  size={18} color="#a78bfa" />, color: "#a78bfa" },
+                { label: t("dash.winRate"),     value: `${s.winRate}%`,                           icon: <Trophy  size={18} color="#f5a623" />, color: "#f5a623" },
+                { label: t("dash.totalTrades"), value: String(s.total),                           icon: <Zap     size={18} color="#38bdf8" />, color: "#38bdf8" },
+                { label: t("dash.pnl"),         value: formatKz(Math.floor(s.totalProfit)),       icon: s.totalProfit >= 0 ? <TrendingUp size={18} color="#22c55e" /> : <TrendingDown size={18} color="#ef4444" />, color: s.totalProfit >= 0 ? "#22c55e" : "#ef4444" },
+                { label: t("dash.volume"),      value: formatKz(Math.floor(s.totalVolume)),       icon: <Target  size={18} color="#a78bfa" />, color: "#a78bfa" },
               ].map(k => (
                 <div key={k.label} style={{ ...card, marginBottom: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -139,22 +141,22 @@ export default function DashboardPage() {
             {/* Wins/Losses bar */}
             <div style={{ ...card, marginTop: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Vitórias vs Derrotas</span>
-                <span style={{ color: "#64748b", fontSize: 12 }}>{s.wins}V · {s.losses}D</span>
+                <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>{t("dash.winsVsLosses")}</span>
+                <span style={{ color: "#64748b", fontSize: 12 }}>{s.wins}W · {s.losses}L</span>
               </div>
               <div style={{ height: 10, borderRadius: 5, background: "#1e2d50", overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${s.winRate}%`, background: "linear-gradient(90deg,#22c55e,#16a34a)", borderRadius: 5, transition: "width 0.6s ease" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                <span style={{ color: "#22c55e", fontSize: 11, fontWeight: 600 }}>{s.winRate}% vitórias</span>
-                <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 600 }}>{100 - s.winRate}% derrotas</span>
+                <span style={{ color: "#22c55e", fontSize: 11, fontWeight: 600 }}>{s.winRate}% {t("dash.pctWins")}</span>
+                <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 600 }}>{100 - s.winRate}% {t("dash.pctLosses")}</span>
               </div>
             </div>
 
             {/* Gráfico P&L acumulado */}
             <div style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>P&L Acumulado (30 dias)</span>
+                <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>{t("dash.pnlChart")}</span>
                 <span style={{ color: pnlColor, fontSize: 14, fontWeight: 800 }}>{formatKz(Math.floor(lastCumulative))}</span>
               </div>
               <MiniChart data={s.dailyPnl} />
@@ -167,7 +169,7 @@ export default function DashboardPage() {
             {/* Breakdown por par */}
             {s.byAsset.length > 0 && (
               <div style={card}>
-                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Desempenho por Par</div>
+                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{t("dash.perfByPair")}</div>
                 {s.byAsset.map(a => (
                   <div key={a.asset} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(30,45,80,0.4)" }}>
                     <div style={{ width: 80, color: "#fff", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{a.asset}</div>
@@ -190,7 +192,7 @@ export default function DashboardPage() {
             {/* Win rate por hora */}
             {s.byHour.some(h => h.trades > 0) && (
               <div style={card}>
-                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Melhor Hora para Operar</div>
+                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{t("dash.bestHour")}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4 }}>
                   {s.byHour.map(h => {
                     const hasTrades = h.trades > 0;
@@ -205,7 +207,7 @@ export default function DashboardPage() {
                   })}
                 </div>
                 <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
-                  {[{ color: "#22c55e", label: "≥60% vitória" }, { color: "#f5a623", label: "45–59%" }, { color: "#ef4444", label: "<45%" }].map(l => (
+                  {[{ color: "#22c55e", label: t("dash.highWin") }, { color: "#f5a623", label: t("dash.midWin") }, { color: "#ef4444", label: t("dash.lowWin") }].map(l => (
                     <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
                       <span style={{ color: "#475569", fontSize: 10 }}>{l.label}</span>
@@ -218,7 +220,7 @@ export default function DashboardPage() {
             {/* Win rate por duração */}
             {s.byDuration.length > 0 && (
               <div style={card}>
-                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Desempenho por Duração</div>
+                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{t("dash.perfByDuration")}</div>
                 {s.byDuration.map(d => (
                   <div key={d.secs} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: "1px solid rgba(30,45,80,0.4)" }}>
                     <div style={{ width: 52, color: "#f5a623", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{d.label}</div>
@@ -239,21 +241,21 @@ export default function DashboardPage() {
             {/* Últimas operações */}
             {s.recent.length > 0 && (
               <div style={card}>
-                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Últimas Operações</div>
-                {s.recent.map((t, i) => (
+                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{t("dash.recentTrades")}</div>
+                {s.recent.map((tr, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 0", borderBottom: i < s.recent.length - 1 ? "1px solid rgba(30,45,80,0.4)" : "none" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: t.result === "win" ? "#22c55e" : "#ef4444", flexShrink: 0 }} />
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: tr.result === "win" ? "#22c55e" : "#ef4444", flexShrink: 0 }} />
                       <div>
-                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{t.asset}</div>
-                        <div style={{ color: "#475569", fontSize: 11 }}>{new Date(t.date).toLocaleDateString("pt-PT")}</div>
+                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{tr.asset}</div>
+                        <div style={{ color: "#475569", fontSize: 11 }}>{new Date(tr.date).toLocaleDateString("pt-PT")}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ color: t.result === "win" ? "#22c55e" : "#ef4444", fontSize: 13, fontWeight: 700 }}>
-                        {t.result === "win" ? "+" : "−"}{formatKz(Math.floor(Math.abs(t.profit ?? t.amount)))}
+                      <div style={{ color: tr.result === "win" ? "#22c55e" : "#ef4444", fontSize: 13, fontWeight: 700 }}>
+                        {tr.result === "win" ? "+" : "−"}{formatKz(Math.floor(Math.abs(tr.profit ?? tr.amount)))}
                       </div>
-                      <div style={{ color: "#475569", fontSize: 11 }}>{t.result === "win" ? "Vitória" : "Derrota"}</div>
+                      <div style={{ color: "#475569", fontSize: 11 }}>{tr.result === "win" ? t("dash.win") : t("dash.loss")}</div>
                     </div>
                   </div>
                 ))}
