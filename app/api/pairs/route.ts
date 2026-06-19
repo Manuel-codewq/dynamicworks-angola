@@ -12,15 +12,16 @@ export async function GET() {
   const allowedReal    = new Set(activePairs);
   const allowedSynth   = new Set(weekendPairs);
 
-  // Pares reais — disponíveis durante horário de mercado ou quando admin força
+  // Pares reais — lista vazia significa "nenhum par activo" (não "todos")
+  const allReal = [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
   const realPairs: DerivPair[] = marketOpen
-    ? [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS].filter(p => !allowedReal.size || allowedReal.has(p.label))
-    : CRYPTO_PAIRS.filter(p => !allowedReal.size || allowedReal.has(p.label));
+    ? (allowedReal.size > 0 ? allReal.filter(p => allowedReal.has(p.label)) : [])
+    : (allowedReal.size > 0 ? CRYPTO_PAIRS.filter(p => allowedReal.has(p.label)) : []);
 
-  // Pares sintéticos — sempre disponíveis (conforme config admin)
+  // Pares sintéticos — lista vazia significa "nenhum par activo"
   const synthPairs: DerivPair[] = allowedSynth.size > 0
     ? SYNTHETIC_PAIRS.filter(p => allowedSynth.has(p.symbol))
-    : SYNTHETIC_PAIRS;
+    : [];
 
   return NextResponse.json({ pairs: [...realPairs, ...synthPairs], marketOpen });
 }

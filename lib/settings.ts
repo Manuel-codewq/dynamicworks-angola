@@ -59,15 +59,15 @@ export async function getSettings(): Promise<PlatformSettings> {
       create: { id: "singleton", maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, largeTradePushThreshold: 0, largeWithdrawalThreshold: 0, dailyLossLimitPct: 0 },
       update: {},
     }) as any;
-    const savedPairs        = Array.isArray(row.activePairs)   ? row.activePairs   as string[] : [];
-    const savedWeekendPairs = Array.isArray(row.weekendPairs)  ? row.weekendPairs  as string[] : [];
+    const savedPairs        = Array.isArray(row.activePairs)  ? row.activePairs  as string[] : null;
+    const savedWeekendPairs = Array.isArray(row.weekendPairs) ? row.weekendPairs as string[] : null;
     cache = {
       maintenanceMode: row.maintenanceMode,
       forceRealMarket: row.forceRealMarket ?? false,
       payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
       winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
-      activePairs:     savedPairs.length > 0 ? savedPairs : DEFAULT_ACTIVE_PAIRS,
-      weekendPairs:    savedWeekendPairs.length > 0 ? savedWeekendPairs : DEFAULT_WEEKEND_PAIRS,
+      activePairs:     savedPairs  !== null ? savedPairs  : DEFAULT_ACTIVE_PAIRS,
+      weekendPairs:    savedWeekendPairs !== null ? savedWeekendPairs : DEFAULT_WEEKEND_PAIRS,
       rankingResetAt:  row.rankingResetAt ? new Date(row.rankingResetAt) : null,
       usdtRateAoa:              Number(row.usdtRateAoa ?? 0),
       usdtWallet:               row.usdtWallet ?? null,
