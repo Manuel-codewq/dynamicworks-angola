@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -35,8 +35,6 @@ function RegisterContent() {
   const [error, setError]               = useState("");
   const [success, setSuccess]           = useState(false);
   const [loading, setLoading]           = useState(false);
-  const nifTimeout                      = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }));
   }
@@ -46,11 +44,6 @@ function RegisterContent() {
     setForm(f => ({ ...f, nif, name: "" }));
     setNifState("idle");
     setNifError("");
-
-    if (nifTimeout.current) clearTimeout(nifTimeout.current);
-    if (nif.length >= 9) {
-      nifTimeout.current = setTimeout(() => verifyNif(nif), 600);
-    }
   }
 
   async function verifyNif(nif: string) {
@@ -191,21 +184,38 @@ function RegisterContent() {
               <label style={labelStyle}>
                 Nº Bilhete de Identidade <span style={{ color: "#ef4444" }}>*</span>
               </label>
-              <div style={{ position: "relative" }}>
-                <Hash size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-                <input
-                  type="text"
-                  value={form.nif}
-                  onChange={e => handleNifChange(e.target.value)}
-                  placeholder="Ex: 5000012345"
-                  required
-                  style={{ ...inputStyle, paddingRight: 40, border: `1px solid ${nifBorderColor}` }}
-                />
-                <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}>
-                  {nifState === "loading" && <Loader2 size={16} color="#94a3b8" style={{ animation: "spin 1s linear infinite" }} />}
-                  {nifState === "valid"   && <ShieldCheck size={16} color="#22c55e" />}
-                  {nifState === "invalid" && <AlertCircle size={16} color="#ef4444" />}
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <Hash size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                  <input
+                    type="text"
+                    value={form.nif}
+                    onChange={e => handleNifChange(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (form.nif.length >= 9) verifyNif(form.nif); } }}
+                    placeholder="Ex: 5000012345"
+                    required
+                    style={{ ...inputStyle, paddingRight: 40, border: `1px solid ${nifBorderColor}` }}
+                  />
+                  <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}>
+                    {nifState === "loading" && <Loader2 size={16} color="#94a3b8" style={{ animation: "spin 1s linear infinite" }} />}
+                    {nifState === "valid"   && <ShieldCheck size={16} color="#22c55e" />}
+                    {nifState === "invalid" && <AlertCircle size={16} color="#ef4444" />}
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => { if (form.nif.length >= 9) verifyNif(form.nif); }}
+                  disabled={form.nif.length < 9 || nifState === "loading"}
+                  style={{
+                    background: nifState === "valid" ? "rgba(34,197,94,0.15)" : "rgba(245,166,35,0.15)",
+                    border: `1px solid ${nifState === "valid" ? "rgba(34,197,94,0.4)" : "rgba(245,166,35,0.4)"}`,
+                    borderRadius: 8, padding: "0 16px", color: nifState === "valid" ? "#22c55e" : "#f5a623",
+                    fontWeight: 700, fontSize: 13, cursor: form.nif.length < 9 || nifState === "loading" ? "not-allowed" : "pointer",
+                    opacity: form.nif.length < 9 ? 0.5 : 1, whiteSpace: "nowrap", flexShrink: 0,
+                  }}
+                >
+                  {nifState === "loading" ? "..." : nifState === "valid" ? "✓ Válido" : "Validar"}
+                </button>
               </div>
               {nifState === "valid" && (
                 <p style={{ color: "#22c55e", fontSize: 12, marginTop: 4 }}>
