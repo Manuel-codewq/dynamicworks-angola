@@ -10,7 +10,8 @@ const ALLOWED_IMG_SRCS = [
 const ALLOWED_CONNECT_SRCS = [
   "'self'",
   "https://api.anthropic.com",    // IA do chat
-  "wss://ws.binaryws.com",        // Deriv WebSocket
+  "wss://ws.derivws.com",         // Deriv WebSocket (novo)
+  "wss://ws.binaryws.com",        // Deriv WebSocket (legado)
   "wss://frontend.binaryws.com",
   "https://api.pwnedpasswords.com", // verificação de senhas
   "https://digital.ao",           // validação NIF
@@ -20,7 +21,7 @@ const ALLOWED_CONNECT_SRCS = [
 // Content Security Policy — bloqueia XSS e injeção de recursos externos
 const CSP = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com`,
+  `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
   `style-src 'self' 'unsafe-inline'`,
   `img-src 'self' ${ALLOWED_IMG_SRCS}`,
   `font-src 'self' data:`,

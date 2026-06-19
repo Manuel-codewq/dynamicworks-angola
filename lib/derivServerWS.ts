@@ -3,7 +3,7 @@ import WebSocket from "ws";
 // A API REST (api.deriv.com/api/v1) foi descontinuada pela Deriv — devolve uma
 // página HTML "Legacy Deriv API". Toda a obtenção de preços server-side passa
 // por este cliente WebSocket (mesmo app_id usado pelo frontend).
-const DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=127916";
+const DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=36544";
 
 export interface DerivCandle {
   epoch: number;
