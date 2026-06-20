@@ -5,6 +5,7 @@ import { sendVerificationEmail } from "@/lib/email";
 import { randomInt, createHash } from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
+import { sendEvolutionMessage, buildWelcomeMessageEvolution } from "@/lib/evolutionApi";
 async function isPwnedPassword(password: string): Promise<boolean> {
   try {
     const hash   = createHash("sha1").update(password).digest("hex").toUpperCase();
@@ -169,6 +170,16 @@ export async function POST(req: NextRequest) {
       await sendVerificationEmail(user.email, user.name, code);
     } catch (err) {
       console.error("[email] Falha ao enviar email de verificação:", err);
+    }
+
+    // Enviar mensagem de boas-vindas via WhatsApp (se o utilizador forneceu telefone)
+    if (phone) {
+      const phoneClean = String(phone).replace(/\D/g, "");
+      if (phoneClean.length >= 9) {
+        sendEvolutionMessage(phoneClean, buildWelcomeMessageEvolution(nomeOficial)).catch(e =>
+          console.error("[WhatsApp] Falha ao enviar boas-vindas:", e)
+        );
+      }
     }
 
     return NextResponse.json(
