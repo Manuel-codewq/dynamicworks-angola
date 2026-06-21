@@ -58,11 +58,11 @@ function RegisterContent() {
       } else {
         setForm(f => ({ ...f, name: "" }));
         setNifState("invalid");
-        setNifError(data.error || "NIF não encontrado. Verifique o número.");
+        setNifError(data.error || "BI não encontrado. Verifique o número.");
       }
     } catch {
       setNifState("invalid");
-      setNifError("Erro ao verificar NIF. Verifique a ligação.");
+      setNifError("Erro ao verificar BI. Verifique a ligação.");
     }
   }
 
