@@ -47,6 +47,7 @@ model User {
   dataNasc          String?
   genero            String?
   naturalidade      String?
+  formadorReports   FormadorReport[]
   accessLogs        AccessLog[]
   copyFollowing     CopyFollow[]            @relation("CopyFollower")
   copyTrader        CopyTrader?
@@ -381,4 +382,23 @@ model PriceAlert {
 
   @@index([userId])
   @@index([triggered])
+}
+
+model FormadorReport {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            String   // YYYY-MM-DD
+  feito           String   // O que foi feito hoje
+  videoPublicado  Boolean  @default(false)
+  videoTitulo     String?
+  reacoes         Int?     // número de reacções no grupo
+  duvidasMembros  String?  // dúvidas mais frequentes
+  planoAmanha     String?  // plano para amanhã
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }

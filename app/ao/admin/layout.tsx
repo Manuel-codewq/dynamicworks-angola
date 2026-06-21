@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
   Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
-  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal, Copy, Trash2, ShieldAlert,
+  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal, Copy, Trash2, ShieldAlert, BookOpen,
 } from "lucide-react";
 
 type NavItem = {
@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
   { href: "/ao/admin/copy",            label: "Copy Trading",   Icon: Copy },
   { href: "/ao/admin/audit",          label: "Auditoria",      Icon: ShieldCheck },
   { href: "/ao/admin/security",       label: "Segurança",      Icon: ShieldAlert },
+  { href: "/ao/admin/formadores",     label: "Formadores",     Icon: BookOpen },
   { href: "/ao/admin/support",        label: "Suporte",        Icon: MessageCircle, badgeKey: "support" },
   { href: "/ao/admin/settings",       label: "Configurações",  Icon: Settings },
   { href: "/ao/admin/reset",          label: "Reset Servidor", Icon: Trash2 },

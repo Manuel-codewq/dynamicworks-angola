@@ -230,7 +230,8 @@ export default function AdminUsersPage() {
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                           <span>
                             {u.name}
-                            {u.role === "admin" && <span style={{ marginLeft: 6, background: "rgba(239,68,68,0.15)", color: "#ef4444", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>ADMIN</span>}
+                            {u.role === "admin"    && <span style={{ marginLeft: 6, background: "rgba(239,68,68,0.15)",   color: "#ef4444", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>ADMIN</span>}
+                            {u.role === "formador" && <span style={{ marginLeft: 6, background: "rgba(56,189,248,0.15)", color: "#38bdf8", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>FORMADOR</span>}
                           </span>
                           <span style={{ color: "#64748b", fontSize: 11, fontWeight: 400 }}>{u.province ?? "—"}</span>
                         </div>
@@ -309,6 +310,18 @@ export default function AdminUsersPage() {
                             <button onClick={() => { if (confirm(`Promover ${u.name} a admin?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "admin" }); }} disabled={busy}
                               style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
                               <Shield size={11} /> Admin
+                            </button>
+                          )}
+                          {u.role !== "admin" && u.role !== "formador" && (
+                            <button onClick={() => { if (confirm(`Tornar ${u.name} formador?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "formador" }); }} disabled={busy}
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(56,189,248,0.1)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              <Shield size={11} /> Formador
+                            </button>
+                          )}
+                          {u.role === "formador" && (
+                            <button onClick={() => { if (confirm(`Remover role de formador de ${u.name}?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "user" }); }} disabled={busy}
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              <Shield size={11} /> Rem. Formador
                             </button>
                           )}
                           {u.kycSubmission !== null && u.kycStatus === "pending" && (

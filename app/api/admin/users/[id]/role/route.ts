@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   const { id } = await params;
   const { role } = await req.json();
-  if (!["user", "admin"].includes(role)) return NextResponse.json({ error: "Role inválido" }, { status: 400 });
+  if (!["user", "admin", "formador"].includes(role)) return NextResponse.json({ error: "Role inválido" }, { status: 400 });
 
   // Admin não pode alterar o seu próprio role
   if (id === session.user.id) {
