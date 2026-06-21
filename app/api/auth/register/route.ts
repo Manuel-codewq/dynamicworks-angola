@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { email, password, phone, province, ref, nifNumero } = body;
+    const { email, password, phone, province, ref, nifNumero, dataNasc, genero, naturalidade } = body;
 
     // Validar NIF (obrigatório)
     const nif = typeof nifNumero === "string" ? nifNumero.replace(/\s/g, "").toUpperCase() : "";
@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
             try {
               await prisma.nifCache.upsert({
                 where:  { nif },
-                create: { nif, nome: nomeOficial, valid: true, expiresAt },
-                update: { nome: nomeOficial, valid: true, expiresAt },
+                create: { nif, nome: nomeOficial ?? "", valid: true, expiresAt },
+                update: { nome: nomeOficial ?? "", valid: true, expiresAt },
               });
             } catch { /* cache best-effort */ }
           }
@@ -168,6 +168,9 @@ export async function POST(req: NextRequest) {
         nifNumero: nif,
         nomeOficial,
         kycNifValidado: true,
+        dataNasc:     typeof dataNasc     === "string" && dataNasc     ? dataNasc     : undefined,
+        genero:       typeof genero       === "string" && genero       ? genero       : undefined,
+        naturalidade: typeof naturalidade === "string" && naturalidade ? naturalidade : undefined,
         verifyCode: code,
         verifyExpires,
         emailVerified: false,

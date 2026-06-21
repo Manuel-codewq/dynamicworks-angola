@@ -109,5 +109,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ valid: false, error: "BI não encontrado. Verifique o número." });
   }
 
-  return NextResponse.json({ valid: true, nome });
+  return NextResponse.json({
+    valid:         true,
+    nome,
+    dataNasc:      typeof data?.data_nasc         === "string" ? data.data_nasc         : undefined,
+    genero:        typeof data?.genero             === "string" ? data.genero             : undefined,
+    naturalidade:  typeof data?.naturalidade       === "string" ? data.naturalidade       : undefined,
+    nacionalidade: typeof data?.nacionalidade_nome === "string" ? data.nacionalidade_nome : undefined,
+  });
 }
