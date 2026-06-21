@@ -4,19 +4,19 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
 import https from "node:https";
 
-const NIF_REGEX    = /^[A-Z0-9]{9,14}$/i; // NIF angolano: dígitos e letras
+const NIF_REGEX    = /^[A-Z0-9]{9,14}$/i;
 const CACHE_TTL_MS = 24 * 60 * 60_000; // 24 horas
 
-// Usa node:https em vez de fetch() porque digital.ao faz renegociação TLS
-// e o undici (fetch nativo do Node.js) não suporta renegociação, ficando pendurado.
-function fetchDigitalAo(nif: string): Promise<string> {
+function fetchSme(bi: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const url = `https://digital.ao/ao/actions/nif.ajcall.php?nif=${encodeURIComponent(nif)}`;
+    const url = `https://sme.gov.ao/actions/bi.ajcall.php?bi=${encodeURIComponent(bi)}`;
 
     const req = https.get(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; DynamicWorks/1.0)",
-        "Accept":     "application/json",
+        "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+        "Referer":         "https://sme.gov.ao/ao/utentes/novo/",
+        "Accept":          "application/json, text/javascript, */*; q=0.01",
+        "X-Requested-With": "XMLHttpRequest",
       },
       timeout: 12000,
     }, (res) => {
@@ -26,20 +26,14 @@ function fetchDigitalAo(nif: string): Promise<string> {
       res.on("end", () => resolve(body));
     });
 
-    req.on("timeout", () => {
-      req.destroy(new Error("timeout"));
-    });
-
-    req.on("error", (err) => {
-      reject(err);
-    });
+    req.on("timeout", () => { req.destroy(new Error("timeout")); });
+    req.on("error",   (err) => { reject(err); });
   });
 }
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
 
-  // 10 verificações por IP por 5 minutos
   if (!await checkRateLimit("nif_lookup", ip, 10, 5 * 60_000)) {
     return NextResponse.json(
       { valid: false, error: "Demasiados pedidos. Tente mais tarde." },
@@ -50,10 +44,10 @@ export async function GET(req: NextRequest) {
   const nif = req.nextUrl.searchParams.get("nif")?.replace(/\s/g, "");
 
   if (!nif || !NIF_REGEX.test(nif)) {
-    return NextResponse.json({ valid: false, error: "Formato de NIF inválido" }, { status: 400 });
+    return NextResponse.json({ valid: false, error: "Formato de BI inválido" }, { status: 400 });
   }
 
-  // Verificar cache local (24h)
+  // Cache local (24h)
   const now = new Date();
   try {
     const cached = await (prisma as any).nifCache?.findUnique({ where: { nif } });
@@ -61,15 +55,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         cached.valid
           ? { valid: true, nome: cached.nome }
-          : { valid: false, error: "NIF não encontrado. Verifique o número." },
+          : { valid: false, error: "BI não encontrado. Verifique o número." },
       );
     }
-  } catch { /* modelo ainda não migrado ou BD indisponível — avançar */ }
+  } catch { /* cache indisponível — avançar */ }
 
-  // Proxy para digital.ao
+  // Chamar API da SME
   let rawBody: string;
   try {
-    rawBody = await fetchDigitalAo(nif);
+    rawBody = await fetchSme(nif);
   } catch (err: unknown) {
     const isTimeout = err instanceof Error && err.message === "timeout";
     return NextResponse.json(
@@ -83,28 +77,25 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Fazer parse da resposta
   let json: Record<string, unknown>;
   try {
     json = JSON.parse(rawBody);
   } catch {
     return NextResponse.json(
-      { valid: false, error: "Erro ao verificar NIF. Tente novamente." },
+      { valid: false, error: "Erro ao verificar BI. Tente novamente." },
       { status: 503 },
     );
   }
 
-  // A API pode devolver "success" (correto) ou "sucess" (typo documentado)
-  const isSuccess = json.success === true || json.sucess === true;
-
-  // data pode ser objeto {nome, numero} ou array [{nome, numero}]
-  const dataRaw  = json.data;
-  const dataItem = Array.isArray(dataRaw) ? dataRaw[0] : dataRaw;
-  const nome     = typeof dataItem?.nome === "string" ? dataItem.nome.trim() : "";
+  const isSuccess = json.sucess === true || json.success === true;
+  const data      = json.data as Record<string, unknown> | undefined;
+  const nome      = typeof data?.nome_completo === "string" ? data.nome_completo.trim()
+                  : typeof data?.nome          === "string" ? data.nome.trim()
+                  : "";
 
   const valid = isSuccess && nome !== "";
 
-  // Guardar em cache (best-effort, só se o modelo existir)
+  // Guardar em cache
   const expiresAt = new Date(Date.now() + CACHE_TTL_MS);
   try {
     await (prisma as any).nifCache?.upsert({
@@ -115,15 +106,7 @@ export async function GET(req: NextRequest) {
   } catch { /* best-effort */ }
 
   if (!valid) {
-    // Tentar extrair mensagem de erro da API
-    const apiMsg =
-      typeof json.message === "string" ? json.message :
-      typeof (json.error as any)?.message === "string" ? (json.error as any).message :
-      null;
-    return NextResponse.json({
-      valid: false,
-      error: "NIF não encontrado. Verifique o número.",
-    });
+    return NextResponse.json({ valid: false, error: "BI não encontrado. Verifique o número." });
   }
 
   return NextResponse.json({ valid: true, nome });

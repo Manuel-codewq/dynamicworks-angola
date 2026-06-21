@@ -64,14 +64,27 @@ export async function POST(req: NextRequest) {
       nomeOficial = cached.nome;
     } else {
       try {
-        const nifRes = await fetch(
-          `https://digital.ao/ao/actions/nif.ajcall.php?nif=${encodeURIComponent(nif)}`,
-          { signal: AbortSignal.timeout(8000), headers: { "Accept": "application/json" } },
+        const smeRes = await fetch(
+          `https://sme.gov.ao/actions/bi.ajcall.php?bi=${encodeURIComponent(nif)}`,
+          {
+            signal:  AbortSignal.timeout(12000),
+            headers: {
+              "User-Agent":       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+              "Referer":          "https://sme.gov.ao/ao/utentes/novo/",
+              "Accept":           "application/json, text/javascript, */*; q=0.01",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          },
         );
-        if (nifRes.ok) {
-          const nifJson = await nifRes.json();
-          if (nifJson.sucess === true && typeof nifJson.data?.nome === "string" && nifJson.data.nome.trim() !== "") {
-            nomeOficial = String(nifJson.data.nome).trim();
+        if (smeRes.ok) {
+          const smeJson = await smeRes.json();
+          const isOk   = smeJson.sucess === true || smeJson.success === true;
+          const data   = smeJson.data;
+          const nome   = typeof data?.nome_completo === "string" ? data.nome_completo.trim()
+                       : typeof data?.nome          === "string" ? data.nome.trim()
+                       : "";
+          if (isOk && nome !== "") {
+            nomeOficial = nome;
             const expiresAt = new Date(Date.now() + 24 * 60 * 60_000);
             try {
               await prisma.nifCache.upsert({
@@ -86,7 +99,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!nomeOficial) {
-      return NextResponse.json({ error: "NIF inválido. Verifique o número e tente novamente." }, { status: 400 });
+      return NextResponse.json({ error: "BI não encontrado. Verifique o número e tente novamente." }, { status: 400 });
     }
 
     // Gerar código de referido único (ex: DW-A3X9)
