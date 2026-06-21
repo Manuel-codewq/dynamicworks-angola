@@ -231,7 +231,9 @@ export default function AdminUsersPage() {
                           <span>
                             {u.name}
                             {u.role === "admin"    && <span style={{ marginLeft: 6, background: "rgba(239,68,68,0.15)",   color: "#ef4444", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>ADMIN</span>}
-                            {u.role === "formador" && <span style={{ marginLeft: 6, background: "rgba(56,189,248,0.15)", color: "#38bdf8", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>FORMADOR</span>}
+                            {u.role === "formador"  && <span style={{ marginLeft: 6, background: "rgba(56,189,248,0.15)",  color: "#38bdf8", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>FORMADOR</span>}
+                            {u.role === "trader"    && <span style={{ marginLeft: 6, background: "rgba(34,197,94,0.15)",   color: "#22c55e", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>TRADER</span>}
+                            {u.role === "marketing" && <span style={{ marginLeft: 6, background: "rgba(167,139,250,0.15)", color: "#a78bfa", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, letterSpacing: ".5px" }}>MARKETING</span>}
                           </span>
                           <span style={{ color: "#64748b", fontSize: 11, fontWeight: 400 }}>{u.province ?? "—"}</span>
                         </div>
@@ -312,16 +314,28 @@ export default function AdminUsersPage() {
                               <Shield size={11} /> Admin
                             </button>
                           )}
-                          {u.role !== "admin" && u.role !== "formador" && (
+                          {!["admin","formador","trader","marketing"].includes(u.role) && (
                             <button onClick={() => { if (confirm(`Tornar ${u.name} formador?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "formador" }); }} disabled={busy}
                               style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(56,189,248,0.1)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
                               <Shield size={11} /> Formador
                             </button>
                           )}
-                          {u.role === "formador" && (
-                            <button onClick={() => { if (confirm(`Remover role de formador de ${u.name}?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "user" }); }} disabled={busy}
+                          {!["admin","formador","trader","marketing"].includes(u.role) && (
+                            <button onClick={() => { if (confirm(`Tornar ${u.name} trader?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "trader" }); }} disabled={busy}
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              <Shield size={11} /> Trader
+                            </button>
+                          )}
+                          {!["admin","formador","trader","marketing"].includes(u.role) && (
+                            <button onClick={() => { if (confirm(`Tornar ${u.name} marketing?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "marketing" }); }} disabled={busy}
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              <Shield size={11} /> Marketing
+                            </button>
+                          )}
+                          {["formador","trader","marketing"].includes(u.role) && (
+                            <button onClick={() => { if (confirm(`Remover role de ${u.name}?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "user" }); }} disabled={busy}
                               style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
-                              <Shield size={11} /> Rem. Formador
+                              <Shield size={11} /> Remover role
                             </button>
                           )}
                           {u.kycSubmission !== null && u.kycStatus === "pending" && (

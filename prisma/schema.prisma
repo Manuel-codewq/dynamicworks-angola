@@ -48,6 +48,8 @@ model User {
   genero            String?
   naturalidade      String?
   formadorReports   FormadorReport[]
+  traderReports     TraderReport[]
+  marketingReports  MarketingReport[]
   accessLogs        AccessLog[]
   copyFollowing     CopyFollow[]            @relation("CopyFollower")
   copyTrader        CopyTrader?
@@ -392,11 +394,52 @@ model FormadorReport {
   feito           String   // O que foi feito hoje
   videoPublicado  Boolean  @default(false)
   videoTitulo     String?
-  reacoes         Int?     // número de reacções no grupo
-  duvidasMembros  String?  // dúvidas mais frequentes
-  planoAmanha     String?  // plano para amanhã
+  reacoes         Int?
+  duvidasMembros  String?
+  planoAmanha     String?
+  imagemProva     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model TraderReport {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            String
+  operacoes       Int?
+  lucro           Float?
+  paresNegociados String?
+  estrategia      String?
+  observacoes     String?
+  planoAmanha     String?
+  imagemProva     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model MarketingReport {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             String
+  conteudoCriado   String?
+  plataforma       String?
+  visualizacoes    Int?
+  leadsGerados     Int?
+  proximoConteudo  String?
+  observacoes      String?
+  imagemProva      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@unique([userId, date])
   @@index([userId])
