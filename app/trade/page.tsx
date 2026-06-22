@@ -2212,6 +2212,7 @@ export default function TradePage() {
   useEffect(() => {
     if (!botAutoTrade || !botEnabled || !botSignal) return;
     if (botSignal === prevBotSignal.current) return;
+    if (activeTradesRef.current.length > 0) return; // aguarda fechar trade activo
     prevBotSignal.current = botSignal;
     openTrade(botSignal === "ALTA" ? "call" : "put");
   }, [botSignal, botAutoTrade, botEnabled]);
