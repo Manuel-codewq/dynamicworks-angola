@@ -75,6 +75,7 @@ const DW_ANIM_CSS = `
 .dw-ping::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: dwPing 1.8s cubic-bezier(0,0,0.2,1) infinite; }
 @media (prefers-reduced-motion: reduce) { .dw-stagger > *, .dw-ping::after { animation: none !important; } }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }
 `;
 
 
@@ -210,6 +211,7 @@ export default function TradePage() {
   const [walletLoading,   setWalletLoading]   = useState(false);
   const [soundOn,         setSoundOn]         = useState(true);
   const [traderStats,     setTraderStats]     = useState<{ today: { real: { pnl: number; wins: number; losses: number; total: number }; demo: { pnl: number; wins: number; losses: number; total: number } }; allTime: { real: { pnl: number; wins: number; losses: number; total: number }; demo: { pnl: number; wins: number; losses: number; total: number } } } | null>(null);
+  const [panelCollapsed,  setPanelCollapsed]  = useState(true);
   const tradeMarkersRef   = useRef<any>(null);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
@@ -3647,7 +3649,9 @@ export default function TradePage() {
   if (isMobile) {
     const TOPBAR_H      = 48;
     const TF_H          = 36;
-    const TRADEPANEL_H  = (activeAccount === "real" || activeAccount === "tournament") ? 225 : 185;
+    const TRADEPANEL_COLLAPSED = 120;
+    const TRADEPANEL_EXPANDED  = 200;
+    const TRADEPANEL_H  = panelCollapsed ? TRADEPANEL_COLLAPSED : TRADEPANEL_EXPANDED;
     const BOTTOMNAV_H   = 52;
     const OPSPANEL_H    = 230;
     const CONTENT_TOP   = TOPBAR_H + TF_H;
@@ -3849,7 +3853,7 @@ export default function TradePage() {
         {leftPanel && renderSlideInPanel()}
 
         {/* ── Chart ── */}
-        <div data-tour="dw-chart" style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden" }}>
+        <div data-tour="dw-chart" style={{ position: "fixed", top: chartTop, left: 0, right: 0, height: chartH, background: "#070d1c", overflow: "hidden", transition: "height 0.2s ease-out" }}>
           <div ref={chartRef}
             style={{ width: "100%", height: "100%", cursor: activeTool ? "crosshair" : draggingHandle.current ? "grabbing" : draggingHLine.current ? "ns-resize" : "default" }}
             onMouseDown={e => onChartPointerDown(e.clientY)}
@@ -4025,66 +4029,84 @@ export default function TradePage() {
               </div>
             )}
 
-            <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#161a26", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", gap: 0 }}>
+            <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, height: TRADEPANEL_H, zIndex: 110, background: "#161a26", borderTop: "1px solid #1a2540", display: "flex", flexDirection: "column", transition: "height 0.2s ease-out" }}>
 
-              {/* Row 1 — Par + Payout */}
-              <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px 0" }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: priceUp ? "#0ecb81" : "#f6465d", flexShrink: 0 }} />
-                <span style={{ color: "#94a3b8", fontWeight: 700, fontSize: 11 }}>{selectedPair?.label}</span>
-                <span style={{ background: "rgba(245,166,35,0.12)", color: "#f5a623", fontWeight: 800, fontSize: 10, borderRadius: 4, padding: "1px 5px" }}>{Math.round(currentPayout * 100)}%</span>
-                <span style={{ color: "#0ecb81", fontWeight: 700, fontSize: 10 }}>+{formatKz(payoutAmt)}</span>
+              {/* Toggle strip */}
+              <div onClick={() => setPanelCollapsed(v => !v)}
+                style={{ height: 28, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, cursor: "pointer", borderBottom: "1px solid #1a2540" }}>
+                <span style={{ color: "#475569", fontSize: 11, fontWeight: 700 }}>
+                  {panelCollapsed ? "expandir opções" : "recolher opções"}
+                </span>
+                <ChevronUp size={12} color="#475569"
+                  style={{ transform: panelCollapsed ? "none" : "rotate(180deg)", transition: "transform 0.2s ease" }} />
               </div>
 
-              {/* Row 2 — Tempo + Investimento */}
-              <div style={{ display: "flex", gap: 6, padding: "5px 12px 0" }}>
+              {/* Campos de edição — Row 2 + Row 3 (animados) */}
+              <div style={{ overflow: "hidden", maxHeight: panelCollapsed ? 0 : 84, transition: "max-height 0.2s ease-out", flexShrink: 0 }}>
 
-                {/* Tempo — clique abre o sheet */}
-                <div onClick={() => setExpirySheetOpen(true)}
-                  style={{ flex: 1, background: "#0b1220", border: `1px solid ${comutacaoActive ? "rgba(99,102,241,0.5)" : "#1a2540"}`, borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
-                  <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Tempo</div>
-                  <div style={{ color: comutacaoActive ? "#a5b4fc" : timerColor, fontWeight: comutacaoActive ? 800 : 900, fontSize: comutacaoActive ? 13 : 17, fontVariantNumeric: "tabular-nums", letterSpacing: comutacaoActive ? 0 : 1, transition: "color 0.4s" }}>
-                    {comutacaoActive ? "⇄ VELA" : timerDisplay}
+                {/* Row 2 — Tempo + Investimento */}
+                <div style={{ display: "flex", gap: 6, padding: "5px 12px 0" }}>
+                  <div onClick={() => setExpirySheetOpen(true)}
+                    style={{ flex: 1, background: "#0b1220", border: `1px solid ${comutacaoActive ? "rgba(99,102,241,0.5)" : "#1a2540"}`, borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
+                    <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Tempo</div>
+                    <div style={{ color: comutacaoActive ? "#a5b4fc" : timerColor, fontWeight: comutacaoActive ? 800 : 900, fontSize: comutacaoActive ? 13 : 17, fontVariantNumeric: "tabular-nums", letterSpacing: comutacaoActive ? 0 : 1, transition: "color 0.4s" }}>
+                      {comutacaoActive ? "⇄ VELA" : timerDisplay}
+                    </div>
+                  </div>
+                  <div style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 9, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ flex: 1, minWidth: 0 }} onClick={() => { if (!amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}>
+                      <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Investimento</div>
+                      {amountEditing ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 2 }} onClick={e => e.stopPropagation()}>
+                          <input autoFocus type="number" min="1000" max="500000" value={amountInput}
+                            onChange={e => setAmountInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); } if (e.key === "Escape") setAmountEditing(false); }}
+                            onBlur={() => { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); }}
+                            style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }} />
+                          <span style={{ color: "#4b5563", fontSize: 9, flexShrink: 0 }}>Kz</span>
+                        </div>
+                      ) : (
+                        <div style={{ color: "#fff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => setAmount(a => Math.max(1000, a - 500))}
+                        style={{ width: 26, height: 26, background: "#1a2540", border: "none", borderRadius: 6, color: "#94a3b8", fontSize: 17, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
+                      <button onClick={() => setAmount(a => a + 500)}
+                        style={{ width: 26, height: 26, background: "#1a2540", border: "none", borderRadius: 6, color: "#94a3b8", fontSize: 17, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Investimento com +/- */}
-                <div style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 9, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ flex: 1, minWidth: 0 }} onClick={() => { if (!amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}>
-                    <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Investimento</div>
-                    {amountEditing ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 2 }} onClick={e => e.stopPropagation()}>
-                        <input autoFocus type="number" min="1000" max="500000" value={amountInput}
-                          onChange={e => setAmountInput(e.target.value)}
-                          onKeyDown={e => { if (e.key === "Enter") { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); } if (e.key === "Escape") setAmountEditing(false); }}
-                          onBlur={() => { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); }}
-                          style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }} />
-                        <span style={{ color: "#4b5563", fontSize: 9, flexShrink: 0 }}>Kz</span>
-                      </div>
-                    ) : (
-                      <div style={{ color: "#fff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => setAmount(a => Math.max(1000, a - 500))}
-                      style={{ width: 26, height: 26, background: "#1a2540", border: "none", borderRadius: 6, color: "#94a3b8", fontSize: 17, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
-                    <button onClick={() => setAmount(a => a + 500)}
-                      style={{ width: 26, height: 26, background: "#1a2540", border: "none", borderRadius: 6, color: "#94a3b8", fontSize: 17, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
-                  </div>
+                {/* Row 3 — Valores rápidos */}
+                <div style={{ display: "flex", gap: 5, padding: "5px 12px 0" }}>
+                  {QUICK_AMOUNTS.map(q => (
+                    <button key={q} onClick={() => setAmount(q)} style={{
+                      flex: 1, height: 24,
+                      background: amount === q ? "#f5a623" : "transparent",
+                      color:      amount === q ? "#11141d" : "#4b5563",
+                      border:     `1px solid ${amount === q ? "#f5a623" : "#1a2540"}`,
+                      borderRadius: 6, fontSize: 10, fontWeight: 800, cursor: "pointer",
+                      transition: "all 0.12s",
+                    }}>{q >= 1000 ? `${q / 1000}k` : q}</button>
+                  ))}
                 </div>
               </div>
 
-              {/* Row 3 — Valores rápidos */}
-              <div style={{ display: "flex", gap: 5, padding: "5px 12px 0" }}>
-                {QUICK_AMOUNTS.map(q => (
-                  <button key={q} onClick={() => setAmount(q)} style={{
-                    flex: 1, height: 24,
-                    background: amount === q ? "#f5a623" : "transparent",
-                    color:      amount === q ? "#11141d" : "#4b5563",
-                    border:     `1px solid ${amount === q ? "#f5a623" : "#1a2540"}`,
-                    borderRadius: 6, fontSize: 10, fontWeight: 800, cursor: "pointer",
-                    transition: "all 0.12s",
-                  }}>{q >= 1000 ? `${q / 1000}k` : q}</button>
-                ))}
+              {/* Pills de resumo — sempre visíveis, clicáveis para expandir */}
+              <div style={{ display: "flex", gap: 5, padding: "4px 12px", flexShrink: 0 }}>
+                <div style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Retorno</span>
+                  <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{Math.round(currentPayout * 100)}%</span>
+                </div>
+                <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: panelCollapsed ? "pointer" : "default" }}>
+                  <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo</span>
+                  <span style={{ color: comutacaoActive ? "#a5b4fc" : "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{comutacaoActive ? "⇄ VELA" : timerDisplay}</span>
+                </div>
+                <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: panelCollapsed ? "pointer" : "default" }}>
+                  <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor</span>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</span>
+                </div>
               </div>
 
               {/* Row 4 — ALTA + BAIXA com círculo BOT IA flutuante no centro */}
