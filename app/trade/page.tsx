@@ -3835,11 +3835,20 @@ export default function TradePage() {
 
           <NotificationBell />
 
-          <button data-tour="dw-account" onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "4px 9px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", flexShrink: 0 }}>
-            {activeAccount === "tournament" ? <Trophy size={11} color="#6366f1" /> : <Wallet size={11} color={activeAccount === "demo" ? "#f5a623" : "#0ecb81"} />}
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
-            <span style={{ background: activeAccount === "tournament" ? "#6366f1" : activeAccount === "demo" ? "#f5a623" : "#0ecb81", color: activeAccount === "tournament" ? "#fff" : "#11141d", borderRadius: 3, fontSize: 7, padding: "1px 4px", fontWeight: 900 }}>{activeAccount === "tournament" ? "Torneio" : activeAccount === "demo" ? "Demo" : "Real"}</span>
-          </button>
+          {(() => {
+            const narrow    = typeof window !== "undefined" && window.innerWidth < 380;
+            const acctColor = activeAccount === "tournament" ? "#a5b4fc" : activeAccount === "demo" ? "#f5a623" : "#0ecb81";
+            return (
+              <button data-tour="dw-account" onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "4px 7px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0 }}>
+                {activeAccount === "tournament" ? <Trophy size={10} color="#a5b4fc" style={{ flexShrink: 0 }} /> : <Wallet size={10} color={acctColor} style={{ flexShrink: 0 }} />}
+                <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                  <span style={{ color: acctColor, fontWeight: 800, fontSize: narrow ? 10 : 11 }}>{formatKz(Math.floor(displayBalance))}</span>
+                  <span style={{ color: "#475569", fontWeight: 500, fontSize: narrow ? 8 : 9 }}> · </span>
+                  <span style={{ color: "#94a3b8", fontWeight: 700, fontSize: narrow ? 8 : 9 }}>{activeAccount === "tournament" ? "TORNEIO" : activeAccount === "demo" ? "DEMO" : "REAL"}</span>
+                </span>
+              </button>
+            );
+          })()}
         </div>}
 
         {/* ── Timeframe strip ── */}
