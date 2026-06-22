@@ -118,6 +118,10 @@ export default function EquipaPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (area === "formacao" && !imagemProva) {
+      setMsg({ text: "A prova (print/screenshot) é obrigatória.", ok: false });
+      return;
+    }
     setSaving(true); setMsg(null);
     const endpoints: Record<Area, string> = { formacao: "/api/formador/report", trading: "/api/trader/report", marketing: "/api/marketing/report" };
     const bodies: Record<Area, object> = {
@@ -200,10 +204,21 @@ export default function EquipaPage() {
                 <input type="checkbox" id="vid" checked={videoPublicado} onChange={e => setVideoPublicado(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#f5a623", cursor: "pointer" }} />
                 <label htmlFor="vid" style={{ color: "#fff", fontSize: 14, cursor: "pointer" }}>Publiquei um vídeo hoje no grupo</label>
               </div>
-              {videoPublicado && <div style={{ marginBottom: 14 }}><label style={lbl}>Título do vídeo</label><input type="text" value={videoTitulo} onChange={e => setVideoTitulo(e.target.value)} placeholder="Ex: Como fazer depósito na Dynamic Works" style={inp} /></div>}
+              {videoPublicado && (
+                <div style={{ marginBottom: 14 }}>
+                  <label style={lbl}>Título do vídeo <span style={{ color: "#ef4444" }}>*</span></label>
+                  <input type="text" value={videoTitulo} onChange={e => setVideoTitulo(e.target.value)} required placeholder="Ex: Como fazer depósito na Dynamic Works" style={inp} />
+                </div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                <div><label style={lbl}>Reacções no grupo</label><input type="number" min={0} value={reacoes} onChange={e => setReacoes(e.target.value)} placeholder="Ex: 24" style={inp} /></div>
-                <div><label style={lbl}>Dúvidas mais frequentes</label><input type="text" value={duvidas} onChange={e => setDuvidas(e.target.value)} placeholder="Ex: Como levantar?" style={inp} /></div>
+                <div>
+                  <label style={lbl}>Reacções no grupo <span style={{ color: "#ef4444" }}>*</span></label>
+                  <input type="number" min={0} value={reacoes} onChange={e => setReacoes(e.target.value)} required placeholder="Ex: 24" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Dúvidas mais frequentes <span style={{ color: "#ef4444" }}>*</span></label>
+                  <input type="text" value={duvidas} onChange={e => setDuvidas(e.target.value)} required placeholder="Ex: Como levantar?" style={inp} />
+                </div>
               </div>
             </>)}
 
@@ -246,13 +261,13 @@ export default function EquipaPage() {
 
             {/* Plano amanhã — comum */}
             <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Plano para amanhã</label>
-              <input type="text" value={planoAmanha} onChange={e => setPlanoAmanha(e.target.value)} placeholder="O que vais fazer amanhã?" style={inp} />
+              <label style={lbl}>Plano para amanhã {area === "formacao" && <span style={{ color: "#ef4444" }}>*</span>}</label>
+              <input type="text" value={planoAmanha} onChange={e => setPlanoAmanha(e.target.value)} required={area === "formacao"} placeholder="O que vais fazer amanhã?" style={inp} />
             </div>
 
             {/* Upload de prova — comum */}
             <div style={{ marginBottom: 20 }}>
-              <label style={lbl}>Prova (print/screenshot)</label>
+              <label style={lbl}>Prova (print/screenshot) {area === "formacao" && <span style={{ color: "#ef4444" }}>*</span>}</label>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{ display: "none" }} />
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
