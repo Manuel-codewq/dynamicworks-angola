@@ -2217,6 +2217,18 @@ export default function TradePage() {
     openTrade(botSignal === "ALTA" ? "call" : "put");
   }, [botSignal, botAutoTrade, botEnabled]);
 
+  // Redimensiona o gráfico após a transição do painel (200ms) terminar
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!chartApiRef.current || !chartRef.current) return;
+      chartApiRef.current.applyOptions({
+        width:  chartRef.current.clientWidth,
+        height: chartRef.current.clientHeight,
+      });
+    }, 220);
+    return () => clearTimeout(t);
+  }, [panelCollapsed]);
+
   useEffect(() => {
     if (!botEnabled || botCountdown <= 0) return;
     const t = setInterval(() => setBotCountdown(v => Math.max(0, v - 1)), 1000);
@@ -4094,21 +4106,23 @@ export default function TradePage() {
                 </div>
               </div>
 
-              {/* Pills de resumo — sempre visíveis, clicáveis para expandir */}
-              <div style={{ display: "flex", gap: 5, padding: "4px 12px", flexShrink: 0 }}>
-                <div style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Retorno</span>
-                  <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{Math.round(currentPayout * 100)}%</span>
+              {/* Pills de resumo — só no estado recolhido, mutuamente exclusivas com os campos */}
+              {panelCollapsed && (
+                <div style={{ display: "flex", gap: 5, padding: "4px 12px", flexShrink: 0 }}>
+                  <div style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Retorno</span>
+                    <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{Math.round(currentPayout * 100)}%</span>
+                  </div>
+                  <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
+                    <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo</span>
+                    <span style={{ color: comutacaoActive ? "#a5b4fc" : "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{comutacaoActive ? "⇄ VELA" : timerDisplay}</span>
+                  </div>
+                  <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
+                    <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor</span>
+                    <span style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</span>
+                  </div>
                 </div>
-                <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: panelCollapsed ? "pointer" : "default" }}>
-                  <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo</span>
-                  <span style={{ color: comutacaoActive ? "#a5b4fc" : "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{comutacaoActive ? "⇄ VELA" : timerDisplay}</span>
-                </div>
-                <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: panelCollapsed ? "pointer" : "default" }}>
-                  <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor</span>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</span>
-                </div>
-              </div>
+              )}
 
               {/* Row 4 — ALTA + BAIXA com círculo BOT IA flutuante no centro */}
               <div style={{ position: "relative", display: "flex", gap: 4, padding: "2px 10px 4px", flex: 1 }}>
