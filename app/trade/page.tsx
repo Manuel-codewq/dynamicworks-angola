@@ -1541,7 +1541,7 @@ export default function TradePage() {
 
     const TOPBAR_H     = 48;
     const TF_H         = 36;
-    const TRADEPANEL_H = 148;
+    const TRADEPANEL_H = 128;
     const BOTTOMNAV_H  = 52;
 
     function initChart() {
@@ -4088,25 +4088,25 @@ export default function TradePage() {
               </div>
 
               {/* Row 4 — ALTA + BAIXA com círculo BOT IA flutuante no centro */}
-              <div style={{ position: "relative", display: "flex", gap: 4, padding: "3px 10px 5px", flex: 1 }}>
+              <div style={{ position: "relative", display: "flex", gap: 4, padding: "2px 10px 4px", flex: 1 }}>
 
                 {/* ALTA — position relative + zIndex 1 para ficar abaixo do círculo */}
                 <button className="dw-btn dw-btn-call" onClick={() => openTrade("call")} disabled={btnDisabled}
-                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(145deg,#16a34a,#0ecb81)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, padding: "10px 0", paddingRight: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(14,203,129,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
-                  {loading ? <span style={{ color: "#fff" }}>…</span> : <>
-                    <TrendingUp size={15} strokeWidth={2.5} />
-                    <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: 0.4 }}>ALTA</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.72 }}>{formatKz(amount)}</span>
+                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(145deg,#16a34a,#0ecb81)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "2px 0", paddingRight: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(14,203,129,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
+                  {loading ? <span style={{ color: "#fff", fontSize: 12 }}>…</span> : <>
+                    <TrendingUp size={11} strokeWidth={2.5} />
+                    <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 0.4, lineHeight: 1.2 }}>ALTA</span>
+                    <span style={{ fontSize: 8, fontWeight: 600, opacity: 0.72, lineHeight: 1.2 }}>{formatKz(amount)}</span>
                   </>}
                 </button>
 
                 {/* BAIXA — position relative + zIndex 1 */}
                 <button className="dw-btn dw-btn-put" onClick={() => openTrade("put")} disabled={btnDisabled}
-                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(145deg,#be123c,#f6465d)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, padding: "10px 0", paddingLeft: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(246,70,93,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
-                  {loading ? <span style={{ color: "#fff" }}>…</span> : <>
-                    <TrendingDown size={15} strokeWidth={2.5} />
-                    <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: 0.4 }}>BAIXA</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.72 }}>{formatKz(amount)}</span>
+                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(145deg,#be123c,#f6465d)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "2px 0", paddingLeft: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(246,70,93,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
+                  {loading ? <span style={{ color: "#fff", fontSize: 12 }}>…</span> : <>
+                    <TrendingDown size={11} strokeWidth={2.5} />
+                    <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 0.4, lineHeight: 1.2 }}>BAIXA</span>
+                    <span style={{ fontSize: 8, fontWeight: 600, opacity: 0.72, lineHeight: 1.2 }}>{formatKz(amount)}</span>
                   </>}
                 </button>
 
