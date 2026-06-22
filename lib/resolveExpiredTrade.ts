@@ -11,7 +11,14 @@ const SYNTHETIC_SYMBOLS = new Set([
 ]);
 
 async function getClosePriceForAsset(asset: string, symbol?: string | null): Promise<number | null> {
-  // Todos os pares: PriceCandle DB → Deriv WS
+  // 1ª prioridade: tick ao vivo da Deriv — mesmo preço que o gráfico mostra ao utilizador
+  const isSynthetic = typeof symbol === "string" && SYNTHETIC_SYMBOLS.has(symbol);
+  try {
+    const livePrice = await getDerivPrice(asset, !isSynthetic);
+    if (livePrice && livePrice > 0) return livePrice;
+  } catch { /* fallback para DB */ }
+
+  // Fallback: última PriceCandle registada (caso a Deriv WS esteja indisponível)
   try {
     const ninetySecsAgo = new Date(Date.now() - 90_000);
     const candle = await prisma.priceCandle.findFirst({
@@ -20,9 +27,9 @@ async function getClosePriceForAsset(asset: string, symbol?: string | null): Pro
       select:  { close: true },
     });
     if (candle?.close && candle.close > 0) return candle.close;
-  } catch { /* ignora erros de DB */ }
-  const isSynthetic = typeof symbol === "string" && SYNTHETIC_SYMBOLS.has(symbol);
-  return getDerivPrice(asset, !isSynthetic);
+  } catch { /* ignora */ }
+
+  return null;
 }
 
 // Empates removidos — qualquer movimento determina win ou loss
