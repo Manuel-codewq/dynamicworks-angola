@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createHash } from "crypto";
 
-const ALLOWED_FOLDERS = ["avatars", "kyc"] as const;
+const ALLOWED_FOLDERS = ["avatars", "kyc", "provas"] as const;
 type UploadFolder = typeof ALLOWED_FOLDERS[number];
 
 const ALLOWED_MIME_PREFIXES = [

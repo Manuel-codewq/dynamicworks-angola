@@ -100,13 +100,18 @@ export default function EquipaPage() {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setMsg({ text: "Imagem demasiado grande (máx. 5MB)", ok: false }); return; }
+    if (file.size > 2 * 1024 * 1024) { setMsg({ text: "Imagem demasiado grande (máx. 2MB)", ok: false }); return; }
     setUploading(true);
-    const fd = new FormData(); fd.append("file", file); fd.append("folder", "provas");
-    const res  = await fetch("/api/upload", { method: "POST", body: fd });
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const res  = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file: base64, folder: "provas" }) });
     const data = await res.json();
     if (data.url) { setImagemProva(data.url); setMsg({ text: "Prova carregada!", ok: true }); }
-    else setMsg({ text: "Erro ao carregar imagem", ok: false });
+    else setMsg({ text: data.error || "Erro ao carregar imagem", ok: false });
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   }
