@@ -24,14 +24,16 @@ export async function GET() {
       userId: session.user.id,
       tournament: { status: "active" },
     },
-    select: { tournamentBalance: true, tournament: { select: { name: true } } },
+    select: { tournamentBalance: true, tournament: { select: { name: true, isDemo: true } } },
   });
+  let tournamentIsDemo: boolean | null = null;
   if (tp) {
     tournamentBalance = tp.tournamentBalance;
     tournamentName    = tp.tournament.name;
+    tournamentIsDemo  = tp.tournament.isDemo;
   }
 
-  return NextResponse.json({ ...user, tournamentBalance, tournamentName });
+  return NextResponse.json({ ...user, tournamentBalance, tournamentName, tournamentIsDemo });
 }
 
 export async function PATCH(req: NextRequest) {

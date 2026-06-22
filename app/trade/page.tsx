@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   TrendingUp, TrendingDown, ChevronDown, ChevronUp, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy, Check,
-  Clock, History, Headphones, MessageCircle, Shield, Gift, Copy,
+  Clock, History, Headphones, MessageCircle, Shield, Gift, Copy, Bot,
   PenLine, CandlestickChart, LineChart, AreaChart,
   Maximize2, Minimize2, Minus, Sliders, Trash2,
   Square, GitFork, BarChart, Activity,
@@ -67,6 +67,7 @@ const DW_ANIM_CSS = `
 .dw-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .dw-btn-call:hover:not(:disabled) { box-shadow: 0 6px 26px rgba(14,203,129,0.55) !important; }
 .dw-btn-put:hover:not(:disabled) { box-shadow: 0 6px 26px rgba(246,70,93,0.55) !important; }
+@keyframes dwBotPulse { 0%,100% { box-shadow: 0 4px 22px rgba(99,102,241,0.55); } 50% { box-shadow: 0 4px 32px rgba(99,102,241,0.9); } }
 .dw-chip { transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.1s ease; }
 .dw-chip:hover { border-color: #3a4360 !important; }
 .dw-chip:active { transform: scale(0.95); }
@@ -168,6 +169,16 @@ export default function TradePage() {
   const [demoBalance,       setDemoBalance]        = useState(10000);
   const [tournamentBalance, setTournamentBalance] = useState<number | null>(null);
   const [tournamentName,    setTournamentName]    = useState<string | null>(null);
+  const [tournamentIsDemo,  setTournamentIsDemo]  = useState<boolean | null>(null);
+  // Bot
+  const [botEnabled,    setBotEnabled]    = useState(false);
+  const [botSignal,     setBotSignal]     = useState<"ALTA" | "BAIXA" | null>(null);
+  const [botConfidence, setBotConfidence] = useState(0);
+  const [botCountdown,  setBotCountdown]  = useState(0);
+  const [showBotModal,  setShowBotModal]  = useState(false);
+  const [botAutoTrade,  setBotAutoTrade]  = useState(false);
+  const [botWinTarget,  setBotWinTarget]  = useState<number | "">(3); // meta de vitórias (obrigatório)
+  const [botWinCount,   setBotWinCount]   = useState(0);              // vitórias acumuladas
   const [activeTrades,      setActiveTrades]      = useState<ActiveTrade[]>([]);
   const [recentWins,        setRecentWins]        = useState<RecentWin[]>([]);
   const [recentWinsFilter,  setRecentWinsFilter]  = useState<"real" | "demo">("real");
@@ -1290,6 +1301,7 @@ export default function TradePage() {
       setBalance(d.balance); setDemoBalance(d.demoBalance); setIsDemo(d.isDemo);
       setTournamentBalance(d.tournamentBalance ?? null);
       setTournamentName(d.tournamentName ?? null);
+      setTournamentIsDemo(d.tournamentIsDemo ?? null);
     }
   }, []);
 
@@ -1529,7 +1541,7 @@ export default function TradePage() {
 
     const TOPBAR_H     = 48;
     const TF_H         = 36;
-    const TRADEPANEL_H = 185;
+    const TRADEPANEL_H = 148;
     const BOTTOMNAV_H  = 52;
 
     function initChart() {
@@ -2040,6 +2052,19 @@ export default function TradePage() {
           type: isWin ? "win" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);
+        // Contabiliza vitória do bot e verifica meta
+        if (isWin && botAutoTrade) {
+          setBotWinCount(prev => {
+            const next = prev + 1;
+            if (botWinTarget !== "" && next >= Number(botWinTarget)) {
+              setBotAutoTrade(false);
+              setBotEnabled(false);
+              setNotification({ msg: `Bot parou — meta de ${botWinTarget} vitórias atingida! 🎯`, type: "win" });
+              setTimeout(() => setNotification(null), 6000);
+            }
+            return next;
+          });
+        }
         fetchBalance();
       } else if (t?.status === "closed") {
         fetchBalance(); // trade antigo — actualiza saldo silenciosamente
@@ -2141,6 +2166,60 @@ export default function TradePage() {
     return false;
   }
 
+  // ── Bot: calcula sinal a cada 10 candles ─────────────────────────────────
+  const botCountdownRef = useRef(0);
+  useEffect(() => { botCountdownRef.current = botCountdown; }, [botCountdown]);
+
+  const calcBotSignal = useCallback(() => {
+    if (botCountdownRef.current > 0) return; // aguarda o sinal activo terminar
+    const data = candleDataRef.current;
+    if (data.length < 15) return;
+    const rsiValues = calcRSI(data, 14);
+    if (rsiValues.length === 0) return;
+    const rsi = rsiValues[rsiValues.length - 1].value;
+    let signal: "ALTA" | "BAIXA";
+    let confidence: number;
+    if (rsi < 30) {
+      signal = "ALTA";
+      confidence = Math.round(65 + ((30 - rsi) / 30) * 30);
+    } else if (rsi > 70) {
+      signal = "BAIXA";
+      confidence = Math.round(65 + ((rsi - 70) / 30) * 30);
+    } else {
+      const last3 = data.slice(-3);
+      const up = last3.filter(c => c.close > c.open).length;
+      signal = up >= 2 ? "ALTA" : "BAIXA";
+      confidence = Math.round(50 + Math.random() * 10);
+    }
+    setBotSignal(signal);
+    setBotConfidence(Math.min(95, confidence));
+    setBotCountdown(30);
+  }, []);
+
+  // Inicia sinal quando bot é activado; recalcula automaticamente quando countdown chega a 0
+  useEffect(() => {
+    if (!botEnabled) return;
+    if (botCountdown === 0) {
+      const t = setTimeout(calcBotSignal, 500);
+      return () => clearTimeout(t);
+    }
+  }, [botEnabled, botCountdown, calcBotSignal]);
+
+  // Auto-trade: executa quando botAutoTrade activo e novo sinal calculado
+  const prevBotSignal = useRef<"ALTA" | "BAIXA" | null>(null);
+  useEffect(() => {
+    if (!botAutoTrade || !botEnabled || !botSignal) return;
+    if (botSignal === prevBotSignal.current) return;
+    prevBotSignal.current = botSignal;
+    openTrade(botSignal === "ALTA" ? "call" : "put");
+  }, [botSignal, botAutoTrade, botEnabled]);
+
+  useEffect(() => {
+    if (!botEnabled || botCountdown <= 0) return;
+    const t = setInterval(() => setBotCountdown(v => Math.max(0, v - 1)), 1000);
+    return () => clearInterval(t);
+  }, [botEnabled, botCountdown]);
+
   const [showAccountModal, setShowAccountModal] = useState(false);
   // "real" | "demo" | "tournament" — conta activa para operar
   const [activeAccount, setActiveAccount] = useState<"real" | "demo" | "tournament">("demo");
@@ -2159,7 +2238,8 @@ export default function TradePage() {
   }, [isDemo, balance, demoBalance, tournamentBalance]);
 
   async function selectAccount(type: "real" | "demo" | "tournament") {
-    const demo = type !== "real";
+    // Torneio real → isDemo: false; torneio demo → isDemo: true
+    const demo = type === "demo" || (type === "tournament" && (tournamentIsDemo ?? false));
     if (isDemo !== demo) {
       const res = await fetch("/api/balance", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -2520,6 +2600,31 @@ export default function TradePage() {
           </div>
           <span style={{ color: "#f6465d", fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{100 - sentiment}%</span>
         </div>
+
+        {/* ── Botão BOT IA — apenas na conta real / torneio ── */}
+        {(activeAccount === "real" || activeAccount === "tournament") && (
+          <button
+            className="dw-btn"
+            onClick={() => { setShowBotModal(true); if (botCountdown === 0) calcBotSignal(); }}
+            style={{
+              width: "100%", height: compact ? 50 : 54, border: "none", borderRadius: 10,
+              background: botEnabled
+                ? (botSignal === "ALTA" ? "linear-gradient(135deg,#0ea5e9 0%,#0ecb81 100%)" : botSignal === "BAIXA" ? "linear-gradient(135deg,#6366f1 0%,#f6465d 100%)" : "linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%)")
+                : "linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%)",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              boxShadow: botEnabled ? "0 4px 22px rgba(99,102,241,0.55)" : "0 4px 18px rgba(14,165,233,0.35)",
+              animation: botEnabled ? "dwBotPulse 2s ease-in-out infinite" : "none",
+              letterSpacing: 1, position: "relative", overflow: "hidden",
+            }}
+          >
+            <Bot size={18} color="#fff" strokeWidth={2.5} />
+            <span style={{ color: "#fff", fontWeight: 900, fontSize: compact ? 14 : 15 }}>
+              {botEnabled && botSignal ? `${botSignal === "ALTA" ? "▲" : "▼"} ${botSignal} · ${botConfidence}%` : "BOT IA"}
+            </span>
+            {botEnabled && <span style={{ position: "absolute", right: 12, color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700 }}>{botCountdown}s</span>}
+          </button>
+        )}
 
         <button className="dw-btn dw-btn-put" onClick={() => openTrade("put")} disabled={btnDisabled} style={{
           width: "100%", height: compact ? 50 : 54,
@@ -3542,7 +3647,7 @@ export default function TradePage() {
   if (isMobile) {
     const TOPBAR_H      = 48;
     const TF_H          = 36;
-    const TRADEPANEL_H  = 185;
+    const TRADEPANEL_H  = (activeAccount === "real" || activeAccount === "tournament") ? 225 : 185;
     const BOTTOMNAV_H   = 52;
     const OPSPANEL_H    = 230;
     const CONTENT_TOP   = TOPBAR_H + TF_H;
@@ -3562,6 +3667,129 @@ export default function TradePage() {
         {/* Modal de selecção de conta — bottom sheet mobile / dropdown desktop */}
         {accountModalJSX}
         {accountToastJSX}
+
+        {/* ── Modal do Bot IA ── */}
+        {showBotModal && (
+          <div onMouseDown={() => setShowBotModal(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(3px)" }}>
+            <div onMouseDown={e => e.stopPropagation()}
+              style={{ background: "#141824", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "0 0 32px", animation: "slideUpModal 0.25s cubic-bezier(0.32,0.72,0,1)", overflow: "hidden" }}>
+
+              {/* Header */}
+              <div style={{ padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 40, height: 4, background: "#262d40", borderRadius: 2 }} />
+              </div>
+              <div style={{ padding: "12px 20px 16px", borderBottom: "1px solid #1c2130", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#0ea5e9,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Bot size={20} color="#fff" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>BOT IA</div>
+                    <div style={{ color: "#475569", fontSize: 12 }}>Análise automática · RSI(14)</div>
+                  </div>
+                </div>
+                <button onClick={() => setShowBotModal(false)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 4 }}>✕</button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+                {/* Toggle ativar/desativar */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
+                  <div>
+                    <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{botEnabled ? "Bot activo" : "Bot inactivo"}</div>
+                    <div style={{ color: "#475569", fontSize: 12 }}>{botEnabled ? "A analisar o mercado em tempo real" : "Clica para activar o bot"}</div>
+                  </div>
+                  <div onClick={() => { setBotEnabled(v => { const next = !v; if (next) calcBotSignal(); else setBotSignal(null); return next; }); }}
+                    style={{ width: 48, height: 26, borderRadius: 13, background: botEnabled ? "#6366f1" : "#1e2d50", position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
+                    <div style={{ position: "absolute", top: 3, left: botEnabled ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
+                  </div>
+                </div>
+
+                {/* Sinal actual */}
+                {botEnabled && (
+                  <div style={{ background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
+                    <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, marginBottom: 10 }}>SINAL ACTUAL · {selectedPair?.label}</div>
+                    {botSignal ? (
+                      <>
+                        {/* Barra de confiança */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                          <div style={{ color: "#0ecb81", fontSize: 12, fontWeight: 700, minWidth: 36 }}>ALTA</div>
+                          <div style={{ flex: 1, height: 8, background: "#0d1117", borderRadius: 4, overflow: "hidden", display: "flex" }}>
+                            <div style={{ height: "100%", width: `${botSignal === "ALTA" ? botConfidence : 100 - botConfidence}%`, background: "linear-gradient(90deg,#0ecb81,#0aa56a)", transition: "width 0.6s ease", borderRadius: 4 }} />
+                          </div>
+                          <div style={{ color: "#f6465d", fontSize: 12, fontWeight: 700, minWidth: 48, textAlign: "right" }}>BAIXA</div>
+                        </div>
+                        {/* Sinal em destaque */}
+                        <div style={{ textAlign: "center", padding: "12px 0", background: botSignal === "ALTA" ? "rgba(14,203,129,0.08)" : "rgba(246,70,93,0.08)", border: `1px solid ${botSignal === "ALTA" ? "rgba(14,203,129,0.3)" : "rgba(246,70,93,0.3)"}`, borderRadius: 10, marginBottom: 12 }}>
+                          <div style={{ fontSize: 28, marginBottom: 4 }}>{botSignal === "ALTA" ? "▲" : "▼"}</div>
+                          <div style={{ color: botSignal === "ALTA" ? "#0ecb81" : "#f6465d", fontWeight: 900, fontSize: 22, letterSpacing: 2 }}>{botSignal}</div>
+                          <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Confiança: <span style={{ color: "#fff", fontWeight: 700 }}>{botConfidence}%</span></div>
+                          <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>Próximo sinal em <span style={{ color: "#6366f1", fontWeight: 700 }}>{botCountdown}s</span></div>
+                        </div>
+                        {/* Botão entrar */}
+                        <button onClick={() => { openTrade(botSignal === "ALTA" ? "call" : "put"); setShowBotModal(false); }}
+                          disabled={loading || currentPrice === 0}
+                          style={{ width: "100%", padding: "14px 0", background: botSignal === "ALTA" ? "linear-gradient(135deg,#0aa56a,#0ecb81)" : "linear-gradient(135deg,#d92f44,#f6465d)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 900, fontSize: 16, letterSpacing: 1, cursor: loading || currentPrice === 0 ? "not-allowed" : "pointer", opacity: loading || currentPrice === 0 ? 0.5 : 1 }}>
+                          {botSignal === "ALTA" ? "▲ ENTRAR ALTA" : "▼ ENTRAR BAIXA"} · {formatKz(amount)}
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ textAlign: "center", padding: "20px 0", color: "#475569", fontSize: 13 }}>A analisar mercado...</div>
+                    )}
+                  </div>
+                )}
+
+                {/* Meta de vitórias (obrigatório para auto-trade) */}
+                {botEnabled && (
+                  <div style={{ background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                      <Trophy size={14} color="#f5a623" />
+                      <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Meta de vitórias</span>
+                      <span style={{ background: "rgba(246,70,93,0.15)", color: "#f6465d", fontSize: 9, fontWeight: 800, borderRadius: 4, padding: "1px 5px" }}>OBRIGATÓRIO</span>
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 11, marginBottom: 10 }}>
+                      O bot pára automaticamente ao atingir este número de vitórias. Protege a tua banca.
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {[1,2,3,5,10].map(n => (
+                        <button key={n} onClick={() => setBotWinTarget(n)}
+                          style={{ flex: 1, height: 34, background: botWinTarget === n ? "linear-gradient(135deg,#f5a623,#e8940f)" : "#111827", border: `1px solid ${botWinTarget === n ? "#f5a623" : "#262d40"}`, borderRadius: 8, color: botWinTarget === n ? "#0a0f1e" : "#64748b", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    {botAutoTrade && botWinCount > 0 && (
+                      <div style={{ marginTop: 8, color: "#0ecb81", fontSize: 12, fontWeight: 700, textAlign: "center" }}>
+                        {botWinCount} / {botWinTarget} vitórias
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Auto-trade */}
+                {botEnabled && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1c2130", borderRadius: 12, padding: "12px 16px" }}>
+                    <div>
+                      <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>Auto-trade</div>
+                      <div style={{ color: botWinTarget === "" ? "#f6465d" : "#475569", fontSize: 11 }}>
+                        {botWinTarget === "" ? "Define a meta de vitórias primeiro" : "Entra automaticamente quando o sinal aparecer"}
+                      </div>
+                    </div>
+                    <div onClick={() => {
+                        if (botWinTarget === "") return;
+                        setBotWinCount(0);
+                        setBotAutoTrade(v => !v);
+                      }}
+                      style={{ width: 40, height: 22, borderRadius: 11, background: botAutoTrade ? "#6366f1" : (botWinTarget === "" ? "#2d1a1a" : "#1e2d50"), position: "relative", cursor: botWinTarget === "" ? "not-allowed" : "pointer", transition: "background 0.2s", flexShrink: 0, opacity: botWinTarget === "" ? 0.5 : 1 }}>
+                      <div style={{ position: "absolute", top: 3, left: botAutoTrade ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Win/loss overlay */}
         {notification && (
@@ -3859,16 +4087,78 @@ export default function TradePage() {
                 ))}
               </div>
 
-              {/* Row 4 — ALTA + BAIXA */}
-              <div style={{ display: "flex", gap: 8, padding: "5px 12px 6px", flex: 1 }}>
+              {/* Row 4 — ALTA + BAIXA com círculo BOT IA flutuante no centro */}
+              <div style={{ position: "relative", display: "flex", gap: 4, padding: "3px 10px 5px", flex: 1 }}>
+
+                {/* ALTA — position relative + zIndex 1 para ficar abaixo do círculo */}
                 <button className="dw-btn dw-btn-call" onClick={() => openTrade("call")} disabled={btnDisabled}
-                  style={{ flex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(150deg,#15803d,#0ecb81)", color: "#fff", border: "none", borderRadius: 11, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: btnDisabled ? "none" : "0 3px 14px rgba(14,203,129,0.28)" }}>
-                  {loading ? "..." : <><TrendingUp size={16} strokeWidth={2.5} /><span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.1 }}><span>ALTA</span><span style={{ fontSize: 10, fontWeight: 700, opacity: 0.8 }}>{formatKz(amount)}</span></span></>}
+                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(145deg,#16a34a,#0ecb81)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, padding: "10px 0", paddingRight: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(14,203,129,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
+                  {loading ? <span style={{ color: "#fff" }}>…</span> : <>
+                    <TrendingUp size={15} strokeWidth={2.5} />
+                    <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: 0.4 }}>ALTA</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.72 }}>{formatKz(amount)}</span>
+                  </>}
                 </button>
+
+                {/* BAIXA — position relative + zIndex 1 */}
                 <button className="dw-btn dw-btn-put" onClick={() => openTrade("put")} disabled={btnDisabled}
-                  style={{ flex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(150deg,#d92f44,#f6465d)", color: "#fff", border: "none", borderRadius: 11, fontSize: 15, fontWeight: 900, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: btnDisabled ? "none" : "0 3px 14px rgba(246,70,93,0.28)" }}>
-                  {loading ? "..." : <><TrendingDown size={16} strokeWidth={2.5} /><span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.1 }}><span>BAIXA</span><span style={{ fontSize: 10, fontWeight: 700, opacity: 0.8 }}>{formatKz(amount)}</span></span></>}
+                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(145deg,#be123c,#f6465d)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, padding: "10px 0", paddingLeft: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(246,70,93,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
+                  {loading ? <span style={{ color: "#fff" }}>…</span> : <>
+                    <TrendingDown size={15} strokeWidth={2.5} />
+                    <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: 0.4 }}>BAIXA</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.72 }}>{formatKz(amount)}</span>
+                  </>}
                 </button>
+
+                {/* Círculo BOT IA — flutuante na junção ALTA/BAIXA */}
+                {(activeAccount === "real" || activeAccount === "tournament") && (
+                  <button
+                    onClick={() => { setShowBotModal(true); if (botCountdown === 0) calcBotSignal(); }}
+                    style={{
+                      position: "absolute",
+                      top: "50%", left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      // Anel externo: 56px, cor do painel cria o efeito de anel
+                      width: 56, height: 56,
+                      borderRadius: "50%",
+                      background: "#161a26",              // cor do painel = anel "invisível"
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      zIndex: 20,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: botEnabled
+                        ? "0 4px 20px rgba(99,102,241,0.6)"
+                        : "0 3px 12px rgba(0,0,0,0.5)",
+                      animation: botEnabled ? "dwBotPulse 2s ease-in-out infinite" : "none",
+                    }}>
+                    {/* Círculo interno: 48px, fundo azul opaco */}
+                    <div style={{
+                      width: 48, height: 48,
+                      borderRadius: "50%",
+                      background: botEnabled
+                        ? (botSignal === "ALTA" ? "#0ea5e9"
+                          : botSignal === "BAIXA" ? "#4f46e5"
+                          : "#2563eb")
+                        : "#1e3a8a",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                      position: "relative",
+                      transition: "background 0.3s",
+                    }}>
+                      {botEnabled && botCountdown > 0 && (
+                        <span style={{ position: "absolute", top: 4, right: 5, color: "rgba(255,255,255,0.5)", fontSize: 6, fontWeight: 900, lineHeight: 1 }}>{botCountdown}s</span>
+                      )}
+                      <Bot size={17} color="#fff" strokeWidth={2.5} />
+                      {botEnabled && botSignal ? (
+                        <span style={{ color: "#fff", fontWeight: 900, fontSize: 8, lineHeight: 1 }}>
+                          {botSignal === "ALTA" ? "▲" : "▼"} {botConfidence}%
+                        </span>
+                      ) : (
+                        <span style={{ color: "#93c5fd", fontWeight: 900, fontSize: 10, letterSpacing: 0.5, lineHeight: 1 }}>IA</span>
+                      )}
+                    </div>
+                  </button>
+                )}
               </div>
             </div>
 

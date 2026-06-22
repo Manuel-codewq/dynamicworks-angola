@@ -32,9 +32,10 @@ export default function AiSupportChat() {
     }
   }, [open, messages]);
 
+  const cleanPath = pathname.replace(/^\/[a-z]{2}(?=\/)/, "");
   if (status !== "authenticated") return null;
-  if (HIDDEN_EXACT.includes(pathname)) return null;
-  if (HIDDEN_PATHS.some(p => pathname.startsWith(p))) return null;
+  if (HIDDEN_EXACT.includes(cleanPath)) return null;
+  if (HIDDEN_PATHS.some(p => cleanPath.startsWith(p))) return null;
 
   async function send() {
     const text = input.trim();
@@ -191,11 +192,14 @@ export default function AiSupportChat() {
         className={!open ? "dw-chat-btn-pulse" : ""}
         style={{
           width: 52, height: 52, borderRadius: "50%",
-          background: open ? "#1e2d50" : "linear-gradient(135deg,#f5a623,#e8940f)",
-          border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          background: open ? "#1e2d50" : "#0a0f1e",
+          border: open ? "none" : "2px solid rgba(245,166,35,0.4)",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
           transition: "background .2s",
+          overflow: "hidden",
+          boxShadow: open ? "none" : "0 4px 20px rgba(0,0,0,0.5)",
         }}>
-        {open ? <X size={22} color="#94a3b8" /> : <MessageCircle size={24} color="#0a0f1e" strokeWidth={2.5} />}
+        {open ? <X size={22} color="#94a3b8" /> : <img src="/logo-icon.jpeg" alt="DW Suporte" style={{ width: 36, height: 36, objectFit: "contain", borderRadius: "50%" }} />}
       </button>
     </div>
   );
