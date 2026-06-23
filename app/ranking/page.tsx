@@ -280,6 +280,12 @@ export default function RankingPage() {
         {/* ── TOURNAMENTS TAB ── */}
         {tab === "tournaments" && (
           <div>
+            {(session?.user as any)?.role === "admin" && (
+              <button onClick={() => router.push("/ao/admin/tournaments")}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 12, padding: "13px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: "pointer", marginBottom: 20 }}>
+                <Trophy size={16} /> Criar / Gerir Torneios
+              </button>
+            )}
             {loading && <div style={{ textAlign: "center", color: "#64748b", padding: 40 }}>{t("common.loading")}</div>}
             {activeTournaments.length > 0 && (
               <div style={{ marginBottom: 24 }}>
@@ -380,47 +386,78 @@ function TournamentCard({ tour, router }: { tour: any; router: any }) {
     active:   { color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
     finished: { color: "#64748b", bg: "rgba(100,116,139,0.12)"},
   };
-  const s = STATUS_COLOR[tour.status] ?? STATUS_COLOR.upcoming;
+  const s      = STATUS_COLOR[tour.status] ?? STATUS_COLOR.upcoming;
   const prizes = Array.isArray(tour.prizes) ? tour.prizes : [];
+  const bannerColor = tour.bannerColor ?? "#f5a623";
   return (
     <div onClick={() => router.push(`/tournaments/${tour.id}`)}
-      style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "16px 18px", marginBottom: 10, cursor: "pointer" }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = "#f5a623")}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e2d50")}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Trophy size={16} color={tour.status === "active" ? "#22c55e" : "#f5a623"} />
-          <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{tour.name}</span>
+      style={{ background: "#111827", border: `1px solid ${bannerColor}33`, borderRadius: 14, marginBottom: 10, cursor: "pointer", overflow: "hidden" }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = bannerColor)}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = `${bannerColor}33`)}>
+
+      {/* Faixa de cor no topo */}
+      <div style={{ height: 4, background: `linear-gradient(90deg,${bannerColor},${bannerColor}44,transparent)` }} />
+
+      <div style={{ padding: "14px 16px" }}>
+        {/* Linha 1 — nome + status */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Trophy size={15} color={bannerColor} />
+            <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{tour.name}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ background: tour.isDemo ? "rgba(99,102,241,0.15)" : "rgba(14,203,129,0.12)", color: tour.isDemo ? "#a5b4fc" : "#0ecb81", borderRadius: 5, fontSize: 9, fontWeight: 800, padding: "2px 6px" }}>{tour.isDemo ? "DEMO" : "REAL"}</span>
+            <span style={{ background: s.bg, color: s.color, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>{STATUS_LABEL[tour.status] ?? tour.status}</span>
+            <ChevronRight size={14} color="#4b5563" />
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ background: s.bg, color: s.color, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>{STATUS_LABEL[tour.status] ?? tour.status}</span>
-          <ChevronRight size={16} color="#4b5563" />
-        </div>
-      </div>
-      {tour.description && <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 10px", lineHeight: 1.5 }}>{tour.description}</p>}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 12, color: "#64748b" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <Calendar size={12} />
-          {new Date(tour.startDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })} → {new Date(tour.endDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })}
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Users size={12} />{tour._count?.participants ?? 0} {t("ranking.participants")}</span>
-        {tour.status !== "finished" && (
-          <span style={{ color: tour.status === "active" ? "#22c55e" : "#f5a623" }}>
-            {tour.status === "active"
-              ? `${Math.max(0, Math.ceil((new Date(tour.endDate).getTime() - Date.now()) / 86400000))} ${t("ranking.daysLeft")}`
-              : `${t("ranking.startsIn")} ${Math.max(0, Math.ceil((new Date(tour.startDate).getTime() - Date.now()) / 86400000))} ${t("ranking.days")}`}
+
+        {tour.description && <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 10px", lineHeight: 1.5 }}>{tour.description}</p>}
+
+        {/* Linha 2 — meta-info */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, color: "#64748b", marginBottom: 10 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <Calendar size={11} />
+            {new Date(tour.startDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })} → {new Date(tour.endDate).toLocaleDateString("pt-AO", { day: "2-digit", month: "short" })}
           </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Users size={11} />{tour._count?.participants ?? 0}{tour.maxParticipants ? `/${tour.maxParticipants}` : ""} {t("ranking.participants")}</span>
+          {tour.status !== "finished" && (
+            <span style={{ color: tour.status === "active" ? "#22c55e" : "#f5a623", fontWeight: 700 }}>
+              {tour.status === "active"
+                ? `${Math.max(0, Math.ceil((new Date(tour.endDate).getTime() - Date.now()) / 86400000))} ${t("ranking.daysLeft")}`
+                : `${t("ranking.startsIn")} ${Math.max(0, Math.ceil((new Date(tour.startDate).getTime() - Date.now()) / 86400000))} ${t("ranking.days")}`}
+            </span>
+          )}
+        </div>
+
+        {/* Linha 3 — badges de entrada, banca, recarga */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: prizes.length > 0 ? 10 : 0 }}>
+          {tour.isFree
+            ? <span style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Entrada gratuita</span>
+            : <span style={{ background: "rgba(245,166,35,0.1)", color: "#f5a623", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Entrada {formatKz(tour.entryFee)}</span>
+          }
+          {tour.startingBalance > 0 && (
+            <span style={{ background: "rgba(99,102,241,0.1)", color: "#a5b4fc", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Banca {formatKz(tour.startingBalance)}</span>
+          )}
+          {tour.rechargeAmount > 0 && (
+            <span style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Recarga {formatKz(tour.rechargeAmount)}</span>
+          )}
+          {tour.prizePool > 0 && (
+            <span style={{ background: `rgba(${bannerColor === "#f5a623" ? "245,166,35" : "14,203,129"},0.1)`, color: bannerColor, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Prémio {formatKz(tour.prizePool)}</span>
+          )}
+        </div>
+
+        {/* Prémios top 3 */}
+        {prizes.length > 0 && (
+          <div style={{ display: "flex", gap: 6 }}>
+            {prizes.slice(0, 3).map((p: any, i: number) => (
+              <div key={i} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 6, padding: "3px 9px", fontSize: 11, color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#b45309", fontWeight: 700 }}>
+                {i + 1}º {(p.amount as number).toLocaleString("pt-PT")} Kz
+              </div>
+            ))}
+          </div>
         )}
       </div>
-      {prizes.length > 0 && (
-        <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          {prizes.slice(0, 3).map((p: any, i: number) => (
-            <div key={i} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 6, padding: "3px 9px", fontSize: 11, color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#b45309", fontWeight: 700 }}>
-              {i + 1}º {(p.amount as number).toLocaleString("pt-PT")} Kz
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

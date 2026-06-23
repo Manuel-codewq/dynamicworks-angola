@@ -24,16 +24,22 @@ export async function GET() {
       userId: session.user.id,
       tournament: { status: "active" },
     },
-    select: { tournamentBalance: true, tournament: { select: { name: true, isDemo: true } } },
+    select: { tournamentBalance: true, tournamentId: true, tournament: { select: { name: true, isDemo: true, rechargeAmount: true, startingBalance: true } } },
   });
-  let tournamentIsDemo: boolean | null = null;
+  let tournamentIsDemo:       boolean | null = null;
+  let tournamentId:           string  | null = null;
+  let tournamentRecharge:     number  | null = null;
+  let tournamentStartBalance: number  | null = null;
   if (tp) {
-    tournamentBalance = tp.tournamentBalance;
-    tournamentName    = tp.tournament.name;
-    tournamentIsDemo  = tp.tournament.isDemo;
+    tournamentBalance       = tp.tournamentBalance;
+    tournamentName          = tp.tournament.name;
+    tournamentIsDemo        = tp.tournament.isDemo;
+    tournamentId            = tp.tournamentId;
+    tournamentRecharge      = tp.tournament.rechargeAmount;
+    tournamentStartBalance  = tp.tournament.startingBalance;
   }
 
-  return NextResponse.json({ ...user, tournamentBalance, tournamentName, tournamentIsDemo });
+  return NextResponse.json({ ...user, tournamentBalance, tournamentName, tournamentIsDemo, tournamentId, tournamentRecharge, tournamentStartBalance });
 }
 
 export async function PATCH(req: NextRequest) {

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if ((session.user as any).role !== "admin") return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const { name, description, rules, startDate, endDate, prizePool, prizes, isFree, isDemo, entryFee, maxParticipants, bannerColor, startingBalance } = await req.json();
+  const { name, description, rules, startDate, endDate, prizePool, prizes, isFree, isDemo, entryFee, maxParticipants, bannerColor, startingBalance, rechargeAmount } = await req.json();
 
   if (!name || !startDate || !endDate) {
     return NextResponse.json({ error: "Nome, data de início e data de fim são obrigatórios" }, { status: 400 });
@@ -46,11 +46,12 @@ export async function POST(req: NextRequest) {
         maxParticipants: maxParticipants ? Number(maxParticipants) : null,
         bannerColor: bannerColor ?? "#f5a623",
         startingBalance: Number(startingBalance) || 10000,
+        rechargeAmount: Number(rechargeAmount) || 0,
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[tournaments/create]", err);
-    return NextResponse.json({ error: "Erro ao criar torneio. Tenta novamente." }, { status: 500 });
+    return NextResponse.json({ error: err?.message ?? "Erro ao criar torneio. Tenta novamente." }, { status: 500 });
   }
 
   // Notificar todos os utilizadores activos sobre o novo torneio

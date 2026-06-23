@@ -97,7 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
   const { name, description, rules, startDate, endDate, prizePool, prizes, status,
-          isFree, isDemo, entryFee, maxParticipants, bannerColor, startingBalance } = body;
+          isFree, isDemo, entryFee, maxParticipants, bannerColor, startingBalance, rechargeAmount } = body;
 
   // Fetch current tournament to check if we're transitioning to "finished"
   const current = await prisma.tournament.findUnique({
@@ -127,6 +127,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(maxParticipants  !== undefined && { maxParticipants: maxParticipants ? Number(maxParticipants) : null }),
       ...(bannerColor      && { bannerColor }),
       ...(startingBalance  !== undefined && { startingBalance: Number(startingBalance) || 10000 }),
+      ...(rechargeAmount   !== undefined && { rechargeAmount: Number(rechargeAmount) || 0 }),
     },
   });
 

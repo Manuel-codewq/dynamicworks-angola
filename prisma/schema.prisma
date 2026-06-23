@@ -272,6 +272,7 @@ model Tournament {
   rules           String?
   isDemo          Boolean                 @default(false)
   startingBalance Float                   @default(10000)
+  rechargeAmount  Float                   @default(0)
   participants    TournamentParticipant[]
 
   @@index([status, startDate])

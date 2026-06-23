@@ -168,9 +168,13 @@ export default function TradePage() {
   const [isDemo,            setIsDemo]            = useState(true);
   const [balance,           setBalance]           = useState(10000);
   const [demoBalance,       setDemoBalance]        = useState(10000);
-  const [tournamentBalance, setTournamentBalance] = useState<number | null>(null);
-  const [tournamentName,    setTournamentName]    = useState<string | null>(null);
-  const [tournamentIsDemo,  setTournamentIsDemo]  = useState<boolean | null>(null);
+  const [tournamentBalance,      setTournamentBalance]      = useState<number | null>(null);
+  const [tournamentName,         setTournamentName]         = useState<string | null>(null);
+  const [tournamentIsDemo,       setTournamentIsDemo]       = useState<boolean | null>(null);
+  const [tournamentId,           setTournamentId]           = useState<string | null>(null);
+  const [tournamentRecharge,     setTournamentRecharge]     = useState<number | null>(null);
+  const [tournamentStartBalance, setTournamentStartBalance] = useState<number | null>(null);
+  const [tournamentRecharging,   setTournamentRecharging]   = useState(false);
   // Bot
   const [botEnabled,    setBotEnabled]    = useState(false);
   const [botSignal,     setBotSignal]     = useState<"ALTA" | "BAIXA" | null>(null);
@@ -1304,6 +1308,9 @@ export default function TradePage() {
       setTournamentBalance(d.tournamentBalance ?? null);
       setTournamentName(d.tournamentName ?? null);
       setTournamentIsDemo(d.tournamentIsDemo ?? null);
+      setTournamentId(d.tournamentId ?? null);
+      setTournamentRecharge(d.tournamentRecharge ?? null);
+      setTournamentStartBalance(d.tournamentStartBalance ?? null);
     }
   }, []);
 
@@ -2117,6 +2124,7 @@ export default function TradePage() {
           expirySecs:      comutacaoActive ? Math.max(30, candleRemSecs) : expiry.secs,
           entryPrice:      currentPrice || 0,
           skipTournament:  activeAccount !== "tournament",
+          tournamentId:    activeAccount === "tournament" ? (tournamentId ?? undefined) : undefined,
         }),
       });
       const receivedAt = Date.now();
@@ -2166,6 +2174,28 @@ export default function TradePage() {
     } catch {}
     setDemoReloading(false);
     return false;
+  }
+
+  async function rechargeTournament() {
+    if (!tournamentId) return;
+    setTournamentRecharging(true);
+    try {
+      const res = await fetch("/api/tournaments/recharge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tournamentId }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        setTournamentBalance(d.tournamentBalance);
+        if (tournamentIsDemo) setDemoBalance(b => b - (tournamentRecharge ?? 0));
+        else setBalance(b => b - (tournamentRecharge ?? 0));
+      } else {
+        setNotification({ msg: d.error ?? "Erro ao recarregar banca.", type: "info" });
+        setTimeout(() => setNotification(null), 4000);
+      }
+    } catch {}
+    setTournamentRecharging(false);
   }
 
   // ── Bot: calcula sinal a cada 10 candles ─────────────────────────────────
@@ -2585,6 +2615,18 @@ export default function TradePage() {
           RETORNO POTENCIAL · PAYOUT {Math.round(currentPayout * 100)}%
         </div>
       </div>
+
+      {/* Banca do torneio esgotada — banner de recarga (desktop) */}
+      {activeAccount === "tournament" && tournamentBalance !== null && tournamentBalance <= 0 && tournamentRecharge && tournamentRecharge > 0 && (
+        <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "12px 14px", marginBottom: 4 }}>
+          <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 13, marginBottom: 4 }}>Banca do torneio esgotada!</div>
+          <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 10 }}>Paga {formatKz(tournamentRecharge ?? 0)} para repor {formatKz(tournamentStartBalance ?? 0)} e continuar.</div>
+          <button onClick={rechargeTournament} disabled={tournamentRecharging}
+            style={{ width: "100%", background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 8, padding: "10px", color: "#0a0f1e", fontWeight: 900, fontSize: 13, cursor: tournamentRecharging ? "not-allowed" : "pointer", opacity: tournamentRecharging ? 0.7 : 1 }}>
+            {tournamentRecharging ? "A processar..." : `Recarregar por ${formatKz(tournamentRecharge ?? 0)}`}
+          </button>
+        </div>
+      )}
 
       {/* ── ALTA / sentimento / BAIXA (empilhados, estilo corretora) ── */}
       {(() => {
@@ -4130,6 +4172,20 @@ export default function TradePage() {
                     <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor</span>
                     <span style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</span>
                   </div>
+                </div>
+              )}
+
+              {/* Banca do torneio esgotada — banner de recarga */}
+              {activeAccount === "tournament" && tournamentBalance !== null && tournamentBalance <= 0 && tournamentRecharge && tournamentRecharge > 0 && (
+                <div style={{ margin: "2px 10px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexShrink: 0 }}>
+                  <div>
+                    <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 11 }}>Banca esgotada!</div>
+                    <div style={{ color: "#94a3b8", fontSize: 9 }}>Recarrega por {formatKz(tournamentRecharge)} para continuar</div>
+                  </div>
+                  <button onClick={rechargeTournament} disabled={tournamentRecharging}
+                    style={{ background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 7, padding: "6px 12px", color: "#0a0f1e", fontWeight: 900, fontSize: 11, cursor: tournamentRecharging ? "not-allowed" : "pointer", flexShrink: 0 }}>
+                    {tournamentRecharging ? "..." : `Recarregar`}
+                  </button>
                 </div>
               )}
 

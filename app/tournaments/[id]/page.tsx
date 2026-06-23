@@ -28,6 +28,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const [joining,     setJoining]     = useState(false);
   const [joined,      setJoined]      = useState(false);
   const [confirmPaid, setConfirmPaid] = useState(false);
+  const [recharging,  setRecharging]  = useState(false);
   const [msg,         setMsg]         = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
@@ -70,6 +71,26 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       setMsg({ text: data.error ?? "Erro ao inscrever.", ok: false });
     }
     setJoining(false);
+  }
+
+  async function recharge() {
+    setRecharging(true); setMsg(null);
+    const res  = await fetch("/api/tournaments/recharge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tournamentId: id }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setTournamentBalance(data.tournamentBalance);
+      const balField = tournament.isDemo ? "demoBalance" : "balance";
+      if (tournament.isDemo) setDemoBalance(b => b - tournament.rechargeAmount);
+      else setBalance(b => b - tournament.rechargeAmount);
+      setMsg({ text: `Banca recarregada! Tens agora ${formatKz(data.tournamentBalance)} para operar.`, ok: true });
+    } else {
+      setMsg({ text: data.error ?? "Erro ao recarregar.", ok: false });
+    }
+    setRecharging(false);
   }
 
   if (loading || !tournament) {
@@ -194,13 +215,32 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               {tournamentBalance !== null && (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0a0f1e", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
                   <span style={{ color: "#94a3b8", fontSize: 13 }}>Saldo do torneio</span>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(tournamentBalance))}</span>
+                  <span style={{ color: tournamentBalance <= 0 ? "#ef4444" : "#fff", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>
+                    {tournamentBalance <= 0 ? "Banca esgotada" : formatKz(Math.floor(tournamentBalance))}
+                  </span>
                 </div>
               )}
-              <button onClick={() => router.push("/trade")}
-                style={{ width: "100%", background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: 10, padding: "13px", color: "#fff", fontWeight: 900, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <Zap size={17} /> Opera agora
-              </button>
+
+              {/* Banca esgotada — opção de recarga */}
+              {tournamentBalance !== null && tournamentBalance <= 0 && tournament.rechargeAmount > 0 && (
+                <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "14px", marginBottom: 12 }}>
+                  <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 13, marginBottom: 6 }}>Banca esgotada!</div>
+                  <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+                    Paga <strong style={{ color: "#f5a623" }}>{formatKz(tournament.rechargeAmount)}</strong> do teu {tournament.isDemo ? "saldo demo" : "saldo real"} para repor a banca de <strong style={{ color: "#fff" }}>{formatKz(tournament.startingBalance)}</strong> e continuar a competir.
+                  </div>
+                  <button onClick={recharge} disabled={recharging}
+                    style={{ width: "100%", background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 9, padding: "12px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: recharging ? "not-allowed" : "pointer", opacity: recharging ? 0.7 : 1 }}>
+                    {recharging ? "A processar..." : `Recarregar por ${formatKz(tournament.rechargeAmount)}`}
+                  </button>
+                </div>
+              )}
+
+              {(tournamentBalance === null || tournamentBalance > 0) && (
+                <button onClick={() => router.push("/trade")}
+                  style={{ width: "100%", background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: 10, padding: "13px", color: "#fff", fontWeight: 900, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <Zap size={17} /> Opera agora
+                </button>
+              )}
             </div>
           )}
 

@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { asset, symbol, direction, amount, expirySecs, skipTournament, entryPrice: clientEntryPrice } = body ?? {};
+  const { asset, symbol, direction, amount, expirySecs, skipTournament, tournamentId: clientTournamentId, entryPrice: clientEntryPrice } = body ?? {};
   const isSynthetic = typeof symbol === "string" && SYNTHETIC_SYMBOLS.has(symbol);
 
   if (!ALLOWED_ASSETS.has(asset)) {
@@ -194,7 +194,9 @@ export async function POST(req: NextRequest) {
   if (user.status === "blocked") return NextResponse.json({ error: "Conta bloqueada" }, { status: 403 });
 
   // Conta real exige pelo menos 1 depósito aprovado
-  if (!user.isDemo) {
+  // Torneio real (isDemo=false) bypassa este check — a taxa de inscrição já é a "entrada" real
+  const isTournamentReal = !skipTournament && !!clientTournamentId;
+  if (!user.isDemo && !isTournamentReal) {
     const hasDeposit = await prisma.transaction.findFirst({
       where: { userId: user.id, type: "deposit", status: "completed" },
       select: { id: true },
@@ -206,13 +208,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Verificar se utilizador está inscrito em torneio activo — respeita escolha de conta do utilizador
+  // Verificar se utilizador está inscrito em torneio activo
+  // O cliente envia tournamentId explícito para evitar ambiguidade entre torneios simultâneos
   const activeTournamentParticipant = skipTournament ? null : await prisma.tournamentParticipant.findFirst({
     where: {
       userId: user.id,
-      tournament: { status: "active", isDemo: user.isDemo, endDate: { gte: new Date() } },
+      tournament: {
+        status: "active",
+        endDate: { gte: new Date() },
+        ...(clientTournamentId ? { id: clientTournamentId } : {}),
+      },
     },
-    include: { tournament: { select: { id: true, startingBalance: true } } },
+    include: { tournament: { select: { id: true, startingBalance: true, isDemo: true } } },
   });
 
   const isTournamentTrade = !!activeTournamentParticipant;

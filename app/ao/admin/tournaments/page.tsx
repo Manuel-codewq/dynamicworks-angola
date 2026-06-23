@@ -85,6 +85,7 @@ const EMPTY_FORM = {
   prizePool: "", isFree: true, isDemo: false, entryFee: "",
   maxParticipants: "", bannerColor: "#f5a623",
   startingBalance: "10000",
+  rechargeAmount: "0",
   prizes: makeEmptyPrizes(3),
 };
 
@@ -153,12 +154,13 @@ export default function AdminTournamentsPage() {
   function openEdit(t: any) {
     setForm({
       name: t.name, description: t.description ?? "", rules: t.rules ?? "",
-      startDate: new Date(t.startDate).toISOString().slice(0, 16),
-      endDate:   new Date(t.endDate).toISOString().slice(0, 16),
+      startDate: new Date(t.startDate).toISOString().slice(0, 10),
+      endDate:   new Date(t.endDate).toISOString().slice(0, 10),
       prizePool: String(t.prizePool), isFree: t.isFree, isDemo: t.isDemo ?? false,
       entryFee: String(t.entryFee ?? 0),
       maxParticipants: t.maxParticipants ? String(t.maxParticipants) : "",
       startingBalance: String(t.startingBalance ?? 10000),
+      rechargeAmount: String(t.rechargeAmount ?? 0),
       bannerColor: t.bannerColor ?? "#f5a623",
       prizes: (t.prizes as any[]).length > 0
         ? t.prizes.map((p: any) => ({ position: p.position, amount: String(p.amount) }))
@@ -190,6 +192,7 @@ export default function AdminTournamentsPage() {
       isFree: form.isFree, isDemo: form.isDemo, entryFee: form.isFree ? 0 : Number(form.entryFee) || 0,
       maxParticipants: form.maxParticipants ? Number(form.maxParticipants) : null,
       startingBalance: Number(form.startingBalance) || 10000,
+      rechargeAmount: Number(form.rechargeAmount) || 0,
       bannerColor: form.bannerColor,
       prizes: form.prizes.filter(p => p.amount && Number(p.amount) > 0).map(p => ({ position: p.position, amount: Number(p.amount) })),
     };
@@ -419,7 +422,7 @@ export default function AdminTournamentsPage() {
                   {[{ label: "Data de início *", key: "startDate" }, { label: "Data de fim *", key: "endDate" }].map(f => (
                     <div key={f.key}>
                       <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>{f.label}</label>
-                      <input type="datetime-local" value={(form as any)[f.key]} onChange={e => setF(f.key, e.target.value)}
+                      <input type="date" value={(form as any)[f.key]} onChange={e => setF(f.key, e.target.value)}
                         style={{ width: "100%", background: "#0d1526", border: `1px solid ${errors[f.key] ? "#ef4444" : "#1e2d50"}`, borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                       {errors[f.key] && <p style={{ color: "#ef4444", fontSize: 11, margin: "4px 0 0" }}>{errors[f.key]}</p>}
                     </div>
@@ -562,14 +565,18 @@ export default function AdminTournamentsPage() {
                     <input type="number" value={form.maxParticipants} onChange={e => setF("maxParticipants", e.target.value)} placeholder="Sem limite"
                       style={{ width: "100%", background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
-                  {form.isDemo && (
-                    <div style={{ gridColumn: "1 / -1" }}>
-                      <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>Saldo inicial do torneio (Kz)</label>
-                      <input type="number" value={form.startingBalance} onChange={e => setF("startingBalance", e.target.value)} placeholder="10000"
-                        style={{ width: "100%", background: "#0d1526", border: "1px solid #f5a623", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-                      <p style={{ color: "#475569", fontSize: 11, margin: "5px 0 0" }}>Cada participante começa com este saldo — igual para todos, separado do saldo demo pessoal.</p>
-                    </div>
-                  )}
+                  <div>
+                    <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>Saldo inicial do torneio (Kz)</label>
+                    <input type="number" value={form.startingBalance} onChange={e => setF("startingBalance", e.target.value)} placeholder="20000"
+                      style={{ width: "100%", background: "#0d1526", border: "1px solid #f5a623", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <p style={{ color: "#475569", fontSize: 11, margin: "5px 0 0" }}>Banca inicial de cada participante — separada do saldo pessoal.</p>
+                  </div>
+                  <div>
+                    <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>Recarga de banca (Kz) — 0 = sem recarga</label>
+                    <input type="number" value={form.rechargeAmount} onChange={e => setF("rechargeAmount", e.target.value)} placeholder="0"
+                      style={{ width: "100%", background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <p style={{ color: "#475569", fontSize: 11, margin: "5px 0 0" }}>Se a banca do participante chegar a 0, pode pagar este valor para repor o saldo inicial.</p>
+                  </div>
                 </div>
               </div>
 
