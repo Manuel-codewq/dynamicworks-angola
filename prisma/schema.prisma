@@ -189,6 +189,10 @@ model Settings {
   dailyLossLimitPct        Float     @default(0)
   largeTradePushThreshold  Float     @default(0)
   largeWithdrawalThreshold Float     @default(0)
+  depositBonusActive       Boolean   @default(false)
+  depositBonusPct          Float     @default(10)
+  depositBonusMinAoa       Float     @default(50000)
+  depositBonusType         String    @default("first")
 }
 
 model PriceCandle {

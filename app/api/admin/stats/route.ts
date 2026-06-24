@@ -11,7 +11,9 @@ export async function GET() {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
-  // Use groupBy/aggregate instead of findMany to avoid loading millions of rows
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
   const [
     totalUsers,
     balanceAgg,
@@ -20,24 +22,44 @@ export async function GET() {
     todayTradesDemo,
     allTimeStats,
     todayStats,
+    newUsersToday,
+    pendingDeposits,
+    pendingWithdrawals,
+    todayDepositsAgg,
+    todayWithdrawalsAgg,
+    last7DaysTrades,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.aggregate({ _sum: { balance: true } }),
     prisma.user.aggregate({ _sum: { demoBalance: true } }),
     prisma.trade.count({ where: { createdAt: { gte: today }, isDemo: false } }),
     prisma.trade.count({ where: { createdAt: { gte: today }, isDemo: true  } }),
-    // All-time win counts via groupBy — O(1) query regardless of row count
     prisma.trade.groupBy({
       by: ["isDemo", "result"],
       where: { status: "closed" },
       _count: { id: true },
     }),
-    // Today's profit per account type
     prisma.trade.groupBy({
       by: ["isDemo", "result"],
       where: { status: "closed", closedAt: { gte: today } },
       _sum:   { amount: true },
       _count: { id: true },
+    }),
+    prisma.user.count({ where: { createdAt: { gte: today } } }),
+    prisma.transaction.count({ where: { type: "deposit",    status: "pending" } }),
+    prisma.transaction.count({ where: { type: "withdrawal", status: "pending" } }),
+    prisma.transaction.aggregate({
+      where: { type: "deposit",    status: "completed", createdAt: { gte: today } },
+      _sum: { amount: true }, _count: { id: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { type: "withdrawal", status: "completed", createdAt: { gte: today } },
+      _sum: { amount: true }, _count: { id: true },
+    }),
+    // P&L últimos 7 dias — buscar campos necessários para agrupar por dia no servidor
+    prisma.trade.findMany({
+      where: { status: "closed", isDemo: false, closedAt: { gte: sevenDaysAgo } },
+      select: { result: true, amount: true, closedAt: true },
     }),
   ]);
 
@@ -54,7 +76,6 @@ export async function GET() {
     const totalWins   = myAll.filter(r => r.result === "win").reduce((s, r) => s + r._count.id, 0);
     const winRate     = totalClosed > 0 ? Math.round((totalWins / totalClosed) * 100) : 0;
 
-    // Profit = sum of amounts where result=loss (broker keeps the bet)
     const platformProfit = myToday
       .filter(r => r.result === "loss")
       .reduce((s, r) => s + (r._sum.amount ?? 0), 0);
@@ -64,6 +85,25 @@ export async function GET() {
 
   const real = extractStats(allTimeStats, todayStats, todayTradesReal, false);
   const demo = extractStats(allTimeStats, todayStats, todayTradesDemo, true);
+
+  // Construir P&L por dia (últimos 7 dias)
+  const pnlMap: Record<string, number> = {};
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sevenDaysAgo);
+    d.setDate(d.getDate() + i);
+    pnlMap[d.toISOString().slice(0, 10)] = 0;
+  }
+  for (const t of last7DaysTrades) {
+    if (!t.closedAt) continue;
+    const day = new Date(t.closedAt).toISOString().slice(0, 10);
+    if (day in pnlMap && t.result === "loss") {
+      pnlMap[day] += t.amount;
+    }
+  }
+  const pnlLast7Days = Object.entries(pnlMap).map(([date, profit]) => ({
+    date,
+    profit: Math.round(profit),
+  }));
 
   return NextResponse.json({
     totalUsers,
@@ -77,5 +117,14 @@ export async function GET() {
     demoPlatformProfit:   demo.platformProfit,
     demoWinRate:          demo.winRate,
     demoTotalTrades:      demo.totalTrades,
+    // Novas métricas
+    newUsersToday,
+    pendingDeposits,
+    pendingWithdrawals,
+    todayDepositsAmount:      Math.round(todayDepositsAgg._sum.amount      ?? 0),
+    todayDepositsCount:       todayDepositsAgg._count.id,
+    todayWithdrawalsAmount:   Math.round(todayWithdrawalsAgg._sum.amount   ?? 0),
+    todayWithdrawalsCount:    todayWithdrawalsAgg._count.id,
+    pnlLast7Days,
   });
 }

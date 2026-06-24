@@ -44,6 +44,10 @@ export interface PlatformSettings {
   largeTradePushThreshold:  number;
   largeWithdrawalThreshold: number;
   dailyLossLimitPct:        number;
+  depositBonusActive:       boolean;
+  depositBonusPct:          number;
+  depositBonusMinAoa:       number;
+  depositBonusType:         "first" | "all";
 }
 
 // In-memory cache with 15s TTL — keeps DB load low while reflecting admin changes quickly
@@ -75,11 +79,15 @@ export async function getSettings(): Promise<PlatformSettings> {
       largeTradePushThreshold:  Number(row.largeTradePushThreshold ?? 0),
       largeWithdrawalThreshold: Number(row.largeWithdrawalThreshold ?? 0),
       dailyLossLimitPct:        Number(row.dailyLossLimitPct ?? 0),
+      depositBonusActive:       Boolean(row.depositBonusActive ?? false),
+      depositBonusPct:          Number(row.depositBonusPct ?? 10),
+      depositBonusMinAoa:       Number(row.depositBonusMinAoa ?? 50000),
+      depositBonusType:         (row.depositBonusType === "all" ? "all" : "first") as "first" | "all",
     };
     cacheAt = Date.now();
     return cache;
   } catch {
-    return { maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13, largeTradePushThreshold: 0, largeWithdrawalThreshold: 0, dailyLossLimitPct: 0 };
+    return { maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13, largeTradePushThreshold: 0, largeWithdrawalThreshold: 0, dailyLossLimitPct: 0, depositBonusActive: false, depositBonusPct: 10, depositBonusMinAoa: 50000, depositBonusType: "first" as const };
   }
 }
 
@@ -109,11 +117,15 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
   if (typeof patch.largeTradePushThreshold === "number" && isFinite(patch.largeTradePushThreshold) && patch.largeTradePushThreshold >= 0) current.largeTradePushThreshold = patch.largeTradePushThreshold;
   if (typeof patch.largeWithdrawalThreshold === "number" && isFinite(patch.largeWithdrawalThreshold) && patch.largeWithdrawalThreshold >= 0) current.largeWithdrawalThreshold = patch.largeWithdrawalThreshold;
   if (typeof patch.dailyLossLimitPct === "number" && isFinite(patch.dailyLossLimitPct) && patch.dailyLossLimitPct >= 0 && patch.dailyLossLimitPct <= 100) current.dailyLossLimitPct = patch.dailyLossLimitPct;
+  if (typeof patch.depositBonusActive === "boolean") current.depositBonusActive = patch.depositBonusActive;
+  if (typeof patch.depositBonusPct === "number" && isFinite(patch.depositBonusPct) && patch.depositBonusPct >= 0 && patch.depositBonusPct <= 100) current.depositBonusPct = patch.depositBonusPct;
+  if (typeof patch.depositBonusMinAoa === "number" && isFinite(patch.depositBonusMinAoa) && patch.depositBonusMinAoa >= 0) current.depositBonusMinAoa = patch.depositBonusMinAoa;
+  if (patch.depositBonusType === "first" || patch.depositBonusType === "all") current.depositBonusType = patch.depositBonusType;
 
   await (prisma.settings.upsert as any)({
     where:  { id: "singleton" },
     create: { id: "singleton", ...current },
-    update: { maintenanceMode: current.maintenanceMode, forceRealMarket: current.forceRealMarket, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, weekendPairs: current.weekendPairs, rankingResetAt: current.rankingResetAt, usdtRateAoa: current.usdtRateAoa, usdtWallet: current.usdtWallet, usdtMinDeposit: current.usdtMinDeposit, largeTradePushThreshold: current.largeTradePushThreshold, largeWithdrawalThreshold: current.largeWithdrawalThreshold, dailyLossLimitPct: current.dailyLossLimitPct },
+    update: { maintenanceMode: current.maintenanceMode, forceRealMarket: current.forceRealMarket, payout: current.payout, winProbability: current.winProbability, activePairs: current.activePairs, weekendPairs: current.weekendPairs, rankingResetAt: current.rankingResetAt, usdtRateAoa: current.usdtRateAoa, usdtWallet: current.usdtWallet, usdtMinDeposit: current.usdtMinDeposit, largeTradePushThreshold: current.largeTradePushThreshold, largeWithdrawalThreshold: current.largeWithdrawalThreshold, dailyLossLimitPct: current.dailyLossLimitPct, depositBonusActive: current.depositBonusActive, depositBonusPct: current.depositBonusPct, depositBonusMinAoa: current.depositBonusMinAoa, depositBonusType: current.depositBonusType },
   });
 
   cache = current;
@@ -122,5 +134,5 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
 }
 
 // Synchronous fallback used by trade/worker routes that already have settings loaded
-export let settings: PlatformSettings = { maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13, largeTradePushThreshold: 0, largeWithdrawalThreshold: 0, dailyLossLimitPct: 0 };
+export let settings: PlatformSettings = { maintenanceMode: false, forceRealMarket: false, payout: DEFAULT_PAYOUT, winProbability: DEFAULT_WIN_PROBABILITY, activePairs: DEFAULT_ACTIVE_PAIRS, weekendPairs: DEFAULT_WEEKEND_PAIRS, rankingResetAt: null, usdtRateAoa: 0, usdtWallet: null, usdtMinDeposit: 13, largeTradePushThreshold: 0, largeWithdrawalThreshold: 0, dailyLossLimitPct: 0, depositBonusActive: false, depositBonusPct: 10, depositBonusMinAoa: 50000, depositBonusType: "first" };
 export async function loadSettings() { settings = await getSettings(); return settings; }

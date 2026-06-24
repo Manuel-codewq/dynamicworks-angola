@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSettings } from "@/lib/settings";
 import {
   sendDepositApprovedEmail, sendDepositRejectedEmail,
   sendWithdrawalApprovedEmail, sendWithdrawalRejectedEmail,
@@ -42,6 +43,8 @@ export async function PATCH(
   // Comissão de referido: 2% do depósito creditado ao referidor
   const REFERRAL_PCT = 0.02;
 
+  const cfg = await getSettings();
+
   let updated;
   try {
     updated = await prisma.$transaction(async (dbTx) => {
@@ -54,59 +57,60 @@ export async function PATCH(
             select: { referredBy: true },
           });
 
-          // Bónus de boas-vindas + comissão de referido (apenas no primeiro depósito aprovado)
-          const BONUS_MIN    = 50_000;
-          const BONUS_PCT    = 0.10;
+          // Bónus de depósito configurável pelo admin
           const prevDeposits = await dbTx.transaction.count({
             where: { userId: tx.userId, type: "deposit", status: "completed", id: { not: id } },
           });
 
-          if (prevDeposits === 0) {
-            // Bónus de 10% no primeiro depósito >= 50.000 Kz
-            if (tx.amount >= BONUS_MIN) {
-              const bonus = Math.floor(tx.amount * BONUS_PCT);
+          const isFirstDeposit = prevDeposits === 0;
+          const bonusApplies   = cfg.depositBonusActive &&
+            tx.amount >= cfg.depositBonusMinAoa &&
+            (cfg.depositBonusType === "all" || isFirstDeposit);
+
+          if (bonusApplies) {
+            const bonus = Math.floor(tx.amount * (cfg.depositBonusPct / 100));
+            const label = isFirstDeposit ? "boas-vindas" : "depósito";
+            await dbTx.user.update({
+              where: { id: tx.userId },
+              data:  { balance: { increment: bonus } },
+            });
+            await dbTx.transaction.create({
+              data: {
+                userId:    tx.userId,
+                type:      "bonus",
+                amount:    bonus,
+                status:    "completed",
+                reference: `Bónus de ${label} ${cfg.depositBonusPct}%`,
+              },
+            });
+            await dbTx.notification.create({
+              data: {
+                userId:  tx.userId,
+                type:    "deposit_completed",
+                title:   `Bónus de ${label}: +${bonus.toLocaleString("pt-PT")} Kz`,
+                message: `Recebeste um bónus de ${cfg.depositBonusPct}% pelo teu depósito de ${Math.floor(tx.amount).toLocaleString("pt-PT")} Kz. O bónus foi adicionado ao teu saldo.`,
+                read:    false,
+              },
+            });
+          }
+
+          // Comissão para o referidor
+          if (depositor.referredBy) {
+            const commission = Math.floor(tx.amount * REFERRAL_PCT);
+            if (commission > 0) {
               await dbTx.user.update({
-                where: { id: tx.userId },
-                data:  { balance: { increment: bonus } },
-              });
-              await dbTx.transaction.create({
-                data: {
-                  userId:    tx.userId,
-                  type:      "bonus",
-                  amount:    bonus,
-                  status:    "completed",
-                  reference: `Bónus de boas-vindas 10% — primeiro depósito`,
-                },
+                where: { id: depositor.referredBy },
+                data:  { balance: { increment: commission }, referralEarnings: { increment: commission } },
               });
               await dbTx.notification.create({
                 data: {
-                  userId:  tx.userId,
-                  type:    "deposit_completed",
-                  title:   `Bónus de boas-vindas: +${bonus.toLocaleString("pt-PT")} Kz`,
-                  message: `Parabéns! Recebeste um bónus de 10% pelo teu primeiro depósito de ${Math.floor(tx.amount).toLocaleString("pt-PT")} Kz. O bónus foi adicionado ao teu saldo.`,
+                  userId:  depositor.referredBy,
+                  type:    "referral_commission",
+                  title:   `Comissão de referido: +${commission.toLocaleString("pt-PT")} Kz`,
+                  message: `Recebeste uma comissão de 2% pelo depósito de um utilizador que convidaste.`,
                   read:    false,
                 },
               });
-            }
-
-            // Comissão para o referidor
-            if (depositor.referredBy) {
-              const commission = Math.floor(tx.amount * REFERRAL_PCT);
-              if (commission > 0) {
-                await dbTx.user.update({
-                  where: { id: depositor.referredBy },
-                  data:  { balance: { increment: commission }, referralEarnings: { increment: commission } },
-                });
-                await dbTx.notification.create({
-                  data: {
-                    userId:  depositor.referredBy,
-                    type:    "referral_commission",
-                    title:   `Comissão de referido: +${commission.toLocaleString("pt-PT")} Kz`,
-                    message: `Recebeste uma comissão de 2% pelo depósito de um utilizador que convidaste.`,
-                    read:    false,
-                  },
-                });
-              }
             }
           }
         } else if (tx.type === "withdrawal") {
