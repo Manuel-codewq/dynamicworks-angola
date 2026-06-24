@@ -44,13 +44,13 @@ export const metadata: Metadata = {
     siteName:    "Dynamics Works",
     title:       TITLE,
     description: DESC,
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Dynamics Works — Plataforma de Trading em Angola" }],
+    images: [{ url: "/logo.jpeg", width: 1148, height: 1148, alt: "Dynamics Works — Plataforma de Trading em Angola" }],
   },
   twitter: {
     card:        "summary_large_image",
     title:       "Dynamics Works — Trading em Angola",
-    description: "Plataforma de opções binárias em Kwanza. Forex, Cripto, Ouro. Depósitos rápidos via USDT (TRC-20).",
-    images:      ["/og-image.png"],
+    description: "Plataforma de opções binárias em Kwanza. Forex, Cripto, Ouro. Depósitos rápidos em USD.",
+    images:      ["/logo.jpeg"],
   },
   icons: [
     { url: "/logo-icon.jpeg", type: "image/jpeg" },
