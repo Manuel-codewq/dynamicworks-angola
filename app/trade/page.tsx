@@ -1734,7 +1734,7 @@ export default function TradePage() {
         const base = { id, color: toolColorRef.current, lineWidth: toolLineWidthRef.current, lineStyle: toolLineStyleRef.current };
         if (tool === "hline") {
           addDrawing({ ...base, type: "hline", price, label: toolLabelRef.current });
-          setActiveTool(null); activeToolRef.current = null;
+          // ferramenta mantém-se activa — utilizador pode colocar múltiplas linhas (Esc para sair)
         } else if (tool === "trendline") {
           const pending = pendingPointRef.current;
           if (!pending) {
@@ -1787,7 +1787,7 @@ export default function TradePage() {
           addDrawing({ ...base, id: `vl_${Date.now()}`, type: "vline", time });
           pendingPointRef.current = null;
           setPendingPoint(null);
-          setActiveTool(null); activeToolRef.current = null;
+          // ferramenta mantém-se activa — utilizador pode colocar múltiplas linhas (Esc para sair)
         } else if (tool === "ray" || tool === "extline") {
           const pending = pendingPointRef.current;
           if (!pending) {
