@@ -3235,6 +3235,17 @@ export default function TradePage() {
         momentum: [field("Período", "period", "ex: 10"), colorField("Cor", "color", "#2dd4bf")],
         ao: [colorField("Cor positiva", "colorPos", "#0ecb81"), colorField("Cor negativa", "colorNeg", "#f6465d")],
         bearsbulls: [field("Período", "period", "ex: 13"), colorField("Bears", "colorBear", "#f6465d"), colorField("Bulls", "colorBull", "#0ecb81")],
+        supertrend:  [field("Período", "period", "ex: 10"), field("Multiplicador", "mult", "ex: 3")],
+        zigzag:      [field("Desvio %", "deviation", "ex: 5")],
+        aroon:       [field("Período", "period", "ex: 14")],
+        roc:         [field("Período", "period", "ex: 12")],
+        stc:         [field("Fast", "fast", "ex: 23"), field("Slow", "slow", "ex: 50"), field("K", "k", "ex: 10")],
+        vortex:      [field("Período", "period", "ex: 14")],
+        demarker:    [field("Período", "period", "ex: 14")],
+        volume_osc:  [field("Fast", "fast", "ex: 5"), field("Slow", "slow", "ex: 10")],
+        ichimoku:    [],
+        fractal:     [],
+        weis:        [],
       };
 
       const getApply = (k: string) => () => {
@@ -3257,6 +3268,15 @@ export default function TradePage() {
         else if (k === "willr") (updates as any).willr = { ...indicators.willr, enabled: true, period: num(c.period, 14) };
         else if (k === "momentum") (updates as any).momentum = { ...indicators.momentum, enabled: true, period: num(c.period, 10) };
         else if (k === "alligator" || k === "ao" || k === "bearsbulls") (updates as any)[k] = { ...(indicators[k as keyof typeof indicators] as any), enabled: true };
+        else if (k === "supertrend") (updates as any).supertrend = { ...indicators.supertrend, enabled: true, period: num(c.period, 10), mult: num(c.mult, 3) };
+        else if (k === "zigzag")    (updates as any).zigzag    = { ...indicators.zigzag,    enabled: true, deviation: num(c.deviation, 5) };
+        else if (k === "aroon")     (updates as any).aroon     = { ...indicators.aroon,     enabled: true, period: num(c.period, 14) };
+        else if (k === "roc")       (updates as any).roc       = { ...indicators.roc,       enabled: true, period: num(c.period, 12) };
+        else if (k === "stc")       (updates as any).stc       = { ...indicators.stc,       enabled: true, fast: num(c.fast, 23), slow: num(c.slow, 50), k: num(c.k, 10) };
+        else if (k === "vortex")    (updates as any).vortex    = { ...indicators.vortex,    enabled: true, period: num(c.period, 14) };
+        else if (k === "demarker")  (updates as any).demarker  = { ...indicators.demarker,  enabled: true, period: num(c.period, 14) };
+        else if (k === "volume_osc")(updates as any).volume_osc= { ...indicators.volume_osc, enabled: true, fast: num(c.fast, 5), slow: num(c.slow, 10) };
+        else if (k === "ichimoku" || k === "fractal" || k === "weis") (updates as any)[k] = { ...(indicators[k as keyof typeof indicators] as any), enabled: true };
         setIndicators(p => ({ ...p, ...updates }));
         setExpandedItem(null);
       };
