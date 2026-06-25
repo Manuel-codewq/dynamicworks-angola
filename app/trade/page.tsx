@@ -252,7 +252,13 @@ export default function TradePage() {
   const TOOL_COLORS = ["#f5a623","#3b82f6","#0ecb81","#f6465d","#a78bfa","#22d3ee","#e2e8f0"];
 
   const [activeTool,     setActiveTool]     = useState<DrawingTool>(null);
-  const [drawings,       setDrawings]       = useState<Drawing[]>([]);
+  const [drawings,       setDrawings]       = useState<Drawing[]>(() => {
+    try {
+      const raw = localStorage.getItem("dw_drawings");
+      if (raw) return JSON.parse(raw) as Drawing[];
+    } catch {}
+    return [];
+  });
   const [showTools,      setShowTools]      = useState(false);
   const [toolColor,      setToolColor]      = useState("#f5a623");
   const [toolLineStyle,  setToolLineStyle]  = useState(0);
@@ -361,6 +367,10 @@ export default function TradePage() {
   useEffect(() => {
     try { localStorage.setItem("dw_indicators", JSON.stringify(indicators)); } catch {}
   }, [indicators]);
+
+  useEffect(() => {
+    try { localStorage.setItem("dw_drawings", JSON.stringify(drawings)); } catch {}
+  }, [drawings]);
 
   // On login: load from DB (source of truth across devices), debounced save on change
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -729,6 +739,7 @@ export default function TradePage() {
     setVlinePositions({});
     setDrawings([]);
     drawingsRef.current = [];
+    try { localStorage.removeItem("dw_drawings"); } catch {}
   }
   function reapplyDrawings() {
     hlineRefsMap.current.clear();
