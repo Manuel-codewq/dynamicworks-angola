@@ -17,19 +17,25 @@ export async function DELETE(
   if (target.role === "admin") return NextResponse.json({ error: "Não é possível eliminar um administrador" }, { status: 403 });
 
   // Eliminar dados relacionados manualmente antes do utilizador
-  await prisma.$transaction([
-    prisma.pushSubscription.deleteMany({ where: { userId: id } }),
-    prisma.promoRedemption.deleteMany({ where: { userId: id } }),
-    prisma.tournamentParticipant.deleteMany({ where: { userId: id } }),
-    prisma.notification.deleteMany({ where: { userId: id } }),
-    prisma.supportMessage.deleteMany({ where: { ticket: { userId: id } } }),
-    prisma.supportTicket.deleteMany({ where: { userId: id } }),
-    prisma.kycSubmission.deleteMany({ where: { userId: id } }),
-    prisma.trade.deleteMany({ where: { userId: id } }),
-    prisma.transaction.deleteMany({ where: { userId: id } }),
-    prisma.user.delete({ where: { id } }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.pushSubscription.deleteMany({ where: { userId: id } }),
+      prisma.promoRedemption.deleteMany({ where: { userId: id } }),
+      prisma.tournamentParticipant.deleteMany({ where: { userId: id } }),
+      prisma.notification.deleteMany({ where: { userId: id } }),
+      prisma.supportMessage.deleteMany({ where: { ticket: { userId: id } } }),
+      prisma.supportTicket.deleteMany({ where: { userId: id } }),
+      prisma.kycSubmission.deleteMany({ where: { userId: id } }),
+      prisma.trade.deleteMany({ where: { userId: id } }),
+      prisma.transaction.deleteMany({ where: { userId: id } }),
+      prisma.user.delete({ where: { id } }),
+    ]);
+  } catch (err) {
+    console.error("[admin/users DELETE]", err);
+    return NextResponse.json({ error: "Erro ao eliminar utilizador" }, { status: 500 });
+  }
 
+  // Audit log só corre após eliminação bem-sucedida
   await prisma.auditLog.create({
     data: {
       adminId:   session.user.id,

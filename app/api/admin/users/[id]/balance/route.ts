@@ -21,10 +21,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const { balance, type = "real", reason } = await req.json();
+  const { balance, type = "real", reason: rawReason } = await req.json();
 
-  // Motivo obrigatório
-  if (!reason || String(reason).trim().length < 5) {
+  // Motivo obrigatório — sanitizar para prevenir XSS stored em logs/notificações
+  const reason = typeof rawReason === "string"
+    ? rawReason.replace(/[<>"'`]/g, "").trim().slice(0, 300)
+    : "";
+  if (reason.length < 5) {
     return NextResponse.json({ error: "Motivo obrigatório (mínimo 5 caracteres)." }, { status: 400 });
   }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendKycSubmittedEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const MAX_ATTEMPTS = 4;
 const BLOCK_MS = 30 * 60 * 1000; // 30 minutos
@@ -30,6 +31,11 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+    // 3 submissões por hora por utilizador — previne spam de uploads grandes
+    if (!await checkRateLimit("kyc_submit", session.user.id, 3, 60 * 60_000)) {
+      return NextResponse.json({ error: "Demasiadas tentativas. Aguarda 1 hora." }, { status: 429 });
+    }
 
     const userId = session.user.id;
     const body = await req.json();

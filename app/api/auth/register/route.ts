@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         const smeRes = await fetch(
           `https://sme.gov.ao/actions/bi.ajcall.php?bi=${encodeURIComponent(nif)}`,
           {
-            signal:  AbortSignal.timeout(12000),
+            signal:  AbortSignal.timeout(4000),
             headers: {
               "User-Agent":       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
               "Referer":          "https://sme.gov.ao/ao/utentes/novo/",
