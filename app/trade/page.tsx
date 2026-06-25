@@ -1755,8 +1755,7 @@ export default function TradePage() {
             addDrawing({ ...base, type: "trendline", p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
             pendingPointRef.current = null;
             setPendingPoint(null);
-            setActiveTool(null); activeToolRef.current = null;
-            // Auto-select newly drawn trendline
+            // ferramenta mantém-se activa (Esc ou botão para sair)
             setTimeout(() => {
               selectedTrendRef.current = id;
               setSelectedTrendId(id);
@@ -1808,7 +1807,7 @@ export default function TradePage() {
             addDrawing({ ...base, id: `${tool}_${Date.now()}`, type: tool, p1Time: pending.time, p1Price: pending.price, p2Time: time, p2Price: price });
             pendingPointRef.current = null;
             setPendingPoint(null);
-            setActiveTool(null); activeToolRef.current = null;
+            // ferramenta mantém-se activa (Esc ou botão para sair)
           }
         }
       });
