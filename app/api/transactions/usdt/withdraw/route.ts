@@ -75,16 +75,21 @@ export async function POST(req: NextRequest) {
       if (user.kycStatus !== "approved") {
         throw Object.assign(new Error("KYC_REQUIRED"), { code: "KYC_REQUIRED" });
       }
-      if (user.balance < amountAoa) {
-        throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
-      }
-
       // Bloquear levantamento duplicado
       const existing = await dbTx.transaction.findFirst({
         where: { userId, type: "withdrawal", status: "pending" },
         select: { id: true },
       });
       if (existing) throw Object.assign(new Error("PENDING_EXISTS"), { code: "PENDING_EXISTS" });
+
+      // Debitar saldo na submissão — devolve em caso de rejeição
+      const deducted = await dbTx.user.updateMany({
+        where: { id: userId, balance: { gte: amountAoa } },
+        data:  { balance: { decrement: amountAoa } },
+      });
+      if (deducted.count === 0) {
+        throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
+      }
 
       // Invalidar OTP atomicamente — se dois pedidos chegarem em simultâneo,
       // só o primeiro consegue fazer este updateMany (o segundo recebe count=0)

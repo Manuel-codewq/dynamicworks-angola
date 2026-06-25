@@ -65,11 +65,6 @@ export async function POST(req: NextRequest) {
         throw Object.assign(new Error("KYC_REQUIRED"), { code: "KYC_REQUIRED" });
       }
 
-      // Validar saldo dentro da transacção — elimina TOCTOU
-      if (type === "withdrawal" && user.balance < amountNum) {
-        throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
-      }
-
       // Bloquear levantamento duplicado: só 1 pedido pendente por utilizador de cada vez
       if (type === "withdrawal") {
         const existing = await dbTx.transaction.findFirst({
@@ -77,6 +72,15 @@ export async function POST(req: NextRequest) {
           select: { id: true },
         });
         if (existing) throw Object.assign(new Error("PENDING_EXISTS"), { code: "PENDING_EXISTS" });
+
+        // Debitar saldo na submissão — fica bloqueado até aprovação ou devolução em caso de rejeição
+        const deducted = await dbTx.user.updateMany({
+          where: { id: userId, balance: { gte: amountNum } },
+          data:  { balance: { decrement: amountNum } },
+        });
+        if (deducted.count === 0) {
+          throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
+        }
       }
 
       // Validar e invalidar OTP atomicamente — um único updateMany cujo WHERE inclui o código

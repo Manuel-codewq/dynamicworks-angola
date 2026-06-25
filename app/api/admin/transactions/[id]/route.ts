@@ -113,16 +113,14 @@ export async function PATCH(
               });
             }
           }
-        } else if (tx.type === "withdrawal") {
-          // Debitar atomicamente: WHERE inclui condição de saldo — sem TOCTOU
-          const deducted = await dbTx.user.updateMany({
-            where: { id: tx.userId, balance: { gte: tx.amount } },
-            data:  { balance: { decrement: tx.amount } },
-          });
-          if (deducted.count === 0) {
-            throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
-          }
         }
+        // levantamento aprovado: saldo já foi debitado na submissão — nada a fazer
+      } else if (status === "rejected" && tx.type === "withdrawal") {
+        // Devolver saldo ao utilizador
+        await dbTx.user.update({
+          where: { id: tx.userId },
+          data:  { balance: { increment: tx.amount } },
+        });
       }
 
       return dbTx.transaction.update({
