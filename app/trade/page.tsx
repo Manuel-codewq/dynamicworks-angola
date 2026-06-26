@@ -184,6 +184,7 @@ export default function TradePage() {
   const [botAutoTrade,  setBotAutoTrade]  = useState(false);
   const [botWinTarget,  setBotWinTarget]  = useState<number | "">(3); // meta de vitórias (obrigatório)
   const [botWinCount,   setBotWinCount]   = useState(0);              // vitórias acumuladas
+  const [botIndicators, setBotIndicators] = useState<{ name: string; value: string; signal: "bullish"|"bearish"|"neutral" }[]>([]);
   const [activeTrades,      setActiveTrades]      = useState<ActiveTrade[]>([]);
   const [recentWins,        setRecentWins]        = useState<RecentWin[]>([]);
   const [recentWinsFilter,  setRecentWinsFilter]  = useState<"real" | "demo">("real");
@@ -2229,29 +2230,97 @@ export default function TradePage() {
   useEffect(() => { botCountdownRef.current = botCountdown; }, [botCountdown]);
 
   const calcBotSignal = useCallback(() => {
-    if (botCountdownRef.current > 0) return; // aguarda o sinal activo terminar
+    if (botCountdownRef.current > 0) return;
     const data = candleDataRef.current;
-    if (data.length < 15) return;
-    const rsiValues = calcRSI(data, 14);
-    if (rsiValues.length === 0) return;
-    const rsi = rsiValues[rsiValues.length - 1].value;
-    let signal: "ALTA" | "BAIXA";
-    let confidence: number;
-    if (rsi < 30) {
-      signal = "ALTA";
-      confidence = Math.round(65 + ((30 - rsi) / 30) * 30);
-    } else if (rsi > 70) {
-      signal = "BAIXA";
-      confidence = Math.round(65 + ((rsi - 70) / 30) * 30);
-    } else {
-      const last3 = data.slice(-3);
-      const up = last3.filter(c => c.close > c.open).length;
-      signal = up >= 2 ? "ALTA" : "BAIXA";
-      confidence = Math.round(50 + Math.random() * 10);
+    if (data.length < 22) return;
+
+    let callScore = 0, putScore = 0;
+    const indics: { name: string; value: string; signal: "bullish"|"bearish"|"neutral" }[] = [];
+
+    // 1 — RSI(14)
+    const rsiArr = calcRSI(data, 14);
+    if (rsiArr.length >= 2) {
+      const rsi     = rsiArr[rsiArr.length - 1].value;
+      const rsiPrev = rsiArr[rsiArr.length - 2].value;
+      let rsiScore = 0;
+      let rsiSig: "bullish"|"bearish"|"neutral" = "neutral";
+      if      (rsi < 30)  { rsiScore =  2; rsiSig = "bullish"; }
+      else if (rsi < 40)  { rsiScore =  1; rsiSig = "bullish"; }
+      else if (rsi > 70)  { rsiScore = -2; rsiSig = "bearish"; }
+      else if (rsi > 60)  { rsiScore = -1; rsiSig = "bearish"; }
+      // crossover bonus
+      if (rsiPrev < 30 && rsi >= 30) rsiScore++;
+      if (rsiPrev > 70 && rsi <= 70) rsiScore--;
+      if (rsiScore > 0) callScore += rsiScore;
+      else if (rsiScore < 0) putScore += Math.abs(rsiScore);
+      indics.push({ name: "RSI(14)", value: rsi.toFixed(1), signal: rsiSig });
     }
-    setBotSignal(signal);
-    setBotConfidence(Math.min(95, confidence));
-    setBotCountdown(30);
+
+    // 2 — EMA Cross (9/21)
+    const ema9  = calcEMA(data, 9);
+    const ema21 = calcEMA(data, 21);
+    if (ema9.length >= 2 && ema21.length >= 2) {
+      const fast     = ema9[ema9.length - 1].value;
+      const slow     = ema21[ema21.length - 1].value;
+      const fastPrev = ema9[ema9.length - 2].value;
+      const slowPrev = ema21[ema21.length - 2].value;
+      let emaScore = 0;
+      let emaSig: "bullish"|"bearish"|"neutral" = "neutral";
+      if      (fastPrev <= slowPrev && fast > slow) { emaScore =  2; emaSig = "bullish"; }
+      else if (fast > slow)                         { emaScore =  1; emaSig = "bullish"; }
+      else if (fastPrev >= slowPrev && fast < slow) { emaScore = -2; emaSig = "bearish"; }
+      else if (fast < slow)                         { emaScore = -1; emaSig = "bearish"; }
+      if (emaScore > 0) callScore += emaScore;
+      else if (emaScore < 0) putScore += Math.abs(emaScore);
+      indics.push({ name: "EMA 9/21", value: fast > slow ? "▲ Bullish" : "▼ Bearish", signal: emaSig });
+    }
+
+    // 3 — Bollinger Bands (20, 2)
+    const bb = calcBB(data, 20);
+    if (bb.upper.length > 0) {
+      const close  = data[data.length - 1].close;
+      const upper  = bb.upper[bb.upper.length - 1].value;
+      const lower  = bb.lower[bb.lower.length - 1].value;
+      const bw     = upper - lower;
+      let bbScore = 0;
+      let bbSig: "bullish"|"bearish"|"neutral" = "neutral";
+      if      (close < lower)               { bbScore =  2; bbSig = "bullish"; }
+      else if (close < lower + bw * 0.1)   { bbScore =  1; bbSig = "bullish"; }
+      else if (close > upper)               { bbScore = -2; bbSig = "bearish"; }
+      else if (close > upper - bw * 0.1)   { bbScore = -1; bbSig = "bearish"; }
+      if (bbScore > 0) callScore += bbScore;
+      else if (bbScore < 0) putScore += Math.abs(bbScore);
+      const pct = bw > 0 ? ((close - lower) / bw * 100).toFixed(0) + "%" : "—";
+      indics.push({ name: "BB(20)", value: pct, signal: bbSig });
+    }
+
+    // 4 — Momentum (5 velas)
+    const last5 = data.slice(-5);
+    const upCount = last5.filter(c => c.close > c.open).length;
+    let momScore = 0;
+    let momSig: "bullish"|"bearish"|"neutral" = "neutral";
+    if      (upCount >= 4) { momScore =  1; momSig = "bullish"; }
+    else if (upCount <= 1) { momScore = -1; momSig = "bearish"; }
+    if (momScore > 0) callScore += momScore;
+    else if (momScore < 0) putScore += Math.abs(momScore);
+    indics.push({ name: "Momentum", value: `${upCount}/5 ↑`, signal: momSig });
+
+    setBotIndicators(indics);
+
+    // ── Decisão ──────────────────────────────────────────────────────────
+    if (callScore < 3 && putScore < 3) {
+      // sinal fraco — aguarda próxima vela
+      setBotSignal(null);
+      setBotConfidence(0);
+      setBotCountdown(30);
+      return;
+    }
+    const direction: "ALTA" | "BAIXA" = callScore >= putScore ? "ALTA" : "BAIXA";
+    const winning = Math.max(callScore, putScore);
+    const confidence = Math.min(95, Math.round(54 + winning * 7));
+    setBotSignal(direction);
+    setBotConfidence(confidence);
+    setBotCountdown(60);
   }, []);
 
   // Inicia sinal quando bot é activado; recalcula automaticamente quando countdown chega a 0
@@ -3835,7 +3904,7 @@ export default function TradePage() {
                   </div>
                   <div>
                     <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>BOT IA</div>
-                    <div style={{ color: "#475569", fontSize: 12 }}>Análise automática · RSI(14)</div>
+                    <div style={{ color: "#475569", fontSize: 12 }}>RSI · EMA · Bollinger · Momentum</div>
                   </div>
                 </div>
                 <button onClick={() => setShowBotModal(false)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 4 }}>✕</button>
@@ -3876,6 +3945,19 @@ export default function TradePage() {
                           <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Confiança: <span style={{ color: "#fff", fontWeight: 700 }}>{botConfidence}%</span></div>
                           <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>Próximo sinal em <span style={{ color: "#6366f1", fontWeight: 700 }}>{botCountdown}s</span></div>
                         </div>
+                        {/* Breakdown de indicadores */}
+                        {botIndicators.length > 0 && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+                            {botIndicators.map(ind => (
+                              <div key={ind.name} style={{ background: "#111827", borderRadius: 8, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span style={{ color: "#475569", fontSize: 10, fontWeight: 600 }}>{ind.name}</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: ind.signal === "bullish" ? "#0ecb81" : ind.signal === "bearish" ? "#f6465d" : "#475569" }}>
+                                  {ind.signal === "bullish" ? "▲" : ind.signal === "bearish" ? "▼" : "—"} {ind.value}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {/* Botão entrar */}
                         <button onClick={() => { openTrade(botSignal === "ALTA" ? "call" : "put"); setShowBotModal(false); }}
                           disabled={loading || currentPrice === 0}
