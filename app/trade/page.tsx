@@ -1418,6 +1418,8 @@ export default function TradePage() {
         }
         candleDataRef.current = [...candleDataRef.current, newC];
         recalcRef.current();
+        // Nova vela fechada — disparar bot se activo e sem countdown
+        if (botEnabledRef.current && botCountdownRef.current === 0) calcBotSignalRef.current();
       } else {
         const updated: CandlestickData = {
           ...c, high: Math.max(c.high, q), low: Math.min(c.low, q), close: q,
@@ -2226,8 +2228,11 @@ export default function TradePage() {
   }
 
   // ── Bot: calcula sinal a cada 10 candles ─────────────────────────────────
-  const botCountdownRef = useRef(0);
+  const botCountdownRef  = useRef(0);
+  const botEnabledRef    = useRef(false);
+  const calcBotSignalRef = useRef<() => void>(() => {});
   useEffect(() => { botCountdownRef.current = botCountdown; }, [botCountdown]);
+  useEffect(() => { botEnabledRef.current = botEnabled; }, [botEnabled]);
 
   const calcBotSignal = useCallback(() => {
     if (botCountdownRef.current > 0) return;
@@ -2310,10 +2315,10 @@ export default function TradePage() {
     // ── Decisão ──────────────────────────────────────────────────────────
     // Threshold: 2 pontos (qualquer 2 indicadores a concordar)
     if (callScore < 2 && putScore < 2) {
-      // sinal fraco — aguarda próxima vela
+      // sinal fraco — tenta de novo em 5s
       setBotSignal(null);
       setBotConfidence(0);
-      setBotCountdown(30);
+      setBotCountdown(5);
       return;
     }
     const direction: "ALTA" | "BAIXA" = callScore >= putScore ? "ALTA" : "BAIXA";
@@ -2324,6 +2329,9 @@ export default function TradePage() {
     setBotConfidence(confidence);
     setBotCountdown(60);
   }, []);
+
+  // Manter ref actualizado para uso nos handlers de candle (sem closure stale)
+  useEffect(() => { calcBotSignalRef.current = calcBotSignal; }, [calcBotSignal]);
 
   // Inicia sinal quando bot é activado; recalcula automaticamente quando countdown chega a 0
   useEffect(() => {
@@ -4828,6 +4836,7 @@ export default function TradePage() {
                 { href: "/copy",      icon: <Copy size={16} color="#38bdf8" />,        label: "Copy Trading",       desc: "Copia experts · torna-te expert" },
                 { href: "/referral",  icon: <Gift size={16} color="#0ecb81" />,        label: "Referidos",          desc: "Convida amigos · ganha 2%" },
                 { href: "/security",  icon: <Shield size={16} color="#f5a623" />,      label: "Segurança",          desc: "2FA, sessões e log de acessos" },
+                { href: "/bot",       icon: <Bot size={16} color="#f5a623" />,        label: "Bot de Estratégia",  desc: "Bot automático RSI · MA · BB" },
                 { href: "/dashboard", icon: <BarChart2 size={16} color="#f5a623" />,   label: "Dashboard",          desc: "Estatísticas das operações" },
                 { href: "/history",   icon: <History size={16} color="#f5a623" />,     label: "Histórico",          desc: "Todas as operações fechadas" },
                 { href: "/ranking",   icon: <Trophy size={16} color="#f5a623" />,      label: "Ranking & Torneios", desc: "Competir com outros traders" },

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ChevronLeft, BarChart2, TrendingUp, TrendingDown,
   Trophy, Target, Zap, RefreshCw, Wallet, History,
-  ArrowUpRight, Clock,
+  ArrowUpRight, Clock, Bot,
 } from "lucide-react";
 import { formatKz } from "@/lib/format";
 import PageGuide from "@/app/components/PageGuide";
@@ -122,6 +122,7 @@ export default function DashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 20 }}>
           {[
             { label: "Negociar",  icon: <TrendingUp size={18} color="#22c55e"/>, href: "/trade",   bg: "rgba(34,197,94,.08)",   border: "rgba(34,197,94,.2)"   },
+            { label: "Bot",       icon: <Bot        size={18} color="#f5a623"/>, href: "/bot",     bg: "rgba(245,166,35,.08)",  border: "rgba(245,166,35,.2)"  },
             { label: "Carteira",  icon: <Wallet     size={18} color="#38bdf8"/>, href: "/wallet",  bg: "rgba(56,189,248,.08)",  border: "rgba(56,189,248,.2)"  },
             { label: "Histórico", icon: <History    size={18} color="#a78bfa"/>, href: "/history", bg: "rgba(167,139,250,.08)", border: "rgba(167,139,250,.2)" },
           ].map(n => (
