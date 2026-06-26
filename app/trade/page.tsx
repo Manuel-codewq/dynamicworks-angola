@@ -2308,7 +2308,8 @@ export default function TradePage() {
     setBotIndicators(indics);
 
     // ── Decisão ──────────────────────────────────────────────────────────
-    if (callScore < 3 && putScore < 3) {
+    // Threshold: 2 pontos (qualquer 2 indicadores a concordar)
+    if (callScore < 2 && putScore < 2) {
       // sinal fraco — aguarda próxima vela
       setBotSignal(null);
       setBotConfidence(0);
@@ -2317,7 +2318,8 @@ export default function TradePage() {
     }
     const direction: "ALTA" | "BAIXA" = callScore >= putScore ? "ALTA" : "BAIXA";
     const winning = Math.max(callScore, putScore);
-    const confidence = Math.min(95, Math.round(54 + winning * 7));
+    // Confiança: base 52%, +8% por ponto acima de 1 (máx 95%)
+    const confidence = Math.min(95, Math.round(52 + (winning - 1) * 8));
     setBotSignal(direction);
     setBotConfidence(confidence);
     setBotCountdown(60);
