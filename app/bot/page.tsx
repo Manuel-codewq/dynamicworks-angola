@@ -123,11 +123,13 @@ export default function BotPage() {
   const runningRef        = useRef(false);
   const cfgRef            = useRef(cfg);
   const candlesRef        = useRef<DerivCandle[]>([]);
-  const lastSignalCandle  = useRef<number>(0);   // epoch do último candle que gerou trade
+  const lastSignalCandle  = useRef<number>(0);
   const tradesDayRef      = useRef(0);
   const pnlDayRef         = useRef(0);
   const activeTradeRef    = useRef<string | null>(null);
   const activeTradeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollIntervalRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const candleCleanupRef  = useRef<(() => void) | null>(null);
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
@@ -256,7 +258,7 @@ export default function BotPage() {
       if (!res.ok && res.status !== 404) return;
 
       const result  = data?.result as string | undefined;
-      const profit  = data?.profit as number | undefined ?? 0;
+      const profit  = (data?.trade?.profit as number | undefined) ?? 0;
       const isWin   = result === "win";
 
       pnlDayRef.current += profit;
@@ -316,12 +318,13 @@ export default function BotPage() {
     addLog({ type: "info", msg: `Bot iniciado — ${cfg.pair} · ${cfg.strategy.toUpperCase()} · ${cfg.timeframe} · ${cfg.isDemo ? "Demo" : "Real"}` });
 
     derivWS.connect();
-    derivWS.onCandles(handleCandles);
+    if (candleCleanupRef.current) candleCleanupRef.current();
+    candleCleanupRef.current = derivWS.onCandles(handleCandles);
     derivWS.getCandles(cfg.symbol, GRANULARITY_MAP[cfg.timeframe], 200);
 
-    // Actualizar candles a cada timeframe
-    const interval = setInterval(() => {
-      if (!runningRef.current) { clearInterval(interval); return; }
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    pollIntervalRef.current = setInterval(() => {
+      if (!runningRef.current) { clearInterval(pollIntervalRef.current!); pollIntervalRef.current = null; return; }
       derivWS.getCandles(cfgRef.current.symbol, GRANULARITY_MAP[cfgRef.current.timeframe], 200);
     }, GRANULARITY_MAP[cfg.timeframe] * 1000);
   }
@@ -329,11 +332,17 @@ export default function BotPage() {
   function stopBot() {
     runningRef.current = false;
     setRunning(false);
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
+    if (candleCleanupRef.current) { candleCleanupRef.current(); candleCleanupRef.current = null; }
     if (activeTradeTimer.current) clearTimeout(activeTradeTimer.current);
     addLog({ type: "info", msg: "Bot parado." });
   }
 
-  useEffect(() => () => { runningRef.current = false; }, []);
+  useEffect(() => () => {
+    runningRef.current = false;
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    if (candleCleanupRef.current) candleCleanupRef.current();
+  }, []);
 
   // ── Indicadores actuais ──────────────────────────────────────────────────────
 
