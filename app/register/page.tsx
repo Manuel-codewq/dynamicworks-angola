@@ -101,12 +101,18 @@ function RegisterContent() {
         .reg-inp:focus { border-color: rgba(245,166,35,.6) !important; box-shadow: 0 0 0 3px rgba(245,166,35,.1); outline: none; }
         .reg-btn:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
         .reg-btn:active:not(:disabled) { transform:scale(.98); }
+        .reg-left { display: none; }
+        .reg-mobile-logo { display: block; }
+        @media(min-width:900px) {
+          .reg-left { display: flex !important; }
+          .reg-right { min-height: 100vh; }
+          .reg-mobile-logo { display: none; }
+        }
       `}</style>
 
       {/* ── Left panel (desktop) ── */}
       <div style={{ flex: 1, display: "none", flexDirection: "column", justifyContent: "space-between", padding: "48px 56px", background: "linear-gradient(160deg,#0d1628 0%,#0a1220 50%,#06091a 100%)", borderRight: "1px solid rgba(30,45,80,.5)", position: "relative", overflow: "hidden" }}
         className="reg-left">
-        <style>{`.reg-left { display:none; } @media(min-width:900px){ .reg-left{ display:flex !important; } .reg-right{ min-height:100vh; } }`}</style>
 
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(30,45,80,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(30,45,80,.12) 1px,transparent 1px)", backgroundSize:"48px 48px", pointerEvents:"none" }} />
         <div style={{ position:"absolute", top:"20%", right:"10%", width:350, height:350, borderRadius:"50%", background:"radial-gradient(circle,rgba(34,197,94,.05) 0%,transparent 70%)", pointerEvents:"none" }} />
@@ -162,7 +168,6 @@ function RegisterContent() {
       <div className="reg-right" style={{ width:"100%", maxWidth:520, margin:"0 auto", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"40px 24px 60px", animation:"fadeUp .5s ease both" }}>
 
         <div className="reg-mobile-logo" style={{ textAlign:"center", marginBottom:32 }}>
-          <style>{`.reg-mobile-logo { display:block; } @media(min-width:900px){ .reg-mobile-logo{ display:none; } }`}</style>
           <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width:52, height:52, objectFit:"contain", borderRadius:12, background:"#111827", marginBottom:10 }} />
           <div style={{ color:"#fff", fontWeight:900, fontSize:20 }}>Dynamic Works</div>
         </div>

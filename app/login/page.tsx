@@ -88,16 +88,24 @@ function LoginContent() {
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.5} }
         @keyframes grid-move { from { transform:translateY(0); } to { transform:translateY(64px); } }
+        @keyframes spin { to { transform:rotate(360deg); } }
         .login-inp { transition: border-color .2s, box-shadow .2s; }
         .login-inp:focus { border-color: rgba(245,166,35,.6) !important; box-shadow: 0 0 0 3px rgba(245,166,35,.1); outline: none; }
         .login-btn:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
         .login-btn:active:not(:disabled) { transform:scale(.98); }
+        .login-left { display: none; }
+        .login-right { width: 100%; }
+        .mobile-logo { display: block; }
+        @media(min-width:900px) {
+          .login-left { display: flex !important; }
+          .login-right { min-height: 100vh; }
+          .mobile-logo { display: none; }
+        }
       `}</style>
 
       {/* ── Left panel (desktop) ── */}
       <div style={{ flex: 1, display: "none", flexDirection: "column", justifyContent: "space-between", padding: "48px 56px", background: "linear-gradient(160deg,#0d1628 0%,#0a1220 50%,#06091a 100%)", borderRight: "1px solid rgba(30,45,80,.5)", position: "relative", overflow: "hidden" }}
         className="login-left">
-        <style>{`.login-left { display: none; } @media(min-width:900px){ .login-left{ display:flex !important; } .login-right{ min-height:100vh; } }`}</style>
 
         {/* Background grid */}
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(30,45,80,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(30,45,80,.12) 1px,transparent 1px)", backgroundSize:"48px 48px", animation:"grid-move 8s linear infinite", pointerEvents:"none" }} />
@@ -161,7 +169,6 @@ function LoginContent() {
 
         {/* Mobile logo */}
         <div className="mobile-logo" style={{ textAlign:"center", marginBottom:36 }}>
-          <style>{`.mobile-logo { display:block; } @media(min-width:900px){ .mobile-logo{ display:none; } }`}</style>
           <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width:52, height:52, objectFit:"contain", borderRadius:12, background:"#111827", marginBottom:12 }} />
           <div style={{ color:"#fff", fontWeight:900, fontSize:20 }}>Dynamic Works</div>
           <div style={{ color:"#f5a623", fontSize:11, letterSpacing:1.2, fontWeight:700, textTransform:"uppercase", marginTop:2 }}>Plataforma de Trading</div>
@@ -303,7 +310,6 @@ function PrimaryBtn({ children, loading, disabled, style }: { children:React.Rea
     <button type="submit" disabled={disabled} className="login-btn"
       style={{ width:"100%", background: disabled ? "#7a5118" : "linear-gradient(135deg,#f5a623,#f97316)", color:"#0a0f1e", border:"none", borderRadius:12, padding:"14px 16px", fontSize:15, fontWeight:800, cursor:disabled ? "not-allowed" : "pointer", transition:"all .18s", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow: disabled ? "none" : "0 6px 24px rgba(245,166,35,.35)", ...style }}>
       {loading ? <span style={{ width:16, height:16, border:"2px solid rgba(0,0,0,.3)", borderTopColor:"#0a0f1e", borderRadius:"50%", display:"inline-block", animation:"spin .7s linear infinite" }} /> : children}
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </button>
   );
 }

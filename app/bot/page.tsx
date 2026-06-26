@@ -355,6 +355,8 @@ export default function BotPage() {
         .bot-inp:focus { border-color:rgba(245,166,35,.5); box-shadow:0 0 0 3px rgba(245,166,35,.1); }
         .bot-sel { background:#0a0f1e; border:1px solid #1e2d50; border-radius:9px; padding:9px 12px; color:#fff; font-size:13px; outline:none; width:100%; box-sizing:border-box; appearance:none; cursor:pointer; }
         .bot-sel:focus { border-color:rgba(245,166,35,.5); box-shadow:0 0 0 3px rgba(245,166,35,.1); }
+        @media(max-width:720px){.bot-grid{grid-template-columns:1fr!important}}
+        @media(min-width:721px){.bot-cfg{display:flex!important}.bot-log{display:flex!important}}
       `}</style>
 
       {/* Header */}
@@ -393,11 +395,9 @@ export default function BotPage() {
         </div>
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }} className="bot-grid">
-          <style>{`@media(max-width:720px){.bot-grid{grid-template-columns:1fr!important}}`}</style>
 
           {/* ── Painel Config ──────────────────────────────────────────────── */}
           <div style={{ display: tab === "log" ? "none" : "flex", flexDirection:"column", gap:12 }} className="bot-cfg">
-            <style>{`@media(min-width:721px){.bot-cfg{display:flex!important}}`}</style>
 
             <Section title="Par & Modo">
               <Label>Par de trading</Label>
@@ -504,7 +504,6 @@ export default function BotPage() {
 
           {/* ── Painel Log / Status ────────────────────────────────────────── */}
           <div style={{ display: tab === "config" ? "none" : "flex", flexDirection:"column", gap:12 }} className="bot-log">
-            <style>{`@media(min-width:721px){.bot-log{display:flex!important}}`}</style>
 
             {/* Stats */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
