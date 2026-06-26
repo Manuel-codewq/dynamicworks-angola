@@ -193,6 +193,8 @@ export default function TradePage() {
   const [mobileTab,     setMobileTab]     = useState<"chart" | "trade" | "wallet" | "account" | "markets">("chart");
   const [tradeDrawer,   setTradeDrawer]   = useState(false);
   const [timeframe,      setTimeframe]      = useState("1m");
+  // tickerPrices como ref — evita re-render em cada tick de cada par subscrito
+  const tickerPricesRef  = useRef<Record<string, number>>({});
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
   const [userMenuOpen,       setUserMenuOpen]       = useState(false);
   const [tournamentWins,     setTournamentWins]     = useState(0);
@@ -216,7 +218,10 @@ export default function TradePage() {
   const [soundOn,         setSoundOn]         = useState(true);
   const [traderStats,     setTraderStats]     = useState<{ today: { real: { pnl: number; wins: number; losses: number; total: number }; demo: { pnl: number; wins: number; losses: number; total: number } }; allTime: { real: { pnl: number; wins: number; losses: number; total: number }; demo: { pnl: number; wins: number; losses: number; total: number } } } | null>(null);
   const [panelCollapsed,  setPanelCollapsed]  = useState(true);
-  const tradeMarkersRef   = useRef<any>(null);
+  const tradeMarkersRef      = useRef<any>(null);
+  // Throttle refs — evitam setState em cada tick
+  const tickerFlushRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sentimentThrottleRef = useRef<number>(0);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const chartRef           = useRef<HTMLDivElement>(null);
@@ -1356,32 +1361,43 @@ export default function TradePage() {
 
       // Guardar o primeiro preço recebido por símbolo como referência da sessão
       if (!sessionOpenPrices[tick.symbol]) sessionOpenPrices[tick.symbol] = tick.quote;
-      // Update ticker for all pairs
-      setTickerPrices(prev => ({ ...prev, [tick.symbol]: tick.quote }));
+
+      // Ticker: escrever no ref e agendar flush em batch (máx 1×/500ms) — evita re-render por cada tick de cada par
+      tickerPricesRef.current = { ...tickerPricesRef.current, [tick.symbol]: tick.quote };
+      if (!tickerFlushRef.current) {
+        tickerFlushRef.current = setTimeout(() => {
+          setTickerPrices({ ...tickerPricesRef.current });
+          tickerFlushRef.current = null;
+        }, 500);
+      }
 
       // Only update chart/price display for the selected pair
       if (tick.symbol !== selectedPairRef.current?.symbol) return;
 
-      const q = tick.quote;
-      const up = q >= lastPriceRef.current;
+      const q   = tick.quote;
+      const prev = lastPriceRef.current;
+
+      // Sanity check ANTES de actualizar lastPriceRef — filtra spikes > 8% (excepto OTC)
+      const isOtc = tick.symbol.startsWith("OTC_") || tick.symbol.startsWith("1HZ") || tick.symbol.startsWith("R_") || tick.symbol.startsWith("RD") || tick.symbol.startsWith("WLD");
+      if (!isOtc && prev > 0 && Math.abs(q - prev) / prev > 0.08) return;
+
+      const up = q >= prev;
       setPriceUp(up);
       lastPriceRef.current = q;
       setCurrentPrice(q);
       if (livePriceLineRef.current) {
-        livePriceLineRef.current.applyOptions({
-          price: q,
-          color: up ? "#0ecb81" : "#f6465d",
-        });
+        livePriceLineRef.current.applyOptions({ price: q, color: up ? "#0ecb81" : "#f6465d" });
       }
-      setSentiment(Math.floor(45 + Math.random() * 30));
+
+      // Sentiment: throttle a 3s — não precisa actualizar em cada tick
+      const now = Date.now();
+      if (now - sentimentThrottleRef.current > 3000) {
+        sentimentThrottleRef.current = now;
+        setSentiment(Math.floor(45 + Math.random() * 30));
+      }
 
       // Skip candle updates during reconnect window — fresh history will arrive via onCandles
       if (reconnectingRef.current) return;
-
-      // Sanity check: ignora bad ticks do Deriv (> 8% de desvio)
-      // OTC: desvia do histórico no início — não filtrar
-      const isOtc = tick.symbol.startsWith("OTC_");
-      if (!isOtc && lastPriceRef.current > 0 && Math.abs(q - lastPriceRef.current) / lastPriceRef.current > 0.08) return;
 
       // Update live candle
       if (!candleSeriesRef.current) return;
@@ -2528,6 +2544,14 @@ export default function TradePage() {
             }}>{q >= 1000 ? `${q / 1000}k` : q}</button>
           ))}
         </div>
+        {displayBalance > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
+            <span style={{ color: "#334155", fontSize: 10 }}>Risco do saldo</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: amount / displayBalance > 0.2 ? "#f6465d" : amount / displayBalance > 0.1 ? "#f5a623" : "#0ecb81", fontVariantNumeric: "tabular-nums" }}>
+              {((amount / displayBalance) * 100).toFixed(1)}%
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Expiração (stepper − / + e grelha de presets) ── */}
@@ -2715,23 +2739,31 @@ export default function TradePage() {
         const s   = isDemo ? traderStats.today.demo : traderStats.today.real;
         const all = isDemo ? traderStats.allTime.demo : traderStats.allTime.real;
         if (s.total === 0 && all.total === 0) return null;
-        const pnlColor = s.pnl >= 0 ? "#0ecb81" : "#f6465d";
+        const pnlColor   = s.pnl >= 0 ? "#0ecb81" : "#f6465d";
+        const winRate    = all.total > 0 ? Math.round((all.wins / all.total) * 100) : 0;
+        const winRateColor = winRate >= 60 ? "#0ecb81" : winRate >= 45 ? "#f5a623" : "#f6465d";
         return (
-          <div style={{ background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: 9, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 2 }}>Hoje</div>
-              <div style={{ color: pnlColor, fontWeight: 800, fontSize: 13 }}>
-                {s.pnl >= 0 ? "+" : ""}{formatKz(Math.abs(s.pnl))}
-              </div>
-              {s.total > 0 && <div style={{ color: "#475569", fontSize: 10 }}>{s.wins}V·{s.losses}D</div>}
-            </div>
-            {all.total > 0 && (
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color: "#64748b", fontSize: 9, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 2 }}>Total</div>
-                <div style={{ color: all.pnl >= 0 ? "#0ecb81" : "#f6465d", fontWeight: 800, fontSize: 13 }}>
-                  {all.pnl >= 0 ? "+" : ""}{formatKz(Math.abs(all.pnl))}
+          <div style={{ background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, overflow: "hidden" }}>
+            {/* Stats row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid #262d40" }}>
+              {[
+                { label: "Hoje P&L", value: `${s.pnl >= 0 ? "+" : ""}${formatKz(Math.abs(s.pnl))}`, color: pnlColor },
+                { label: "Hoje", value: s.total > 0 ? `${s.wins}V · ${s.losses}D` : "—", color: "#94a3b8" },
+                { label: "Win Rate", value: all.total > 0 ? `${winRate}%` : "—", color: winRateColor },
+              ].map((item, i) => (
+                <div key={i} style={{ padding: "8px 10px", borderRight: i < 2 ? "1px solid #262d40" : "none", textAlign: "center" }}>
+                  <div style={{ color: "#334155", fontSize: 9, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 3 }}>{item.label}</div>
+                  <div style={{ color: item.color, fontWeight: 800, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{item.value}</div>
                 </div>
-                <div style={{ color: "#475569", fontSize: 10 }}>{all.total > 0 ? `${Math.round((all.wins / all.total) * 100)}% win` : ""}</div>
+              ))}
+            </div>
+            {/* Win rate bar */}
+            {all.total > 0 && (
+              <div style={{ padding: "5px 10px 6px", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ flex: 1, height: 4, background: "#141824", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${winRate}%`, background: `linear-gradient(90deg, ${winRateColor}, ${winRateColor}88)`, borderRadius: 2, transition: "width 0.6s ease" }} />
+                </div>
+                <span style={{ color: "#334155", fontSize: 9 }}>{all.wins}V / {all.losses}D</span>
               </div>
             )}
           </div>
@@ -2825,6 +2857,34 @@ export default function TradePage() {
           ))
         )}
       </div>
+
+      {/* ── Mini trade history (desktop only) ── */}
+      {!compact && tradeHistory.length > 0 && (
+        <div style={{ background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #262d40" }}>
+            <span style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>Últimas Operações</span>
+            <button onClick={() => fetchTradeHistory()} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", fontSize: 10 }}>
+              <RefreshCw size={10} />
+            </button>
+          </div>
+          {tradeHistory.slice(0, 6).map((t: any) => {
+            const isWin = t.result === "win";
+            const profit = t.profit ?? (isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : -t.amount);
+            return (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", borderBottom: "1px solid #141824", borderLeft: `2px solid ${isWin ? "#0ecb81" : "#f6465d"}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, color: t.direction === "call" ? "#0ecb81" : "#f6465d" }}>{t.direction === "call" ? "▲" : "▼"}</span>
+                  <span style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.asset}</span>
+                  <span style={{ color: "#334155", fontSize: 10 }}>{new Date(t.createdAt).toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+                <span style={{ color: isWin ? "#0ecb81" : "#f6465d", fontWeight: 800, fontSize: 12, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                  {isWin ? "+" : ""}{formatKz(profit)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
     </div>
@@ -4016,6 +4076,28 @@ export default function TradePage() {
                 <X size={16} color="#64748b" />
               </button>
             </div>
+            {/* Stats summary */}
+            {traderStats && (() => {
+              const s   = isDemo ? traderStats.today.demo   : traderStats.today.real;
+              const all = isDemo ? traderStats.allTime.demo : traderStats.allTime.real;
+              if (s.total === 0 && all.total === 0) return null;
+              const wr = all.total > 0 ? Math.round((all.wins / all.total) * 100) : 0;
+              const wrColor = wr >= 60 ? "#0ecb81" : wr >= 45 ? "#f5a623" : "#f6465d";
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid #262d40", flexShrink: 0 }}>
+                  {[
+                    { label: "P&L Hoje",  value: `${s.pnl >= 0 ? "+" : ""}${formatKz(Math.abs(s.pnl))}`,  color: s.pnl >= 0 ? "#0ecb81" : "#f6465d" },
+                    { label: "Hoje",      value: s.total > 0 ? `${s.wins}V · ${s.losses}D` : "—",          color: "#94a3b8" },
+                    { label: "Win Rate",  value: all.total > 0 ? `${wr}%` : "—",                           color: wrColor },
+                  ].map((item, i) => (
+                    <div key={i} style={{ padding: "8px 0", textAlign: "center", borderRight: i < 2 ? "1px solid #262d40" : "none" }}>
+                      <div style={{ color: "#334155", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{item.label}</div>
+                      <div style={{ color: item.color, fontSize: 12, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             {/* Content */}
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px" }}>
               {tradeHistoryTab === "open" ? (
@@ -4772,9 +4854,22 @@ export default function TradePage() {
 
         {renderAssetDropdown()}
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#141824", border: "1px solid #262d40", borderRadius: 8, padding: "5px 10px" }}>
-          <div className="dw-ping" style={{ width: 7, height: 7, borderRadius: "50%", background: priceUp ? "#0ecb81" : "#f6465d", boxShadow: priceUp ? "0 0 6px #0ecb81" : "0 0 6px #f6465d" }} />
-          <span style={{ fontSize: 16, fontWeight: 900, color: priceUp ? "#0ecb81" : "#f6465d", fontVariantNumeric: "tabular-nums", transition: "color 0.2s ease" }}>{priceStr}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#141824", border: "1px solid #262d40", borderRadius: 8, padding: "5px 12px" }}>
+            <div className="dw-ping" style={{ width: 7, height: 7, borderRadius: "50%", background: priceUp ? "#0ecb81" : "#f6465d", boxShadow: priceUp ? "0 0 6px #0ecb81" : "0 0 6px #f6465d", flexShrink: 0 }} />
+            <span style={{ fontSize: 16, fontWeight: 900, color: priceUp ? "#0ecb81" : "#f6465d", fontVariantNumeric: "tabular-nums", transition: "color 0.2s ease" }}>{priceStr}</span>
+          </div>
+          {(() => {
+            const open = selectedPair ? (sessionOpenPrices[selectedPair.symbol] ?? 0) : 0;
+            if (!open || !currentPrice) return null;
+            const pct = ((currentPrice - open) / open) * 100;
+            const isPos = pct >= 0;
+            return (
+              <span style={{ fontSize: 11, fontWeight: 700, color: isPos ? "#0ecb81" : "#f6465d", background: isPos ? "rgba(14,203,129,0.1)" : "rgba(246,70,93,0.1)", border: `1px solid ${isPos ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)"}`, borderRadius: 5, padding: "3px 8px", fontVariantNumeric: "tabular-nums" }}>
+                {isPos ? "+" : ""}{pct.toFixed(2)}%
+              </span>
+            );
+          })()}
         </div>
 
         <div style={{ flex: 1 }} />
@@ -4852,22 +4947,25 @@ export default function TradePage() {
       <div style={{ paddingTop: 88, height: "100vh", display: "flex" }}>
         {/* Chart area — ocupa todo o espaço disponível */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", borderRight: "1px solid #262d40" }}>
-          <div style={{ padding: "6px 14px", background: "#161a26", display: "flex", gap: 5, borderBottom: "1px solid #262d40", alignItems: "center" }}>
-            {["1m", "5m", "15m", "1h", "1D"].map(tf => (
+          <div style={{ padding: "5px 14px", background: "#161a26", display: "flex", gap: 4, borderBottom: "1px solid #262d40", alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
+            {["1m", "3m", "5m", "15m", "30m", "1h", "4h", "1D"].map(tf => (
               <button key={tf} className="dw-chip" onClick={() => setTimeframe(tf)} style={{
                 background: timeframe === tf ? "rgba(245,166,35,0.12)" : "transparent",
                 color: timeframe === tf ? "#f5a623" : "#4b5563",
-                border: `1px solid ${timeframe === tf ? "rgba(245,166,35,0.4)" : "#262d40"}`,
-                borderRadius: 6, padding: "4px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                border: `1px solid ${timeframe === tf ? "rgba(245,166,35,0.4)" : "transparent"}`,
+                borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer",
                 boxShadow: timeframe === tf ? "0 0 8px rgba(245,166,35,0.15)" : "none",
-                transition: "all 0.12s",
+                transition: "all 0.12s", flexShrink: 0,
               }}>{tf}</button>
             ))}
             <div style={{ flex: 1 }} />
             {candleTimer && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", fontVariantNumeric: "tabular-nums", letterSpacing: 1 }}>
-                {candleTimer}
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, background: "#141824", border: "1px solid #262d40", borderRadius: 6, padding: "3px 10px", flexShrink: 0 }}>
+                <Clock size={11} color="#f5a623" />
+                <span style={{ fontSize: 12, fontWeight: 800, color: candleRemSecs <= 10 ? "#f6465d" : "#f5a623", fontVariantNumeric: "tabular-nums", letterSpacing: 1, transition: "color 0.3s" }}>
+                  {candleTimer}
+                </span>
+              </div>
             )}
           </div>
           <div style={{ flex: 1, minHeight: 0, position: "relative" }} onClick={() => { if (expandedItem === "__charttype") setExpandedItem(null); }}>

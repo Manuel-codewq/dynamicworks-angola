@@ -112,37 +112,41 @@ export default function HistoryPage() {
   });
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ minHeight: "100vh", background: "#070d1c", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 40 }}>
+    <div style={{ minHeight: "100vh", background: "#070d1c", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 40 }}>
+      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}`}</style>
 
       {/* Header */}
-      <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
-        <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
-          <ChevronLeft size={20} />
+      <div style={{ background: "#0d1528", borderBottom: "1px solid rgba(30,45,80,.6)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10, backdropFilter: "blur(12px)" }}>
+        <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(30,45,80,.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 9, color: "#94a3b8" }}>
+          <ChevronLeft size={18} />
         </button>
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>{t("history.title")}</span>
-        <button onClick={load} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}><RefreshCw size={16} /></button>
+        <BarChart2 size={16} color="#a78bfa" />
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1, letterSpacing: -.2 }}>{t("history.title")}</span>
+        <button onClick={load} style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(30,45,80,.4)", cursor: "pointer", width: 36, height: 36, borderRadius: 9, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <RefreshCw size={14} />
+        </button>
         <button onClick={() => exportCsv(filtered)}
-          style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "7px 12px", color: "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-          <Download size={14} /> CSV
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.3)", borderRadius: 9, padding: "8px 14px", color: "#22c55e", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+          <Download size={13} /> CSV
         </button>
       </div>
 
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "20px 16px" }}>
+      <div style={{ maxWidth: 820, margin: "0 auto", padding: "20px 16px", animation: "fadeUp .4s ease both" }}>
 
         {/* Filtros — modo */}
-        <div style={{ display: "flex", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 16, width: "fit-content" }}>
+        <div style={{ display: "flex", gap: 4, background: "rgba(17,24,39,.8)", border: "1px solid rgba(30,45,80,.5)", borderRadius: 12, padding: 4, marginBottom: 16, width: "fit-content" }}>
           {(["real","all","demo"] as ModeFilter[]).map(m => (
             <button key={m} onClick={() => { setModeFilter(m); setPage(1); }}
-              style={{ padding: "7px 16px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                background: modeFilter === m ? (m === "real" ? "#22c55e" : m === "demo" ? "#f5a623" : "#94a3b8") : "transparent",
-                color: modeFilter === m ? "#0a0f1e" : "#94a3b8",
+              style={{ padding: "8px 18px", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s",
+                background: modeFilter === m ? (m === "real" ? "#22c55e" : m === "demo" ? "#f5a623" : "#64748b") : "transparent",
+                color: modeFilter === m ? "#0a0f1e" : "#64748b",
               }}>
               {m === "real" ? t("history.filter.real") : m === "demo" ? t("history.filter.demo") : t("history.filter.both")}
             </button>
@@ -152,25 +156,25 @@ export default function HistoryPage() {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: t("history.winRate"), value: `${winRate}%`,             color: "#f5a623", Icon: Trophy    },
-            { label: t("history.totalPnl"),value: formatKz(Math.floor(totalPnl)), color: totalPnl >= 0 ? "#22c55e" : "#ef4444", Icon: BarChart2 },
-            { label: `${wins}W / ${losses}L`, value: `${total} ${t("dash.trades")}`, color: "#94a3b8", Icon: Target    },
-            { label: t("history.volume"),  value: formatKz(Math.floor(totalVol)), color: "#64748b", Icon: BarChart2 },
+            { label: t("history.winRate"), value: `${winRate}%`, color: "#f5a623", bg: "rgba(245,166,35,.06)", border: "rgba(245,166,35,.18)", Icon: Trophy },
+            { label: t("history.totalPnl"), value: formatKz(Math.floor(totalPnl)), color: totalPnl >= 0 ? "#22c55e" : "#ef4444", bg: totalPnl >= 0 ? "rgba(34,197,94,.06)" : "rgba(239,68,68,.06)", border: totalPnl >= 0 ? "rgba(34,197,94,.18)" : "rgba(239,68,68,.18)", Icon: BarChart2 },
+            { label: `${wins}V / ${losses}D`, value: `${total} ${t("dash.trades")}`, color: "#94a3b8", bg: "rgba(148,163,184,.04)", border: "rgba(30,45,80,.5)", Icon: Target },
+            { label: t("history.volume"), value: formatKz(Math.floor(totalVol)), color: "#64748b", bg: "rgba(30,45,80,.15)", border: "rgba(30,45,80,.4)", Icon: BarChart2 },
           ].map((s, i) => (
-            <div key={i} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+            <div key={i} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
               <s.Icon size={18} color={s.color} />
               <div>
-                <div style={{ color: s.color, fontWeight: 800, fontSize: 16 }}>{s.value}</div>
-                <div style={{ color: "#64748b", fontSize: 11 }}>{s.label}</div>
+                <div style={{ color: s.color, fontWeight: 900, fontSize: 17, letterSpacing: -.3 }}>{s.value}</div>
+                <div style={{ color: "#475569", fontSize: 11 }}>{s.label}</div>
               </div>
             </div>
           ))}
         </div>
 
         {/* Filtros avançados */}
-        <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+        <div style={{ background: "rgba(17,24,39,.8)", border: "1px solid rgba(30,45,80,.5)", borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <Filter size={14} color="#64748b" />
+            <Filter size={13} color="#475569" />
             {(["all","win","loss"] as ResultFilter[]).map(r => (
               <button key={r} onClick={() => { setResultFilter(r); setPage(1); }} style={filterBtn(resultFilter === r, r === "win" ? "#22c55e" : r === "loss" ? "#ef4444" : "#94a3b8")}>
                 {r === "all" ? t("history.filter.all") : r === "win" ? t("history.filter.wins") : t("history.filter.losses")}
@@ -179,32 +183,33 @@ export default function HistoryPage() {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ position: "relative" }}>
-              <Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+              <Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#475569", pointerEvents: "none" }} />
               <input placeholder="EUR/USD" value={assetSearch} onChange={e => { setAssetSearch(e.target.value); setPage(1); }}
-                style={{ ...inp, paddingLeft: 28, width: 160 }} />
+                style={{ ...inp, paddingLeft: 28, width: 150 }} />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Calendar size={13} color="#64748b" />
-              <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-                style={{ ...inp, colorScheme: "dark" }} />
-              <span style={{ color: "#64748b", fontSize: 12 }}>{t("history.to")}</span>
-              <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }}
-                style={{ ...inp, colorScheme: "dark" }} />
+              <Calendar size={13} color="#475569" />
+              <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} style={{ ...inp, colorScheme: "dark" }} />
+              <span style={{ color: "#475569", fontSize: 12 }}>{t("history.to")}</span>
+              <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} style={{ ...inp, colorScheme: "dark" }} />
             </div>
             {(resultFilter !== "all" || assetSearch || dateFrom || dateTo) && (
               <button onClick={() => { setResultFilter("all"); setAssetSearch(""); setDateFrom(""); setDateTo(""); setPage(1); }}
-                style={{ background: "transparent", border: "1px solid #1e2d50", borderRadius: 7, padding: "6px 12px", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
+                style={{ background: "transparent", border: "1px solid rgba(30,45,80,.5)", borderRadius: 8, padding: "6px 12px", color: "#64748b", fontSize: 12, cursor: "pointer" }}>
                 {t("history.clear")}
               </button>
             )}
           </div>
         </div>
 
-        {/* Tabela */}
+        {/* Lista */}
         {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", color: "#475569", padding: "48px 0" }}>
-            <BarChart2 size={40} color="#1e2d50" style={{ marginBottom: 12 }} />
-            <div style={{ fontSize: 14 }}>{t("history.noTrades")}</div>
+          <div style={{ textAlign: "center", color: "#475569", padding: "56px 0" }}>
+            <div style={{ width: 56, height: 56, background: "rgba(30,45,80,.3)", borderRadius: 14, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <BarChart2 size={26} color="#1e3a5f" />
+            </div>
+            <div style={{ fontSize: 14, marginBottom: 6 }}>{t("history.noTrades")}</div>
+            <div style={{ fontSize: 12, color: "#334155" }}>Tenta ajustar os filtros acima</div>
           </div>
         ) : (
           <>
@@ -212,43 +217,40 @@ export default function HistoryPage() {
               const isWin = tr.result === "win";
               const pl    = tr.profit ?? 0;
               return (
-                <div key={tr.id} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "14px 16px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+                <div key={tr.id} style={{ background: "rgba(17,24,39,.8)", border: "1px solid rgba(30,45,80,.4)", borderLeft: `3px solid ${isWin ? "#22c55e" : "#ef4444"}`, borderRadius: 12, padding: "14px 16px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
                   {/* Ícone */}
-                  <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                    background: isWin ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: isWin ? "rgba(34,197,94,.1)" : "rgba(239,68,68,.1)" }}>
                     {isWin ? <TrendingUp size={18} color="#22c55e" /> : <TrendingDown size={18} color="#ef4444" />}
                   </div>
 
-                  {/* Info principal */}
+                  {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                      <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{tr.asset}</span>
-                      <span style={{ background: tr.direction === "call" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: tr.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                      <span style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 14 }}>{tr.asset}</span>
+                      <span style={{ background: tr.direction === "call" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)", color: tr.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>
                         {tr.direction === "call" ? t("history.call") : t("history.put")}
                       </span>
-                      <span style={{ background: tr.isDemo ? "rgba(245,166,35,0.1)" : "rgba(34,197,94,0.1)", color: tr.isDemo ? "#f5a623" : "#22c55e", borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
+                      <span style={{ background: tr.isDemo ? "rgba(245,166,35,.1)" : "rgba(34,197,94,.1)", color: tr.isDemo ? "#f5a623" : "#22c55e", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>
                         {tr.isDemo ? "DEMO" : "REAL"}
                       </span>
-                      <span style={{ color: "#475569", fontSize: 11 }}>{formatExpiry(tr.expirySecs)}</span>
+                      <span style={{ background: "rgba(30,45,80,.4)", color: "#64748b", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600 }}>{formatExpiry(tr.expirySecs)}</span>
                     </div>
-                    <div style={{ color: "#64748b", fontSize: 11 }}>{formatDate(tr.createdAt)}</div>
-                  </div>
-
-                  {/* Valores */}
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ color: isWin ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 15 }}>
-                      {isWin ? "+" : "−"}{formatKz(Math.floor(Math.abs(pl)))}
-                    </div>
-                    <div style={{ color: "#475569", fontSize: 11 }}>{formatKz(Math.floor(tr.amount))}</div>
+                    <div style={{ color: "#475569", fontSize: 11 }}>{formatDate(tr.createdAt)}</div>
                     {tr.entryPrice > 0 && tr.closePrice && (
-                      <div style={{ color: "#374151", fontSize: 10, marginTop: 2 }}>
+                      <div style={{ color: "#2a3a55", fontSize: 10, marginTop: 3 }}>
                         {tr.entryPrice.toFixed(5)} → {tr.closePrice.toFixed(5)}
                       </div>
                     )}
+                  </div>
+
+                  {/* Valores + share */}
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ color: isWin ? "#22c55e" : "#ef4444", fontWeight: 900, fontSize: 16, letterSpacing: -.3 }}>
+                      {isWin ? "+" : "−"}{formatKz(Math.floor(Math.abs(pl)))}
+                    </div>
+                    <div style={{ color: "#475569", fontSize: 11, marginBottom: tr.status === "closed" && tr.result ? 6 : 0 }}>{formatKz(Math.floor(tr.amount))}</div>
                     {tr.status === "closed" && tr.result && (
-                      <div style={{ marginTop: 6 }}>
-                        <TradeShareButton trade={{ asset: tr.asset, direction: tr.direction, result: tr.result, profit: pl, amount: tr.amount, payout: tr.payout, createdAt: tr.createdAt }} size="sm" />
-                      </div>
+                      <TradeShareButton trade={{ asset: tr.asset, direction: tr.direction, result: tr.result, profit: pl, amount: tr.amount, payout: tr.payout, createdAt: tr.createdAt }} size="sm" />
                     )}
                   </div>
                 </div>
@@ -257,14 +259,14 @@ export default function HistoryPage() {
 
             {/* Paginação */}
             {totalPages > 1 && (
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 20 }}>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 24 }}>
                 <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                  style={{ padding: "8px 16px", background: page === 1 ? "#1e2d50" : "#111827", border: "1px solid #1e2d50", borderRadius: 8, color: page === 1 ? "#475569" : "#fff", cursor: page === 1 ? "not-allowed" : "pointer", fontSize: 13 }}>
+                  style={{ padding: "9px 18px", background: page === 1 ? "rgba(30,45,80,.2)" : "rgba(17,24,39,.8)", border: "1px solid rgba(30,45,80,.5)", borderRadius: 9, color: page === 1 ? "#334155" : "#94a3b8", cursor: page === 1 ? "not-allowed" : "pointer", fontSize: 14 }}>
                   ←
                 </button>
-                <span style={{ color: "#94a3b8", fontSize: 13 }}>Pág. {page} / {totalPages} · {filtered.length} trades</span>
+                <span style={{ color: "#475569", fontSize: 12, fontWeight: 600 }}>Pág. {page} / {totalPages} · {filtered.length} trades</span>
                 <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-                  style={{ padding: "8px 16px", background: page === totalPages ? "#1e2d50" : "#111827", border: "1px solid #1e2d50", borderRadius: 8, color: page === totalPages ? "#475569" : "#fff", cursor: page === totalPages ? "not-allowed" : "pointer", fontSize: 13 }}>
+                  style={{ padding: "9px 18px", background: page === totalPages ? "rgba(30,45,80,.2)" : "rgba(17,24,39,.8)", border: "1px solid rgba(30,45,80,.5)", borderRadius: 9, color: page === totalPages ? "#334155" : "#94a3b8", cursor: page === totalPages ? "not-allowed" : "pointer", fontSize: 14 }}>
                   →
                 </button>
               </div>

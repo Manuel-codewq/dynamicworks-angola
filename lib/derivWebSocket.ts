@@ -94,7 +94,8 @@ export function getAvailablePairs(): DerivPair[] {
 }
 
 export const GRANULARITY: Record<string, number> = {
-  "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "1D": 86400,
+  "1m": 60, "3m": 180, "5m": 300, "15m": 900,
+  "30m": 1800, "1h": 3600, "4h": 14400, "1D": 86400,
 };
 
 export interface DerivTick   { symbol: string; quote: number; epoch: number; }

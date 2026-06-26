@@ -178,6 +178,11 @@ export default function WalletPage() {
   const tabBtn = (tabKey: string): React.CSSProperties => ({ flex: 1, padding: "10px 0", background: tab === tabKey ? "#f5a623" : "none", color: tab === tabKey ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" });
   const filterBtn = (active: boolean): React.CSSProperties => ({ padding: "6px 12px", background: active ? "rgba(245,166,35,0.15)" : "rgba(255,255,255,0.04)", color: active ? "#f5a623" : "#64748b", border: `1px solid ${active ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer" });
 
+  // ── Computed metrics ──────────────────────────────────────────────────────
+  const totalDeposited   = transactions.filter(t => t.type === "deposit"    && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+  const totalWithdrawn   = transactions.filter(t => t.type === "withdrawal" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+  const totalBonus       = transactions.filter(t => t.type === "bonus"      && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#070d1a", padding: "24px 16px", maxWidth: 600, margin: "0 auto" }}>
       <Skeleton height={22} width={140} radius={8} style={{ marginBottom: 20 }} />
@@ -198,15 +203,15 @@ export default function WalletPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 40 }}>
       {/* Header */}
-      <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
+      <div style={{ background: "rgba(17,24,39,0.97)", backdropFilter: "blur(16px)", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
         <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
         <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>{t("wallet.title")}</span>
-        <button onClick={() => setShowBalance(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>
+        <button onClick={() => setShowBalance(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: "4px 8px" }}>
           {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
-        <button onClick={load} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>
+        <button onClick={load} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: "4px 8px" }}>
           <RefreshCw size={16} />
         </button>
       </div>
@@ -214,20 +219,45 @@ export default function WalletPage() {
       <PageGuide storageKey="dw_guide_wallet" steps={WALLET_GUIDE} />
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px" }}>
 
-        {/* Balance cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-          <div style={{ ...card, marginBottom: 0, background: "linear-gradient(135deg,#111827,#0f1e38)" }}>
-            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{t("wallet.realBalance")}</div>
-            <div style={{ color: "#f5a623", fontSize: 22, fontWeight: 900 }}>
-              {showBalance ? formatKz(Math.floor(balance)) : "••••••"}
-            </div>
+        {/* ── Main balance hero card ── */}
+        <div style={{ background: "linear-gradient(135deg,#0f1e38 0%,#111827 40%,#0d1420 100%)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 20, padding: "24px 22px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle,rgba(245,166,35,0.07) 0%,transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ color: "#475569", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>{t("wallet.realBalance")}</div>
+          <div style={{ color: "#f5a623", fontSize: "clamp(28px,8vw,40px)", fontWeight: 900, letterSpacing: -1, marginBottom: 4, lineHeight: 1 }}>
+            {showBalance ? formatKz(Math.floor(balance)) : "••••••••"}
           </div>
-          <div style={{ ...card, marginBottom: 0 }}>
-            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{t("wallet.demoBalance")}</div>
-            <div style={{ color: "#94a3b8", fontSize: 22, fontWeight: 900 }}>
-              {showBalance ? formatKz(Math.floor(demoBalance)) : "••••••"}
-            </div>
+          <div style={{ color: "#334155", fontSize: 12, marginBottom: 20 }}>Saldo real disponível para negociar</div>
+
+          {/* Quick actions */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => { setTab("deposit"); resetForm(); }}
+              style={{ flex: 1, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 12, padding: "12px 10px", color: "#22c55e", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "all .2s" }}>
+              <ArrowDownCircle size={16} /> Depositar
+            </button>
+            <button onClick={() => { setTab("withdraw"); resetForm(); }}
+              style={{ flex: 1, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "12px 10px", color: "#ef4444", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "all .2s" }}>
+              <ArrowUpCircle size={16} /> Levantar
+            </button>
+            <button onClick={() => router.push("/trade")}
+              style={{ flex: 1, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 12, padding: "12px 10px", color: "#f5a623", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "all .2s" }}>
+              <Send size={16} /> Negociar
+            </button>
           </div>
+        </div>
+
+        {/* ── Stats row ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 14 }}>
+          {[
+            { label: "Demo",         value: showBalance ? formatKz(Math.floor(demoBalance)) : "••••", color: "#64748b", sub: "saldo demo" },
+            { label: "Depositado",   value: showBalance ? formatKz(Math.floor(totalDeposited)) : "••••", color: "#22c55e", sub: "total" },
+            { label: "Bónus",        value: showBalance ? formatKz(Math.floor(totalBonus)) : "••••", color: "#f5a623", sub: "recebido" },
+          ].map(s => (
+            <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "14px 12px", textAlign: "center" }}>
+              <div style={{ color: "#334155", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>{s.label}</div>
+              <div style={{ color: s.color, fontSize: 14, fontWeight: 900 }}>{s.value}</div>
+              <div style={{ color: "#1e2d50", fontSize: 10, marginTop: 2 }}>{s.sub}</div>
+            </div>
+          ))}
         </div>
 
         {/* Tabs */}
@@ -517,10 +547,12 @@ export default function WalletPage() {
                 <div style={{ fontSize: 14 }}>{t("wallet.noTransactions")}</div>
               </div>
             ) : (
-              filtered.map(tx => {
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {filtered.map(tx => {
                 const isCredit = tx.type === "deposit" || tx.type === "bonus" || tx.type === "tournament_prize" || (tx.type === "adjustment" && tx.amount >= 0);
                 const color    = isCredit ? "#22c55e" : "#ef4444";
-                const bgColor  = isCredit ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)";
+                const bgColor  = isCredit ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)";
+                const borderColor = isCredit ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)";
                 const icon     = isCredit ? <ArrowDownCircle size={20} color="#22c55e" /> : <ArrowUpCircle size={20} color="#ef4444" />;
                 const label    = tx.type === "deposit"          ? t("wallet.type.deposit")
                                : tx.type === "withdrawal"       ? t("wallet.type.withdrawal")
@@ -529,36 +561,42 @@ export default function WalletPage() {
                                : tx.type === "tournament_prize" ? "Prémio de Torneio"
                                : tx.type === "tournament_entry" ? "Inscrição em Torneio"
                                : tx.type;
+                const methodLabel: Record<string, string> = {
+                  multicaixa_ref:         "Multicaixa Express",
+                  multicaixa_express:     t("wallet.method.multicaixa"),
+                  transferencia_bancaria: t("wallet.method.transfer"),
+                  usdt_trc20:             "USDT TRC-20",
+                };
                 return (
-                  <div key={tx.id} style={{ ...card, padding: "16px 18px" }}>
+                  <div key={tx.id} style={{ background: "#111827", border: `1px solid ${borderColor}`, borderRadius: 14, padding: "14px 16px", borderLeft: `3px solid ${color}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: bgColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 12, background: bgColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         {icon}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{label}</span>
-                          <span style={{ color, fontWeight: 800, fontSize: 15 }}>
-                            {isCredit ? "+" : "−"}{formatKz(Math.abs(Math.floor(tx.amount)))}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                           <div>
-                            {tx.method && <span style={{ color: "#64748b", fontSize: 12 }}>{{
-                              multicaixa_ref:         "Multicaixa (Ent/Ref)",
-                              multicaixa_express:     t("wallet.method.multicaixa"),
-                              transferencia_bancaria: t("wallet.method.transfer"),
-                              usdt_trc20:             "USDT TRC-20",
-                            }[tx.method] ?? tx.method}</span>}
-                            <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{formatDate(tx.createdAt)}</div>
+                            <div style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 14 }}>{label}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                              {tx.method && <span style={{ color: "#334155", fontSize: 11, background: "rgba(255,255,255,0.04)", border: "1px solid #1e2d50", borderRadius: 4, padding: "1px 5px" }}>{methodLabel[tx.method] ?? tx.method}</span>}
+                              <span style={{ color: "#334155", fontSize: 11 }}>{formatDate(tx.createdAt)}</span>
+                            </div>
                           </div>
-                          <StatusBadge status={tx.status} />
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ color, fontWeight: 900, fontSize: 16 }}>
+                              {isCredit ? "+" : "−"}{formatKz(Math.abs(Math.floor(tx.amount)))}
+                            </div>
+                            <div style={{ marginTop: 4 }}>
+                              <StatusBadge status={tx.status} />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 );
-              })
+              })}
+              </div>
             )}
           </>
         )}
