@@ -56,24 +56,29 @@ export function playOpen(): void {
   tone(440, 0.06, now + 0.07, 0.08, "sine");
 }
 
-/** Sequência ascendente de vitória */
+/** Win — estilo Pocket Option: 3 blings rápidos com harmónicos metálicos */
 export function playWin(): void {
   if (!isSoundEnabled()) return;
   const c = getCtx();
   if (!c) return;
   const now = c.currentTime;
-  tone(600,  0.10, now,        0.20, "sine");
-  tone(800,  0.10, now + 0.11, 0.22, "sine");
-  tone(1000, 0.10, now + 0.22, 0.22, "sine");
-  tone(1300, 0.18, now + 0.33, 0.25, "sine");
+  // Bling 1 — fundamental + oitava (efeito coin)
+  tone(1046, 0.09, now,        0.28, "sine");
+  tone(2093, 0.09, now,        0.09, "sine");
+  // Bling 2
+  tone(1318, 0.09, now + 0.08, 0.30, "sine");
+  tone(2637, 0.09, now + 0.08, 0.09, "sine");
+  // Bling 3 — final mais longo e brilhante
+  tone(1568, 0.22, now + 0.16, 0.36, "sine");
+  tone(3136, 0.22, now + 0.16, 0.10, "sine");
 }
 
-/** Tom descendente de derrota */
+/** Loss — estilo Pocket Option: 2 tons descendentes "womp womp" */
 export function playLoss(): void {
   if (!isSoundEnabled()) return;
   const c = getCtx();
   if (!c) return;
   const now = c.currentTime;
-  tone(350, 0.14, now,        0.20, "sine");
-  tone(250, 0.20, now + 0.15, 0.18, "sine");
+  tone(300, 0.22, now,        0.30, "sawtooth");
+  tone(200, 0.30, now + 0.24, 0.24, "sawtooth");
 }

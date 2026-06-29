@@ -2183,9 +2183,9 @@ export default function TradePage() {
       console.error("[openTrade]", err);
       setNotification({ msg: `Erro: ${err?.message ?? "ligação falhou"}`, type: "info" });
     }
-    // Prevent accidental double-submit (500ms)
+    // Prevent accidental double-submit (200ms)
     const elapsed = Date.now() - started;
-    if (elapsed < 500) await new Promise(r => setTimeout(r, 500 - elapsed));
+    if (elapsed < 200) await new Promise(r => setTimeout(r, 200 - elapsed));
     setTimeout(() => setNotification(null), 3000);
     setLoading(false);
   }
