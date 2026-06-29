@@ -618,6 +618,25 @@ export default function LandingPage() {
         </div>
       </FadeIn>
 
+      {/* ── Patrocinadores ── */}
+      <FadeIn>
+        <div style={{ position: "relative", zIndex: 1, borderTop: "1px solid rgba(30,45,80,0.4)", borderBottom: "1px solid rgba(30,45,80,0.4)", background: "rgba(4,7,16,0.6)", backdropFilter: "blur(12px)" }}>
+          <section style={{ maxWidth: 1160, margin: "0 auto", padding: "36px 32px", textAlign: "center" }}>
+            <p style={{ color: "#1e2d50", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.6, marginBottom: 24 }}>Patrocinador Oficial</p>
+            <a href="https://doumblemg.com" target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 14, background: "rgba(17,24,39,0.8)", border: "1px solid rgba(245,166,35,0.15)", borderRadius: 14, padding: "16px 28px", textDecoration: "none", transition: "all .25s", cursor: "pointer" }}
+              onMouseOver={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,166,35,0.4)"; (e.currentTarget as HTMLElement).style.background = "rgba(245,166,35,0.06)"; }}
+              onMouseOut={e  => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,166,35,0.15)"; (e.currentTarget as HTMLElement).style.background = "rgba(17,24,39,0.8)"; }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,rgba(245,166,35,0.2),rgba(245,166,35,0.06))", border: "1px solid rgba(245,166,35,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#f5a623", letterSpacing: -0.5 }}>DM</div>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ color: "#e2e8f0", fontWeight: 800, fontSize: 14, letterSpacing: -0.3 }}>DOUBLE MG, LDA</div>
+                <div style={{ color: "#374151", fontSize: 12 }}>Consultoria Financeira & Gestão</div>
+              </div>
+            </a>
+          </section>
+        </div>
+      </FadeIn>
+
       {/* ── Footer ── */}
       <footer style={{ position: "relative", zIndex: 1, background: "rgba(4,7,16,0.98)", borderTop: "1px solid rgba(30,45,80,0.5)", padding: "52px 32px 28px" }}>
         <div style={{ maxWidth: 1160, margin: "0 auto" }}>
