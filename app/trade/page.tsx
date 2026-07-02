@@ -3910,17 +3910,11 @@ export default function TradePage() {
   // ── Modal do Bot IA (partilhado desktop + mobile) ────────────────────────
   const botModalJSX = showBotModal ? (
     <div onMouseDown={() => setShowBotModal(false)}
-      style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", backdropFilter: "blur(3px)" }}>
+      style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(3px)", padding: "0 0 env(safe-area-inset-bottom,0)" }}>
       <div onMouseDown={e => e.stopPropagation()}
-        style={{ background: "#141824", borderRadius: isMobile ? "20px 20px 0 0" : 20, width: "100%", maxWidth: 480, padding: "0 0 32px", animation: "slideUpModal 0.25s cubic-bezier(0.32,0.72,0,1)", overflow: "hidden" }}>
+        style={{ background: "#141824", borderRadius: 20, width: "calc(100% - 24px)", maxWidth: 480, padding: "0 0 32px", animation: "slideUpModal 0.25s cubic-bezier(0.32,0.72,0,1)", overflow: "hidden" }}>
 
-        {/* Handle (mobile only) */}
-        {isMobile && (
-          <div style={{ padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 40, height: 4, background: "#262d40", borderRadius: 2 }} />
-          </div>
-        )}
-        <div style={{ padding: isMobile ? "12px 20px 16px" : "20px 20px 16px", borderBottom: "1px solid #1c2130", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #1c2130", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#0ea5e9,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Bot size={20} color="#fff" strokeWidth={2} />
