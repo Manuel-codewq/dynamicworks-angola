@@ -133,15 +133,22 @@ export default function LandingPage() {
         .footer-link { color:#2d3d58;font-size:13px;text-decoration:none;transition:color .2s; }
         .footer-link:hover { color:#fff; }
         @media(max-width:900px) {
-          .hero-wrap { flex-direction:column !important; padding-top:110px !important; gap:48px !important; }
+          .hero-wrap { flex-direction:column !important; padding:88px 20px 52px !important; gap:32px !important; }
           .hero-mockup { display:none !important; }
-          .stats-row { grid-template-columns:1fr !important; }
+          .stats-row { grid-template-columns:1fr !important; gap:0 !important; }
           .feats { grid-template-columns:1fr !important; }
           .steps { flex-direction:column !important; gap:32px !important; }
           .step-arrow { display:none !important; }
           .nav-links { display:none !important; }
           .nav-mobile-btn { display:flex !important; }
           .footer-inner { flex-direction:column !important; align-items:flex-start !important; gap:24px !important; }
+          .hero-h1 { font-size:clamp(30px,9vw,48px) !important; letter-spacing:-1.5px !important; max-width:100% !important; }
+          .hero-sub { font-size:15px !important; }
+          .hero-cta { flex-direction:column !important; }
+          .hero-cta button { width:100% !important; justify-content:center !important; }
+          .section-pad { padding:72px 20px !important; }
+          .cta-pad { padding:72px 20px !important; }
+          footer { padding:32px 20px 20px !important; }
         }
       `}</style>
 
@@ -200,17 +207,16 @@ export default function LandingPage() {
 
           {/* Left */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 className="fu1" style={{ fontSize: "clamp(44px,5.5vw,80px)", fontWeight: 900, lineHeight: 1.03, letterSpacing: "-3px", marginBottom: 26 }}>
-              Negoceie os<br />
-              mercados globais<br />
+            <h1 className="fu1 hero-h1" style={{ fontSize: "clamp(38px,4.2vw,64px)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-2.5px", marginBottom: 26, maxWidth: 560 }}>
+              Negoceie os mercados globais{" "}
               <span style={{ color: "#fff" }}>em Kwanzas.</span>
             </h1>
 
-            <p className="fu2" style={{ fontSize: 17, color: "#64748b", lineHeight: 1.75, maxWidth: 440, marginBottom: 40 }}>
+            <p className="fu2 hero-sub" style={{ fontSize: 17, color: "#64748b", lineHeight: 1.75, maxWidth: 440, marginBottom: 40 }}>
               A corretora angolana de opções binárias com depósitos e levantamentos em AOA via Multicaixa. Payout até 85% por operação.
             </p>
 
-            <div className="fu3" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 32 }}>
+            <div className="fu3 hero-cta" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 32 }}>
               <button className="btn-primary" onClick={() => router.push("/register")}>
                 Começar Agora <ArrowRight size={16} strokeWidth={2.5} />
               </button>
@@ -253,7 +259,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── Vantagens ── */}
-      <section id="vantagens" style={{ maxWidth: 1200, margin: "0 auto", padding: "120px 48px" }}>
+      <section id="vantagens" className="section-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "120px 48px" }}>
         <div style={{ marginBottom: 64 }}>
           <p style={{ color: "#ffffff", fontSize: 11, fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 14 }}>Porque a Dynamic Works</p>
           <h2 style={{ fontSize: "clamp(30px,4vw,52px)", fontWeight: 900, letterSpacing: -2, lineHeight: 1.1, maxWidth: 520 }}>
@@ -345,7 +351,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── CTA final ── */}
-      <section style={{ maxWidth: 760, margin: "0 auto", padding: "120px 48px", textAlign: "center" }}>
+      <section className="cta-pad" style={{ maxWidth: 760, margin: "0 auto", padding: "120px 48px", textAlign: "center" }}>
         <h2 style={{ fontSize: "clamp(36px,5vw,68px)", fontWeight: 900, letterSpacing: -3, lineHeight: 1.03, marginBottom: 22 }}>
           Pronto para<br />negociar?
         </h2>
