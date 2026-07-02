@@ -2237,23 +2237,22 @@ export default function TradePage() {
   const calcBotSignal = useCallback(() => {
     if (botCountdownRef.current > 0) return;
     const data = candleDataRef.current;
-    if (data.length < 22) return;
+    if (data.length < 30) return;
 
     let callScore = 0, putScore = 0;
     const indics: { name: string; value: string; signal: "bullish"|"bearish"|"neutral" }[] = [];
 
     // 1 — RSI(14)
     const rsiArr = calcRSI(data, 14);
-    if (rsiArr.length >= 2) {
+    if (rsiArr.length >= 3) {
       const rsi     = rsiArr[rsiArr.length - 1].value;
       const rsiPrev = rsiArr[rsiArr.length - 2].value;
       let rsiScore = 0;
       let rsiSig: "bullish"|"bearish"|"neutral" = "neutral";
-      if      (rsi < 30)  { rsiScore =  2; rsiSig = "bullish"; }
+      if      (rsi < 30)  { rsiScore =  3; rsiSig = "bullish"; }
       else if (rsi < 40)  { rsiScore =  1; rsiSig = "bullish"; }
-      else if (rsi > 70)  { rsiScore = -2; rsiSig = "bearish"; }
+      else if (rsi > 70)  { rsiScore = -3; rsiSig = "bearish"; }
       else if (rsi > 60)  { rsiScore = -1; rsiSig = "bearish"; }
-      // crossover bonus
       if (rsiPrev < 30 && rsi >= 30) rsiScore++;
       if (rsiPrev > 70 && rsi <= 70) rsiScore--;
       if (rsiScore > 0) callScore += rsiScore;
@@ -2271,60 +2270,99 @@ export default function TradePage() {
       const slowPrev = ema21[ema21.length - 2].value;
       let emaScore = 0;
       let emaSig: "bullish"|"bearish"|"neutral" = "neutral";
-      if      (fastPrev <= slowPrev && fast > slow) { emaScore =  2; emaSig = "bullish"; }
+      if      (fastPrev <= slowPrev && fast > slow) { emaScore =  3; emaSig = "bullish"; }
       else if (fast > slow)                         { emaScore =  1; emaSig = "bullish"; }
-      else if (fastPrev >= slowPrev && fast < slow) { emaScore = -2; emaSig = "bearish"; }
+      else if (fastPrev >= slowPrev && fast < slow) { emaScore = -3; emaSig = "bearish"; }
       else if (fast < slow)                         { emaScore = -1; emaSig = "bearish"; }
       if (emaScore > 0) callScore += emaScore;
       else if (emaScore < 0) putScore += Math.abs(emaScore);
-      indics.push({ name: "EMA 9/21", value: fast > slow ? "▲ Bullish" : "▼ Bearish", signal: emaSig });
+      indics.push({ name: "EMA 9/21", value: fast > slow ? "▲ Alta" : "▼ Baixa", signal: emaSig });
     }
 
-    // 3 — Bollinger Bands (20, 2)
+    // 3 — MACD (12/26/9)
+    const macdResult = calcMACD(data, 12, 26, 9);
+    if (macdResult.histogram.length >= 2) {
+      const hist     = macdResult.histogram[macdResult.histogram.length - 1].value;
+      const histPrev = macdResult.histogram[macdResult.histogram.length - 2].value;
+      let macdScore = 0;
+      let macdSig: "bullish"|"bearish"|"neutral" = "neutral";
+      if      (hist > 0 && histPrev <= 0)   { macdScore =  3; macdSig = "bullish"; }
+      else if (hist > 0 && hist > histPrev) { macdScore =  1; macdSig = "bullish"; }
+      else if (hist < 0 && histPrev >= 0)   { macdScore = -3; macdSig = "bearish"; }
+      else if (hist < 0 && hist < histPrev) { macdScore = -1; macdSig = "bearish"; }
+      if (macdScore > 0) callScore += macdScore;
+      else if (macdScore < 0) putScore += Math.abs(macdScore);
+      indics.push({ name: "MACD", value: hist > 0 ? `+${hist.toFixed(5)}` : hist.toFixed(5), signal: macdSig });
+    }
+
+    // 4 — Stochastic (14, 3)
+    const stochResult = calcStochastic(data, 14, 3);
+    if (stochResult.k.length >= 2) {
+      const k     = stochResult.k[stochResult.k.length - 1].value;
+      const kPrev = stochResult.k[stochResult.k.length - 2].value;
+      let stochScore = 0;
+      let stochSig: "bullish"|"bearish"|"neutral" = "neutral";
+      if      (k < 20)                { stochScore =  2; stochSig = "bullish"; }
+      else if (kPrev < 20 && k >= 20) { stochScore =  2; stochSig = "bullish"; }
+      else if (k > 80)                { stochScore = -2; stochSig = "bearish"; }
+      else if (kPrev > 80 && k <= 80) { stochScore = -2; stochSig = "bearish"; }
+      if (stochScore > 0) callScore += stochScore;
+      else if (stochScore < 0) putScore += Math.abs(stochScore);
+      indics.push({ name: "Stoch %K", value: k.toFixed(1), signal: stochSig });
+    }
+
+    // 5 — Bollinger Bands (20, 2)
     const bb = calcBB(data, 20);
     if (bb.upper.length > 0) {
-      const close  = data[data.length - 1].close;
-      const upper  = bb.upper[bb.upper.length - 1].value;
-      const lower  = bb.lower[bb.lower.length - 1].value;
-      const bw     = upper - lower;
+      const close = data[data.length - 1].close;
+      const upper = bb.upper[bb.upper.length - 1].value;
+      const lower = bb.lower[bb.lower.length - 1].value;
+      const bw    = upper - lower;
       let bbScore = 0;
       let bbSig: "bullish"|"bearish"|"neutral" = "neutral";
-      if      (close < lower)               { bbScore =  2; bbSig = "bullish"; }
-      else if (close < lower + bw * 0.1)   { bbScore =  1; bbSig = "bullish"; }
-      else if (close > upper)               { bbScore = -2; bbSig = "bearish"; }
-      else if (close > upper - bw * 0.1)   { bbScore = -1; bbSig = "bearish"; }
+      if      (close < lower)             { bbScore =  2; bbSig = "bullish"; }
+      else if (close < lower + bw * 0.1)  { bbScore =  1; bbSig = "bullish"; }
+      else if (close > upper)             { bbScore = -2; bbSig = "bearish"; }
+      else if (close > upper - bw * 0.1)  { bbScore = -1; bbSig = "bearish"; }
       if (bbScore > 0) callScore += bbScore;
       else if (bbScore < 0) putScore += Math.abs(bbScore);
       const pct = bw > 0 ? ((close - lower) / bw * 100).toFixed(0) + "%" : "—";
       indics.push({ name: "BB(20)", value: pct, signal: bbSig });
     }
 
-    // 4 — Momentum (5 velas)
-    const last5 = data.slice(-5);
-    const upCount = last5.filter(c => c.close > c.open).length;
-    let momScore = 0;
-    let momSig: "bullish"|"bearish"|"neutral" = "neutral";
-    if      (upCount >= 4) { momScore =  1; momSig = "bullish"; }
-    else if (upCount <= 1) { momScore = -1; momSig = "bearish"; }
-    if (momScore > 0) callScore += momScore;
-    else if (momScore < 0) putScore += Math.abs(momScore);
-    indics.push({ name: "Momentum", value: `${upCount}/5 ↑`, signal: momSig });
+    // 6 — ADX(14): só entra em tendências fortes (ADX > 25)
+    const adxResult = calcADX(data, 14);
+    let adxValue = 0;
+    if (adxResult.adx.length > 0) {
+      adxValue = adxResult.adx[adxResult.adx.length - 1].value;
+      const adxSig: "bullish"|"bearish"|"neutral" = adxValue > 25 ? "bullish" : "neutral";
+      indics.push({ name: "ADX(14)", value: adxValue.toFixed(1), signal: adxSig });
+    }
 
     setBotIndicators(indics);
 
     // ── Decisão ──────────────────────────────────────────────────────────
-    // Threshold: 2 pontos (qualquer 2 indicadores a concordar)
-    if (callScore < 2 && putScore < 2) {
-      // sinal fraco — tenta de novo em 5s
+    // Se ADX < 20 o mercado está em range — recalcula em 10s sem forçar sinal
+    if (adxValue > 0 && adxValue < 20) {
       setBotSignal(null);
       setBotConfidence(0);
-      setBotCountdown(5);
+      setBotCountdown(10);
+      return;
+    }
+    // Threshold: 4 pontos mínimos (pelo menos 2 indicadores concordam fortemente)
+    if (callScore < 4 && putScore < 4) {
+      setBotSignal(null);
+      setBotConfidence(0);
+      setBotCountdown(8);
       return;
     }
     const direction: "ALTA" | "BAIXA" = callScore >= putScore ? "ALTA" : "BAIXA";
     const winning = Math.max(callScore, putScore);
-    // Confiança: base 52%, +8% por ponto acima de 1 (máx 95%)
-    const confidence = Math.min(95, Math.round(52 + (winning - 1) * 8));
+    const total   = callScore + putScore;
+    // Confiança: proporção do lado vencedor + bonus ADX
+    const baseConf = Math.round((winning / Math.max(total, 1)) * 100);
+    const adxBonus = adxValue > 40 ? 5 : adxValue > 30 ? 3 : 0;
+    const confidence = Math.min(95, Math.max(55, baseConf + adxBonus));
     setBotSignal(direction);
     setBotConfidence(confidence);
     setBotCountdown(60);
@@ -3869,6 +3907,140 @@ export default function TradePage() {
     </div>
   ) : null;
 
+  // ── Modal do Bot IA (partilhado desktop + mobile) ────────────────────────
+  const botModalJSX = showBotModal ? (
+    <div onMouseDown={() => setShowBotModal(false)}
+      style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", backdropFilter: "blur(3px)" }}>
+      <div onMouseDown={e => e.stopPropagation()}
+        style={{ background: "#141824", borderRadius: isMobile ? "20px 20px 0 0" : 20, width: "100%", maxWidth: 480, padding: "0 0 32px", animation: "slideUpModal 0.25s cubic-bezier(0.32,0.72,0,1)", overflow: "hidden" }}>
+
+        {/* Handle (mobile only) */}
+        {isMobile && (
+          <div style={{ padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 40, height: 4, background: "#262d40", borderRadius: 2 }} />
+          </div>
+        )}
+        <div style={{ padding: isMobile ? "12px 20px 16px" : "20px 20px 16px", borderBottom: "1px solid #1c2130", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#0ea5e9,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Bot size={20} color="#fff" strokeWidth={2} />
+            </div>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>BOT IA</div>
+              <div style={{ color: "#475569", fontSize: 12 }}>RSI · EMA · MACD · Stoch · BB · ADX</div>
+            </div>
+          </div>
+          <button onClick={() => setShowBotModal(false)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* Toggle ativar/desativar */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{botEnabled ? "Bot activo" : "Bot inactivo"}</div>
+              <div style={{ color: "#475569", fontSize: 12 }}>{botEnabled ? "A analisar o mercado em tempo real" : "Clica para activar o bot"}</div>
+            </div>
+            <div onClick={() => { setBotEnabled(v => { const next = !v; if (next) calcBotSignal(); else setBotSignal(null); return next; }); }}
+              style={{ width: 48, height: 26, borderRadius: 13, background: botEnabled ? "#6366f1" : "#1e2d50", position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
+              <div style={{ position: "absolute", top: 3, left: botEnabled ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
+            </div>
+          </div>
+
+          {/* Sinal actual */}
+          {botEnabled && (
+            <div style={{ background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, marginBottom: 10 }}>SINAL ACTUAL · {selectedPair?.label}</div>
+              {botSignal ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ color: "#0ecb81", fontSize: 12, fontWeight: 700, minWidth: 36 }}>ALTA</div>
+                    <div style={{ flex: 1, height: 8, background: "#0d1117", borderRadius: 4, overflow: "hidden", display: "flex" }}>
+                      <div style={{ height: "100%", width: `${botSignal === "ALTA" ? botConfidence : 100 - botConfidence}%`, background: "linear-gradient(90deg,#0ecb81,#0aa56a)", transition: "width 0.6s ease", borderRadius: 4 }} />
+                    </div>
+                    <div style={{ color: "#f6465d", fontSize: 12, fontWeight: 700, minWidth: 48, textAlign: "right" }}>BAIXA</div>
+                  </div>
+                  <div style={{ textAlign: "center", padding: "12px 0", background: botSignal === "ALTA" ? "rgba(14,203,129,0.08)" : "rgba(246,70,93,0.08)", border: `1px solid ${botSignal === "ALTA" ? "rgba(14,203,129,0.3)" : "rgba(246,70,93,0.3)"}`, borderRadius: 10, marginBottom: 12 }}>
+                    <div style={{ fontSize: 28, marginBottom: 4 }}>{botSignal === "ALTA" ? "▲" : "▼"}</div>
+                    <div style={{ color: botSignal === "ALTA" ? "#0ecb81" : "#f6465d", fontWeight: 900, fontSize: 22, letterSpacing: 2 }}>{botSignal}</div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Confiança: <span style={{ color: "#fff", fontWeight: 700 }}>{botConfidence}%</span></div>
+                    <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>Próximo sinal em <span style={{ color: "#6366f1", fontWeight: 700 }}>{botCountdown}s</span></div>
+                  </div>
+                  {botIndicators.length > 0 && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+                      {botIndicators.map(ind => (
+                        <div key={ind.name} style={{ background: "#111827", borderRadius: 8, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ color: "#475569", fontSize: 10, fontWeight: 600 }}>{ind.name}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: ind.signal === "bullish" ? "#0ecb81" : ind.signal === "bearish" ? "#f6465d" : "#475569" }}>
+                            {ind.signal === "bullish" ? "▲" : ind.signal === "bearish" ? "▼" : "—"} {ind.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={() => { openTrade(botSignal === "ALTA" ? "call" : "put"); setShowBotModal(false); }}
+                    disabled={loading || currentPrice === 0}
+                    style={{ width: "100%", padding: "14px 0", background: botSignal === "ALTA" ? "linear-gradient(135deg,#0aa56a,#0ecb81)" : "linear-gradient(135deg,#d92f44,#f6465d)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 900, fontSize: 16, letterSpacing: 1, cursor: loading || currentPrice === 0 ? "not-allowed" : "pointer", opacity: loading || currentPrice === 0 ? 0.5 : 1 }}>
+                    {botSignal === "ALTA" ? "▲ ENTRAR ALTA" : "▼ ENTRAR BAIXA"} · {formatKz(amount)}
+                  </button>
+                </>
+              ) : (
+                <div style={{ textAlign: "center", padding: "20px 0", color: "#475569", fontSize: 13 }}>A analisar mercado...</div>
+              )}
+            </div>
+          )}
+
+          {/* Meta de vitórias */}
+          {botEnabled && (
+            <div style={{ background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <Trophy size={14} color="#f5a623" />
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Meta de vitórias</span>
+                <span style={{ background: "rgba(246,70,93,0.15)", color: "#f6465d", fontSize: 9, fontWeight: 800, borderRadius: 4, padding: "1px 5px" }}>OBRIGATÓRIO</span>
+              </div>
+              <div style={{ color: "#64748b", fontSize: 11, marginBottom: 10 }}>
+                O bot pára automaticamente ao atingir este número de vitórias. Protege a tua banca.
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {[1,2,3,5,10].map(n => (
+                  <button key={n} onClick={() => setBotWinTarget(n)}
+                    style={{ flex: 1, height: 34, background: botWinTarget === n ? "linear-gradient(135deg,#f5a623,#e8940f)" : "#111827", border: `1px solid ${botWinTarget === n ? "#f5a623" : "#262d40"}`, borderRadius: 8, color: botWinTarget === n ? "#0a0f1e" : "#64748b", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+              {botAutoTrade && botWinCount > 0 && (
+                <div style={{ marginTop: 8, color: "#0ecb81", fontSize: 12, fontWeight: 700, textAlign: "center" }}>
+                  {botWinCount} / {botWinTarget} vitórias
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Auto-trade */}
+          {botEnabled && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1c2130", borderRadius: 12, padding: "12px 16px" }}>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>Auto-trade</div>
+                <div style={{ color: botWinTarget === "" ? "#f6465d" : "#475569", fontSize: 11 }}>
+                  {botWinTarget === "" ? "Define a meta de vitórias primeiro" : "Entra automaticamente quando o sinal aparecer"}
+                </div>
+              </div>
+              <div onClick={() => {
+                  if (botWinTarget === "") return;
+                  setBotWinCount(0);
+                  setBotAutoTrade(v => !v);
+                }}
+                style={{ width: 40, height: 22, borderRadius: 11, background: botAutoTrade ? "#6366f1" : (botWinTarget === "" ? "#2d1a1a" : "#1e2d50"), position: "relative", cursor: botWinTarget === "" ? "not-allowed" : "pointer", transition: "background 0.2s", flexShrink: 0, opacity: botWinTarget === "" ? 0.5 : 1 }}>
+                <div style={{ position: "absolute", top: 3, left: botAutoTrade ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // ── MOBILE RENDER ─────────────────────────────────────────────────────────
   if (isMobile) {
     const TOPBAR_H      = 48;
@@ -3897,140 +4069,7 @@ export default function TradePage() {
         {accountToastJSX}
 
         {/* ── Modal do Bot IA ── */}
-        {showBotModal && (
-          <div onMouseDown={() => setShowBotModal(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(3px)" }}>
-            <div onMouseDown={e => e.stopPropagation()}
-              style={{ background: "#141824", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "0 0 32px", animation: "slideUpModal 0.25s cubic-bezier(0.32,0.72,0,1)", overflow: "hidden" }}>
-
-              {/* Header */}
-              <div style={{ padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ width: 40, height: 4, background: "#262d40", borderRadius: 2 }} />
-              </div>
-              <div style={{ padding: "12px 20px 16px", borderBottom: "1px solid #1c2130", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#0ea5e9,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Bot size={20} color="#fff" strokeWidth={2} />
-                  </div>
-                  <div>
-                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>BOT IA</div>
-                    <div style={{ color: "#475569", fontSize: 12 }}>RSI · EMA · Bollinger · Momentum</div>
-                  </div>
-                </div>
-                <button onClick={() => setShowBotModal(false)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 4 }}>✕</button>
-              </div>
-
-              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
-
-                {/* Toggle ativar/desativar */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
-                  <div>
-                    <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{botEnabled ? "Bot activo" : "Bot inactivo"}</div>
-                    <div style={{ color: "#475569", fontSize: 12 }}>{botEnabled ? "A analisar o mercado em tempo real" : "Clica para activar o bot"}</div>
-                  </div>
-                  <div onClick={() => { setBotEnabled(v => { const next = !v; if (next) calcBotSignal(); else setBotSignal(null); return next; }); }}
-                    style={{ width: 48, height: 26, borderRadius: 13, background: botEnabled ? "#6366f1" : "#1e2d50", position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
-                    <div style={{ position: "absolute", top: 3, left: botEnabled ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
-                  </div>
-                </div>
-
-                {/* Sinal actual */}
-                {botEnabled && (
-                  <div style={{ background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, marginBottom: 10 }}>SINAL ACTUAL · {selectedPair?.label}</div>
-                    {botSignal ? (
-                      <>
-                        {/* Barra de confiança */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                          <div style={{ color: "#0ecb81", fontSize: 12, fontWeight: 700, minWidth: 36 }}>ALTA</div>
-                          <div style={{ flex: 1, height: 8, background: "#0d1117", borderRadius: 4, overflow: "hidden", display: "flex" }}>
-                            <div style={{ height: "100%", width: `${botSignal === "ALTA" ? botConfidence : 100 - botConfidence}%`, background: "linear-gradient(90deg,#0ecb81,#0aa56a)", transition: "width 0.6s ease", borderRadius: 4 }} />
-                          </div>
-                          <div style={{ color: "#f6465d", fontSize: 12, fontWeight: 700, minWidth: 48, textAlign: "right" }}>BAIXA</div>
-                        </div>
-                        {/* Sinal em destaque */}
-                        <div style={{ textAlign: "center", padding: "12px 0", background: botSignal === "ALTA" ? "rgba(14,203,129,0.08)" : "rgba(246,70,93,0.08)", border: `1px solid ${botSignal === "ALTA" ? "rgba(14,203,129,0.3)" : "rgba(246,70,93,0.3)"}`, borderRadius: 10, marginBottom: 12 }}>
-                          <div style={{ fontSize: 28, marginBottom: 4 }}>{botSignal === "ALTA" ? "▲" : "▼"}</div>
-                          <div style={{ color: botSignal === "ALTA" ? "#0ecb81" : "#f6465d", fontWeight: 900, fontSize: 22, letterSpacing: 2 }}>{botSignal}</div>
-                          <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Confiança: <span style={{ color: "#fff", fontWeight: 700 }}>{botConfidence}%</span></div>
-                          <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>Próximo sinal em <span style={{ color: "#6366f1", fontWeight: 700 }}>{botCountdown}s</span></div>
-                        </div>
-                        {/* Breakdown de indicadores */}
-                        {botIndicators.length > 0 && (
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
-                            {botIndicators.map(ind => (
-                              <div key={ind.name} style={{ background: "#111827", borderRadius: 8, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <span style={{ color: "#475569", fontSize: 10, fontWeight: 600 }}>{ind.name}</span>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: ind.signal === "bullish" ? "#0ecb81" : ind.signal === "bearish" ? "#f6465d" : "#475569" }}>
-                                  {ind.signal === "bullish" ? "▲" : ind.signal === "bearish" ? "▼" : "—"} {ind.value}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {/* Botão entrar */}
-                        <button onClick={() => { openTrade(botSignal === "ALTA" ? "call" : "put"); setShowBotModal(false); }}
-                          disabled={loading || currentPrice === 0}
-                          style={{ width: "100%", padding: "14px 0", background: botSignal === "ALTA" ? "linear-gradient(135deg,#0aa56a,#0ecb81)" : "linear-gradient(135deg,#d92f44,#f6465d)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 900, fontSize: 16, letterSpacing: 1, cursor: loading || currentPrice === 0 ? "not-allowed" : "pointer", opacity: loading || currentPrice === 0 ? 0.5 : 1 }}>
-                          {botSignal === "ALTA" ? "▲ ENTRAR ALTA" : "▼ ENTRAR BAIXA"} · {formatKz(amount)}
-                        </button>
-                      </>
-                    ) : (
-                      <div style={{ textAlign: "center", padding: "20px 0", color: "#475569", fontSize: 13 }}>A analisar mercado...</div>
-                    )}
-                  </div>
-                )}
-
-                {/* Meta de vitórias (obrigatório para auto-trade) */}
-                {botEnabled && (
-                  <div style={{ background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                      <Trophy size={14} color="#f5a623" />
-                      <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Meta de vitórias</span>
-                      <span style={{ background: "rgba(246,70,93,0.15)", color: "#f6465d", fontSize: 9, fontWeight: 800, borderRadius: 4, padding: "1px 5px" }}>OBRIGATÓRIO</span>
-                    </div>
-                    <div style={{ color: "#64748b", fontSize: 11, marginBottom: 10 }}>
-                      O bot pára automaticamente ao atingir este número de vitórias. Protege a tua banca.
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {[1,2,3,5,10].map(n => (
-                        <button key={n} onClick={() => setBotWinTarget(n)}
-                          style={{ flex: 1, height: 34, background: botWinTarget === n ? "linear-gradient(135deg,#f5a623,#e8940f)" : "#111827", border: `1px solid ${botWinTarget === n ? "#f5a623" : "#262d40"}`, borderRadius: 8, color: botWinTarget === n ? "#0a0f1e" : "#64748b", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                    {botAutoTrade && botWinCount > 0 && (
-                      <div style={{ marginTop: 8, color: "#0ecb81", fontSize: 12, fontWeight: 700, textAlign: "center" }}>
-                        {botWinCount} / {botWinTarget} vitórias
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Auto-trade */}
-                {botEnabled && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1c2130", borderRadius: 12, padding: "12px 16px" }}>
-                    <div>
-                      <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>Auto-trade</div>
-                      <div style={{ color: botWinTarget === "" ? "#f6465d" : "#475569", fontSize: 11 }}>
-                        {botWinTarget === "" ? "Define a meta de vitórias primeiro" : "Entra automaticamente quando o sinal aparecer"}
-                      </div>
-                    </div>
-                    <div onClick={() => {
-                        if (botWinTarget === "") return;
-                        setBotWinCount(0);
-                        setBotAutoTrade(v => !v);
-                      }}
-                      style={{ width: 40, height: 22, borderRadius: 11, background: botAutoTrade ? "#6366f1" : (botWinTarget === "" ? "#2d1a1a" : "#1e2d50"), position: "relative", cursor: botWinTarget === "" ? "not-allowed" : "pointer", transition: "background 0.2s", flexShrink: 0, opacity: botWinTarget === "" ? 0.5 : 1 }}>
-                      <div style={{ position: "absolute", top: 3, left: botAutoTrade ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {botModalJSX}
 
         {/* Win/loss overlay */}
         {notification && (
@@ -4925,6 +4964,9 @@ export default function TradePage() {
   return (
     <div style={{ minHeight: "100vh", background: "#11141d", fontFamily: "system-ui, -apple-system, sans-serif", userSelect: "none" }}>
       <style>{DW_ANIM_CSS}</style>
+
+      {/* Modal do Bot IA (desktop) */}
+      {botModalJSX}
 
       {notification && (
         <TradeResultOverlay
