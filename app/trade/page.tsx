@@ -11,6 +11,7 @@ import {
   Maximize2, Minimize2, Minus, Sliders, Trash2,
   Square, GitFork, BarChart, Activity,
   Volume2, VolumeX, RefreshCw, Search, Banknote, Target, Medal,
+  Eye, EyeOff,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -76,6 +77,17 @@ const DW_ANIM_CSS = `
 @media (prefers-reduced-motion: reduce) { .dw-stagger > *, .dw-ping::after { animation: none !important; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes dwPopIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes dwValuePop { 0% { transform: scale(1); } 40% { transform: scale(1.16); } 100% { transform: scale(1); } }
+@keyframes dwBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dwSheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes dwPillsIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.dw-dropdown-in { animation: dwPopIn 0.16s ease both; transform-origin: top left; }
+.dw-value-pop { display: inline-block; animation: dwValuePop 0.26s ease; }
+.dw-sheet-backdrop { animation: dwBackdropIn 0.18s ease; }
+.dw-sheet-panel { animation: dwSheetIn 0.26s cubic-bezier(0.16,1,0.3,1); }
+.dw-pills-in { animation: dwPillsIn 0.2s ease both; }
+@media (prefers-reduced-motion: reduce) { .dw-dropdown-in, .dw-value-pop, .dw-sheet-backdrop, .dw-sheet-panel, .dw-pills-in { animation: none !important; } }
 `;
 
 
@@ -198,6 +210,11 @@ export default function TradePage() {
   const tickerPricesRef  = useRef<Record<string, number>>({});
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
   const [userMenuOpen,       setUserMenuOpen]       = useState(false);
+  const [userAvatar,         setUserAvatar]         = useState("");
+  const [balanceHidden,      setBalanceHidden]      = useState(() => {
+    try { return localStorage.getItem("dw_balance_hidden") === "1"; } catch {}
+    return false;
+  });
   const [tournamentWins,     setTournamentWins]     = useState(0);
   const [tournamentPositions, setTournamentPositions] = useState<any[]>([]);
   const [demoReloading,  setDemoReloading]  = useState(false);
@@ -1339,7 +1356,7 @@ export default function TradePage() {
         if (d?.maintenance) { router.push("/maintenance"); return; }
       });
       fetchBalance();
-      fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => { if (d) setTournamentWins(d.tournamentWins ?? 0); });
+      fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => { if (d) { setTournamentWins(d.tournamentWins ?? 0); setUserAvatar(d.avatar ?? ""); } });
       const loadStats = () => fetch("/api/trade/stats").then(r => r.ok ? r.json() : null).then(d => { if (d) setTraderStats(d); });
       loadStats();
       const statsId = setInterval(loadStats, 30_000);
@@ -1596,7 +1613,7 @@ export default function TradePage() {
       if (w === 0 || h === 0) return;
 
       const chart = createChart(el, {
-        layout: { background: { color: "#11141d" }, textColor: "#94a3b8", attributionLogo: false },
+        layout: { background: { color: "#11141d" }, textColor: "#5b6786", fontSize: 11, attributionLogo: false },
         grid:   { vertLines: { color: "#262d40" }, horzLines: { color: "#262d40" } },
         crosshair: { mode: 1 },
         timeScale: {
@@ -1672,9 +1689,9 @@ export default function TradePage() {
       const ct = chartTypeRef.current;
       let series: ISeriesApi<any>;
       if (ct === "line") {
-        series = chart.addSeries(LineSeries, { color: "#f5a623", lineWidth: 2, priceFormat, lastValueVisible: false, priceLineVisible: false });
+        series = chart.addSeries(LineSeries, { color: "#f5a623", lineWidth: 2, priceFormat, lastValueVisible: true, priceLineVisible: true });
       } else if (ct === "area") {
-        series = chart.addSeries(AreaSeries, { lineColor: "#f5a623", topColor: "rgba(245,166,35,0.3)", bottomColor: "rgba(245,166,35,0.0)", lineWidth: 2, priceFormat, lastValueVisible: false, priceLineVisible: false });
+        series = chart.addSeries(AreaSeries, { lineColor: "#f5a623", topColor: "rgba(245,166,35,0.3)", bottomColor: "rgba(245,166,35,0.0)", lineWidth: 2, priceFormat, lastValueVisible: true, priceLineVisible: true });
       } else if (ct === "bar") {
         series = chart.addSeries(BarSeries, { upColor: "#0ecb81", downColor: "#f6465d", priceFormat, lastValueVisible: false });
       } else {
@@ -1684,7 +1701,7 @@ export default function TradePage() {
       currentCandleRef.current = null;
       tradePriceLinesRef.current.clear();
       if (ct === "candle" || ct === "bar") {
-        livePriceLineRef.current = series.createPriceLine({ price: 0, color: "#0ecb81", lineWidth: 1, lineStyle: 0, axisLabelVisible: false, title: "" });
+        livePriceLineRef.current = series.createPriceLine({ price: 0, color: "#0ecb81", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "" });
       }
       // Recriar linhas de entrada dos trades activos após reinicialização do gráfico
       requestAnimationFrame(() => {
@@ -2449,6 +2466,13 @@ export default function TradePage() {
   }
 
   function toggleAccount() { setShowAccountModal(v => !v); }
+  function toggleBalanceHidden() {
+    setBalanceHidden(v => {
+      const next = !v;
+      try { localStorage.setItem("dw_balance_hidden", next ? "1" : "0"); } catch {}
+      return next;
+    });
+  }
 
   const accountModalJSX = showAccountModal ? (() => {
     const isReal = !isDemo && tournamentBalance === null;
@@ -2601,7 +2625,7 @@ export default function TradePage() {
         <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, whiteSpace: "nowrap" }}>
           <span style={{ color: accountToastColor }}>{accountToast}</span>
           <span style={{ color: "#475569", fontWeight: 500, fontSize: 12, marginLeft: 6 }}>
-            {formatKz(displayBalance)}
+            {balanceHidden ? "••••••" : formatKz(displayBalance)}
           </span>
         </div>
       </div>
@@ -3017,11 +3041,12 @@ export default function TradePage() {
     return (
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}
-          style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, padding: mobile ? "5px 10px" : "6px 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: mobile ? 4 : 6, fontSize: mobile ? 13 : 14, fontWeight: 700 }}>
-          {selectedPair?.label ?? "…"} <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" />
+          style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, padding: mobile ? "5px 10px" : "6px 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: mobile ? 4 : 6, fontSize: mobile ? 13 : 14, fontWeight: 700, transition: "border-color 0.15s ease" }}>
+          <span key={selectedPair?.symbol ?? "none"} className="dw-value-pop">{selectedPair?.label ?? "…"}</span>
+          <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" style={{ transition: "transform 0.15s ease", transform: assetDropdown ? "rotate(180deg)" : "none" }} />
         </button>
         {assetDropdown && (
-          <div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, minWidth: mobile ? 200 : 240, zIndex: 300, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: mobile ? "70vh" : "420px", overflowY: "auto" }}>
+          <div className="dw-dropdown-in" style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, minWidth: mobile ? 200 : 240, zIndex: 300, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: mobile ? "70vh" : "420px", overflowY: "auto" }}>
             {catOrder.filter(cat => groups[cat]).map(cat => (
               <div key={cat}>
                 <div style={{ padding: "6px 14px 4px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1, textTransform: "uppercase", borderTop: "1px solid #262d40" }}>
@@ -3031,7 +3056,12 @@ export default function TradePage() {
                   <button key={p.symbol}
                     onClick={() => { setSelectedPair(p); setAssetDropdown(false); }}
                     style={{ width: "100%", background: selectedPair?.symbol === p.symbol ? "#262d40" : "transparent", border: "none", padding: mobile ? "10px 14px" : "8px 14px", color: "#fff", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, minHeight: 40 }}>
-                    <span style={{ fontWeight: 600 }}>{p.label}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ fontWeight: 600 }}>{p.label}</span>
+                      <span style={{ color: "#f5a623", fontSize: 10, fontWeight: 800, background: "rgba(245,166,35,0.12)", borderRadius: 5, padding: "1px 5px" }}>
+                        {Math.round((payoutMap[p.label] ?? 0.74) * 100)}%
+                      </span>
+                    </span>
                     {tickerPrices[p.symbol] ? (
                       <span style={{ color: "#94a3b8", fontSize: 11 }}>{tickerPrices[p.symbol].toFixed(p.decimals)}</span>
                     ) : null}
@@ -3658,10 +3688,10 @@ export default function TradePage() {
     );
   }
 
-  function renderLegend() {
+  function renderLegend(topOffset = 6) {
     if (!legend.length) return null;
     return (
-      <div style={{ position: "absolute", top: 6, left: 6, zIndex: 10, display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
+      <div style={{ position: "absolute", top: topOffset, left: 6, zIndex: 10, display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
         {legend.map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(7,13,28,0.75)", borderRadius: 4, padding: "2px 6px" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: item.color, flexShrink: 0, display: "inline-block" }} />
@@ -4080,17 +4110,13 @@ export default function TradePage() {
             <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 24, height: 24, objectFit: "contain", borderRadius: 5, background: "#262d40" }} />
             <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>Dynamic Works</span>
           </div>
-
-          <button onClick={() => setMobileTab("markets")} style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, padding: "5px 8px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
-              {selectedPair?.label.replace(" OTC", "") ?? "…"}
-            </span>
-            {selectedPair?.label.includes("OTC") && <span style={{ fontSize: 8, color: "#f5a623", fontWeight: 900, background: "rgba(245,166,35,0.15)", borderRadius: 3, padding: "0px 3px", flexShrink: 0 }}>OTC</span>}
-            <ChevronDown size={11} color="#64748b" style={{ flexShrink: 0 }} />
-          </button>
           <div style={{ flex: 1 }} />
 
           <NotificationBell />
+
+          <button onClick={toggleBalanceHidden} style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            {balanceHidden ? <EyeOff size={13} color="#64748b" /> : <Eye size={13} color="#64748b" />}
+          </button>
 
           {(() => {
             const narrow    = typeof window !== "undefined" && window.innerWidth < 380;
@@ -4099,7 +4125,7 @@ export default function TradePage() {
               <button data-tour="dw-account" onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "4px 7px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0 }}>
                 {activeAccount === "tournament" ? <Trophy size={10} color="#a5b4fc" style={{ flexShrink: 0 }} /> : <Wallet size={10} color={acctColor} style={{ flexShrink: 0 }} />}
                 <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
-                  <span style={{ color: acctColor, fontWeight: 800, fontSize: narrow ? 10 : 11 }}>{formatKz(Math.floor(displayBalance))}</span>
+                  <span key={balanceHidden ? "h" : Math.floor(displayBalance)} className="dw-value-pop" style={{ color: acctColor, fontWeight: 800, fontSize: narrow ? 10 : 11 }}>{balanceHidden ? "••••••" : formatKz(Math.floor(displayBalance))}</span>
                   <span style={{ color: "#475569", fontWeight: 500, fontSize: narrow ? 8 : 9 }}> · </span>
                   <span style={{ color: "#94a3b8", fontWeight: 700, fontSize: narrow ? 8 : 9 }}>{activeAccount === "tournament" ? "TORNEIO" : activeAccount === "demo" ? "DEMO" : "REAL"}</span>
                 </span>
@@ -4155,7 +4181,11 @@ export default function TradePage() {
             if (x === undefined) return null;
             return <div key={vl.id} style={{ position: "absolute", left: x, top: 0, bottom: 0, width: vl.lineWidth, background: vl.color, opacity: 0.8, pointerEvents: "none", zIndex: 15 }} />;
           })}
-          {renderLegend()}
+          {/* ── Selector de par (canto superior esquerdo, sobre o gráfico) ── */}
+          <div style={{ position: "absolute", top: 6, left: 6, zIndex: 11 }}>
+            {renderAssetDropdown(true)}
+          </div>
+          {renderLegend(40)}
           {renderTournamentWidget()}
 
           {/* ── Tipo de gráfico (canto inferior esquerdo) ── */}
@@ -4188,7 +4218,7 @@ export default function TradePage() {
 
         {/* ── Trades panel — ABOVE chart ── */}
         {showTradesPanel && (
-          <div style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 108, background: "#161a26", display: "flex", flexDirection: "column" }}>
+          <div className="dw-pills-in" style={{ position: "fixed", top: CONTENT_TOP, left: 0, right: 0, bottom: TRADEPANEL_H + BOTTOMNAV_H, zIndex: 108, background: "#161a26", display: "flex", flexDirection: "column" }}>
             {/* Tabs */}
             <div style={{ display: "flex", borderBottom: "1px solid #262d40", flexShrink: 0 }}>
               {(["open", "history"] as const).map(tab => (
@@ -4224,7 +4254,7 @@ export default function TradePage() {
               );
             })()}
             {/* Content */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px" }}>
+            <div className="dw-stagger" style={{ flex: 1, overflowY: "auto", padding: "8px 12px" }}>
               {tradeHistoryTab === "open" ? (
                 activeTrades.length === 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 8 }}>
@@ -4350,7 +4380,7 @@ export default function TradePage() {
                   <div onClick={() => setExpirySheetOpen(true)}
                     style={{ flex: 1, background: "#0b1220", border: `1px solid ${comutacaoActive ? "rgba(99,102,241,0.5)" : "#1a2540"}`, borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
                     <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Tempo</div>
-                    <div style={{ color: comutacaoActive ? "#a5b4fc" : timerColor, fontWeight: comutacaoActive ? 800 : 900, fontSize: comutacaoActive ? 13 : 17, fontVariantNumeric: "tabular-nums", letterSpacing: comutacaoActive ? 0 : 1, transition: "color 0.4s" }}>
+                    <div key={comutacaoActive ? "com" : expiry.secs} className="dw-value-pop" style={{ color: comutacaoActive ? "#a5b4fc" : timerColor, fontWeight: comutacaoActive ? 800 : 900, fontSize: comutacaoActive ? 13 : 17, fontVariantNumeric: "tabular-nums", letterSpacing: comutacaoActive ? 0 : 1, transition: "color 0.4s" }}>
                       {comutacaoActive ? "⇄ VELA" : timerDisplay}
                     </div>
                   </div>
@@ -4367,7 +4397,7 @@ export default function TradePage() {
                           <span style={{ color: "#4b5563", fontSize: 9, flexShrink: 0 }}>Kz</span>
                         </div>
                       ) : (
-                        <div style={{ color: "#fff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
+                        <div key={amount} className="dw-value-pop" style={{ color: "#fff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</div>
                       )}
                     </div>
                     <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
@@ -4396,18 +4426,18 @@ export default function TradePage() {
 
               {/* Pills de resumo — só no estado recolhido, mutuamente exclusivas com os campos */}
               {panelCollapsed && (
-                <div style={{ display: "flex", gap: 5, padding: "4px 12px", flexShrink: 0 }}>
+                <div className="dw-pills-in" style={{ display: "flex", gap: 5, padding: "4px 12px", flexShrink: 0 }}>
                   <div style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center" }}>
                     <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Retorno</span>
-                    <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{Math.round(currentPayout * 100)}%</span>
+                    <span key={selectedPair?.symbol ?? "p"} className="dw-value-pop" style={{ color: "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{Math.round(currentPayout * 100)}%</span>
                   </div>
                   <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
                     <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo</span>
-                    <span style={{ color: comutacaoActive ? "#a5b4fc" : "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{comutacaoActive ? "⇄ VELA" : timerDisplay}</span>
+                    <span key={comutacaoActive ? "com" : expiry.secs} className="dw-value-pop" style={{ color: comutacaoActive ? "#a5b4fc" : "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{comutacaoActive ? "⇄ VELA" : timerDisplay}</span>
                   </div>
                   <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
                     <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Valor</span>
-                    <span style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</span>
+                    <span key={amount} className="dw-value-pop" style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{formatKz(amount)}</span>
                   </div>
                 </div>
               )}
@@ -4505,10 +4535,10 @@ export default function TradePage() {
             {expirySheetOpen && (
               <>
                 {/* Backdrop */}
-                <div onClick={() => setExpirySheetOpen(false)}
+                <div onClick={() => setExpirySheetOpen(false)} className="dw-sheet-backdrop"
                   style={{ position: "fixed", inset: 0, zIndex: 119, background: "rgba(0,0,0,0.55)" }} />
                 {/* Sheet */}
-                <div style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, zIndex: 120, background: "#141824", borderRadius: "18px 18px 0 0", borderTop: "1px solid #262d40", padding: "0 16px 20px" }}>
+                <div className="dw-sheet-panel" style={{ position: "fixed", bottom: BOTTOMNAV_H, left: 0, right: 0, zIndex: 120, background: "#141824", borderRadius: "18px 18px 0 0", borderTop: "1px solid #262d40", padding: "0 16px 20px" }}>
                   {/* Handle */}
                   <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
                     <div style={{ width: 36, height: 4, background: "#262d40", borderRadius: 2 }} />
@@ -4556,13 +4586,13 @@ export default function TradePage() {
 
         {/* ── Markets overlay ── */}
         {mobileTab === "markets" && (
-          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", display: "flex", flexDirection: "column" }}>
+          <div className="dw-pills-in" style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", display: "flex", flexDirection: "column" }}>
             {/* Header */}
             <div style={{ padding: "12px 14px 8px", flexShrink: 0, borderBottom: "1px solid #1a2540" }}>
               <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Mercados</span>
             </div>
             {/* Pairs list */}
-            <div style={{ flex: 1, overflowY: "auto" }}>
+            <div className="dw-stagger" style={{ flex: 1, overflowY: "auto" }}>
               {(() => {
                 const groups: Record<string, DerivPair[]> = {};
                 pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
@@ -4579,6 +4609,7 @@ export default function TradePage() {
                       const isUp    = price >= open;
                       const pct     = open > 0 && price > 0 ? ((price - open) / open * 100) : 0;
                       const isActive = selectedPair?.symbol === p.symbol;
+                      const payout  = Math.round((payoutMap[p.label] ?? 0.74) * 100);
                       return (
                         <button key={p.symbol} onClick={() => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
                           style={{ width: "100%", background: isActive ? "rgba(245,166,35,0.07)" : "transparent", border: "none", borderBottom: "1px solid #141824", padding: "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
@@ -4586,7 +4617,12 @@ export default function TradePage() {
                             {isActive && <div style={{ width: 3, height: 28, background: "#f5a623", borderRadius: 2, position: "absolute", left: 0 }} />}
                             <div style={{ textAlign: "left" }}>
                               <div style={{ color: isActive ? "#f5a623" : "#fff", fontWeight: 700, fontSize: 14 }}>{p.label}</div>
-                              <div style={{ color: "#334155", fontSize: 11, marginTop: 1 }}>{p.category}</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                                <span style={{ color: "#334155", fontSize: 11 }}>{p.category}</span>
+                                <span key={payout} className="dw-value-pop" style={{ color: "#f5a623", fontSize: 9, fontWeight: 800, background: "rgba(245,166,35,0.12)", borderRadius: 5, padding: "1px 5px" }}>
+                                  {payout}%
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <div style={{ textAlign: "right" }}>
@@ -4613,7 +4649,7 @@ export default function TradePage() {
         {mobileTab === "trade" && (() => {
           const openCount = activeTrades.length;
           return (
-            <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", display: "flex", flexDirection: "column" }}>
+            <div className="dw-pills-in" style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", display: "flex", flexDirection: "column" }}>
 
               {/* Header */}
               <div style={{ padding: "14px 16px 0", flexShrink: 0 }}>
@@ -4637,7 +4673,7 @@ export default function TradePage() {
               </div>
 
               {/* Content */}
-              <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
+              <div className="dw-stagger" style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
 
                 {/* ── Em aberto ── */}
                 {tradeHistoryTab === "open" && (
@@ -4764,7 +4800,7 @@ export default function TradePage() {
 
         {/* ── Wallet overlay ── */}
         {mobileTab === "wallet" && (
-          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          <div className="dw-pills-in" style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", display: "flex", flexDirection: "column", overflowY: "auto" }}>
             <div style={{ padding: "14px 14px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Carteira</span>
               <button onClick={() => setWalletData(null)} style={{ background: "none", border: "none", color: "#f5a623", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px" }}>↺ Actualizar</button>
@@ -4780,11 +4816,11 @@ export default function TradePage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
                   <div style={{ background: "linear-gradient(135deg,#0d1f12,#142a1a)", border: "1px solid rgba(14,203,129,0.25)", borderRadius: 12, padding: "12px 14px" }}>
                     <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, marginBottom: 4 }}>SALDO REAL</div>
-                    <div style={{ color: "#0ecb81", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.balance))}</div>
+                    <div key={Math.floor(walletData.balance)} className="dw-value-pop" style={{ color: "#0ecb81", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.balance))}</div>
                   </div>
                   <div style={{ background: "linear-gradient(135deg,#1a1206,#261b08)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 12, padding: "12px 14px" }}>
                     <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, marginBottom: 4 }}>SALDO DEMO</div>
-                    <div style={{ color: "#f5a623", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.demoBalance))}</div>
+                    <div key={Math.floor(walletData.demoBalance)} className="dw-value-pop" style={{ color: "#f5a623", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.demoBalance))}</div>
                   </div>
                 </div>
 
@@ -4802,6 +4838,7 @@ export default function TradePage() {
 
                 {/* Recent transactions */}
                 <div style={{ color: "#64748b", fontSize: 11, fontWeight: 600, letterSpacing: 0.8, marginBottom: 8 }}>MOVIMENTOS RECENTES</div>
+                <div className="dw-stagger">
                 {walletData.transactions.length === 0 ? (
                   <div style={{ color: "#334155", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Sem movimentos ainda</div>
                 ) : walletData.transactions.map((tx: any) => {
@@ -4825,6 +4862,7 @@ export default function TradePage() {
                     </div>
                   );
                 })}
+                </div>
               </div>
             ) : null}
           </div>
@@ -4832,12 +4870,12 @@ export default function TradePage() {
 
         {/* ── Account overlay ── */}
         {mobileTab === "account" && (
-          <div style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", overflowY: "auto" }}>
-            <div style={{ padding: "16px 14px" }}>
+          <div className="dw-pills-in" style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", overflowY: "auto" }}>
+            <div className="dw-stagger" style={{ padding: "16px 14px" }}>
               {/* Avatar + name */}
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, padding: "14px", background: "#141824", borderRadius: 14, border: "1px solid #1a2540" }}>
-                <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg,#f5a623,#e8940f)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, color: "#11141d", flexShrink: 0 }}>
-                  {session?.user?.name?.split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
+                <div style={{ width: 50, height: 50, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
+                  <img src={userAvatar || "/logo.jpeg"} alt={userAvatar ? "avatar" : "Dynamic Works"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -5005,18 +5043,22 @@ export default function TradePage() {
 
         <NotificationBell />
 
+        <button onClick={toggleBalanceHidden} title={balanceHidden ? "Mostrar saldo" : "Ocultar saldo"} style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          {balanceHidden ? <EyeOff size={14} color="#64748b" /> : <Eye size={14} color="#64748b" />}
+        </button>
+
         {/* Botão de conta — abre modal com real/demo/torneio */}
         <button onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "5px 12px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
           {activeAccount === "tournament" ? <Trophy size={13} color="#6366f1" /> : <Wallet size={13} color={activeAccount === "demo" ? "#f5a623" : "#0ecb81"} />}
-          <span style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(displayBalance))}</span>
+          <span key={balanceHidden ? "h" : Math.floor(displayBalance)} className="dw-value-pop" style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{balanceHidden ? "••••••" : formatKz(Math.floor(displayBalance))}</span>
           <span style={{ background: activeAccount === "tournament" ? "#6366f1" : activeAccount === "demo" ? "#f5a623" : "#0ecb81", color: activeAccount === "tournament" ? "#fff" : "#11141d", borderRadius: 4, fontSize: 9, padding: "2px 5px", fontWeight: 900 }}>{activeAccount === "tournament" ? "Torneio" : activeAccount === "demo" ? "Demo" : "Real"}</span>
           <ChevronDown size={12} color="#64748b" />
         </button>
 
         <div style={{ position: "relative" }}>
           <button onClick={() => setUserMenuOpen(!userMenuOpen)}
-            style={{ width: 36, height: 36, background: "#f5a623", borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <User size={18} color="#11141d" />
+            style={{ width: 36, height: 36, borderRadius: "50%", border: "none", cursor: "pointer", padding: 0, overflow: "hidden" }}>
+            <img src={userAvatar || "/logo.jpeg"} alt={userAvatar ? "avatar" : "Dynamic Works"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </button>
           {userMenuOpen && (
             <div style={{ position: "absolute", top: "110%", right: 0, background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, minWidth: 180, zIndex: 200 }}>
