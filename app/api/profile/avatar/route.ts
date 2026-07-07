@@ -9,7 +9,14 @@ export async function POST(req: NextRequest) {
 
   const { avatarUrl } = await req.json();
 
-  if (!avatarUrl || typeof avatarUrl !== "string" || !avatarUrl.startsWith("https://res.cloudinary.com/")) {
+  // O public_id do upload é sempre "avatars/<userId>_<timestamp>" (ver /api/upload),
+  // por isso o URL tem de conter esse prefixo — evita aceitar qualquer imagem
+  // pública do Cloudinary (de outra conta/pasta) como se fosse o próprio upload.
+  if (
+    !avatarUrl || typeof avatarUrl !== "string" ||
+    !avatarUrl.startsWith("https://res.cloudinary.com/") ||
+    !avatarUrl.includes(`/avatars/${session.user.id}_`)
+  ) {
     return NextResponse.json({ error: "URL de avatar inválida." }, { status: 400 });
   }
 

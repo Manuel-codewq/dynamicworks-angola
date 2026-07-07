@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendWhatsAppMessage, buildWelcomeMessage } from "@/lib/whatsapp";
+import crypto from "crypto";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN!;
+const APP_SECRET   = process.env.WHATSAPP_APP_SECRET;
 
 // Meta verifica o webhook com um GET na primeira configuração
 export async function GET(req: NextRequest) {
@@ -17,9 +19,26 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ error: "Token inválido" }, { status: 403 });
 }
 
+// Valida a assinatura HMAC-SHA256 que a Meta envia em X-Hub-Signature-256,
+// calculada sobre o corpo bruto do pedido com o App Secret. Sem isto, qualquer
+// pessoa que descubra a URL pode forjar eventos de webhook.
+function isValidMetaSignature(rawBody: string, header: string | null): boolean {
+  if (!APP_SECRET || !header?.startsWith("sha256=")) return false;
+  const expected = crypto.createHmac("sha256", APP_SECRET).update(rawBody).digest("hex");
+  const provided = header.slice("sha256=".length);
+  const expectedBuf = Buffer.from(expected, "hex");
+  const providedBuf = Buffer.from(provided, "hex");
+  if (expectedBuf.length !== providedBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, providedBuf);
+}
+
 // Meta envia mensagens recebidas via POST
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const rawBody = await req.text();
+  if (!isValidMetaSignature(rawBody, req.headers.get("x-hub-signature-256"))) {
+    return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
+  }
+  const body = JSON.parse(rawBody);
 
   const entry    = body?.entry?.[0];
   const changes  = entry?.changes?.[0];

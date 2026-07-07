@@ -36,9 +36,13 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Nome deve ter pelo menos 3 caracteres" }, { status: 400 });
   }
 
-  // Validate avatar URL if provided (must be Cloudinary or empty string to clear)
+  // Validate avatar URL if provided (must be this user's own Cloudinary upload, or empty string to clear)
   if (avatar !== undefined && avatar !== null && avatar !== "") {
-    if (typeof avatar !== "string" || !avatar.startsWith("https://res.cloudinary.com/")) {
+    if (
+      typeof avatar !== "string" ||
+      !avatar.startsWith("https://res.cloudinary.com/") ||
+      !avatar.includes(`/avatars/${session.user.id}_`)
+    ) {
       return NextResponse.json({ error: "URL de avatar inválida." }, { status: 400 });
     }
   }
