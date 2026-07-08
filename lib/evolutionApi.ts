@@ -4,7 +4,7 @@ const EVOLUTION_URL  = process.env.EVOLUTION_API_URL!;
 const EVOLUTION_KEY  = process.env.EVOLUTION_API_KEY!;
 const INSTANCE_NAME  = process.env.EVOLUTION_INSTANCE ?? "DynamicWorks";
 
-const GROUP_LINK = "https://chat.whatsapp.com/KpoqJd7os526c59DQ8eRXe";
+const GROUP_LINK = "https://chat.whatsapp.com/GQOuezdNDlYKEtmcfa5UKr";
 
 export async function sendEvolutionMessage(to: string, text: string): Promise<boolean> {
   try {

@@ -31,7 +31,7 @@ export function buildWelcomeMessage(name?: string): string {
     `${greeting} Seja bem-vindo(a) à *Dynamic Works* 📈\n\n` +
     `Somos uma plataforma angolana de trading de *opções binárias*.\n\n` +
     `Para começares, entra no nosso grupo de aulas gratuitas 👇\n` +
-    `https://chat.whatsapp.com/KpoqJd7os526c59DQ8eRXe\n\n` +
+    `https://chat.whatsapp.com/GQOuezdNDlYKEtmcfa5UKr\n\n` +
     `Qualquer dúvida, estou aqui para ajudar! 🚀`
   );
 }
