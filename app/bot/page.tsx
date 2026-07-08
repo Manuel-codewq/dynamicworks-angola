@@ -355,7 +355,7 @@ export default function BotPage() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070d1c", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 60 }}>
+    <div style={{ minHeight: "100vh", background: "#070d1c", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 100 }}>
       <style>{`
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
         @keyframes spin{to{transform:rotate(360deg)}}

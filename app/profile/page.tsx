@@ -315,7 +315,7 @@ export default function ProfilePage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 40 }}>
+    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 100 }}>
 
       {/* Banner KYC redirect */}
       <Suspense fallback={null}>

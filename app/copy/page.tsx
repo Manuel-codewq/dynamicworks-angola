@@ -112,7 +112,7 @@ export default function CopyTradingPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 60 }}>
+    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 100 }}>
       {/* Topbar */}
       <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "#94a3b8", display: "flex" }}>

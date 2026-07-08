@@ -99,7 +99,7 @@ export default function DashboardPage() {
   const pnlColor = lastCumulative >= 0 ? "#22c55e" : "#ef4444";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070d1c", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 56 }}>
+    <div style={{ minHeight: "100vh", background: "#070d1c", fontFamily: "system-ui,-apple-system,sans-serif", paddingBottom: 100 }}>
       <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}`}</style>
 
       {/* Header */}
