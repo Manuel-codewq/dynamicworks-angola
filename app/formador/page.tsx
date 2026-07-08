@@ -11,7 +11,7 @@ type TraderReport   = { id: string; date: string; operacoes: number | null; lucr
 type MarketingReport= { id: string; date: string; conteudoCriado: string | null; plataforma: string | null; visualizacoes: number | null; leadsGerados: number | null; proximoConteudo: string | null; observacoes: string | null; imagemProva: string | null; };
 
 const AREAS: { key: Area; label: string; icon: React.ReactNode; color: string; roles: string[] }[] = [
-  { key: "formacao", label: "Formação",  icon: <BookOpen  size={16} />, color: "#f5a623", roles: ["formador", "admin"] },
+  { key: "formacao", label: "Formação",  icon: <BookOpen  size={16} />, color: "#ffffff", roles: ["formador", "admin"] },
   { key: "trading",  label: "Trading",   icon: <TrendingUp size={16} />, color: "#22c55e", roles: ["trader",   "admin"] },
   { key: "marketing",label: "Marketing", icon: <Megaphone  size={16} />, color: "#a78bfa", roles: ["marketing","admin"] },
 ];
@@ -201,7 +201,7 @@ export default function EquipaPage() {
                 <textarea value={feito} onChange={e => setFeito(e.target.value)} rows={4} required placeholder="Ex: Gravei vídeo sobre como abrir conta, respondi às dúvidas do grupo..." style={{ ...inp, resize: "vertical" }} />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <input type="checkbox" id="vid" checked={videoPublicado} onChange={e => setVideoPublicado(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#f5a623", cursor: "pointer" }} />
+                <input type="checkbox" id="vid" checked={videoPublicado} onChange={e => setVideoPublicado(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#ffffff", cursor: "pointer" }} />
                 <label htmlFor="vid" style={{ color: "#fff", fontSize: 14, cursor: "pointer" }}>Publiquei um vídeo hoje no grupo</label>
               </div>
               {videoPublicado && (
@@ -310,7 +310,7 @@ export default function EquipaPage() {
                     {area === "formacao"  && <><p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Feito: </span>{r.feito}</p>{r.videoTitulo && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Vídeo: </span>{r.videoTitulo}</p>}{r.duvidasMembros && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Dúvidas: </span>{r.duvidasMembros}</p>}</>}
                     {area === "trading"  && <><p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Observações: </span>{r.observacoes}</p>{r.paresNegociados && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Pares: </span>{r.paresNegociados}</p>}{r.estrategia && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Estratégia: </span>{r.estrategia}</p>}</>}
                     {area === "marketing"&& <><p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Conteúdo: </span>{r.conteudoCriado}</p>{r.plataforma && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Plataforma: </span>{r.plataforma}</p>}{r.observacoes && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Obs: </span>{r.observacoes}</p>}</>}
-                    {r.planoAmanha && <p style={{ color: "#f5a623", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Amanhã: </span>{r.planoAmanha}</p>}
+                    {r.planoAmanha && <p style={{ color: "#ffffff", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Amanhã: </span>{r.planoAmanha}</p>}
                     {r.imagemProva && <img src={r.imagemProva} alt="prova" style={{ marginTop: 8, maxWidth: "100%", maxHeight: 200, borderRadius: 8, border: "1px solid #1e2d50", objectFit: "contain" }} />}
                   </div>
                 )}

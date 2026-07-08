@@ -79,7 +79,7 @@ export default function AdminTradesPage() {
 
   const resultColor = (r: string) =>
     r === "win"  ? "#22c55e" :
-    r === "loss" ? "#ef4444" : "#f5a623";
+    r === "loss" ? "#ef4444" : "#ffffff";
   const resultLabel = (r: string) =>
     r === "win"  ? "Ganho" :
     r === "loss" ? "Perda" : "Ativo";
@@ -98,7 +98,7 @@ export default function AdminTradesPage() {
           <button onClick={handleExportCsv} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 14px", color: "#22c55e", cursor: "pointer", fontSize: 13 }}>
             <Download size={14} /> CSV (vista)
           </button>
-          <button onClick={handleExportAll} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: "8px 14px", color: "#f5a623", cursor: exporting ? "wait" : "pointer", fontSize: 13, opacity: exporting ? 0.6 : 1 }}>
+          <button onClick={handleExportAll} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "8px 14px", color: "#ffffff", cursor: exporting ? "wait" : "pointer", fontSize: 13, opacity: exporting ? 0.6 : 1 }}>
             <Download size={14} /> {exporting ? "A exportar..." : "Exportar Tudo"}
           </button>
         </div>
@@ -109,7 +109,7 @@ export default function AdminTradesPage() {
         {(["real","demo"] as const).map(m => (
           <button key={m} onClick={() => setMode(m)}
             style={{ padding: "7px 20px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
-              background: mode === m ? (m === "real" ? "#22c55e" : "#f5a623") : "transparent",
+              background: mode === m ? (m === "real" ? "#22c55e" : "#ffffff") : "transparent",
               color:      mode === m ? "#0a0f1e" : "#94a3b8",
             }}>
             {m === "real"

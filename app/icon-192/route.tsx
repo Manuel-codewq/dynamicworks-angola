@@ -9,7 +9,7 @@ export function GET() {
         style={{
           width: 192,
           height: 192,
-          background: "#f5a623",
+          background: "#ffffff",
           borderRadius: 38,
           display: "flex",
           alignItems: "center",

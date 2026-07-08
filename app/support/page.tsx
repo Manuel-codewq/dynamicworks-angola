@@ -9,7 +9,7 @@ import {
 import PageGuide from "@/app/components/PageGuide";
 
 const SUPPORT_GUIDE = [
-  { icon: <MessageCircle size={26} color="#f5a623" />, iconColor: "#f5a623", title: "Centro de Suporte",     description: "Aqui podes abrir tickets de suporte para qualquer problema: depósitos, levantamentos, KYC, problemas técnicos ou questões de conta.", tip: "A equipa responde em até 24 horas nos dias úteis." },
+  { icon: <MessageCircle size={26} color="#ffffff" />, iconColor: "#ffffff", title: "Centro de Suporte",     description: "Aqui podes abrir tickets de suporte para qualquer problema: depósitos, levantamentos, KYC, problemas técnicos ou questões de conta.", tip: "A equipa responde em até 24 horas nos dias úteis." },
   { icon: <Plus          size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Abrir um Ticket",       description: "Clica em 'Novo Ticket', escolhe a categoria do problema, escreve o assunto e descreve detalhadamente o que aconteceu.", tip: "Quanto mais detalhes deres, mais rápido conseguimos ajudar-te." },
   { icon: <MessageCircle size={26} color="#38bdf8" />, iconColor: "#38bdf8", title: "Acompanhar o Ticket",   description: "Após criar o ticket, aparece na lista. Clica nele para ver as respostas do suporte e enviar mais mensagens.", tip: "Activa as notificações push para saber quando o suporte responder." },
   { icon: <CheckCircle   size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Estados dos Tickets",   description: "Aberto = aguarda resposta do suporte. Em Progresso = a ser tratado. Fechado = resolvido. Podes reabrir um ticket fechado se necessário.", tip: "Se o problema for urgente usa também o WhatsApp disponível no menu." },
@@ -17,7 +17,7 @@ const SUPPORT_GUIDE = [
 
 const CATEGORIES: Record<string, { label: string; color: string }> = {
   deposito:    { label: "Depósito",       color: "#22c55e" },
-  levantamento:{ label: "Levantamento",   color: "#f5a623" },
+  levantamento:{ label: "Levantamento",   color: "#ffffff" },
   kyc:         { label: "KYC",            color: "#a855f7" },
   conta:       { label: "Conta",          color: "#3b82f6" },
   tecnico:     { label: "Técnico",        color: "#ef4444" },
@@ -26,7 +26,7 @@ const CATEGORIES: Record<string, { label: string; color: string }> = {
 
 const STATUS: Record<string, { label: string; color: string; Icon: any }> = {
   open:        { label: "Aberto",       color: "#22c55e", Icon: AlertCircle  },
-  in_progress: { label: "Em análise",  color: "#f5a623", Icon: Clock        },
+  in_progress: { label: "Em análise",  color: "#ffffff", Icon: Clock        },
   closed:      { label: "Resolvido",   color: "#64748b", Icon: CheckCircle  },
 };
 
@@ -136,7 +136,7 @@ export default function SupportPage() {
 
   if (status === "loading") return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <Loader2 size={32} color="#f5a623" className="animate-spin" />
+      <Loader2 size={32} color="#ffffff" className="animate-spin" />
     </div>
   );
 
@@ -151,7 +151,7 @@ export default function SupportPage() {
           <ChevronLeft size={20} />
         </button>
         <div style={{ width: 32, height: 32, background: "#1e2d50", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <MessageCircle size={16} color="#f5a623" />
+          <MessageCircle size={16} color="#ffffff" />
         </div>
         <div style={{ flex: 1 }}>
           <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>
@@ -166,7 +166,7 @@ export default function SupportPage() {
         </div>
         {!active && (
           <button onClick={() => setShowNew(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 9, padding: "8px 14px", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 9, padding: "8px 14px", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
             <Plus size={15} /> Novo ticket
           </button>
         )}
@@ -177,13 +177,13 @@ export default function SupportPage() {
         <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
           {loadingList ? (
             <div style={{ textAlign: "center", padding: 60 }}>
-              <Loader2 size={28} color="#f5a623" />
+              <Loader2 size={28} color="#ffffff" />
             </div>
           ) : tickets.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px" }}>
               <Inbox size={48} color="#1e2d50" style={{ marginBottom: 16 }} />
               <p style={{ color: "#64748b", fontSize: 15, margin: 0 }}>Nenhum ticket ainda.</p>
-              <p style={{ color: "#4b5563", fontSize: 13, marginTop: 6 }}>Clica em <strong style={{ color: "#f5a623" }}>Novo ticket</strong> para pedir ajuda.</p>
+              <p style={{ color: "#4b5563", fontSize: 13, marginTop: 6 }}>Clica em <strong style={{ color: "#ffffff" }}>Novo ticket</strong> para pedir ajuda.</p>
             </div>
           ) : tickets.map(t => {
             const st = STATUS[t.status] ?? STATUS.open;
@@ -192,7 +192,7 @@ export default function SupportPage() {
             return (
               <div key={t.id} onClick={() => openTicket(t)}
                 style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", transition: "border-color .2s" }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = "#f5a623")}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "#ffffff")}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e2d50")}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ flex: 1 }}>
@@ -221,16 +221,16 @@ export default function SupportPage() {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
             {loadingChat ? (
-              <div style={{ textAlign: "center", padding: 40 }}><Loader2 size={24} color="#f5a623" /></div>
+              <div style={{ textAlign: "center", padding: 40 }}><Loader2 size={24} color="#ffffff" /></div>
             ) : messages.map(m => (
               <div key={m.id} style={{ display: "flex", justifyContent: m.isAdmin ? "flex-start" : "flex-end", marginBottom: 10 }}>
                 <div style={{
                   maxWidth: "78%", borderRadius: m.isAdmin ? "4px 14px 14px 14px" : "14px 4px 14px 14px",
-                  background: m.isAdmin ? "#111827" : "rgba(245,166,35,0.15)",
-                  border: m.isAdmin ? "1px solid #1e2d50" : "1px solid rgba(245,166,35,0.3)",
+                  background: m.isAdmin ? "#111827" : "rgba(255,255,255,0.15)",
+                  border: m.isAdmin ? "1px solid #1e2d50" : "1px solid rgba(255,255,255,0.3)",
                   padding: "10px 14px",
                 }}>
-                  {m.isAdmin && <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 800, marginBottom: 4, letterSpacing: 0.5 }}>SUPORTE</div>}
+                  {m.isAdmin && <div style={{ color: "#ffffff", fontSize: 10, fontWeight: 800, marginBottom: 4, letterSpacing: 0.5 }}>SUPORTE</div>}
                   <p style={{ color: "#e2e8f0", fontSize: 14, margin: 0, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{m.body}</p>
                   <div style={{ color: "#4b5563", fontSize: 10, marginTop: 5, textAlign: "right" }}>{timeAgo(m.createdAt)}</div>
                 </div>
@@ -251,7 +251,7 @@ export default function SupportPage() {
                 style={{ flex: 1, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: "10px 13px", color: "#fff", fontSize: 14, outline: "none", resize: "none", fontFamily: "inherit", lineHeight: 1.5 }}
               />
               <button onClick={sendMessage} disabled={sending || !msgInput.trim()}
-                style={{ width: 42, height: 42, background: "#f5a623", border: "none", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, opacity: sending || !msgInput.trim() ? 0.5 : 1 }}>
+                style={{ width: 42, height: 42, background: "#ffffff", border: "none", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, opacity: sending || !msgInput.trim() ? 0.5 : 1 }}>
                 {sending ? <Loader2 size={18} color="#0a0f1e" /> : <Send size={18} color="#0a0f1e" />}
               </button>
             </div>
@@ -296,7 +296,7 @@ export default function SupportPage() {
             {newErr && <div style={{ color: "#ef4444", fontSize: 13, marginBottom: 12 }}>{newErr}</div>}
 
             <button onClick={createTicket} disabled={creating}
-              style={{ width: "100%", background: "#f5a623", border: "none", borderRadius: 12, padding: "14px", color: "#0a0f1e", fontWeight: 800, fontSize: 15, cursor: creating ? "not-allowed" : "pointer", opacity: creating ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              style={{ width: "100%", background: "#ffffff", border: "none", borderRadius: 12, padding: "14px", color: "#0a0f1e", fontWeight: 800, fontSize: 15, cursor: creating ? "not-allowed" : "pointer", opacity: creating ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               {creating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               {creating ? "A enviar…" : "Enviar ticket"}
             </button>

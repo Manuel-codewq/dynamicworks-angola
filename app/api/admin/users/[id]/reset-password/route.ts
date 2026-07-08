@@ -54,14 +54,14 @@ export async function POST(
             <tr><td align="center">
               <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
                 <tr><td style="background:#111827;border:1px solid #1e2d50;border-radius:16px;padding:36px 40px;text-align:center;">
-                  <div style="width:38px;height:38px;background:#f5a623;border-radius:9px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+                  <div style="width:38px;height:38px;background:#ffffff;border-radius:9px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
                     <span style="color:#0a0f1e;font-size:20px;font-weight:900;">D</span>
                   </div>
                   <h1 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Senha temporária</h1>
                   <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;">A tua senha foi reposta pelo administrador. Usa a senha abaixo para entrar e altera-a de imediato.</p>
-                  <div style="background:#0a0f1e;border:2px solid #f5a623;border-radius:12px;padding:20px;margin:0 0 24px;">
+                  <div style="background:#0a0f1e;border:2px solid #ffffff;border-radius:12px;padding:20px;margin:0 0 24px;">
                     <p style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;">Nova senha temporária</p>
-                    <p style="color:#f5a623;font-size:28px;font-weight:900;letter-spacing:4px;margin:0;font-family:monospace;">${tempPassword}</p>
+                    <p style="color:#ffffff;font-size:28px;font-weight:900;letter-spacing:4px;margin:0;font-family:monospace;">${tempPassword}</p>
                   </div>
                   <p style="color:#64748b;font-size:12px;">Por razões de segurança, altera a senha após o primeiro acesso.</p>
                 </td></tr>

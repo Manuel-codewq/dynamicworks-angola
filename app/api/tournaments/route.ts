@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         isDemo: isDemo === true,
         entryFee: isFree !== false ? 0 : Number(entryFee) || 0,
         maxParticipants: maxParticipants ? Number(maxParticipants) : null,
-        bannerColor: bannerColor ?? "#f5a623",
+        bannerColor: bannerColor ?? "#ffffff",
         startingBalance: Number(startingBalance) || 10000,
         rechargeAmount: Number(rechargeAmount) || 0,
       },

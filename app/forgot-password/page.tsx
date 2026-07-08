@@ -74,8 +74,8 @@ export default function ForgotPasswordPage() {
 
           {/* Ícone central */}
           <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <div style={{ width: 56, height: 56, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 14, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-              <Mail size={26} color="#f5a623" />
+            <div style={{ width: 56, height: 56, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 14, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <Mail size={26} color="#ffffff" />
             </div>
             <h1 style={{ color: "#ffffff", fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>Recuperar senha</h1>
             <p style={{ color: "#94a3b8", fontSize: 14, margin: 0, lineHeight: 1.6 }}>
@@ -118,7 +118,7 @@ export default function ForgotPasswordPage() {
 
             <button type="submit" disabled={loading || cooldown > 0}
               style={{
-                width: "100%", background: (loading || cooldown > 0) ? "#1e2d50" : "#f5a623",
+                width: "100%", background: (loading || cooldown > 0) ? "#1e2d50" : "#ffffff",
                 color: (loading || cooldown > 0) ? "#94a3b8" : "#0a0f1e",
                 border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 14, fontWeight: 700,
                 cursor: (loading || cooldown > 0) ? "not-allowed" : "pointer",
@@ -127,7 +127,7 @@ export default function ForgotPasswordPage() {
               }}>
               {loading ? (
                 <>
-                  <div style={{ width: 16, height: 16, border: "2px solid #64748b", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+                  <div style={{ width: 16, height: 16, border: "2px solid #64748b", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
                   A enviar...
                 </>
               ) : cooldown > 0 ? (

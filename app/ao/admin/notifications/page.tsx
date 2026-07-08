@@ -136,7 +136,7 @@ export default function AdminNotificationsPage() {
       <div style={{ marginBottom: 24 }}>
         {[
           { key: "novidades", label: "NOVIDADES", color: "#6366f1", bg: "rgba(99,102,241,0.1)" },
-          { key: "promocao",  label: "PROMOÇÃO",  color: "#f5a623", bg: "rgba(245,166,35,0.1)" },
+          { key: "promocao",  label: "PROMOÇÃO",  color: "#ffffff", bg: "rgba(255,255,255,0.1)" },
           { key: "torneio",   label: "TORNEIO",   color: "#22c55e", bg: "rgba(34,197,94,0.1)"  },
           { key: "sistema",   label: "SISTEMA",   color: "#94a3b8", bg: "rgba(148,163,184,0.08)" },
         ].map(cat => (
@@ -162,7 +162,7 @@ export default function AdminNotificationsPage() {
         {/* Compose */}
         <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-            <Bell size={16} color="#f5a623" />
+            <Bell size={16} color="#ffffff" />
             <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Compor notificação</span>
           </div>
 
@@ -170,7 +170,7 @@ export default function AdminNotificationsPage() {
           <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
             {([["all", "Todos os utilizadores", Users], ["user", "Utilizador específico", User]] as const).map(([val, label, Icon]) => (
               <button key={val} onClick={() => setTarget(val)}
-                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 8, border: `1px solid ${target === val ? "#f5a623" : "#1e2d50"}`, background: target === val ? "rgba(245,166,35,0.1)" : "transparent", color: target === val ? "#f5a623" : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 8, border: `1px solid ${target === val ? "#ffffff" : "#1e2d50"}`, background: target === val ? "rgba(255,255,255,0.1)" : "transparent", color: target === val ? "#ffffff" : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                 <Icon size={14} /> {label}
               </button>
             ))}
@@ -211,7 +211,7 @@ export default function AdminNotificationsPage() {
           )}
 
           <button onClick={send} disabled={loading || !title.trim() || !message.trim()}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 0", background: loading || !title.trim() || !message.trim() ? "#1e2d50" : "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 10, color: loading || !title.trim() || !message.trim() ? "#475569" : "#0a0f1e", fontWeight: 800, fontSize: 14, cursor: loading || !title.trim() || !message.trim() ? "not-allowed" : "pointer" }}>
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 0", background: loading || !title.trim() || !message.trim() ? "#1e2d50" : "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 10, color: loading || !title.trim() || !message.trim() ? "#475569" : "#0a0f1e", fontWeight: 800, fontSize: 14, cursor: loading || !title.trim() || !message.trim() ? "not-allowed" : "pointer" }}>
             <Send size={15} /> {loading ? "A enviar..." : `Enviar${target === "all" ? " para todos" : " para utilizador"}`}
           </button>
         </div>
@@ -223,13 +223,13 @@ export default function AdminNotificationsPage() {
           {(title || message) && (
             <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <Zap size={14} color="#f5a623" />
+                <Zap size={14} color="#ffffff" />
                 <span style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, letterSpacing: 0.5 }}>PRÉ-VISUALIZAÇÃO</span>
               </div>
-              <div style={{ background: "#0d1526", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ background: "#0d1526", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "14px 16px" }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(245,166,35,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Bell size={18} color="#f5a623" />
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Bell size={18} color="#ffffff" />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{title || "Título da notificação"}</div>

@@ -40,7 +40,7 @@ function Countdown({ expiresAt, serverTime }: { expiresAt: number; serverTime: n
   const ss = String(secs % 60).padStart(2, "0");
   const urgent = secs <= 10;
   return (
-    <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 14, color: urgent ? "#ef4444" : secs <= 30 ? "#f5a623" : "#22c55e" }}>
+    <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 14, color: urgent ? "#ef4444" : secs <= 30 ? "#ffffff" : "#22c55e" }}>
       {mm}:{ss}
     </span>
   );
@@ -90,7 +90,7 @@ export default function LivePage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ position: "relative" }}>
-            <Activity size={22} color="#f5a623" />
+            <Activity size={22} color="#ffffff" />
             <span style={{ position: "absolute", top: -3, right: -3, width: 8, height: 8, background: "#22c55e", borderRadius: "50%", animation: "pulse 1.5s infinite" }} />
           </div>
           <div>
@@ -108,9 +108,9 @@ export default function LivePage() {
       {/* Stats cards */}
       {stats && (
         <div style={{ display: "flex", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
-          <div style={card("rgba(245,166,35,0.08)", "rgba(245,166,35,0.2)")}>
+          <div style={card("rgba(255,255,255,0.08)", "rgba(255,255,255,0.2)")}>
             <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>OPERAÇÕES ATIVAS</div>
-            <div style={{ color: "#f5a623", fontSize: 28, fontWeight: 800 }}>{stats.realCount}</div>
+            <div style={{ color: "#ffffff", fontSize: 28, fontWeight: 800 }}>{stats.realCount}</div>
             <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{stats.demoCount} demo</div>
           </div>
           <div style={card("rgba(34,197,94,0.08)", "rgba(34,197,94,0.2)")}>
@@ -136,7 +136,7 @@ export default function LivePage() {
         {(["real", "demo"] as const).map(m => (
           <button key={m} onClick={() => setMode(m)}
             style={{ padding: "7px 20px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
-              background: mode === m ? (m === "real" ? "#22c55e" : "#f5a623") : "transparent",
+              background: mode === m ? (m === "real" ? "#22c55e" : "#ffffff") : "transparent",
               color:      mode === m ? "#0a0f1e" : "#94a3b8",
             }}>
             {m === "real"
@@ -187,7 +187,7 @@ export default function LivePage() {
                         {isCall ? "ALTA" : "BAIXA"}
                       </span>
                     </td>
-                    <td style={{ ...td, color: "#f5a623", fontWeight: 700 }}>{formatKz(t.amount)}</td>
+                    <td style={{ ...td, color: "#ffffff", fontWeight: 700 }}>{formatKz(t.amount)}</td>
                     <td style={{ ...td, color: "#94a3b8", fontFamily: "monospace" }}>{t.entryPrice}</td>
                     <td style={td}>
                       <Countdown expiresAt={t.expiresAt} serverTime={serverTime} />

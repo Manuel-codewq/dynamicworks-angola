@@ -51,13 +51,13 @@ export default function PageGuide({ storageKey, steps, autoDelay = 800 }: Props)
         style={{
           position: "fixed", bottom: 80, right: 16, zIndex: 500,
           width: 42, height: 42, borderRadius: "50%",
-          background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.35)",
+          background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.35)",
           display: "flex", alignItems: "center", justifyContent: "center",
           cursor: "pointer", backdropFilter: "blur(4px)",
           boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
         }}
       >
-        <HelpCircle size={20} color="#f5a623" />
+        <HelpCircle size={20} color="#ffffff" />
       </button>
 
       {/* Modal */}
@@ -68,7 +68,7 @@ export default function PageGuide({ storageKey, steps, autoDelay = 800 }: Props)
             {/* Header */}
             <div style={{ background: "#0a0f1e", borderBottom: "1px solid #1e2d50", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#ffffff,#cbd5e1)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <HelpCircle size={13} color="#0a0f1e" />
                 </div>
                 <span style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>Guia da página</span>
@@ -82,7 +82,7 @@ export default function PageGuide({ storageKey, steps, autoDelay = 800 }: Props)
             <div style={{ display: "flex", justifyContent: "center", gap: 5, padding: "12px 20px 0" }}>
               {steps.map((_, i) => (
                 <div key={i} onClick={() => setStep(i)}
-                  style={{ width: i === step ? 18 : 6, height: 6, borderRadius: 3, background: i <= step ? "#f5a623" : "#1e2d50", transition: "all 0.3s", cursor: "pointer" }} />
+                  style={{ width: i === step ? 18 : 6, height: 6, borderRadius: 3, background: i <= step ? "#ffffff" : "#1e2d50", transition: "all 0.3s", cursor: "pointer" }} />
               ))}
             </div>
 
@@ -97,9 +97,9 @@ export default function PageGuide({ storageKey, steps, autoDelay = 800 }: Props)
               </div>
 
               {s.tip && (
-                <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, padding: "9px 13px", display: "flex", gap: 9, alignItems: "flex-start" }}>
-                  <Zap size={13} color="#f5a623" style={{ flexShrink: 0, marginTop: 1 }} />
-                  <span style={{ color: "#f5a623", fontSize: 12, lineHeight: 1.5 }}>{s.tip}</span>
+                <div style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, padding: "9px 13px", display: "flex", gap: 9, alignItems: "flex-start" }}>
+                  <Zap size={13} color="#ffffff" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span style={{ color: "#ffffff", fontSize: 12, lineHeight: 1.5 }}>{s.tip}</span>
                 </div>
               )}
             </div>
@@ -113,7 +113,7 @@ export default function PageGuide({ storageKey, steps, autoDelay = 800 }: Props)
                 </button>
               )}
               <button onClick={() => isLast ? finish() : setStep(s => s + 1)}
-                style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "10px 0", background: isLast ? "linear-gradient(135deg,#22c55e,#16a34a)" : "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 10, color: "#0a0f1e", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "10px 0", background: isLast ? "linear-gradient(135deg,#22c55e,#16a34a)" : "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 10, color: "#0a0f1e", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
                 {isLast ? <><CheckCircle size={15} /> Entendido!</> : <>Próximo <ChevronRight size={15} /></>}
               </button>
             </div>

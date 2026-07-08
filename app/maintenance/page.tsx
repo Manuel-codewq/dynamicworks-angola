@@ -34,11 +34,11 @@ export default function MaintenancePage() {
         <div style={{ marginBottom: 24, display: "flex", justifyContent: "center" }}>
           <div style={{
             width: 72, height: 72, borderRadius: "50%",
-            background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)",
+            background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)",
             display: "flex", alignItems: "center", justifyContent: "center",
             animation: "spin 3s linear infinite",
           }}>
-            <Settings size={34} color="#f5a623" />
+            <Settings size={34} color="#ffffff" />
           </div>
         </div>
 
@@ -58,7 +58,7 @@ export default function MaintenancePage() {
           <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>
             Próxima verificação em
           </p>
-          <div style={{ color: "#f5a623", fontSize: 40, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+          <div style={{ color: "#ffffff", fontSize: 40, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
             {String(seconds).padStart(2, "0")}s
           </div>
         </div>

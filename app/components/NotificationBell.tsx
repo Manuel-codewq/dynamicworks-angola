@@ -21,10 +21,10 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; bg: string; color: st
   withdrawal_rejected:  { icon: <XCircle      size={20} color="#ef4444" />, bg: "rgba(239,68,68,0.12)",   color: "#ef4444" },
   kyc_approved:         { icon: <ScanFace     size={20} color="#22c55e" />, bg: "rgba(34,197,94,0.12)",   color: "#22c55e" },
   kyc_rejected:         { icon: <ScanFace     size={20} color="#ef4444" />, bg: "rgba(239,68,68,0.12)",   color: "#ef4444" },
-  broadcast:            { icon: <Megaphone    size={20} color="#f5a623" />, bg: "rgba(245,166,35,0.12)",  color: "#f5a623" },
+  broadcast:            { icon: <Megaphone    size={20} color="#ffffff" />, bg: "rgba(255,255,255,0.12)",  color: "#ffffff" },
   admin:                { icon: <Info         size={20} color="#38bdf8" />, bg: "rgba(56,189,248,0.12)",  color: "#38bdf8" },
   referral_commission:  { icon: <Gift          size={20} color="#22c55e" />, bg: "rgba(34,197,94,0.12)",   color: "#22c55e" },
-  info:                 { icon: <Info          size={20} color="#f5a623" />, bg: "rgba(245,166,35,0.12)",  color: "#f5a623" },
+  info:                 { icon: <Info          size={20} color="#ffffff" />, bg: "rgba(255,255,255,0.12)",  color: "#ffffff" },
 };
 
 function timeAgo(dateStr: string): string {
@@ -112,7 +112,7 @@ export default function NotificationBell() {
         style={{
           display: "flex", gap: 12, padding: "14px 16px",
           borderBottom: "1px solid rgba(30,45,80,0.5)",
-          background: n.read ? "transparent" : "rgba(245,166,35,0.04)",
+          background: n.read ? "transparent" : "rgba(255,255,255,0.04)",
           cursor: "pointer",
         }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: cfg(n).bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -123,7 +123,7 @@ export default function NotificationBell() {
             <span style={{ color: n.read ? "#94a3b8" : "#fff", fontWeight: n.read ? 500 : 700, fontSize: 14, flex: 1, minWidth: 0 }}>
               {n.title}
             </span>
-            {!n.read && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#f5a623", flexShrink: 0 }} />}
+            {!n.read && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ffffff", flexShrink: 0 }} />}
           </div>
           <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as any}>
             {n.message}
@@ -233,7 +233,7 @@ export default function NotificationBell() {
                 {unread > 0 && <span style={{ background: "#ef4444", color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "1px 7px" }}>{unread}</span>}
               </div>
               {unread > 0 && (
-                <button onClick={markAll} disabled={markingAll} style={{ background: "none", border: "none", cursor: "pointer", color: "#f5a623", fontSize: 11, fontWeight: 600 }}>
+                <button onClick={markAll} disabled={markingAll} style={{ background: "none", border: "none", cursor: "pointer", color: "#ffffff", fontSize: 11, fontWeight: 600 }}>
                   Ler todas
                 </button>
               )}
@@ -254,7 +254,7 @@ export default function NotificationBell() {
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 12px", borderBottom: "1px solid #1e2d50", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Bell size={20} color="#f5a623" />
+              <Bell size={20} color="#ffffff" />
               <span style={{ color: "#fff", fontWeight: 800, fontSize: 17 }}>Notificações</span>
               {unread > 0 && (
                 <span style={{ background: "#ef4444", color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "2px 8px" }}>
@@ -265,7 +265,7 @@ export default function NotificationBell() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {unread > 0 && (
                 <button onClick={markAll} disabled={markingAll}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#f5a623", fontSize: 13, fontWeight: 600 }}>
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#ffffff", fontSize: 13, fontWeight: 600 }}>
                   Ler todas
                 </button>
               )}

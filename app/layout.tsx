@@ -67,7 +67,7 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
-    "theme-color":            "#f5a623",
+    "theme-color":            "#ffffff",
     "geo.region":             "AO",
     "geo.placename":          "Angola",
     "geo.position":           "-8.839988;13.289437",

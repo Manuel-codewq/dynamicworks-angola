@@ -23,7 +23,7 @@ const STEPS: TourStep[] = [
   {
     placement: "center",
     Icon: BookOpen,
-    accent: "#f5a623",
+    accent: "#ffffff",
     title: "Bem-vindo à Dynamic Works!",
     body: "A primeira corretora de opções binárias angolana. Vamos fazer um tour rápido para saber como tudo funciona.",
     tip: "Podes fechar o tutorial a qualquer momento e repetir mais tarde.",
@@ -68,7 +68,7 @@ const STEPS: TourStep[] = [
     target: "dw-payout",
     placement: "top",
     Icon: Zap,
-    accent: "#f5a623",
+    accent: "#ffffff",
     title: "Retorno Potencial",
     body: "Antes de clicar ALTA ou BAIXA, este painel mostra exatamente quanto vais receber se a previsão estiver correta.",
     tip: "O retorno é calculado automaticamente com base no valor investido e no payout do par.",
@@ -77,7 +77,7 @@ const STEPS: TourStep[] = [
     target: "dw-account",
     placement: "bottom",
     Icon: Wallet,
-    accent: "#f5a623",
+    accent: "#ffffff",
     title: "Demo vs Conta Real",
     body: "Clica aqui para alternar entre conta Demo (saldo virtual de 10.000 Kz) e conta Real (o teu dinheiro depositado). Começa sempre em Demo!",
     tip: "Podes repor o saldo Demo sempre que quiser — sem custos.",
@@ -184,8 +184,8 @@ function Spotlight({ rect }: { rect: Rect | null }) {
         position: "fixed", zIndex: 9101,
         top: top - 2, left: left - 2,
         width: width + 4, height: height + 4,
-        borderRadius: 12, border: "2px solid rgba(245,166,35,0.7)",
-        boxShadow: "0 0 0 4px rgba(245,166,35,0.15), 0 0 30px rgba(245,166,35,0.2)",
+        borderRadius: 12, border: "2px solid rgba(255,255,255,0.7)",
+        boxShadow: "0 0 0 4px rgba(255,255,255,0.15), 0 0 30px rgba(255,255,255,0.2)",
         pointerEvents: "none",
       }} />
     </>
@@ -261,7 +261,7 @@ export default function OnboardingTutorial() {
       <style>{`
         @keyframes dwTourIn  { from { opacity:0; transform:translateY(8px) scale(0.97); } to { opacity:1; transform:none; } }
         @keyframes dwTourOut { from { opacity:1; } to { opacity:0; } }
-        @keyframes dwPulse   { 0%,100% { box-shadow:0 0 0 0 rgba(245,166,35,0.4); } 50% { box-shadow:0 0 0 8px rgba(245,166,35,0); } }
+        @keyframes dwPulse   { 0%,100% { box-shadow:0 0 0 0 rgba(255,255,255,0.4); } 50% { box-shadow:0 0 0 8px rgba(255,255,255,0); } }
       `}</style>
 
       {/* Dark backdrop — only full when no target */}
@@ -283,7 +283,7 @@ export default function OnboardingTutorial() {
           background: "#0d1526",
           border: "1px solid #1e3a5f",
           borderRadius: 18,
-          boxShadow: "0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px rgba(245,166,35,0.12)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.12)",
           overflow: "hidden",
           animation: exiting ? "dwTourOut 0.26s ease forwards" : "dwTourIn 0.32s cubic-bezier(0.34,1.2,0.64,1)",
           transition: "top 0.35s ease, bottom 0.35s ease, left 0.35s ease, right 0.35s ease",
@@ -299,7 +299,7 @@ export default function OnboardingTutorial() {
       >
         {/* Progress bar */}
         <div style={{ height: 3, background: "#1e2d50" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#f5a623,#e8940f)", transition: "width 0.4s ease" }} />
+          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#ffffff,#cbd5e1)", transition: "width 0.4s ease" }} />
         </div>
 
         {/* Header */}
@@ -350,7 +350,7 @@ export default function OnboardingTutorial() {
             flex: 1, height: 44,
             background: isLast
               ? "linear-gradient(135deg,#22c55e,#16a34a)"
-              : "linear-gradient(135deg,#f5a623,#e8940f)",
+              : "linear-gradient(135deg,#ffffff,#cbd5e1)",
             border: "none", borderRadius: 10,
             color: "#0a0f1e", fontWeight: 800, fontSize: 14,
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
@@ -366,7 +366,7 @@ export default function OnboardingTutorial() {
               <button key={i} onClick={() => setStep(i)} style={{
                 width: i === step ? 16 : 6, height: 6,
                 borderRadius: 3, border: "none", cursor: "pointer", padding: 0,
-                background: i <= step ? "#f5a623" : "#1e2d50",
+                background: i <= step ? "#ffffff" : "#1e2d50",
                 transition: "all 0.3s ease",
               }} />
             ))}

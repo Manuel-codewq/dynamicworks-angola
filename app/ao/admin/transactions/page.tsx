@@ -19,13 +19,13 @@ interface AdminTransaction {
 
 const TYPE_LABEL:   Record<string, string> = { deposit: "Depósito", withdrawal: "Levantamento" };
 const METHOD_LABEL: Record<string, string> = { multicaixa: "Multicaixa Express", multicaixa_express: "Multicaixa Express", multicaixa_ref: "Multicaixa Ref.", transferencia_bancaria: "Transf. Bancária", usdt_trc20: "USDT TRC-20" };
-const TYPE_COLOR: Record<string, string>  = { deposit: "#22c55e",     withdrawal: "#f5a623" };
-const TYPE_BG:    Record<string, string>  = { deposit: "rgba(34,197,94,0.12)", withdrawal: "rgba(245,166,35,0.12)" };
+const TYPE_COLOR: Record<string, string>  = { deposit: "#22c55e",     withdrawal: "#ffffff" };
+const TYPE_BG:    Record<string, string>  = { deposit: "rgba(34,197,94,0.12)", withdrawal: "rgba(255,255,255,0.12)" };
 
 const STATUS_LABEL: Record<string, string> = { pending: "Pendente", completed: "Aprovado", rejected: "Rejeitado" };
-const STATUS_COLOR: Record<string, string> = { pending: "#f5a623",  completed: "#22c55e",  rejected: "#ef4444" };
+const STATUS_COLOR: Record<string, string> = { pending: "#ffffff",  completed: "#22c55e",  rejected: "#ef4444" };
 const STATUS_BG:    Record<string, string> = {
-  pending:   "rgba(245,166,35,0.12)",
+  pending:   "rgba(255,255,255,0.12)",
   completed: "rgba(34,197,94,0.12)",
   rejected:  "rgba(239,68,68,0.12)",
 };
@@ -129,7 +129,7 @@ export default function AdminTransactionsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Transações</h1>
             {pending > 0 && (
-              <span style={{ background: "rgba(245,166,35,0.2)", color: "#f5a623", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>
+              <span style={{ background: "rgba(255,255,255,0.2)", color: "#ffffff", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>
                 {pending} pendente{pending !== 1 ? "s" : ""}
               </span>
             )}
@@ -270,7 +270,7 @@ export default function AdminTransactionsPage() {
                     {tx.method === "multicaixa_ref" && tx.reference ? (
                       <div>
                         <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, marginBottom: 2 }}>ENT. 10116</div>
-                        <div style={{ color: "#f5a623", fontFamily: "monospace", fontSize: 14, fontWeight: 800, letterSpacing: 2 }}>{tx.reference}</div>
+                        <div style={{ color: "#ffffff", fontFamily: "monospace", fontSize: 14, fontWeight: 800, letterSpacing: 2 }}>{tx.reference}</div>
                       </div>
                     ) : (
                       <span style={{ color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>{tx.reference ?? "—"}</span>

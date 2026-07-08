@@ -86,7 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (status === "loading") {
     return (
       <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#f5a623", fontFamily: "system-ui, sans-serif", fontSize: 16 }}>A verificar permissões...</span>
+        <span style={{ color: "#ffffff", fontFamily: "system-ui, sans-serif", fontSize: 16 }}>A verificar permissões...</span>
       </div>
     );
   }
@@ -103,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 34, height: 34, objectFit: "contain", borderRadius: 8, background: "#0a0f1e", flexShrink: 0 }} />
             <div>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Dynamic Works</div>
-              <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>ADMIN PANEL</div>
+              <div style={{ color: "#ffffff", fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>ADMIN PANEL</div>
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const active     = pathname === href || pathname.startsWith(href + "/");
             const count      = badgeKey ? (badges[badgeKey] ?? 0) : 0;
             const isKyc      = badgeKey === "kyc";
-            const badgeColor = isKyc ? "#f5a623" : "#ef4444";
+            const badgeColor = isKyc ? "#ffffff" : "#ef4444";
             const isDanger   = href === "/ao/admin/reset";
             return (
               <a key={href} href={href}
@@ -122,13 +122,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "10px 12px", borderRadius: 8, marginBottom: 2,
                   background:  active
-                    ? (isDanger ? "rgba(239,68,68,0.15)" : "rgba(245,166,35,0.12)")
+                    ? (isDanger ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.12)")
                     : "transparent",
                   color:       active
-                    ? (isDanger ? "#ef4444" : "#f5a623")
+                    ? (isDanger ? "#ef4444" : "#ffffff")
                     : (isDanger ? "#ef4444" : "#94a3b8"),
                   borderLeft:  active
-                    ? `3px solid ${isDanger ? "#ef4444" : "#f5a623"}`
+                    ? `3px solid ${isDanger ? "#ef4444" : "#ffffff"}`
                     : "3px solid transparent",
                   textDecoration: "none", fontSize: 14, fontWeight: active ? 700 : 500,
                   transition: "background 0.15s, color 0.15s",
@@ -154,7 +154,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div style={{ color: "#64748b", fontSize: 11 }}>{session?.user?.email}</div>
           </div>
           <a href="/trade" target="_blank" rel="noopener noreferrer"
-            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", marginBottom: 6, background: "rgba(245,166,35,0.07)", border: "1px solid rgba(245,166,35,0.15)", borderRadius: 8, color: "#f5a623", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", marginBottom: 6, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#ffffff", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
             <ExternalLink size={14} /> Ver plataforma
           </a>
           <button onClick={() => signOut({ callbackUrl: "/login" })}

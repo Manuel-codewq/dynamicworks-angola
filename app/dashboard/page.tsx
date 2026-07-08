@@ -13,8 +13,8 @@ import { SkeletonStatCard, SkeletonCard } from "@/app/components/Skeleton";
 import { useT } from "@/lib/i18n";
 
 const DASHBOARD_GUIDE = [
-  { icon: <BarChart2 size={26} color="#f5a623" />, iconColor: "#f5a623", title: "O teu Dashboard",       description: "Aqui encontras todas as estatísticas das tuas operações reais — taxa de vitória, lucro total, volume e evolução ao longo do tempo.", tip: "As estatísticas são actualizadas em tempo real após cada trade." },
-  { icon: <Trophy    size={26} color="#f5a623" />, iconColor: "#f5a623", title: "Taxa de Vitória",       description: "Percentagem de operações que terminaram em ganho. Uma taxa acima de 55% é considerada positiva na maioria das estratégias de opções binárias.", tip: "Mais importante que a taxa de vitória é o valor médio ganho vs perdido." },
+  { icon: <BarChart2 size={26} color="#ffffff" />, iconColor: "#ffffff", title: "O teu Dashboard",       description: "Aqui encontras todas as estatísticas das tuas operações reais — taxa de vitória, lucro total, volume e evolução ao longo do tempo.", tip: "As estatísticas são actualizadas em tempo real após cada trade." },
+  { icon: <Trophy    size={26} color="#ffffff" />, iconColor: "#ffffff", title: "Taxa de Vitória",       description: "Percentagem de operações que terminaram em ganho. Uma taxa acima de 55% é considerada positiva na maioria das estratégias de opções binárias.", tip: "Mais importante que a taxa de vitória é o valor médio ganho vs perdido." },
   { icon: <TrendingUp size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Gráfico P&L (30 dias)", description: "Mostra a evolução do teu lucro/prejuízo acumulado nos últimos 30 dias. Uma linha a subir significa que estás a ser consistente.", tip: "Se o gráfico estiver a descer, analisa os pares onde perdes mais." },
   { icon: <Target    size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Desempenho por Par",    description: "Vê em quais pares (EUR/USD, BTC/USD, etc.) tens melhores resultados. Foca-te nos pares onde a tua taxa de vitória é maior.", tip: "Não tentes dominar todos os pares ao mesmo tempo — especializa-te em 2 ou 3." },
 ];
@@ -107,7 +107,7 @@ export default function DashboardPage() {
         <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(30,45,80,.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 9, color: "#94a3b8" }}>
           <ChevronLeft size={18} />
         </button>
-        <BarChart2 size={18} color="#f5a623" />
+        <BarChart2 size={18} color="#ffffff" />
         <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1, letterSpacing: -.2 }}>Dashboard</span>
         <button onClick={load} style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(30,45,80,.4)", cursor: "pointer", width: 36, height: 36, borderRadius: 9, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <RefreshCw size={14} />
@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 20 }}>
           {[
             { label: "Negociar",  icon: <TrendingUp size={18} color="#22c55e"/>, href: "/trade",   bg: "rgba(34,197,94,.08)",   border: "rgba(34,197,94,.2)"   },
-            { label: "Bot",       icon: <Bot        size={18} color="#f5a623"/>, href: "/bot",     bg: "rgba(245,166,35,.08)",  border: "rgba(245,166,35,.2)"  },
+            { label: "Bot",       icon: <Bot        size={18} color="#ffffff"/>, href: "/bot",     bg: "rgba(255,255,255,.08)",  border: "rgba(255,255,255,.2)"  },
             { label: "Carteira",  icon: <Wallet     size={18} color="#38bdf8"/>, href: "/wallet",  bg: "rgba(56,189,248,.08)",  border: "rgba(56,189,248,.2)"  },
             { label: "Histórico", icon: <History    size={18} color="#a78bfa"/>, href: "/history", bg: "rgba(167,139,250,.08)", border: "rgba(167,139,250,.2)" },
           ].map(n => (
@@ -141,7 +141,7 @@ export default function DashboardPage() {
             </div>
             <div style={{ color: "#94a3b8", fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{t("dash.noTrades")}</div>
             <div style={{ color: "#475569", fontSize: 13, marginBottom: 28, lineHeight: 1.6 }}>{t("dash.noTradesDesc")}</div>
-            <button onClick={() => router.push("/trade")} style={{ background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#0a0f1e", border: "none", borderRadius: 12, padding: "13px 28px", fontSize: 14, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 6px 20px rgba(245,166,35,.3)" }}>
+            <button onClick={() => router.push("/trade")} style={{ background: "linear-gradient(135deg,#ffffff,#f97316)", color: "#0a0f1e", border: "none", borderRadius: 12, padding: "13px 28px", fontSize: 14, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 6px 20px rgba(255,255,255,.3)" }}>
               <ArrowUpRight size={16} /> {t("dash.goTrade")}
             </button>
           </div>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
             {/* KPIs */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
               {[
-                { label: t("dash.winRate"),     value: `${s.winRate}%`,                     icon: <Trophy    size={20} color="#f5a623"/>, accent: "#f5a623",  bg: "rgba(245,166,35,.06)"  },
+                { label: t("dash.winRate"),     value: `${s.winRate}%`,                     icon: <Trophy    size={20} color="#ffffff"/>, accent: "#ffffff",  bg: "rgba(255,255,255,.06)"  },
                 { label: t("dash.totalTrades"), value: String(s.total),                     icon: <Zap       size={20} color="#38bdf8"/>, accent: "#38bdf8",  bg: "rgba(56,189,248,.06)"  },
                 { label: t("dash.pnl"),         value: formatKz(Math.floor(s.totalProfit)), icon: s.totalProfit >= 0 ? <TrendingUp size={20} color="#22c55e"/> : <TrendingDown size={20} color="#ef4444"/>, accent: s.totalProfit >= 0 ? "#22c55e" : "#ef4444", bg: s.totalProfit >= 0 ? "rgba(34,197,94,.06)" : "rgba(239,68,68,.06)" },
                 { label: t("dash.volume"),      value: formatKz(Math.floor(s.totalVolume)), icon: <Target    size={20} color="#a78bfa"/>, accent: "#a78bfa",  bg: "rgba(167,139,250,.06)" },
@@ -240,8 +240,8 @@ export default function DashboardPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 5 }}>
                   {s.byHour.map(h => {
                     const has   = h.trades > 0;
-                    const bg    = !has ? "#0d1526" : h.winRate >= 60 ? "rgba(34,197,94,.2)" : h.winRate >= 45 ? "rgba(245,166,35,.15)" : "rgba(239,68,68,.15)";
-                    const color = !has ? "#1e2d50" : h.winRate >= 60 ? "#22c55e" : h.winRate >= 45 ? "#f5a623" : "#ef4444";
+                    const bg    = !has ? "#0d1526" : h.winRate >= 60 ? "rgba(34,197,94,.2)" : h.winRate >= 45 ? "rgba(255,255,255,.15)" : "rgba(239,68,68,.15)";
+                    const color = !has ? "#1e2d50" : h.winRate >= 60 ? "#22c55e" : h.winRate >= 45 ? "#ffffff" : "#ef4444";
                     return (
                       <div key={h.hour} style={{ background: bg, borderRadius: 8, padding: "6px 4px", textAlign: "center", border: `1px solid ${has ? color + "30" : "transparent"}` }}>
                         <div style={{ color: "#475569", fontSize: 9, marginBottom: 2 }}>{String(h.hour).padStart(2,"0")}h</div>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                   })}
                 </div>
                 <div style={{ display: "flex", gap: 14, marginTop: 12 }}>
-                  {[{ c:"#22c55e",l:t("dash.highWin") },{ c:"#f5a623",l:t("dash.midWin") },{ c:"#ef4444",l:t("dash.lowWin") }].map(l => (
+                  {[{ c:"#22c55e",l:t("dash.highWin") },{ c:"#ffffff",l:t("dash.midWin") },{ c:"#ef4444",l:t("dash.lowWin") }].map(l => (
                     <div key={l.l} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, background: l.c }} />
                       <span style={{ color: "#475569", fontSize: 10 }}>{l.l}</span>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
                 <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 700, marginBottom: 16 }}>{t("dash.perfByDuration")}</div>
                 {s.byDuration.map((d, idx) => (
                   <div key={d.secs} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: idx < s.byDuration.length - 1 ? "1px solid rgba(30,45,80,.3)" : "none" }}>
-                    <div style={{ width: 52, color: "#f5a623", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{d.label}</div>
+                    <div style={{ width: 52, color: "#ffffff", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{d.label}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ height: 6, borderRadius: 3, background: "#0f1b30", overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${d.winRate}%`, background: d.winRate >= 50 ? "linear-gradient(90deg,#22c55e,#16a34a)" : "linear-gradient(90deg,#ef4444,#dc2626)", borderRadius: 3 }} />

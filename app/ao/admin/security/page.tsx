@@ -101,9 +101,9 @@ export default function AdminSecurityPage() {
       onClick={() => applyFilter(value)}
       style={{
         padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
-        border: filter === value ? "1px solid #f5a623" : "1px solid #1e2d50",
-        background: filter === value ? "rgba(245,166,35,0.12)" : "#0d1526",
-        color: filter === value ? "#f5a623" : "#64748b",
+        border: filter === value ? "1px solid #ffffff" : "1px solid #1e2d50",
+        background: filter === value ? "rgba(255,255,255,0.12)" : "#0d1526",
+        color: filter === value ? "#ffffff" : "#64748b",
       }}
     >{label}</button>
   );

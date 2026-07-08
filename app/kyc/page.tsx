@@ -152,7 +152,7 @@ export default function KYCPage() {
     card:    { background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: "24px", width: "100%", maxWidth: 460, marginBottom: 14 },
     h2:      { color: "#fff", fontSize: 17, fontWeight: 700, margin: "0 0 4px" },
     sub:     { color: "#64748b", fontSize: 13, margin: "0 0 16px" },
-    btnGold: { width: "100%", background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer" as const, display: "flex", alignItems: "center" as const, justifyContent: "center" as const, gap: 8 },
+    btnGold: { width: "100%", background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer" as const, display: "flex", alignItems: "center" as const, justifyContent: "center" as const, gap: 8 },
     btnGreen:{ width: "100%", background: "#22c55e", color: "#fff", border: "none", borderRadius: 10, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer" as const, display: "flex", alignItems: "center" as const, justifyContent: "center" as const, gap: 8, marginBottom: 10 },
     btnOut:  { width: "100%", background: "transparent", color: "#94a3b8", border: "1px solid #1e2d50", borderRadius: 10, padding: "13px", fontWeight: 600, fontSize: 14, cursor: "pointer" as const, display: "flex", alignItems: "center" as const, justifyContent: "center" as const, gap: 8 },
     photoBox:{ width: "100%", aspectRatio: "4/3", borderRadius: 12, overflow: "hidden", background: "#0a0f1e", border: "1px solid #1e2d50", display: "flex", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 10, position: "relative" as const },
@@ -163,17 +163,17 @@ export default function KYCPage() {
   if (isPending) return (
     <div style={S.page}>
       <div style={S.topbar}>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
-        <span style={{ color: "#f5a623", fontWeight: 800 }}>Dynamics Works</span>
+        <div style={{ width: 32, height: 32, background: "#ffffff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
+        <span style={{ color: "#ffffff", fontWeight: 800 }}>Dynamics Works</span>
       </div>
       <div style={{ ...S.card, textAlign: "center", padding: "40px 24px" }}>
-        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-          <Clock size={30} color="#f5a623" />
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <Clock size={30} color="#ffffff" />
         </div>
         <h2 style={{ ...S.h2, textAlign: "center", fontSize: 20, marginBottom: 10 }}>Documentos em Análise</h2>
         <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
           Os teus documentos foram recebidos e estão a ser analisados pela nossa equipa.<br />
-          <strong style={{ color: "#f5a623" }}>Resposta em até 24 horas.</strong>
+          <strong style={{ color: "#ffffff" }}>Resposta em até 24 horas.</strong>
         </p>
         <p style={{ color: "#64748b", fontSize: 12, marginBottom: 24 }}>
           Só podes reenviar documentos se a submissão for rejeitada.
@@ -187,8 +187,8 @@ export default function KYCPage() {
   if (blockedUntil) return (
     <div style={S.page}>
       <div style={S.topbar}>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
-        <span style={{ color: "#f5a623", fontWeight: 800 }}>Dynamics Works</span>
+        <div style={{ width: 32, height: 32, background: "#ffffff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
+        <span style={{ color: "#ffffff", fontWeight: 800 }}>Dynamics Works</span>
       </div>
       <div style={{ ...S.card, textAlign: "center" }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
@@ -196,7 +196,7 @@ export default function KYCPage() {
         </div>
         <h2 style={{ ...S.h2, color: "#ef4444", textAlign: "center" }}>Verificação Bloqueada</h2>
         <p style={{ ...S.sub, textAlign: "center", marginBottom: 16 }}>Atingiste o limite de tentativas.</p>
-        <div style={{ fontSize: 30, fontWeight: 900, color: "#f5a623", marginBottom: 20 }}>{countdown || "..."}</div>
+        <div style={{ fontSize: 30, fontWeight: 900, color: "#ffffff", marginBottom: 20 }}>{countdown || "..."}</div>
         <button style={S.btnOut} onClick={() => router.push("/profile")}>Voltar ao Perfil</button>
       </div>
     </div>
@@ -206,8 +206,8 @@ export default function KYCPage() {
   if (done) return (
     <div style={S.page}>
       <div style={S.topbar}>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
-        <span style={{ color: "#f5a623", fontWeight: 800 }}>Dynamics Works</span>
+        <div style={{ width: 32, height: 32, background: "#ffffff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
+        <span style={{ color: "#ffffff", fontWeight: 800 }}>Dynamics Works</span>
       </div>
       <div style={{ ...S.card, textAlign: "center", padding: "40px 24px" }}>
         <CheckCircle size={48} color="#22c55e" style={{ marginBottom: 16 }} />
@@ -222,22 +222,22 @@ export default function KYCPage() {
     <div style={S.page}>
       {/* Topbar */}
       <div style={S.topbar}>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
-        <span style={{ color: "#f5a623", fontWeight: 800 }}>Dynamics Works</span>
+        <div style={{ width: 32, height: 32, background: "#ffffff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ScanFace size={18} color="#0a0f1e" /></div>
+        <span style={{ color: "#ffffff", fontWeight: 800 }}>Dynamics Works</span>
         <button onClick={() => router.push("/profile")} style={{ marginLeft: "auto", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "5px 12px", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>Voltar</button>
       </div>
 
       {/* Header */}
       <div style={{ ...S.card, background: "transparent", border: "none", padding: "0 0 4px", marginBottom: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <ShieldCheck size={20} color="#f5a623" />
+          <ShieldCheck size={20} color="#ffffff" />
           <h1 style={{ color: "#fff", fontSize: 19, fontWeight: 800, margin: 0 }}>Verificação de Identidade</h1>
         </div>
         <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>Envia as 3 fotos abaixo. A equipa analisa em até 24h.</p>
         {attemptsLeft !== null && (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 20, padding: "4px 10px", marginTop: 10 }}>
-            <Clock size={12} color="#f5a623" />
-            <span style={{ color: "#f5a623", fontSize: 12, fontWeight: 600 }}>{attemptsLeft} tentativa{attemptsLeft !== 1 ? "s" : ""} restante{attemptsLeft !== 1 ? "s" : ""}</span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, padding: "4px 10px", marginTop: 10 }}>
+            <Clock size={12} color="#ffffff" />
+            <span style={{ color: "#ffffff", fontSize: 12, fontWeight: 600 }}>{attemptsLeft} tentativa{attemptsLeft !== 1 ? "s" : ""} restante{attemptsLeft !== 1 ? "s" : ""}</span>
           </div>
         )}
       </div>
@@ -253,7 +253,7 @@ export default function KYCPage() {
       {/* Selfie */}
       <div style={S.card}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <Camera size={16} color="#f5a623" />
+          <Camera size={16} color="#ffffff" />
           <h2 style={S.h2}>Selfie</h2>
           {kyc.selfie && <CheckCircle size={15} color="#22c55e" style={{ marginLeft: "auto" }} />}
         </div>
@@ -262,7 +262,7 @@ export default function KYCPage() {
           onChange={e => handleFile(e, "selfie", "Selfie")} />
         <div style={S.photoBox}>
           {uploading === "Selfie" ? (
-            <Loader2 size={28} color="#f5a623" style={{ animation: "spin 1s linear infinite" }} />
+            <Loader2 size={28} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />
           ) : kyc.selfie ? (
             <>
               <img src={kyc.selfie} alt="selfie" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -280,7 +280,7 @@ export default function KYCPage() {
       {/* BI Frente */}
       <div style={S.card}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <CreditCard size={16} color="#f5a623" />
+          <CreditCard size={16} color="#ffffff" />
           <h2 style={S.h2}>B.I. — Frente</h2>
           {kyc.biFront && <CheckCircle size={15} color="#22c55e" style={{ marginLeft: "auto" }} />}
         </div>
@@ -289,7 +289,7 @@ export default function KYCPage() {
           onChange={e => handleFile(e, "biFront", "BI Frente")} />
         <div style={{ ...S.photoBox, aspectRatio: "16/10" }}>
           {uploading === "BI Frente" ? (
-            <Loader2 size={28} color="#f5a623" style={{ animation: "spin 1s linear infinite" }} />
+            <Loader2 size={28} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />
           ) : kyc.biFront ? (
             <>
               <img src={kyc.biFront} alt="bi frente" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -307,7 +307,7 @@ export default function KYCPage() {
       {/* BI Verso */}
       <div style={S.card}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <CreditCard size={16} color="#f5a623" />
+          <CreditCard size={16} color="#ffffff" />
           <h2 style={S.h2}>B.I. — Verso</h2>
           {kyc.biBack && <CheckCircle size={15} color="#22c55e" style={{ marginLeft: "auto" }} />}
         </div>
@@ -316,7 +316,7 @@ export default function KYCPage() {
           onChange={e => handleFile(e, "biBack", "BI Verso")} />
         <div style={{ ...S.photoBox, aspectRatio: "16/10" }}>
           {uploading === "BI Verso" ? (
-            <Loader2 size={28} color="#f5a623" style={{ animation: "spin 1s linear infinite" }} />
+            <Loader2 size={28} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />
           ) : kyc.biBack ? (
             <>
               <img src={kyc.biBack} alt="bi verso" style={{ width: "100%", height: "100%", objectFit: "cover" }} />

@@ -98,7 +98,7 @@ function RegisterContent() {
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
         @keyframes spin   { to { transform:rotate(360deg); } }
         .reg-inp { transition: border-color .2s, box-shadow .2s; }
-        .reg-inp:focus { border-color: rgba(245,166,35,.6) !important; box-shadow: 0 0 0 3px rgba(245,166,35,.1); outline: none; }
+        .reg-inp:focus { border-color: rgba(255,255,255,.6) !important; box-shadow: 0 0 0 3px rgba(255,255,255,.1); outline: none; }
         .reg-btn:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
         .reg-btn:active:not(:disabled) { transform:scale(.98); }
         .reg-left { display: none; }
@@ -121,7 +121,7 @@ function RegisterContent() {
           <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width:44, height:44, objectFit:"contain", borderRadius:10, background:"#111827" }} />
           <div>
             <div style={{ color:"#fff", fontWeight:900, fontSize:18 }}>Dynamic Works</div>
-            <div style={{ color:"#f5a623", fontSize:11, letterSpacing:1.2, fontWeight:700, textTransform:"uppercase" }}>Plataforma de Trading</div>
+            <div style={{ color:"#ffffff", fontSize:11, letterSpacing:1.2, fontWeight:700, textTransform:"uppercase" }}>Plataforma de Trading</div>
           </div>
         </div>
 
@@ -136,7 +136,7 @@ function RegisterContent() {
 
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {[
-              { icon:<Zap size={16} color="#f5a623"/>, label:"Conta demo gratuita — 10.000 Kz virtual" },
+              { icon:<Zap size={16} color="#ffffff"/>, label:"Conta demo gratuita — 10.000 Kz virtual" },
               { icon:<TrendingUp size={16} color="#22c55e"/>, label:"Payout real até 85% em opções binárias" },
               { icon:<Shield size={16} color="#3b82f6"/>, label:"KYC com verificação de BI via AGT Angola" },
               { icon:<BarChart2 size={16} color="#a78bfa"/>, label:"Depósitos e levantamentos via Multicaixa Express" },
@@ -221,7 +221,7 @@ function RegisterContent() {
                   </div>
                   <button type="button" onClick={() => { if (form.nif.length >= 9) verifyNif(form.nif); }}
                     disabled={form.nif.length < 9 || nifState === "loading"}
-                    style={{ background: nifState === "valid" ? "rgba(34,197,94,.15)" : "rgba(245,166,35,.12)", border:`1px solid ${nifState === "valid" ? "rgba(34,197,94,.4)" : "rgba(245,166,35,.3)"}`, borderRadius:10, padding:"0 14px", color: nifState === "valid" ? "#22c55e" : "#f5a623", fontWeight:700, fontSize:12, cursor: form.nif.length < 9 || nifState === "loading" ? "not-allowed" : "pointer", opacity: form.nif.length < 9 ? 0.5 : 1, whiteSpace:"nowrap", flexShrink:0 }}>
+                    style={{ background: nifState === "valid" ? "rgba(34,197,94,.15)" : "rgba(255,255,255,.12)", border:`1px solid ${nifState === "valid" ? "rgba(34,197,94,.4)" : "rgba(255,255,255,.3)"}`, borderRadius:10, padding:"0 14px", color: nifState === "valid" ? "#22c55e" : "#ffffff", fontWeight:700, fontSize:12, cursor: form.nif.length < 9 || nifState === "loading" ? "not-allowed" : "pointer", opacity: form.nif.length < 9 ? 0.5 : 1, whiteSpace:"nowrap", flexShrink:0 }}>
                     {nifState === "loading" ? "..." : nifState === "valid" ? "✓ Válido" : "Validar"}
                   </button>
                 </div>
@@ -290,7 +290,7 @@ function RegisterContent() {
 
               {/* Submit */}
               <button type="submit" disabled={loading || nifState !== "valid"} className="reg-btn"
-                style={{ width:"100%", background: loading || nifState !== "valid" ? "#7a5118" : "linear-gradient(135deg,#f5a623,#f97316)", color:"#0a0f1e", border:"none", borderRadius:12, padding:"14px 16px", fontSize:15, fontWeight:800, cursor: loading || nifState !== "valid" ? "not-allowed" : "pointer", transition:"all .18s", display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginTop:4, boxShadow: loading || nifState !== "valid" ? "none" : "0 6px 24px rgba(245,166,35,.3)" }}>
+                style={{ width:"100%", background: loading || nifState !== "valid" ? "#7a5118" : "linear-gradient(135deg,#ffffff,#f97316)", color:"#0a0f1e", border:"none", borderRadius:12, padding:"14px 16px", fontSize:15, fontWeight:800, cursor: loading || nifState !== "valid" ? "not-allowed" : "pointer", transition:"all .18s", display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginTop:4, boxShadow: loading || nifState !== "valid" ? "none" : "0 6px 24px rgba(255,255,255,.3)" }}>
                 {loading
                   ? <span style={{ width:16, height:16, border:"2px solid rgba(0,0,0,.3)", borderTopColor:"#0a0f1e", borderRadius:"50%", display:"inline-block", animation:"spin .7s linear infinite" }} />
                   : <><ArrowRight size={16} strokeWidth={2.5} /> Criar conta gratuita</>
@@ -300,7 +300,7 @@ function RegisterContent() {
 
             <p style={{ textAlign:"center", color:"#334155", fontSize:14, marginTop:20 }}>
               Já tem conta?{" "}
-              <a href="/login" style={{ color:"#f5a623", textDecoration:"none", fontWeight:700 }}>Entrar</a>
+              <a href="/login" style={{ color:"#ffffff", textDecoration:"none", fontWeight:700 }}>Entrar</a>
             </p>
           </div>
 

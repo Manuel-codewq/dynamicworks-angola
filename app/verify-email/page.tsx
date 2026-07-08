@@ -105,17 +105,17 @@ function VerifyEmailContent() {
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 36 }}>
-          <div style={{ width: 38, height: 38, background: "#f5a623", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 38, height: 38, background: "#ffffff", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ color: "#0a0f1e", fontSize: 20, fontWeight: 900 }}>D</span>
           </div>
-          <span style={{ color: "#f5a623", fontSize: 18, fontWeight: 800, letterSpacing: "-0.3px" }}>Dynamics Works</span>
+          <span style={{ color: "#ffffff", fontSize: 18, fontWeight: 800, letterSpacing: "-0.3px" }}>Dynamics Works</span>
         </div>
 
         {/* Card */}
         <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: "36px 32px" }}>
           <div style={{ textAlign: "center", marginBottom: 28 }}>
-            <div style={{ width: 60, height: 60, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 16, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-              <Mail size={28} color="#f5a623" />
+            <div style={{ width: 60, height: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 16, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Mail size={28} color="#ffffff" />
             </div>
             <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>Verifica o teu email</h1>
             <p style={{ color: "#64748b", fontSize: 14, margin: 0, lineHeight: 1.6 }}>
@@ -139,10 +139,10 @@ function VerifyEmailContent() {
                   onKeyDown={e => handleKeyDown(i, e)}
                   style={{
                     width: 52, height: 60, textAlign: "center", fontSize: 26, fontWeight: 800,
-                    background: "#0a0f1e", border: `2px solid ${d ? "#f5a623" : "#1e2d50"}`,
+                    background: "#0a0f1e", border: `2px solid ${d ? "#ffffff" : "#1e2d50"}`,
                     borderRadius: 10, color: "#fff", outline: "none",
                     transition: "border-color 0.15s",
-                    caretColor: "#f5a623",
+                    caretColor: "#ffffff",
                   }}
                 />
               ))}
@@ -165,7 +165,7 @@ function VerifyEmailContent() {
               type="submit"
               disabled={loading || digits.join("").length < 6}
               style={{
-                width: "100%", padding: "10px 16px", background: loading || digits.join("").length < 6 ? "#374151" : "#f5a623",
+                width: "100%", padding: "10px 16px", background: loading || digits.join("").length < 6 ? "#374151" : "#ffffff",
                 color: loading || digits.join("").length < 6 ? "#6b7280" : "#0a0f1e",
                 fontWeight: 800, fontSize: 15, border: "none", borderRadius: 10,
                 cursor: loading || digits.join("").length < 6 ? "not-allowed" : "pointer",
@@ -183,7 +183,7 @@ function VerifyEmailContent() {
               disabled={resending || countdown > 0}
               style={{
                 background: "none", border: "none", cursor: countdown > 0 || resending ? "not-allowed" : "pointer",
-                color: countdown > 0 || resending ? "#374151" : "#f5a623",
+                color: countdown > 0 || resending ? "#374151" : "#ffffff",
                 fontSize: 14, fontWeight: 700, padding: 0,
               }}
             >
@@ -194,7 +194,7 @@ function VerifyEmailContent() {
 
         <p style={{ textAlign: "center", color: "#374151", fontSize: 13, marginTop: 24 }}>
           Já tens conta?{" "}
-          <a href="/login" style={{ color: "#f5a623", fontWeight: 700, textDecoration: "none" }}>Entrar</a>
+          <a href="/login" style={{ color: "#ffffff", fontWeight: 700, textDecoration: "none" }}>Entrar</a>
         </p>
       </div>
     </div>

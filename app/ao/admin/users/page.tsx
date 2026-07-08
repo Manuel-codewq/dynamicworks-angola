@@ -24,7 +24,7 @@ interface AdminUser {
 
 const KYC_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   "no-submit": { label: "Sem docs",   color: "#64748b", bg: "rgba(100,116,139,0.12)" },
-  pending:     { label: "A rever",    color: "#f5a623", bg: "rgba(245,166,35,0.12)"  },
+  pending:     { label: "A rever",    color: "#ffffff", bg: "rgba(255,255,255,0.12)"  },
   approved:    { label: "Verificado", color: "#22c55e", bg: "rgba(34,197,94,0.12)"   },
   rejected:    { label: "Rejeitado",  color: "#ef4444", bg: "rgba(239,68,68,0.12)"   },
 };
@@ -145,7 +145,7 @@ export default function AdminUsersPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
           <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
-            <Users size={22} color="#f5a623" /> Utilizadores
+            <Users size={22} color="#ffffff" /> Utilizadores
           </h1>
           <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 0" }}>Gestão de contas e permissões</p>
         </div>
@@ -168,7 +168,7 @@ export default function AdminUsersPage() {
           { label: "Total",       value: counts.total,        Icon: Users,       color: "#94a3b8", filter: "all"        as StatusFilter },
           { label: "Ativos",      value: counts.active,       Icon: UserCheck,   color: "#22c55e", filter: "active"     as StatusFilter },
           { label: "Bloqueados",  value: counts.blocked,      Icon: UserX,       color: "#ef4444", filter: "blocked"    as StatusFilter },
-          { label: "KYC a rever", value: counts.kycSubmitted, Icon: Clock,       color: "#f5a623", filter: null },
+          { label: "KYC a rever", value: counts.kycSubmitted, Icon: Clock,       color: "#ffffff", filter: null },
           { label: "Suspeitos",    value: counts.suspicious,   Icon: AlertCircle, color: "#ef4444", filter: "suspicious" as StatusFilter },
         ].map(s => (
           <button key={s.label} onClick={() => s.filter && setStatusFilter(s.filter)}
@@ -195,7 +195,7 @@ export default function AdminUsersPage() {
         </div>
         {(["all", "active", "blocked", "suspicious"] as StatusFilter[]).map(f => (
           <button key={f} onClick={() => setStatusFilter(f)}
-            style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid", borderColor: statusFilter === f ? (f === "suspicious" ? "#ef4444" : "#f5a623") : (f === "suspicious" && counts.suspicious > 0 ? "rgba(239,68,68,0.4)" : "#1e2d50"), background: statusFilter === f ? (f === "suspicious" ? "rgba(239,68,68,0.12)" : "rgba(245,166,35,0.12)") : "transparent", color: statusFilter === f ? (f === "suspicious" ? "#ef4444" : "#f5a623") : (f === "suspicious" && counts.suspicious > 0 ? "#ef4444" : "#64748b"), fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid", borderColor: statusFilter === f ? (f === "suspicious" ? "#ef4444" : "#ffffff") : (f === "suspicious" && counts.suspicious > 0 ? "rgba(239,68,68,0.4)" : "#1e2d50"), background: statusFilter === f ? (f === "suspicious" ? "rgba(239,68,68,0.12)" : "rgba(255,255,255,0.12)") : "transparent", color: statusFilter === f ? (f === "suspicious" ? "#ef4444" : "#ffffff") : (f === "suspicious" && counts.suspicious > 0 ? "#ef4444" : "#64748b"), fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             {f === "all" ? "Todos" : f === "active" ? "Ativos" : f === "blocked" ? "Bloqueados" : <span style={{ display:"flex", alignItems:"center", gap:5 }}><AlertCircle size={12} />Suspeitos{counts.suspicious > 0 ? ` (${counts.suspicious})` : ""}</span>}
           </button>
         ))}
@@ -223,7 +223,7 @@ export default function AdminUsersPage() {
                   const kyc = KYC_STYLE[u.kycStatus] ?? KYC_STYLE.pending;
                   const isEditing = editBal?.id === u.id;
                   return (
-                    <tr key={u.id} style={{ opacity: busy ? 0.5 : 1, transition: "opacity .2s", background: selected?.id === u.id ? "rgba(245,166,35,0.04)" : "transparent" }}>
+                    <tr key={u.id} style={{ opacity: busy ? 0.5 : 1, transition: "opacity .2s", background: selected?.id === u.id ? "rgba(255,255,255,0.04)" : "transparent" }}>
 
                       {/* Utilizador */}
                       <td style={{ ...td, color: "#fff", fontWeight: 600 }}>
@@ -260,7 +260,7 @@ export default function AdminUsersPage() {
                       {/* Saldo Demo */}
                       <td style={td}>
                         <button onClick={() => { setBalModal({ user: u, type: "demo", newValue: String(Math.floor(u.demoBalance ?? 0)) }); setBalReason(""); }}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "#f5a623", fontSize: 13, fontWeight: 600, padding: 0, textAlign: "left" }}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#ffffff", fontSize: 13, fontWeight: 600, padding: 0, textAlign: "left" }}
                           title="Clique para editar saldo demo">
                           {formatKz(Math.floor(u.demoBalance ?? 0))}
                         </button>
@@ -310,7 +310,7 @@ export default function AdminUsersPage() {
                           )}
                           {u.role !== "admin" && (
                             <button onClick={() => { if (confirm(`Promover ${u.name} a admin?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "admin" }); }} disabled={busy}
-                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.1)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
                               <Shield size={11} /> Admin
                             </button>
                           )}
@@ -345,7 +345,7 @@ export default function AdminUsersPage() {
                             </a>
                           )}
                           <button onClick={() => openBalHistory(u)}
-                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                            style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.1)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
                             <History size={11} /> Historial Saldo
                           </button>
                           {u.role !== "admin" && (
@@ -446,7 +446,7 @@ export default function AdminUsersPage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <div>
                 <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>
-                  <span style={{ display:"flex", alignItems:"center", gap:8 }}>{balModal.type === "real" ? <><Wallet size={16} color="#22c55e" /> Editar Saldo Real</> : <><Monitor size={16} color="#f5a623" /> Editar Saldo Demo</>}</span>
+                  <span style={{ display:"flex", alignItems:"center", gap:8 }}>{balModal.type === "real" ? <><Wallet size={16} color="#22c55e" /> Editar Saldo Real</> : <><Monitor size={16} color="#ffffff" /> Editar Saldo Demo</>}</span>
                 </div>
                 <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>{balModal.user.name}</div>
               </div>
@@ -468,7 +468,7 @@ export default function AdminUsersPage() {
               </label>
               <input type="number" value={balModal.newValue}
                 onChange={e => setBalModal(p => p ? { ...p, newValue: e.target.value } : null)}
-                style={{ width: "100%", background: "#0a0f1e", border: `1px solid ${balModal.type === "real" ? "#22c55e" : "#f5a623"}`, borderRadius: 8, padding: "10px 12px", color: "#fff", fontSize: 15, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
+                style={{ width: "100%", background: "#0a0f1e", border: `1px solid ${balModal.type === "real" ? "#22c55e" : "#ffffff"}`, borderRadius: 8, padding: "10px 12px", color: "#fff", fontSize: 15, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
             </div>
 
             <div style={{ marginBottom: 20 }}>
@@ -489,7 +489,7 @@ export default function AdminUsersPage() {
                 Cancelar
               </button>
               <button onClick={confirmBalEdit} disabled={balSaving || balReason.trim().length < 5 || !balModal.newValue}
-                style={{ flex: 1, padding: "11px 0", background: balSaving || balReason.trim().length < 5 ? "#1e2d50" : balModal.type === "real" ? "#22c55e" : "#f5a623", border: "none", borderRadius: 10, color: balSaving || balReason.trim().length < 5 ? "#475569" : "#000", fontWeight: 800, fontSize: 14, cursor: balSaving || balReason.trim().length < 5 ? "not-allowed" : "pointer" }}>
+                style={{ flex: 1, padding: "11px 0", background: balSaving || balReason.trim().length < 5 ? "#1e2d50" : balModal.type === "real" ? "#22c55e" : "#ffffff", border: "none", borderRadius: 10, color: balSaving || balReason.trim().length < 5 ? "#475569" : "#000", fontWeight: 800, fontSize: 14, cursor: balSaving || balReason.trim().length < 5 ? "not-allowed" : "pointer" }}>
                 {balSaving ? "A guardar..." : "Confirmar edição"}
               </button>
             </div>
@@ -507,7 +507,7 @@ export default function AdminUsersPage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: "1px solid #1e2d50" }}>
               <div>
                 <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>
-                  <History size={16} color="#f5a623" style={{ display: "inline", marginRight: 8, verticalAlign: "middle" }} />
+                  <History size={16} color="#ffffff" style={{ display: "inline", marginRight: 8, verticalAlign: "middle" }} />
                   Historial de Saldo
                 </div>
                 {balHistory && <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>{balHistory.user.name} · {balHistory.user.email}</div>}
@@ -545,7 +545,7 @@ export default function AdminUsersPage() {
                 {/* Resumo */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: "#1e2d50", borderBottom: "1px solid #1e2d50" }}>
                   {[
-                    { label: "Saldo actual", value: `${Math.floor(balHistory.summary.currentBalance).toLocaleString("pt-PT")} Kz`, color: "#f5a623" },
+                    { label: "Saldo actual", value: `${Math.floor(balHistory.summary.currentBalance).toLocaleString("pt-PT")} Kz`, color: "#ffffff" },
                     { label: "Total depositado", value: `+${balHistory.summary.totalDeposited.toLocaleString("pt-PT")} Kz`, color: "#22c55e" },
                     { label: "Total levantado", value: `-${balHistory.summary.totalWithdrawn.toLocaleString("pt-PT")} Kz`, color: "#ef4444" },
                     { label: "P&L trades reais", value: `${balHistory.summary.tradeNet >= 0 ? "+" : ""}${balHistory.summary.tradeNet.toLocaleString("pt-PT")} Kz`, color: balHistory.summary.tradeNet >= 0 ? "#22c55e" : "#ef4444" },
@@ -568,21 +568,21 @@ export default function AdminUsersPage() {
                     const icons: Record<string, React.ReactNode> = {
                       deposit:             <Wallet size={16} color="#22c55e" />,
                       withdrawal:          <Wallet size={16} color="#ef4444" />,
-                      adjustment:          <Wrench size={16} color="#f5a623" />,
-                      tournament_prize:    <Trophy size={16} color="#f5a623" />,
+                      adjustment:          <Wrench size={16} color="#ffffff" />,
+                      tournament_prize:    <Trophy size={16} color="#ffffff" />,
                       tournament_entry:    <Trophy size={16} color="#ef4444" />,
                       referral_commission: <Gift   size={16} color="#22c55e" />,
                       trade:               ev.sign === "+" ? <TrendingUp size={16} color="#22c55e" /> : <TrendingDown size={16} color="#ef4444" />,
-                      audit:               <Wrench size={16} color="#f5a623" />,
+                      audit:               <Wrench size={16} color="#ffffff" />,
                     };
                     const icon = icons[ev.category] ?? <AlertCircle size={16} color="#94a3b8" />;
                     const statusBadge: Record<string, { label: string; color: string }> = {
                       completed: { label: "Aprovado",  color: "#22c55e" },
-                      pending:   { label: "Pendente",  color: "#f5a623" },
+                      pending:   { label: "Pendente",  color: "#ffffff" },
                       rejected:  { label: "Rejeitado", color: "#ef4444" },
                       win:       { label: "Ganhou",    color: "#22c55e" },
                       loss:      { label: "Perdeu",    color: "#ef4444" },
-                      info:      { label: "Admin",     color: "#f5a623" },
+                      info:      { label: "Admin",     color: "#ffffff" },
                     };
                     const badge = statusBadge[ev.status];
                     return (

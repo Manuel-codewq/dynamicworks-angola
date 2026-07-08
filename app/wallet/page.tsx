@@ -14,7 +14,7 @@ import { Skeleton, SkeletonTable } from "@/app/components/Skeleton";
 import { Wallet as WalletIcon, ArrowDownCircle as DepositIcon, ArrowUpCircle as WithdrawIcon, Clock as HistoryIcon, ShieldAlert, Gift } from "lucide-react";
 
 const WALLET_GUIDE = [
-  { icon: <WalletIcon   size={26} color="#f5a623" />, iconColor: "#f5a623", title: "A tua Carteira",        description: "Aqui podes ver o teu saldo real e demo, fazer depósitos, pedir levantamentos e consultar todo o histórico de transacções.", tip: "O saldo demo serve para praticar — não é dinheiro real." },
+  { icon: <WalletIcon   size={26} color="#ffffff" />, iconColor: "#ffffff", title: "A tua Carteira",        description: "Aqui podes ver o teu saldo real e demo, fazer depósitos, pedir levantamentos e consultar todo o histórico de transacções.", tip: "O saldo demo serve para praticar — não é dinheiro real." },
   { icon: <DepositIcon  size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Como fazer Depósito",   description: "Escolhe o valor, o método de pagamento e a referência. Depois confirmas com um código OTP enviado para o teu email. O admin aprova o depósito manualmente.", tip: "Guarda sempre o comprovativo de pagamento até o depósito ser aprovado." },
   { icon: <WithdrawIcon size={26} color="#ef4444" />, iconColor: "#ef4444", title: "Como fazer Levantamento", description: "Para levantar precisas de ter KYC aprovado. Indica o valor e a conta de destino, confirma com OTP. O processamento demora 1 a 3 dias úteis.", tip: "O KYC garante a segurança dos levantamentos. Faz a verificação em Perfil." },
   { icon: <HistoryIcon  size={26} color="#38bdf8" />, iconColor: "#38bdf8", title: "Histórico de Transacções", description: "Usa os filtros para ver só depósitos, só levantamentos, ou filtrar por estado: Pendente (a aguardar aprovação), Aprovado ou Rejeitado.", tip: "Pendente = em análise. Aprovado = creditado. Rejeitado = não processado." },
@@ -29,7 +29,7 @@ type Filter = "all" | "deposit" | "withdrawal";
 type StatusFilter = "all" | "pending" | "completed" | "rejected";
 
 const STATUS_CFG: Record<string, { tKey: string; color: string; bg: string; Icon: any }> = {
-  pending:   { tKey: "wallet.status.pending",  color: "#f5a623", bg: "rgba(245,166,35,0.1)",  Icon: Clock        },
+  pending:   { tKey: "wallet.status.pending",  color: "#ffffff", bg: "rgba(255,255,255,0.1)",  Icon: Clock        },
   approved:  { tKey: "wallet.status.approved", color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
   completed: { tKey: "wallet.status.approved", color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
   rejected:  { tKey: "wallet.status.rejected", color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle      },
@@ -175,8 +175,8 @@ export default function WalletPage() {
 
   const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 22, marginBottom: 14 };
   const inp: React.CSSProperties  = { width: "100%", background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" };
-  const tabBtn = (tabKey: string): React.CSSProperties => ({ flex: 1, padding: "10px 0", background: tab === tabKey ? "#f5a623" : "none", color: tab === tabKey ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" });
-  const filterBtn = (active: boolean): React.CSSProperties => ({ padding: "6px 12px", background: active ? "rgba(245,166,35,0.15)" : "rgba(255,255,255,0.04)", color: active ? "#f5a623" : "#64748b", border: `1px solid ${active ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer" });
+  const tabBtn = (tabKey: string): React.CSSProperties => ({ flex: 1, padding: "10px 0", background: tab === tabKey ? "#ffffff" : "none", color: tab === tabKey ? "#0a0f1e" : "#94a3b8", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" });
+  const filterBtn = (active: boolean): React.CSSProperties => ({ padding: "6px 12px", background: active ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)", color: active ? "#ffffff" : "#64748b", border: `1px solid ${active ? "rgba(255,255,255,0.3)" : "#1e2d50"}`, borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer" });
 
   // ── Computed metrics ──────────────────────────────────────────────────────
   const totalDeposited   = transactions.filter(t => t.type === "deposit"    && t.status === "completed").reduce((s, t) => s + t.amount, 0);
@@ -220,10 +220,10 @@ export default function WalletPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px" }}>
 
         {/* ── Main balance hero card ── */}
-        <div style={{ background: "linear-gradient(135deg,#0f1e38 0%,#111827 40%,#0d1420 100%)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 20, padding: "24px 22px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle,rgba(245,166,35,0.07) 0%,transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ background: "linear-gradient(135deg,#0f1e38 0%,#111827 40%,#0d1420 100%)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, padding: "24px 22px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)", pointerEvents: "none" }} />
           <div style={{ color: "#475569", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>{t("wallet.realBalance")}</div>
-          <div style={{ color: "#f5a623", fontSize: "clamp(28px,8vw,40px)", fontWeight: 900, letterSpacing: -1, marginBottom: 4, lineHeight: 1 }}>
+          <div style={{ color: "#ffffff", fontSize: "clamp(28px,8vw,40px)", fontWeight: 900, letterSpacing: -1, marginBottom: 4, lineHeight: 1 }}>
             {showBalance ? formatKz(Math.floor(balance)) : "••••••••"}
           </div>
           <div style={{ color: "#334155", fontSize: 12, marginBottom: 20 }}>Saldo real disponível para negociar</div>
@@ -239,7 +239,7 @@ export default function WalletPage() {
               <ArrowUpCircle size={16} /> Levantar
             </button>
             <button onClick={() => router.push("/trade")}
-              style={{ flex: 1, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 12, padding: "12px 10px", color: "#f5a623", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "all .2s" }}>
+              style={{ flex: 1, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 12, padding: "12px 10px", color: "#ffffff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "all .2s" }}>
               <Send size={16} /> Negociar
             </button>
           </div>
@@ -250,7 +250,7 @@ export default function WalletPage() {
           {[
             { label: "Demo",         value: showBalance ? formatKz(Math.floor(demoBalance)) : "••••", color: "#64748b", sub: "saldo demo" },
             { label: "Depositado",   value: showBalance ? formatKz(Math.floor(totalDeposited)) : "••••", color: "#22c55e", sub: "total" },
-            { label: "Bónus",        value: showBalance ? formatKz(Math.floor(totalBonus)) : "••••", color: "#f5a623", sub: "recebido" },
+            { label: "Bónus",        value: showBalance ? formatKz(Math.floor(totalBonus)) : "••••", color: "#ffffff", sub: "recebido" },
           ].map(s => (
             <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "14px 12px", textAlign: "center" }}>
               <div style={{ color: "#334155", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>{s.label}</div>
@@ -293,12 +293,12 @@ export default function WalletPage() {
               </div>
             )}
             {/* Bonus banner */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,rgba(245,166,35,0.1),rgba(249,115,22,0.07))", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
-              <div style={{ width: 36, height: 36, background: "rgba(245,166,35,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Gift size={18} color="#f5a623" />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,rgba(255,255,255,0.1),rgba(249,115,22,0.07))", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
+              <div style={{ width: 36, height: 36, background: "rgba(255,255,255,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Gift size={18} color="#ffffff" />
               </div>
               <div>
-                <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>{t("wallet.bonus")}</div>
+                <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 13 }}>{t("wallet.bonus")}</div>
                 <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>{t("wallet.bonusDesc")}</div>
               </div>
             </div>
@@ -341,12 +341,12 @@ export default function WalletPage() {
                       )}
                     </div>
                   ))}
-                  <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, padding: "10px 14px", marginTop: 6, color: "#94a3b8", fontSize: 12, lineHeight: 1.6 }}>
+                  <div style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, padding: "10px 14px", marginTop: 6, color: "#94a3b8", fontSize: 12, lineHeight: 1.6 }}>
                     Após o pagamento o teu depósito será aprovado em breve. Guarda a referência caso precises de confirmação.
                   </div>
                 </div>
                 <button onClick={() => { setPaymentInfo(null); setTab("history"); }}
-                  style={{ width: "100%", background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                  style={{ width: "100%", background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
                   {t("wallet.tab.history")}
                 </button>
               </div>
@@ -364,7 +364,7 @@ export default function WalletPage() {
                     <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="ex: 50000" style={inp} disabled={otpSent} />
                   </div>
                   {!otpSent ? (
-                    <button onClick={sendOtp} disabled={busy} style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
+                    <button onClick={sendOtp} disabled={busy} style={{ background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}>
                       {busy ? t("common.loading") : "Gerar referência de pagamento"}
                     </button>
                   ) : (
@@ -378,7 +378,7 @@ export default function WalletPage() {
                           style={{ ...inp, fontSize: 24, textAlign: "center", letterSpacing: 10, fontWeight: 700 }} />
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
+                        <button onClick={submitTx} disabled={busy || otp.length < 6} style={{ flex: 1, background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: (busy || otp.length < 6) ? "not-allowed" : "pointer", opacity: (busy || otp.length < 6) ? 0.7 : 1 }}>
                           {busy ? t("common.loading") : "Confirmar e gerar referência"}
                         </button>
                         <button onClick={resetForm} style={{ padding: "13px 16px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", cursor: "pointer" }}>{t("common.cancel")}</button>
@@ -412,14 +412,14 @@ export default function WalletPage() {
                   Precisas de ter saldo real para efectuar um levantamento.<br />
                   Faz um depósito primeiro.
                 </div>
-                <button onClick={() => setTab("deposit")} style={{ marginTop: 16, background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+                <button onClick={() => setTab("deposit")} style={{ marginTop: 16, background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
                   {t("wallet.tab.deposit")}
                 </button>
               </div>
             ) : (
             <>
-            <div style={{ background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, color: "#94a3b8", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
-              <AlertCircle size={15} color="#f5a623" style={{ flexShrink: 0 }} />
+            <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, color: "#94a3b8", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+              <AlertCircle size={15} color="#ffffff" style={{ flexShrink: 0 }} />
               KYC obrigatório para levantamentos. O processamento demora 1-3 dias úteis.
             </div>
 

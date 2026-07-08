@@ -10,7 +10,7 @@ import {
 import PageGuide from "@/app/components/PageGuide";
 
 const SECURITY_GUIDE = [
-  { icon: <Shield  size={26} color="#f5a623" />, iconColor: "#f5a623", title: "Segurança da Conta",        description: "Esta página permite-te proteger a tua conta com autenticação em dois factores, ver todos os dispositivos ligados e consultar o histórico de acessos.", tip: "Activa o 2FA para proteger a conta mesmo que alguém descubra a tua senha." },
+  { icon: <Shield  size={26} color="#ffffff" />, iconColor: "#ffffff", title: "Segurança da Conta",        description: "Esta página permite-te proteger a tua conta com autenticação em dois factores, ver todos os dispositivos ligados e consultar o histórico de acessos.", tip: "Activa o 2FA para proteger a conta mesmo que alguém descubra a tua senha." },
   { icon: <Mail    size={26} color="#38bdf8" />, iconColor: "#38bdf8", title: "2FA — Dois Factores",       description: "Com o 2FA activo, além da senha precisas de um código enviado para o teu email em cada login. Mesmo que alguém roube a tua senha, não consegue entrar.", tip: "O código expira em 10 minutos. Verifica a pasta de spam se não o encontrares." },
   { icon: <Monitor size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Sessões Activas",          description: "Aqui vês todos os dispositivos onde a tua conta está activa. Podes encerrar sessões de dispositivos que não reconheces.", tip: "Se vires uma sessão com um IP desconhecido, encerra-a e muda a senha imediatamente." },
   { icon: <Lock    size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Log de Acessos",           description: "Registo de todos os logins: bem-sucedidos, falhados e tentativas de 2FA. Permite detectar se alguém tentou aceder à tua conta.", tip: "Muitos 'login falhado' seguidos indicam que alguém está a tentar adivinhar a tua senha." },
@@ -28,7 +28,7 @@ const sectionTitle: React.CSSProperties = {
   color: "#ffffff", fontSize: 16, fontWeight: 700, margin: "0 0 4px",
 };
 const sub: React.CSSProperties = { color: "#94a3b8", fontSize: 13, margin: "0 0 20px" };
-const btn = (color = "#f5a623", text = "#0a0f1e"): React.CSSProperties => ({
+const btn = (color = "#ffffff", text = "#0a0f1e"): React.CSSProperties => ({
   background: color, color: text, border: "none", borderRadius: 8,
   padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer",
 });
@@ -193,8 +193,8 @@ export default function SecurityPage() {
           <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 4 }}>
             <ChevronLeft size={22} />
           </button>
-          <div style={{ width: 38, height: 38, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Shield size={20} color="#f5a623" />
+          <div style={{ width: 38, height: 38, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Shield size={20} color="#ffffff" />
           </div>
           <div>
             <div style={{ color: "#ffffff", fontSize: 18, fontWeight: 700 }}>Segurança</div>
@@ -277,8 +277,8 @@ export default function SecurityPage() {
               <>
                 {setupStep === "idle" && (
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.15)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
-                      <Mail size={16} color="#f5a623" />
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
+                      <Mail size={16} color="#ffffff" />
                       <span style={{ color: "#94a3b8", fontSize: 13 }}>Será enviado um código de 6 dígitos para o teu email em cada login.</span>
                     </div>
                     <button onClick={startEmail2FA} disabled={loading} style={{ ...btn(), display: "flex", alignItems: "center", gap: 8 }}>
@@ -365,7 +365,7 @@ export default function SecurityPage() {
             {sessions.map(s => (
               <div key={s.id} style={{
                 ...card, marginBottom: 10,
-                border: s.isCurrent ? "1px solid rgba(245,166,35,0.4)" : "1px solid #1e2d50",
+                border: s.isCurrent ? "1px solid rgba(255,255,255,0.4)" : "1px solid #1e2d50",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -380,8 +380,8 @@ export default function SecurityPage() {
                         {s.device}
                         {s.isCurrent && (
                           <span style={{
-                            marginLeft: 8, background: "rgba(245,166,35,0.15)",
-                            color: "#f5a623", fontSize: 11, fontWeight: 700,
+                            marginLeft: 8, background: "rgba(255,255,255,0.15)",
+                            color: "#ffffff", fontSize: 11, fontWeight: 700,
                             padding: "2px 7px", borderRadius: 4,
                           }}>ACTUAL</span>
                         )}

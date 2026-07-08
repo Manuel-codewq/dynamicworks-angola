@@ -6,7 +6,7 @@ export default function NotFound() {
       fontFamily: "system-ui, -apple-system, sans-serif",
     }}>
       <div style={{ textAlign: "center", maxWidth: 420 }}>
-        <div style={{ color: "#f5a623", fontSize: 120, fontWeight: 900, lineHeight: 1, opacity: 0.3, userSelect: "none" }}>
+        <div style={{ color: "#ffffff", fontSize: 120, fontWeight: 900, lineHeight: 1, opacity: 0.3, userSelect: "none" }}>
           404
         </div>
         <h1 style={{ color: "#fff", fontSize: 24, fontWeight: 800, margin: "8px 0 12px" }}>
@@ -17,7 +17,7 @@ export default function NotFound() {
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
           <a href="/trade" style={{
-            display: "inline-block", background: "#f5a623", color: "#0a0f1e",
+            display: "inline-block", background: "#ffffff", color: "#0a0f1e",
             borderRadius: 10, padding: "10px 28px", fontWeight: 700, fontSize: 14,
             textDecoration: "none", width: "100%", maxWidth: 280, textAlign: "center",
           }}>

@@ -30,14 +30,14 @@ const PERIOD_LABELS: Record<string, string> = {
 };
 
 function medalColor(pos: number) {
-  if (pos === 1) return "#f5a623";
+  if (pos === 1) return "#ffffff";
   if (pos === 2) return "#94a3b8";
   if (pos === 3) return "#cd7f32";
   return "#64748b";
 }
 
 function MedalIcon({ pos }: { pos: number }) {
-  if (pos === 1) return <Trophy size={16} color="#f5a623" />;
+  if (pos === 1) return <Trophy size={16} color="#ffffff" />;
   if (pos === 2) return <Crown  size={16} color="#94a3b8" />;
   if (pos === 3) return <Medal  size={16} color="#cd7f32" />;
   return <span style={{ color: "#64748b", fontWeight: 700, fontSize: 13 }}>{pos}º</span>;
@@ -101,8 +101,8 @@ export default function AdminRankingPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 38, height: 38, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Trophy size={20} color="#f5a623" />
+          <div style={{ width: 38, height: 38, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Trophy size={20} color="#ffffff" />
           </div>
           <div>
             <div style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>Ranking</div>
@@ -119,7 +119,7 @@ export default function AdminRankingPage() {
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         {PERIODS.map(p => (
           <button key={p.value} onClick={() => setPeriod(p.value)}
-            style={{ padding: "7px 16px", borderRadius: 8, border: `1px solid ${period === p.value ? "#f5a623" : "#1e2d50"}`, background: period === p.value ? "rgba(245,166,35,0.12)" : "transparent", color: period === p.value ? "#f5a623" : "#94a3b8", fontWeight: period === p.value ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
+            style={{ padding: "7px 16px", borderRadius: 8, border: `1px solid ${period === p.value ? "#ffffff" : "#1e2d50"}`, background: period === p.value ? "rgba(255,255,255,0.12)" : "transparent", color: period === p.value ? "#ffffff" : "#94a3b8", fontWeight: period === p.value ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
             {p.label}
           </button>
         ))}
@@ -151,7 +151,7 @@ export default function AdminRankingPage() {
                       <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1e2d50", border: `2px solid ${medalColor(e.position)}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
                         {e.avatar
                           ? <img src={e.avatar} alt={e.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          : <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 13 }}>{e.name.charAt(0).toUpperCase()}</span>
+                          : <span style={{ color: "#ffffff", fontWeight: 800, fontSize: 13 }}>{e.name.charAt(0).toUpperCase()}</span>
                         }
                       </div>
                       <div>
@@ -169,7 +169,7 @@ export default function AdminRankingPage() {
                     {e.wins}W / {e.total - e.wins}L
                   </td>
                   <td style={{ padding: "12px", textAlign: "right" }}>
-                    <span style={{ color: e.winRate >= 60 ? "#22c55e" : e.winRate >= 45 ? "#f5a623" : "#ef4444", fontWeight: 700, fontSize: 14 }}>
+                    <span style={{ color: e.winRate >= 60 ? "#22c55e" : e.winRate >= 45 ? "#ffffff" : "#ef4444", fontWeight: 700, fontSize: 14 }}>
                       {e.winRate}%
                     </span>
                   </td>
@@ -184,7 +184,7 @@ export default function AdminRankingPage() {
       {ranking.length > 0 && (
         <div style={card}>
           <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-            <Trophy size={15} color="#f5a623" /> Publicação para WhatsApp
+            <Trophy size={15} color="#ffffff" /> Publicação para WhatsApp
           </div>
           <pre style={{ background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: 16, color: "#94a3b8", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word", margin: "0 0 14px" }}>
             {generatePost()}

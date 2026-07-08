@@ -18,7 +18,7 @@ type TraderRow = {
 const CARD: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 20 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#f5a623",
+  pending: "#ffffff",
   approved: "#22c55e",
   rejected: "#ef4444",
 };
@@ -79,7 +79,7 @@ export default function AdminCopyPage() {
         <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "#94a3b8", display: "flex" }}>
           <ChevronLeft size={22} />
         </button>
-        <Award size={20} color="#f5a623" />
+        <Award size={20} color="#ffffff" />
         <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Copy Trading — Admin</span>
       </div>
 
@@ -90,7 +90,7 @@ export default function AdminCopyPage() {
             <button key={f} onClick={() => setFilter(f)}
               style={{
                 flex: 1, padding: "9px 0", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13,
-                background: filter === f ? "#f5a623" : "#111827",
+                background: filter === f ? "#ffffff" : "#111827",
                 color: filter === f ? "#0a0f1e" : "#94a3b8",
               }}>
               {f === "all" ? "Todos" : STATUS_LABELS[f]}
@@ -112,7 +112,7 @@ export default function AdminCopyPage() {
                 {t.user.avatar ? (
                   <img src={t.user.avatar} alt={t.user.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", color: "#f5a623", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
                     {t.user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -136,7 +136,7 @@ export default function AdminCopyPage() {
                   { label: "Data candidatura", value: new Date(t.createdAt).toLocaleDateString("pt-PT") },
                 ].map(s => (
                   <div key={s.label} style={{ flex: 1, background: "#0a0f1e", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
-                    <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 15 }}>{s.value}</div>
+                    <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 15 }}>{s.value}</div>
                     <div style={{ color: "#64748b", fontSize: 10, marginTop: 2 }}>{s.label}</div>
                   </div>
                 ))}

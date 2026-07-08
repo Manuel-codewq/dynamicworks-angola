@@ -19,13 +19,13 @@ function prizeLabel(i: number) {
   return `${i + 1}º Lugar`;
 }
 function prizeIcon(i: number, size = 14) {
-  if (i === 0) return <Trophy size={size} color="#f5a623" />;
+  if (i === 0) return <Trophy size={size} color="#ffffff" />;
   if (i === 1) return <Crown  size={size} color="#94a3b8" />;
   if (i === 2) return <Star   size={size} color="#cd7f32" />;
   return <Medal size={size} color="#64748b" />;
 }
 function prizeColor(i: number) {
-  return i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : i === 2 ? "#cd7f32" : "#64748b";
+  return i === 0 ? "#ffffff" : i === 1 ? "#94a3b8" : i === 2 ? "#cd7f32" : "#64748b";
 }
 
 // Prize auto-distribution percentages by number of winners
@@ -43,13 +43,13 @@ const PRIZE_DIST: Record<number, number[]> = {
 };
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
-  upcoming: { label: "Próximo",    color: "#f5a623", bg: "rgba(245,166,35,0.1)",  dot: "#f5a623" },
+  upcoming: { label: "Próximo",    color: "#ffffff", bg: "rgba(255,255,255,0.1)",  dot: "#ffffff" },
   active:   { label: "A decorrer", color: "#22c55e", bg: "rgba(34,197,94,0.1)",   dot: "#22c55e" },
   finished: { label: "Terminado",  color: "#64748b", bg: "rgba(100,116,139,0.1)", dot: "#64748b" },
 };
 
 const BANNER_COLORS = [
-  { value: "#f5a623", label: "Ouro"     },
+  { value: "#ffffff", label: "Ouro"     },
   { value: "#22c55e", label: "Verde"    },
   { value: "#3b82f6", label: "Azul"     },
   { value: "#a855f7", label: "Roxo"     },
@@ -83,7 +83,7 @@ const EMPTY_FORM = {
   name: "", description: "", rules: "",
   startDate: "", endDate: "",
   prizePool: "", isFree: true, isDemo: false, entryFee: "",
-  maxParticipants: "", bannerColor: "#f5a623",
+  maxParticipants: "", bannerColor: "#ffffff",
   startingBalance: "10000",
   rechargeAmount: "0",
   prizes: makeEmptyPrizes(3),
@@ -161,7 +161,7 @@ export default function AdminTournamentsPage() {
       maxParticipants: t.maxParticipants ? String(t.maxParticipants) : "",
       startingBalance: String(t.startingBalance ?? 10000),
       rechargeAmount: String(t.rechargeAmount ?? 0),
-      bannerColor: t.bannerColor ?? "#f5a623",
+      bannerColor: t.bannerColor ?? "#ffffff",
       prizes: (t.prizes as any[]).length > 0
         ? t.prizes.map((p: any) => ({ position: p.position, amount: String(p.amount) }))
         : makeEmptyPrizes(3),
@@ -260,7 +260,7 @@ export default function AdminTournamentsPage() {
     finished: tournaments.filter(t => t.status === "finished").length,
   };
 
-  if (status === "loading") return <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", color: "#f5a623", fontFamily: "system-ui" }}>A carregar...</div>;
+  if (status === "loading") return <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontFamily: "system-ui" }}>A carregar...</div>;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui, sans-serif", color: "#fff" }}>
@@ -269,7 +269,7 @@ export default function AdminTournamentsPage() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 44, height: 44, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(245,166,35,0.3)" }}>
+            <div style={{ width: 44, height: 44, background: "linear-gradient(135deg,#ffffff,#cbd5e1)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
               <Trophy size={22} color="#0a0f1e" />
             </div>
             <div>
@@ -277,7 +277,7 @@ export default function AdminTournamentsPage() {
               <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>{tournaments.length} torneio(s) · {counts.active} activo(s)</p>
             </div>
           </div>
-          <button onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg,#f5a623,#e8940f)", color: "#0a0f1e", border: "none", borderRadius: 12, padding: "12px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 16px rgba(245,166,35,0.35)" }}>
+          <button onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg,#ffffff,#cbd5e1)", color: "#0a0f1e", border: "none", borderRadius: 12, padding: "12px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,255,255,0.35)" }}>
             <Plus size={17} /> Criar Torneio
           </button>
         </div>
@@ -286,7 +286,7 @@ export default function AdminTournamentsPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
           {[
             { label: "Em curso",   value: counts.active,   color: "#22c55e", Icon: Zap      },
-            { label: "Próximos",   value: counts.upcoming, color: "#f5a623", Icon: Clock    },
+            { label: "Próximos",   value: counts.upcoming, color: "#ffffff", Icon: Clock    },
             { label: "Terminados", value: counts.finished, color: "#64748b", Icon: Trophy   },
           ].map(s => (
             <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}>
@@ -304,7 +304,7 @@ export default function AdminTournamentsPage() {
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4, marginBottom: 20, width: "fit-content" }}>
           {(["active", "upcoming", "finished"] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: tab === t ? (t === "active" ? "#22c55e" : t === "upcoming" ? "#f5a623" : "#374151") : "transparent", color: tab === t ? (t === "finished" ? "#fff" : "#0a0f1e") : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+            <button key={t} onClick={() => setTab(t)} style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: tab === t ? (t === "active" ? "#22c55e" : t === "upcoming" ? "#ffffff" : "#374151") : "transparent", color: tab === t ? (t === "finished" ? "#fff" : "#0a0f1e") : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
               {t === "active" ? "A decorrer" : t === "upcoming" ? "Próximos" : "Terminados"}
               {counts[t] > 0 && <span style={{ marginLeft: 6, background: "rgba(255,255,255,0.2)", borderRadius: 10, padding: "1px 6px", fontSize: 11 }}>{counts[t]}</span>}
             </button>
@@ -316,7 +316,7 @@ export default function AdminTournamentsPage() {
           <div style={{ background: "#111827", border: "1px dashed #1e2d50", borderRadius: 16, padding: "56px 24px", textAlign: "center" }}>
             <Trophy size={44} color="#1e2d50" style={{ marginBottom: 14 }} />
             <p style={{ color: "#64748b", fontSize: 15, margin: "0 0 6px" }}>Nenhum torneio {tab === "active" ? "a decorrer" : tab === "upcoming" ? "próximo" : "terminado"}.</p>
-            {tab !== "finished" && <p style={{ color: "#4b5563", fontSize: 13, margin: 0 }}>Clica em <strong style={{ color: "#f5a623" }}>Criar Torneio</strong> para começar.</p>}
+            {tab !== "finished" && <p style={{ color: "#4b5563", fontSize: 13, margin: 0 }}>Clica em <strong style={{ color: "#ffffff" }}>Criar Torneio</strong> para começar.</p>}
           </div>
         ) : byTab.map(t => {
           const sc = STATUS_CFG[t.status] ?? STATUS_CFG.upcoming;
@@ -324,23 +324,23 @@ export default function AdminTournamentsPage() {
           const prizes: any[] = Array.isArray(t.prizes) ? t.prizes : [];
           return (
             <div key={t.id} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, overflow: "hidden", marginBottom: 12 }}>
-              <div style={{ height: 4, background: `linear-gradient(90deg,${t.bannerColor ?? "#f5a623"},${t.bannerColor ?? "#f5a623"}44)` }} />
+              <div style={{ height: 4, background: `linear-gradient(90deg,${t.bannerColor ?? "#ffffff"},${t.bannerColor ?? "#ffffff"}44)` }} />
               <div style={{ padding: "18px 20px" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
                       <span style={{ fontWeight: 800, fontSize: 17 }}>{t.name}</span>
                       <span style={{ background: sc.bg, color: sc.color, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>{sc.label}</span>
-                      {t.isDemo && <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>DEMO</span>}
+                      {t.isDemo && <span style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}>DEMO</span>}
                       {t.isFree
                         ? <span style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}><Unlock size={9} style={{ display:"inline",marginRight:3 }} />GRATUITO</span>
-                        : <span style={{ background: "rgba(245,166,35,0.1)", color: "#f5a623", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}><Lock size={9} style={{ display:"inline",marginRight:3 }} />{formatKz(t.entryFee)} {t.isDemo ? "saldo demo" : "entrada"}</span>
+                        : <span style={{ background: "rgba(255,255,255,0.1)", color: "#ffffff", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "2px 8px" }}><Lock size={9} style={{ display:"inline",marginRight:3 }} />{formatKz(t.entryFee)} {t.isDemo ? "saldo demo" : "entrada"}</span>
                       }
                     </div>
                     {t.description && <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 8px", lineHeight: 1.6, maxWidth: 580 }}>{t.description.slice(0, 140)}{t.description.length > 140 ? "…" : ""}</p>}
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 12, color: "#64748b" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Calendar size={12} />{formatDate(t.startDate)} → {formatDate(t.endDate)}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Gift size={12} color="#f5a623" /><span style={{ color: "#f5a623", fontWeight: 700 }}>{formatKz(t.prizePool)}</span></span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Gift size={12} color="#ffffff" /><span style={{ color: "#ffffff", fontWeight: 700 }}>{formatKz(t.prizePool)}</span></span>
                       <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Users size={12} />{t._count?.participants ?? 0}{t.maxParticipants ? `/${t.maxParticipants}` : ""} participantes</span>
                       {prizes.length > 0 && <span style={{ color: "#4b5563" }}>· {prizes.length} vencedores</span>}
                     </div>
@@ -348,13 +348,13 @@ export default function AdminTournamentsPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => window.open(`/tournaments/${t.id}`, "_blank")} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 7, padding: "6px 9px", cursor: "pointer", display: "flex" }} title="Ver"><Eye size={13} color="#64748b" /></button>
-                      <button onClick={() => openEdit(t)} style={{ background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 7, padding: "6px 9px", cursor: "pointer" }}><Edit3 size={13} color="#f5a623" /></button>
+                      <button onClick={() => openEdit(t)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 7, padding: "6px 9px", cursor: "pointer" }}><Edit3 size={13} color="#ffffff" /></button>
                       <button onClick={() => del(t.id)} style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 7, padding: "6px 9px", cursor: "pointer" }}><Trash2 size={13} color="#ef4444" /></button>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
                       {t.status === "upcoming" && <button onClick={() => setStatus(t.id, "active")}   style={{ flex: 1, background: "rgba(34,197,94,0.1)",  color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)",  borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Iniciar</button>}
                       {t.status === "active"   && <button onClick={() => setStatus(t.id, "finished")} style={{ flex: 1, background: "rgba(100,116,139,0.1)", color: "#94a3b8", border: "1px solid rgba(100,116,139,0.25)", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>■ Terminar</button>}
-                      {t.status === "finished" && <button onClick={() => setStatus(t.id, "upcoming")} style={{ flex: 1, background: "rgba(245,166,35,0.1)",  color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)",  borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>↺ Repor</button>}
+                      {t.status === "finished" && <button onClick={() => setStatus(t.id, "upcoming")} style={{ flex: 1, background: "rgba(255,255,255,0.1)",  color: "#ffffff", border: "1px solid rgba(255,255,255,0.25)",  borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>↺ Repor</button>}
                       {t.status !== "finished" && <button onClick={() => resetBalances(t.id, t.name)} style={{ flex: 1, background: "rgba(99,102,241,0.1)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><RotateCcw size={10} /> Saldos</button>}
                     </div>
                   </div>
@@ -434,7 +434,7 @@ export default function AdminTournamentsPage() {
               <div style={{ marginBottom: 22 }}>
                 <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>2 · TIPO DE CONTA</div>
                 <div style={{ display: "flex", gap: 10 }}>
-                  {[{ val: false, label: "Conta Real", color: "#22c55e" }, { val: true, label: "Conta Demo", color: "#f5a623" }].map(opt => (
+                  {[{ val: false, label: "Conta Real", color: "#22c55e" }, { val: true, label: "Conta Demo", color: "#ffffff" }].map(opt => (
                     <button key={String(opt.val)} onClick={() => setF("isDemo", opt.val)}
                       style={{ flex: 1, padding: "13px", border: `2px solid ${form.isDemo === opt.val ? opt.color : "#1e2d50"}`, borderRadius: 12, background: form.isDemo === opt.val ? `${opt.color}12` : "#0d1526", color: form.isDemo === opt.val ? opt.color : "#64748b", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
                       {opt.label}
@@ -450,7 +450,7 @@ export default function AdminTournamentsPage() {
               <div style={{ marginBottom: 22 }}>
                 <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>3 · TIPO DE ACESSO</div>
                 <div style={{ display: "flex", gap: 10, marginBottom: form.isFree ? 0 : 12 }}>
-                  {[{ val: true, label: "Gratuito", Icon: Unlock, color: "#22c55e" }, { val: false, label: "Pago", Icon: Lock, color: "#f5a623" }].map(opt => (
+                  {[{ val: true, label: "Gratuito", Icon: Unlock, color: "#22c55e" }, { val: false, label: "Pago", Icon: Lock, color: "#ffffff" }].map(opt => (
                     <button key={String(opt.val)} onClick={() => setF("isFree", opt.val)}
                       style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px", border: `2px solid ${form.isFree === opt.val ? opt.color : "#1e2d50"}`, borderRadius: 12, background: form.isFree === opt.val ? `${opt.color}12` : "#0d1526", color: form.isFree === opt.val ? opt.color : "#64748b", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
                       <opt.Icon size={15} /> {opt.label}
@@ -461,7 +461,7 @@ export default function AdminTournamentsPage() {
                   <div style={{ marginTop: 12 }}>
                     <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>Valor de entrada (Kz) *</label>
                     <input type="number" value={form.entryFee} onChange={e => setF("entryFee", e.target.value)} placeholder="Ex: 5000"
-                      style={{ width: "100%", background: "#0d1526", border: `1px solid ${errors.entryFee ? "#ef4444" : "#f5a623"}`, borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+                      style={{ width: "100%", background: "#0d1526", border: `1px solid ${errors.entryFee ? "#ef4444" : "#ffffff"}`, borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
                     {errors.entryFee && <p style={{ color: "#ef4444", fontSize: 11, margin: "4px 0 0" }}>{errors.entryFee}</p>}
                     <p style={{ color: "#64748b", fontSize: 11, margin: "6px 0 0" }}>
                       {form.isDemo ? "Debitado do saldo demo do utilizador ao inscrever-se." : "Debitado do saldo real do utilizador ao inscrever-se."}
@@ -483,7 +483,7 @@ export default function AdminTournamentsPage() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
                     <button onClick={autoDistribute} title="Distribuir automaticamente pelos vencedores"
-                      style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 9, padding: "11px 14px", color: "#f5a623", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 9, padding: "11px 14px", color: "#ffffff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
                       <Wand2 size={14} /> Auto-distribuir
                     </button>
                   </div>
@@ -523,7 +523,7 @@ export default function AdminTournamentsPage() {
                 <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>4 · DESCRIÇÃO E REGRAS</div>
 
                 {/* Templates */}
-                <button onClick={() => setShowTemplates(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.15)", borderRadius: 9, padding: "8px 13px", color: "#f5a623", fontWeight: 600, fontSize: 12, cursor: "pointer", marginBottom: 12, width: "100%" }}>
+                <button onClick={() => setShowTemplates(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 9, padding: "8px 13px", color: "#ffffff", fontWeight: 600, fontSize: 12, cursor: "pointer", marginBottom: 12, width: "100%" }}>
                   <Zap size={13} /> Usar template de texto {showTemplates ? "▲" : "▼"}
                 </button>
                 {showTemplates && (
@@ -568,7 +568,7 @@ export default function AdminTournamentsPage() {
                   <div>
                     <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>Saldo inicial do torneio (Kz)</label>
                     <input type="number" value={form.startingBalance} onChange={e => setF("startingBalance", e.target.value)} placeholder="20000"
-                      style={{ width: "100%", background: "#0d1526", border: "1px solid #f5a623", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                      style={{ width: "100%", background: "#0d1526", border: "1px solid #ffffff", borderRadius: 9, padding: "11px 13px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                     <p style={{ color: "#475569", fontSize: 11, margin: "5px 0 0" }}>Banca inicial de cada participante — separada do saldo pessoal.</p>
                   </div>
                   <div>

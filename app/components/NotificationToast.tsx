@@ -21,7 +21,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: st
   kyc_rejected:         { icon: <ScanFace      size={20} />, color: "#ef4444", bg: "rgba(239,68,68,0.12)"    },
   trade_win:            { icon: <TrendingUp    size={20} />, color: "#22c55e", bg: "rgba(34,197,94,0.12)"    },
   trade_loss:           { icon: <TrendingDown  size={20} />, color: "#ef4444", bg: "rgba(239,68,68,0.12)"    },
-  broadcast:            { icon: <Megaphone     size={20} />, color: "#f5a623", bg: "rgba(245,166,35,0.12)"   },
+  broadcast:            { icon: <Megaphone     size={20} />, color: "#ffffff", bg: "rgba(255,255,255,0.12)"   },
   admin:                { icon: <Info          size={20} />, color: "#38bdf8", bg: "rgba(56,189,248,0.12)"   },
 };
 
@@ -147,7 +147,7 @@ function ToastItem({ n, onDismiss }: { n: Notif; onDismiss: () => void }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* App label */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-              <div style={{ width: 14, height: 14, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 3, flexShrink: 0 }} />
+              <div style={{ width: 14, height: 14, background: "linear-gradient(135deg,#ffffff,#cbd5e1)", borderRadius: 3, flexShrink: 0 }} />
               <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.3 }}>DYNAMICS WORKS</span>
             </div>
             <div style={{ color: "#ffffff", fontWeight: 700, fontSize: 13, lineHeight: 1.3, marginBottom: 3 }}>{n.title}</div>

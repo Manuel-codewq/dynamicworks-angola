@@ -52,7 +52,7 @@ export default function TradeShareButton({ trade, size = "md" }: Props) {
     ctx.stroke();
 
     // ── Logo ───────────────────────────────────────────────────────────────
-    ctx.fillStyle = "#f5a623";
+    ctx.fillStyle = "#ffffff";
     roundRect(ctx, 48, 48, 44, 44, 10);
     ctx.fill();
     ctx.fillStyle = "#0a0f1e";
@@ -60,7 +60,7 @@ export default function TradeShareButton({ trade, size = "md" }: Props) {
     ctx.textAlign = "center";
     ctx.fillText("D", 70, 77);
 
-    ctx.fillStyle = "#f5a623";
+    ctx.fillStyle = "#ffffff";
     ctx.font      = "bold 18px system-ui";
     ctx.textAlign = "left";
     ctx.fillText("Dynamic Works", 104, 72);
@@ -103,7 +103,7 @@ export default function TradeShareButton({ trade, size = "md" }: Props) {
     const stats = [
       { label: "Investimento", value: formatKz(trade.amount), color: "#94a3b8" },
       { label: isWin ? "Lucro" : "Perda",    value: (isWin ? "+" : "−") + formatKz(profitAbs), color: accentColor },
-      { label: "Payout", value: `${Math.round((trade.payout ?? 0.74) * 100)}%`, color: "#f5a623" },
+      { label: "Payout", value: `${Math.round((trade.payout ?? 0.74) * 100)}%`, color: "#ffffff" },
     ];
 
     const colW = (W - 96) / 3;
@@ -169,9 +169,9 @@ export default function TradeShareButton({ trade, size = "md" }: Props) {
       title="Partilhar resultado"
       style={{
         display: "flex", alignItems: "center", gap: isSmall ? 4 : 6,
-        background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.25)",
+        background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.25)",
         borderRadius: isSmall ? 6 : 8, padding: isSmall ? "4px 8px" : "6px 12px",
-        color: "#f5a623", cursor: "pointer", fontSize: isSmall ? 11 : 12, fontWeight: 700,
+        color: "#ffffff", cursor: "pointer", fontSize: isSmall ? 11 : 12, fontWeight: 700,
       }}
     >
       <Share2 size={isSmall ? 11 : 13} />

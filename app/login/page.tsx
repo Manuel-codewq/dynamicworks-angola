@@ -90,7 +90,7 @@ function LoginContent() {
         @keyframes grid-move { from { transform:translateY(0); } to { transform:translateY(64px); } }
         @keyframes spin { to { transform:rotate(360deg); } }
         .login-inp { transition: border-color .2s, box-shadow .2s; }
-        .login-inp:focus { border-color: rgba(245,166,35,.6) !important; box-shadow: 0 0 0 3px rgba(245,166,35,.1); outline: none; }
+        .login-inp:focus { border-color: rgba(255,255,255,.6) !important; box-shadow: 0 0 0 3px rgba(255,255,255,.1); outline: none; }
         .login-btn:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
         .login-btn:active:not(:disabled) { transform:scale(.98); }
         .login-left { display: none; }
@@ -109,7 +109,7 @@ function LoginContent() {
 
         {/* Background grid */}
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(30,45,80,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(30,45,80,.12) 1px,transparent 1px)", backgroundSize:"48px 48px", animation:"grid-move 8s linear infinite", pointerEvents:"none" }} />
-        <div style={{ position:"absolute", top:"10%", left:"15%", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(245,166,35,.055) 0%,transparent 70%)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", top:"10%", left:"15%", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(255,255,255,.055) 0%,transparent 70%)", pointerEvents:"none" }} />
         <div style={{ position:"absolute", bottom:"15%", right:"10%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle,rgba(59,130,246,.05) 0%,transparent 70%)", pointerEvents:"none" }} />
 
         {/* Logo */}
@@ -117,7 +117,7 @@ function LoginContent() {
           <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width:44, height:44, objectFit:"contain", borderRadius:10, background:"#111827" }} />
           <div>
             <div style={{ color:"#fff", fontWeight:900, fontSize:18, letterSpacing:-.3 }}>Dynamic Works</div>
-            <div style={{ color:"#f5a623", fontSize:11, letterSpacing:1.2, fontWeight:700, textTransform:"uppercase" }}>Plataforma de Trading</div>
+            <div style={{ color:"#ffffff", fontSize:11, letterSpacing:1.2, fontWeight:700, textTransform:"uppercase" }}>Plataforma de Trading</div>
           </div>
         </div>
 
@@ -125,7 +125,7 @@ function LoginContent() {
         <div style={{ position:"relative", zIndex:1 }}>
           <h2 style={{ color:"#f0f4ff", fontSize:"clamp(28px,3vw,40px)", fontWeight:900, lineHeight:1.1, letterSpacing:-1, marginBottom:20 }}>
             Negoceia os<br/>
-            <span style={{ background:"linear-gradient(90deg,#f5a623,#fbbf24)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>mercados globais</span><br/>
+            <span style={{ background:"linear-gradient(90deg,#ffffff,#fbbf24)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>mercados globais</span><br/>
             em Kwanzas.
           </h2>
           <p style={{ color:"#475569", fontSize:15, lineHeight:1.75, maxWidth:340 }}>
@@ -136,7 +136,7 @@ function LoginContent() {
           <div style={{ display:"flex", gap:0, marginTop:36, border:"1px solid rgba(30,45,80,.6)", borderRadius:14, overflow:"hidden" }}>
             {STATS.map((s, i) => (
               <div key={i} style={{ flex:1, padding:"16px 14px", borderRight: i < STATS.length-1 ? "1px solid rgba(30,45,80,.6)" : "none", textAlign:"center" }}>
-                <div style={{ color:"#f5a623", fontWeight:900, fontSize:20, marginBottom:4 }}>{s.value}</div>
+                <div style={{ color:"#ffffff", fontWeight:900, fontSize:20, marginBottom:4 }}>{s.value}</div>
                 <div style={{ color:"#334155", fontSize:11 }}>{s.label}</div>
               </div>
             ))}
@@ -147,7 +147,7 @@ function LoginContent() {
             {[
               { icon:<TrendingUp size={15} color="#0ecb81"/>, label:"Payout até 85% por operação" },
               { icon:<Shield size={15} color="#3b82f6"/>, label:"KYC + 2FA — conta 100% segura" },
-              { icon:<BarChart2 size={15} color="#f5a623"/>, label:"30+ indicadores integrados no gráfico" },
+              { icon:<BarChart2 size={15} color="#ffffff"/>, label:"30+ indicadores integrados no gráfico" },
               { icon:<Zap size={15} color="#a78bfa"/>, label:"Conta demo gratuita — 10.000 Kz virtual" },
             ].map((f, i) => (
               <div key={i} style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -171,7 +171,7 @@ function LoginContent() {
         <div className="mobile-logo" style={{ textAlign:"center", marginBottom:36 }}>
           <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width:52, height:52, objectFit:"contain", borderRadius:12, background:"#111827", marginBottom:12 }} />
           <div style={{ color:"#fff", fontWeight:900, fontSize:20 }}>Dynamic Works</div>
-          <div style={{ color:"#f5a623", fontSize:11, letterSpacing:1.2, fontWeight:700, textTransform:"uppercase", marginTop:2 }}>Plataforma de Trading</div>
+          <div style={{ color:"#ffffff", fontSize:11, letterSpacing:1.2, fontWeight:700, textTransform:"uppercase", marginTop:2 }}>Plataforma de Trading</div>
         </div>
 
         <div style={{ width:"100%", maxWidth:400 }}>
@@ -182,8 +182,8 @@ function LoginContent() {
               <>
                 {/* 2FA header */}
                 <div style={{ textAlign:"center", marginBottom:28 }}>
-                  <div style={{ width:56, height:56, background:"rgba(245,166,35,.08)", border:"1px solid rgba(245,166,35,.25)", borderRadius:16, display:"inline-flex", alignItems:"center", justifyContent:"center", marginBottom:16 }}>
-                    <Shield size={26} color="#f5a623" />
+                  <div style={{ width:56, height:56, background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.25)", borderRadius:16, display:"inline-flex", alignItems:"center", justifyContent:"center", marginBottom:16 }}>
+                    <Shield size={26} color="#ffffff" />
                   </div>
                   <h1 style={{ color:"#fff", fontSize:22, fontWeight:800, margin:"0 0 8px", letterSpacing:-.3 }}>{t("2fa.title")}</h1>
                   <p style={{ color:"#475569", fontSize:14, margin:0, lineHeight:1.6 }}>
@@ -232,7 +232,7 @@ function LoginContent() {
                   </Field>
 
                   <Field label={t("login.password")} icon={<Lock size={15} color="#475569" />}
-                    right={<a href="/forgot-password" style={{ color:"#f5a623", fontSize:12, textDecoration:"none", fontWeight:600 }}>{t("login.forgotPassword")}</a>}>
+                    right={<a href="/forgot-password" style={{ color:"#ffffff", fontSize:12, textDecoration:"none", fontWeight:600 }}>{t("login.forgotPassword")}</a>}>
                     <div style={{ position:"relative" }}>
                       <Lock size={15} color="#475569" style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} />
                       <input type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
@@ -251,15 +251,15 @@ function LoginContent() {
                 </form>
 
                 {failedAttempts >= 3 && failedAttempts < MAX_ATTEMPTS && (
-                  <div style={{ background:"rgba(245,166,35,.06)", border:"1px solid rgba(245,166,35,.2)", borderRadius:8, padding:"10px 14px", marginTop:16, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                    <span style={{ color:"#f5a623", fontSize:13 }}>{MAX_ATTEMPTS - failedAttempts} tentativas restantes</span>
-                    <a href="/forgot-password" style={{ color:"#f5a623", fontSize:12, fontWeight:700, textDecoration:"none" }}>{t("login.recoverPassword")}</a>
+                  <div style={{ background:"rgba(255,255,255,.06)", border:"1px solid rgba(255,255,255,.2)", borderRadius:8, padding:"10px 14px", marginTop:16, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <span style={{ color:"#ffffff", fontSize:13 }}>{MAX_ATTEMPTS - failedAttempts} tentativas restantes</span>
+                    <a href="/forgot-password" style={{ color:"#ffffff", fontSize:12, fontWeight:700, textDecoration:"none" }}>{t("login.recoverPassword")}</a>
                   </div>
                 )}
 
                 <p style={{ textAlign:"center", color:"#334155", fontSize:14, marginTop:24 }}>
                   {t("login.noAccount")}{" "}
-                  <a href="/register" style={{ color:"#f5a623", textDecoration:"none", fontWeight:700 }}>{t("login.register")}</a>
+                  <a href="/register" style={{ color:"#ffffff", textDecoration:"none", fontWeight:700 }}>{t("login.register")}</a>
                 </p>
               </>
             )}
@@ -308,7 +308,7 @@ function AlertBox({ msg }: { msg:string }) {
 function PrimaryBtn({ children, loading, disabled, style }: { children:React.ReactNode; loading?:boolean; disabled?:boolean; style?:React.CSSProperties }) {
   return (
     <button type="submit" disabled={disabled} className="login-btn"
-      style={{ width:"100%", background: disabled ? "#7a5118" : "linear-gradient(135deg,#f5a623,#f97316)", color:"#0a0f1e", border:"none", borderRadius:12, padding:"14px 16px", fontSize:15, fontWeight:800, cursor:disabled ? "not-allowed" : "pointer", transition:"all .18s", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow: disabled ? "none" : "0 6px 24px rgba(245,166,35,.35)", ...style }}>
+      style={{ width:"100%", background: disabled ? "#7a5118" : "linear-gradient(135deg,#ffffff,#f97316)", color:"#0a0f1e", border:"none", borderRadius:12, padding:"14px 16px", fontSize:15, fontWeight:800, cursor:disabled ? "not-allowed" : "pointer", transition:"all .18s", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow: disabled ? "none" : "0 6px 24px rgba(255,255,255,.35)", ...style }}>
       {loading ? <span style={{ width:16, height:16, border:"2px solid rgba(0,0,0,.3)", borderTopColor:"#0a0f1e", borderRadius:"50%", display:"inline-block", animation:"spin .7s linear infinite" }} /> : children}
     </button>
   );

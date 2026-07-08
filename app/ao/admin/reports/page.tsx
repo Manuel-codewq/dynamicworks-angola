@@ -30,7 +30,7 @@ const td: React.CSSProperties = {
 
 function WinRateBar({ actual, configured }: { actual: number; configured: number }) {
   const diff  = actual - configured;
-  const color = diff > 5 ? "#ef4444" : diff < -5 ? "#22c55e" : "#f5a623";
+  const color = diff > 5 ? "#ef4444" : diff < -5 ? "#22c55e" : "#ffffff";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ width: 120, height: 8, background: "#1e2d50", borderRadius: 4, overflow: "hidden", position: "relative" }}>
@@ -127,7 +127,7 @@ export default function AdminReportsPage() {
           {DAYS_OPTIONS.map(d => (
             <button key={d} onClick={() => setDays(d)}
               style={{ padding: "6px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                background: days === d ? "#f5a623" : "#1e2d50", color: days === d ? "#000" : "#94a3b8" }}>
+                background: days === d ? "#ffffff" : "#1e2d50", color: days === d ? "#000" : "#94a3b8" }}>
               {d}d
             </button>
           ))}
@@ -140,7 +140,7 @@ export default function AdminReportsPage() {
             <Download size={13} /> Exportar CSV
           </button>
           <button onClick={() => window.open(`/ao/admin/reports/print?days=${days}`, "_blank")}
-            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, padding: "7px 12px", color: "#f5a623", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, padding: "7px 12px", color: "#ffffff", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
             <FileText size={13} /> Exportar PDF
           </button>
         </div>
@@ -153,7 +153,7 @@ export default function AdminReportsPage() {
           {/* P&L chart */}
           <div style={sectionCard}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <BarChart2 size={17} color="#f5a623" />
+              <BarChart2 size={17} color="#ffffff" />
               <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Lucro da Corretora — últimos {days} dias</span>
             </div>
             <div style={{ display: "flex", gap: 32, marginBottom: 20, flexWrap: "wrap" }}>
@@ -165,7 +165,7 @@ export default function AdminReportsPage() {
               </div>
               <div>
                 <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>OPERAÇÕES FECHADAS</div>
-                <div style={{ color: "#f5a623", fontSize: 26, fontWeight: 800 }}>{totalTrades.toLocaleString("pt-PT")}</div>
+                <div style={{ color: "#ffffff", fontSize: 26, fontWeight: 800 }}>{totalTrades.toLocaleString("pt-PT")}</div>
               </div>
             </div>
             {pnl.length > 0 ? (
@@ -188,7 +188,7 @@ export default function AdminReportsPage() {
           {/* Win rate per pair */}
           <div style={sectionCard}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <TrendingUp size={17} color="#f5a623" />
+              <TrendingUp size={17} color="#ffffff" />
               <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Taxa de vitória por par</span>
               <span style={{ color: "#64748b", fontSize: 12, marginLeft: 4 }}>(conta real · histórico completo)</span>
             </div>
@@ -224,7 +224,7 @@ export default function AdminReportsPage() {
           {/* Top winning users */}
           <div style={sectionCard}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <Trophy size={17} color="#f5a623" />
+              <Trophy size={17} color="#ffffff" />
               <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Utilizadores mais rentáveis</span>
               <span style={{ color: "#64748b", fontSize: 12, marginLeft: 4 }}>(maior risco para a corretora)</span>
             </div>
@@ -255,7 +255,7 @@ export default function AdminReportsPage() {
                         </td>
                         <td style={{ ...td, color: "#94a3b8" }}>{u.trades}</td>
                         <td style={td}>
-                          <span style={{ color: u.winRate >= 60 ? "#ef4444" : u.winRate >= 50 ? "#f5a623" : "#22c55e", fontWeight: 700 }}>
+                          <span style={{ color: u.winRate >= 60 ? "#ef4444" : u.winRate >= 50 ? "#ffffff" : "#22c55e", fontWeight: 700 }}>
                             {u.winRate}%
                           </span>
                         </td>
@@ -278,7 +278,7 @@ export default function AdminReportsPage() {
           <div style={sectionCard}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <BarChart2 size={17} color="#f5a623" />
+                <BarChart2 size={17} color="#ffffff" />
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Detalhe diário</span>
               </div>
               <button onClick={() => exportCSV(pnl, days)} disabled={pnl.length === 0}
@@ -310,7 +310,7 @@ export default function AdminReportsPage() {
                         <td style={{ ...td, color: "#ef4444", textAlign: "right" }}>{hasData ? d.losses : "—"}</td>
                         <td style={{ ...td, textAlign: "right" }}>
                           {d.winRate !== null
-                            ? <span style={{ color: d.winRate >= 55 ? "#ef4444" : d.winRate >= 47 ? "#f5a623" : "#22c55e", fontWeight: 700 }}>{d.winRate}%</span>
+                            ? <span style={{ color: d.winRate >= 55 ? "#ef4444" : d.winRate >= 47 ? "#ffffff" : "#22c55e", fontWeight: 700 }}>{d.winRate}%</span>
                             : <span style={{ color: "#334155" }}>—</span>}
                         </td>
                         <td style={{ ...td, color: "#94a3b8", textAlign: "right" }}>{hasData ? formatKz(d.volume) : "—"}</td>
@@ -333,7 +333,7 @@ export default function AdminReportsPage() {
                     <td style={{ ...td, color: "#ef4444", fontWeight: 700, textAlign: "right" }}>{pnl.reduce((s, d) => s + (d.losses ?? 0), 0)}</td>
                     <td style={{ ...td, textAlign: "right" }}>
                       {totalTrades > 0
-                        ? <span style={{ color: "#f5a623", fontWeight: 700 }}>
+                        ? <span style={{ color: "#ffffff", fontWeight: 700 }}>
                             {Math.round((pnl.reduce((s, d) => s + (d.wins ?? 0), 0) / totalTrades) * 100)}%
                           </span>
                         : "—"}

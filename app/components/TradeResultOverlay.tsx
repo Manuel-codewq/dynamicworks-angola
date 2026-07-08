@@ -28,7 +28,7 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const COLORS = ["#f5a623", "#22c55e", "#ffffff", "#fbbf24", "#34d399", "#a78bfa", "#f472b6"];
+    const COLORS = ["#ffffff", "#22c55e", "#ffffff", "#fbbf24", "#34d399", "#a78bfa", "#f472b6"];
     const particles = Array.from({ length: 140 }, (_, i) => ({
       x:     (i / 140) * canvas.width + (Math.random() - 0.5) * 60,
       y:     -20 - Math.random() * 120,
@@ -89,7 +89,7 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
         onClick={e => e.stopPropagation()}
         style={{
           backgroundColor: "#111827",
-          border: "2px solid #f5a623",
+          border: "2px solid #ffffff",
           borderRadius: 20,
           padding: "32px 36px",
           maxWidth: "80vw",
@@ -99,10 +99,10 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
           alignItems: "center",
           gap: 14,
           textAlign: "center",
-          boxShadow: "0 0 40px rgba(245,166,35,0.3), 0 20px 60px rgba(0,0,0,0.8)",
+          boxShadow: "0 0 40px rgba(255,255,255,0.3), 0 20px 60px rgba(0,0,0,0.8)",
         }}
       >
-        <Info size={32} color="#f5a623" />
+        <Info size={32} color="#ffffff" />
         <div style={{ color: "#ffffff", fontWeight: 700, fontSize: 16, lineHeight: 1.4 }}>
           {msg}
         </div>
@@ -110,7 +110,7 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
           onClick={onDone}
           style={{
             marginTop: 4,
-            background: "#f5a623",
+            background: "#ffffff",
             color: "#0a0f1e",
             border: "none",
             borderRadius: 10,
@@ -138,7 +138,7 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
         @keyframes trShake    { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-9px)} 40%{transform:translateX(9px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
         @keyframes trFadeOut  { 0%,65%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(.9)} }
         @keyframes trLossOut  { 0%,55%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(.92)} }
-        @keyframes trGlow     { 0%,100%{filter:drop-shadow(0 0 8px #f5a623)} 50%{filter:drop-shadow(0 0 22px #f5a623)} }
+        @keyframes trGlow     { 0%,100%{filter:drop-shadow(0 0 8px #ffffff)} 50%{filter:drop-shadow(0 0 22px #ffffff)} }
       `}</style>
 
       {/* Background flash */}
@@ -180,7 +180,7 @@ export default function TradeResultOverlay({ type, msg, onDone }: Props) {
             animation: isWin ? "trPulse 1.4s ease-in-out infinite" : undefined,
           }}>
             {isWin
-              ? <Trophy     size={46} color="#f5a623" style={{ animation: "trGlow 1.4s ease-in-out infinite" }} />
+              ? <Trophy     size={46} color="#ffffff" style={{ animation: "trGlow 1.4s ease-in-out infinite" }} />
               : <TrendingDown size={46} color="#ef4444" />
             }
           </div>

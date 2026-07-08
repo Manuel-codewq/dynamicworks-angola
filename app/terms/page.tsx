@@ -45,7 +45,7 @@ export default function TermsPage() {
       <div style={{ background: "#111827", borderBottom: "1px solid #1e2d50", padding: "0 24px" }}>
         <div style={{ maxWidth: 760, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 36, height: 36, background: "#ffffff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <TrendingUp size={20} color="#0a0f1e" strokeWidth={2.5} />
             </div>
             <span style={{ color: "#fff", fontWeight: 800, fontSize: 17 }}>Dynamics Works</span>
@@ -69,7 +69,7 @@ export default function TermsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
           {SECTIONS.map(s => (
             <section key={s.title}>
-              <h2 style={{ color: "#f5a623", fontSize: 16, fontWeight: 700, margin: "0 0 12px", letterSpacing: 0.2 }}>
+              <h2 style={{ color: "#ffffff", fontSize: 16, fontWeight: 700, margin: "0 0 12px", letterSpacing: 0.2 }}>
                 {s.title}
               </h2>
               <p style={{ lineHeight: 1.75, fontSize: 15, margin: 0, color: "#94a3b8" }}>
@@ -85,7 +85,7 @@ export default function TermsPage() {
           </p>
           <p style={{ color: "#374151", fontSize: 12, margin: 0 }}>
             Desenvolvida pela{" "}
-            <span style={{ color: "#f5a623", fontWeight: 700 }}>Digikap</span>
+            <span style={{ color: "#ffffff", fontWeight: 700 }}>Digikap</span>
             {" "}— Tecnologia & Inovação Digital · Angola
           </p>
         </div>

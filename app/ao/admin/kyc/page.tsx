@@ -24,14 +24,14 @@ interface KycEntry {
 type Filter = "all" | "pending" | "approved" | "rejected";
 
 const STATUS: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-  pending:  { label: "Pendente",  color: "#f5a623", bg: "rgba(245,166,35,0.12)",  Icon: Clock },
+  pending:  { label: "Pendente",  color: "#ffffff", bg: "rgba(255,255,255,0.12)",  Icon: Clock },
   approved: { label: "Aprovado",  color: "#22c55e", bg: "rgba(34,197,94,0.12)",   Icon: ShieldCheck },
   rejected: { label: "Rejeitado", color: "#ef4444", bg: "rgba(239,68,68,0.12)",   Icon: ShieldX },
 };
 
 function LivenessBadge({ score }: { score: number }) {
-  const color = score >= 80 ? "#22c55e" : score >= 60 ? "#f5a623" : "#ef4444";
-  const bg    = score >= 80 ? "rgba(34,197,94,0.12)" : score >= 60 ? "rgba(245,166,35,0.12)" : "rgba(239,68,68,0.12)";
+  const color = score >= 80 ? "#22c55e" : score >= 60 ? "#ffffff" : "#ef4444";
+  const bg    = score >= 80 ? "rgba(34,197,94,0.12)" : score >= 60 ? "rgba(255,255,255,0.12)" : "rgba(239,68,68,0.12)";
   return (
     <span style={{ background: bg, color, borderRadius: 20, padding: "2px 8px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
       {score}% IA
@@ -104,7 +104,7 @@ export default function AdminKycPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
           <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
-            <ScanFace size={24} color="#f5a623" /> Verificação KYC
+            <ScanFace size={24} color="#ffffff" /> Verificação KYC
           </h1>
           <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 0" }}>Reveja e decida sobre as submissões de identidade</p>
         </div>
@@ -117,7 +117,7 @@ export default function AdminKycPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         {(["all", "pending", "approved", "rejected"] as Filter[]).map(f => {
           const active = filter === f;
-          const colors: Record<Filter, string> = { all: "#94a3b8", pending: "#f5a623", approved: "#22c55e", rejected: "#ef4444" };
+          const colors: Record<Filter, string> = { all: "#94a3b8", pending: "#ffffff", approved: "#22c55e", rejected: "#ef4444" };
           const c = colors[f];
           return (
             <button key={f} onClick={() => changeFilter(f)}
@@ -187,7 +187,7 @@ export default function AdminKycPage() {
                       <td style={td}>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button onClick={() => setSelected(entry)} disabled={busy}
-                            style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(245,166,35,0.1)", color: "#f5a623", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 7, padding: "5px 10px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                            style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.1)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 7, padding: "5px 10px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                             <Eye size={13} /> Ver
                           </button>
                           {entry.user.kycStatus === "pending" && (
@@ -222,7 +222,7 @@ export default function AdminKycPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
               <div>
                 <h2 style={{ color: "#fff", margin: 0, fontSize: 18, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-                  <User size={18} color="#f5a623" /> {selected.user.name}
+                  <User size={18} color="#ffffff" /> {selected.user.name}
                 </h2>
                 <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 0" }}>{selected.user.email} · {selected.user.province ?? "Província não indicada"}</p>
               </div>
@@ -232,7 +232,7 @@ export default function AdminKycPage() {
             {/* Liveness + stats */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
               {[
-                { label: "Liveness IA", value: `${selected.livenessScore}%`, color: selected.livenessScore >= 80 ? "#22c55e" : selected.livenessScore >= 60 ? "#f5a623" : "#ef4444" },
+                { label: "Liveness IA", value: `${selected.livenessScore}%`, color: selected.livenessScore >= 80 ? "#22c55e" : selected.livenessScore >= 60 ? "#ffffff" : "#ef4444" },
                 { label: "Tentativas", value: `${selected.user.kycAttempts} / 2`, color: selected.user.kycAttempts >= 2 ? "#ef4444" : "#94a3b8" },
                 { label: "Estado", value: STATUS[selected.user.kycStatus]?.label ?? selected.user.kycStatus, color: STATUS[selected.user.kycStatus]?.color ?? "#94a3b8" },
               ].map(s => (
@@ -298,7 +298,7 @@ export default function AdminKycPage() {
               {/* Botão reset de tentativas — sempre visível para admin desbloquear utilizador */}
               {(selected.user.kycAttempts > 0 || selected.user.kycBlockedUntil) && (
                 <button onClick={() => resetAttempts(selected.userId)} disabled={!!busyId}
-                  style={{ width: "100%", background: "transparent", color: "#f5a623", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, padding: "11px 0", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  style={{ width: "100%", background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, padding: "11px 0", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <RefreshCw size={15} /> Resetar Tentativas ({selected.user.kycAttempts}/4 usadas)
                 </button>
               )}

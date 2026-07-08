@@ -9,7 +9,7 @@ import {
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
   open:        { label: "Aberto",      color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: AlertCircle },
-  in_progress: { label: "Em análise", color: "#f5a623", bg: "rgba(245,166,35,0.1)",  Icon: Clock       },
+  in_progress: { label: "Em análise", color: "#ffffff", bg: "rgba(255,255,255,0.1)",  Icon: Clock       },
   closed:      { label: "Resolvido",  color: "#64748b", bg: "rgba(100,116,139,0.1)", Icon: CheckCircle },
 };
 
@@ -111,7 +111,7 @@ export default function AdminSupportPage() {
             <ChevronLeft size={20} />
           </button>
         )}
-        <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#f5a623,#e8940f)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#ffffff,#cbd5e1)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <MessageCircle size={18} color="#0a0f1e" />
         </div>
         <div style={{ flex: 1 }}>
@@ -128,7 +128,7 @@ export default function AdminSupportPage() {
           <div style={{ display: "flex", gap: 8 }}>
             {active.status !== "in_progress" && (
               <button onClick={() => setStatus(active.id, "in_progress")}
-                style={{ background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: "6px 12px", color: "#f5a623", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "6px 12px", color: "#ffffff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                 Em análise
               </button>
             )}
@@ -168,7 +168,7 @@ export default function AdminSupportPage() {
       {!active && (
         <div style={{ flex: 1, overflowY: "auto", padding: 16, maxWidth: 800, width: "100%", margin: "0 auto" }}>
           {loading ? (
-            <div style={{ textAlign: "center", padding: 60 }}><Loader2 size={28} color="#f5a623" /></div>
+            <div style={{ textAlign: "center", padding: 60 }}><Loader2 size={28} color="#ffffff" /></div>
           ) : tickets.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px" }}>
               <Inbox size={48} color="#1e2d50" style={{ marginBottom: 16 }} />
@@ -180,7 +180,7 @@ export default function AdminSupportPage() {
             return (
               <div key={t.id} onClick={() => openTicket(t)}
                 style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", transition: "border-color .2s" }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = "#f5a623")}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "#ffffff")}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e2d50")}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
                   <div style={{ flex: 1 }}>
@@ -211,12 +211,12 @@ export default function AdminSupportPage() {
               <div key={m.id} style={{ display: "flex", justifyContent: m.isAdmin ? "flex-end" : "flex-start", marginBottom: 10 }}>
                 <div style={{
                   maxWidth: "78%", borderRadius: m.isAdmin ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
-                  background: m.isAdmin ? "rgba(245,166,35,0.15)" : "#111827",
-                  border: m.isAdmin ? "1px solid rgba(245,166,35,0.3)" : "1px solid #1e2d50",
+                  background: m.isAdmin ? "rgba(255,255,255,0.15)" : "#111827",
+                  border: m.isAdmin ? "1px solid rgba(255,255,255,0.3)" : "1px solid #1e2d50",
                   padding: "10px 14px",
                 }}>
                   {!m.isAdmin && <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, marginBottom: 4 }}>{active.user?.name?.split(" ")[0]?.toUpperCase()}</div>}
-                  {m.isAdmin  && <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, marginBottom: 4 }}>SUPORTE (tu)</div>}
+                  {m.isAdmin  && <div style={{ color: "#ffffff", fontSize: 10, fontWeight: 700, marginBottom: 4 }}>SUPORTE (tu)</div>}
                   <p style={{ color: "#e2e8f0", fontSize: 14, margin: 0, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{m.body}</p>
                   <div style={{ color: "#4b5563", fontSize: 10, marginTop: 5, textAlign: "right" }}>{timeAgo(m.createdAt)}</div>
                 </div>
@@ -235,7 +235,7 @@ export default function AdminSupportPage() {
               style={{ flex: 1, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: "10px 13px", color: "#fff", fontSize: 14, outline: "none", resize: "none", fontFamily: "inherit", lineHeight: 1.5 }}
             />
             <button onClick={sendReply} disabled={sending || !reply.trim()}
-              style={{ width: 42, height: 42, background: "#f5a623", border: "none", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, opacity: sending || !reply.trim() ? 0.5 : 1 }}>
+              style={{ width: 42, height: 42, background: "#ffffff", border: "none", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, opacity: sending || !reply.trim() ? 0.5 : 1 }}>
               {sending ? <Loader2 size={18} color="#0a0f1e" /> : <Send size={18} color="#0a0f1e" />}
             </button>
           </div>

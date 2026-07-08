@@ -140,7 +140,7 @@ export default function ResetPage() {
         <p style={{ ...label, marginBottom: 14, lineHeight: 1.6 }}>
           Para prosseguir, escreva exatamente{" "}
           <code style={{
-            background: "#1e2d50", color: "#f5a623",
+            background: "#1e2d50", color: "#ffffff",
             padding: "2px 8px", borderRadius: 4, fontSize: 13, fontWeight: 700,
           }}>
             {CONFIRM_PHRASE}

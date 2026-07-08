@@ -66,7 +66,7 @@ export default function PushManager() {
   return (
     <div style={{
       position: "fixed", bottom: 70, left: 12, right: 12, zIndex: 1000,
-      background: "#111827", border: "1px solid rgba(245,166,35,0.4)",
+      background: "#111827", border: "1px solid rgba(255,255,255,0.4)",
       borderRadius: 14, padding: "14px 16px",
       boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
       display: "flex", alignItems: "center", gap: 12,
@@ -76,9 +76,9 @@ export default function PushManager() {
 
       <div style={{
         width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-        background: "rgba(245,166,35,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        <Bell size={20} color="#f5a623" />
+        <Bell size={20} color="#ffffff" />
       </div>
 
       <div style={{ flex: 1 }}>
@@ -89,7 +89,7 @@ export default function PushManager() {
       <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
         <button
           onClick={handleAllow}
-          style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+          style={{ background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
           Activar
         </button>
         <button

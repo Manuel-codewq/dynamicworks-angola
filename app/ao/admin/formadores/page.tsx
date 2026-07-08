@@ -94,14 +94,14 @@ export default function AdminFormadoresPage() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <BookOpen size={28} color="#f5a623" />
+            <BookOpen size={28} color="#ffffff" />
             <div>
               <div style={{ color: "#fff", fontSize: 22, fontWeight: 800 }}>Relatórios dos Formadores</div>
               <div style={{ color: "#94a3b8", fontSize: 13 }}>Visão geral da equipa de formação</div>
             </div>
           </div>
           <button onClick={exportAll}
-            style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", color: "#f5a623", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", color: "#ffffff", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
             <Download size={15} /> Exportar CSV {filterUser && `(${formadores.find(f => f.id === filterUser)?.name.split(" ")[0]})`}
           </button>
         </div>
@@ -109,7 +109,7 @@ export default function AdminFormadoresPage() {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
           {[
-            { icon: <Users size={18} color="#f5a623" />,      label: "Formadores",        value: formadores.length },
+            { icon: <Users size={18} color="#ffffff" />,      label: "Formadores",        value: formadores.length },
             { icon: <BookOpen size={18} color="#38bdf8" />,   label: "Relatórios hoje",   value: reportHoje },
             { icon: <Video size={18} color="#22c55e" />,       label: "Vídeos publicados", value: totalVideos },
             { icon: <TrendingUp size={18} color="#a78bfa" />,  label: "Reacções totais",   value: totalReacoes },
@@ -148,14 +148,14 @@ export default function AdminFormadoresPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
                 onClick={() => setExpanded(expanded === r.id ? null : r.id)}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", color: "#f5a623", fontWeight: 800, fontSize: 14, flexShrink: 0, overflow: "hidden" }}>
+                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontWeight: 800, fontSize: 14, flexShrink: 0, overflow: "hidden" }}>
                     {r.user.avatar ? <img src={r.user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : r.user.name[0]}
                   </div>
                   <div>
                     <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{r.user.name}</div>
                     <div style={{ color: "#94a3b8", fontSize: 12 }}>{r.user.email}</div>
                   </div>
-                  <span style={{ background: r.date === today ? "rgba(245,166,35,0.15)" : "rgba(30,45,80,0.6)", color: r.date === today ? "#f5a623" : "#94a3b8", border: `1px solid ${r.date === today ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>{r.date}</span>
+                  <span style={{ background: r.date === today ? "rgba(255,255,255,0.15)" : "rgba(30,45,80,0.6)", color: r.date === today ? "#ffffff" : "#94a3b8", border: `1px solid ${r.date === today ? "rgba(255,255,255,0.3)" : "#1e2d50"}`, borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>{r.date}</span>
                   {r.videoPublicado && (
                     <span style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 6, padding: "2px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
                       <Video size={10} /> Vídeo publicado
@@ -192,7 +192,7 @@ export default function AdminFormadoresPage() {
                   {r.planoAmanha && (
                     <div style={{ marginBottom: 10 }}>
                       <span style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 3 }}>Plano para amanhã</span>
-                      <p style={{ color: "#f5a623", fontSize: 14, margin: 0 }}>{r.planoAmanha}</p>
+                      <p style={{ color: "#ffffff", fontSize: 14, margin: 0 }}>{r.planoAmanha}</p>
                     </div>
                   )}
 
@@ -211,7 +211,7 @@ export default function AdminFormadoresPage() {
                   {/* Export individual */}
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #1e2d50" }}>
                     <button onClick={e => { e.stopPropagation(); exportUser(r.user.id, r.user.name); }}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", color: "#f5a623", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", color: "#ffffff", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                       <Download size={13} /> Exportar CSV de {r.user.name.split(" ")[0]}
                     </button>
                   </div>

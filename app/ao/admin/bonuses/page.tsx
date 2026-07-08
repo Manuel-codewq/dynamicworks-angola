@@ -116,8 +116,8 @@ export default function AdminBonusesPage() {
       <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 24, marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Percent size={18} color="#f5a623" />
+            <div style={{ width: 36, height: 36, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Percent size={18} color="#ffffff" />
             </div>
             <div>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Bónus Automático de Depósito</div>
@@ -152,7 +152,7 @@ export default function AdminBonusesPage() {
                     onChange={e => setBonusCfg(c => ({ ...c, depositBonusPct: Number(e.target.value) }))}
                     style={{ ...inputStyle, paddingRight: 30 }}
                   />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#f5a623", fontWeight: 700, fontSize: 13 }}>%</span>
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#ffffff", fontWeight: 700, fontSize: 13 }}>%</span>
                 </div>
               </div>
 
@@ -195,7 +195,7 @@ export default function AdminBonusesPage() {
             <button
               onClick={saveBonusConfig}
               disabled={savingBonus}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", background: bonusSaved ? "#22c55e" : "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 8, color: "#0a0f1e", fontWeight: 700, fontSize: 13, cursor: "pointer", opacity: savingBonus ? 0.7 : 1 }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", background: bonusSaved ? "#22c55e" : "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 8, color: "#0a0f1e", fontWeight: 700, fontSize: 13, cursor: "pointer", opacity: savingBonus ? 0.7 : 1 }}
             >
               {bonusSaved ? <><Check size={14} /> Guardado!</> : savingBonus ? "A guardar..." : <><Save size={14} /> Guardar configuração</>}
             </button>
@@ -218,7 +218,7 @@ export default function AdminBonusesPage() {
           <button onClick={load} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
             <RefreshCw size={14} />
           </button>
-          <button onClick={() => setShowForm(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 8, padding: "8px 16px", color: "#0a0f1e", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+          <button onClick={() => setShowForm(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 8, padding: "8px 16px", color: "#0a0f1e", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
             <Plus size={14} /> Novo código
           </button>
         </div>
@@ -228,7 +228,7 @@ export default function AdminBonusesPage() {
       {showForm && (
         <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: 24, marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-            <Gift size={16} color="#f5a623" />
+            <Gift size={16} color="#ffffff" />
             <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Novo código promocional</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
@@ -257,7 +257,7 @@ export default function AdminBonusesPage() {
             </div>
           </div>
           <button onClick={create} disabled={creating || !form.code.trim() || !form.value}
-            style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 8, color: "#0a0f1e", fontWeight: 700, fontSize: 13, cursor: "pointer", opacity: creating ? 0.7 : 1 }}>
+            style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 8, color: "#0a0f1e", fontWeight: 700, fontSize: 13, cursor: "pointer", opacity: creating ? 0.7 : 1 }}>
             <Plus size={14} /> {creating ? "A criar..." : "Criar código"}
           </button>
         </div>
@@ -291,7 +291,7 @@ export default function AdminBonusesPage() {
                       </div>
                     </td>
                     <td style={{ padding: "12px 16px", color: "#94a3b8", fontSize: 13 }}>{c.type === "balance" ? "Saldo real" : "Demo"}</td>
-                    <td style={{ padding: "12px 16px", color: "#f5a623", fontWeight: 700, fontSize: 13 }}>{formatKz(c.value)}</td>
+                    <td style={{ padding: "12px 16px", color: "#ffffff", fontWeight: 700, fontSize: 13 }}>{formatKz(c.value)}</td>
                     <td style={{ padding: "12px 16px", color: "#94a3b8", fontSize: 13 }}>{c._count.redemptions}/{c.maxUses}</td>
                     <td style={{ padding: "12px 16px", color: "#64748b", fontSize: 12 }}>{formatDate(c.expiresAt)}</td>
                     <td style={{ padding: "12px 16px" }}>

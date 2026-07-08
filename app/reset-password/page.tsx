@@ -12,7 +12,7 @@ function getStrength(pwd: string): { score: number; label: string; color: string
   if (/[^A-Za-z0-9]/.test(pwd)) score++;
   if (score <= 1) return { score, label: "Fraca",  color: "#ef4444" };
   if (score <= 2) return { score, label: "Média",  color: "#f59e0b" };
-  if (score <= 3) return { score, label: "Boa",    color: "#f5a623" };
+  if (score <= 3) return { score, label: "Boa",    color: "#ffffff" };
   return             { score, label: "Forte", color: "#22c55e" };
 }
 
@@ -71,7 +71,7 @@ function ResetPasswordContent() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, background: "#f5a623", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 48, height: 48, background: "#ffffff", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <TrendingUp size={28} color="#0a0f1e" strokeWidth={2.5} />
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>Dynamics Works</div>
@@ -86,8 +86,8 @@ function ResetPasswordContent() {
           </button>
 
           <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <div style={{ width: 56, height: 56, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 14, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-              <KeyRound size={26} color="#f5a623" />
+            <div style={{ width: 56, height: 56, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 14, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <KeyRound size={26} color="#ffffff" />
             </div>
             <h1 style={{ color: "#ffffff", fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>Nova senha</h1>
             <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>
@@ -177,7 +177,7 @@ function ResetPasswordContent() {
             <button type="submit" disabled={loading || success || !pwdMatch || code.length < 6}
               style={{
                 width: "100%",
-                background: (loading || success || !pwdMatch || code.length < 6) ? "#1e2d50" : "#f5a623",
+                background: (loading || success || !pwdMatch || code.length < 6) ? "#1e2d50" : "#ffffff",
                 color: (loading || success || !pwdMatch || code.length < 6) ? "#94a3b8" : "#0a0f1e",
                 border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 14, fontWeight: 700,
                 cursor: (loading || success || !pwdMatch || code.length < 6) ? "not-allowed" : "pointer",
@@ -185,7 +185,7 @@ function ResetPasswordContent() {
               }}>
               {loading ? (
                 <>
-                  <div style={{ width: 16, height: 16, border: "2px solid #64748b", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+                  <div style={{ width: 16, height: 16, border: "2px solid #64748b", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
                   A alterar...
                 </>
               ) : "Alterar senha"}

@@ -32,8 +32,8 @@ export default function SupportWidget() {
           {/* Suporte interno */}
           <button
             onClick={() => { setOpen(false); router.push("/support"); }}
-            style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 12, padding: "11px 16px", cursor: "pointer", color: "#fff", whiteSpace: "nowrap" }}>
-            <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "11px 16px", cursor: "pointer", color: "#fff", whiteSpace: "nowrap" }}>
+            <div style={{ width: 32, height: 32, background: "#ffffff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <HeadphonesIcon size={16} color="#0a0f1e" />
             </div>
             <div style={{ textAlign: "left" }}>
@@ -66,9 +66,9 @@ export default function SupportWidget() {
         onClick={() => setOpen(v => !v)}
         style={{
           width: 52, height: 52, borderRadius: "50%",
-          background: open ? "#1e2d50" : "linear-gradient(135deg,#f5a623,#e8940f)",
+          background: open ? "#1e2d50" : "linear-gradient(135deg,#ffffff,#cbd5e1)",
           border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 20px rgba(245,166,35,0.4)",
+          boxShadow: "0 4px 20px rgba(255,255,255,0.4)",
           transition: "all .2s",
         }}>
         {open

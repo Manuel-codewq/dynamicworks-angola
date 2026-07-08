@@ -50,9 +50,9 @@ export default function LocaleSwitcher({ compact = false }: { compact?: boolean 
               style={{
                 display: "flex", alignItems: "center", gap: 10,
                 width: "100%", padding: "10px 14px",
-                background: l.code === locale ? "rgba(245,166,35,0.12)" : "transparent",
+                background: l.code === locale ? "rgba(255,255,255,0.12)" : "transparent",
                 border: "none", cursor: "pointer", textAlign: "left",
-                color: l.code === locale ? "#f5a623" : "#cbd5e1",
+                color: l.code === locale ? "#ffffff" : "#cbd5e1",
                 fontSize: 13, fontWeight: l.code === locale ? 700 : 400,
                 transition: "background 0.1s",
               }}

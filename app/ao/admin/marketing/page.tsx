@@ -111,7 +111,7 @@ export default function AdminMarketingPage() {
                   {r.conteudoCriado && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Conteúdo: </span>{r.conteudoCriado}</p>}
                   {r.visualizacoes != null && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Visualizações: </span>{r.visualizacoes.toLocaleString("pt-PT")}</p>}
                   {r.observacoes && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Obs: </span>{r.observacoes}</p>}
-                  {r.proximoConteudo && <p style={{ color: "#f5a623", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Próximo: </span>{r.proximoConteudo}</p>}
+                  {r.proximoConteudo && <p style={{ color: "#ffffff", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Próximo: </span>{r.proximoConteudo}</p>}
                   {r.imagemProva && <img src={r.imagemProva} alt="prova" style={{ marginTop: 8, maxWidth: "100%", maxHeight: 250, borderRadius: 8, border: "1px solid #1e2d50", objectFit: "contain" }} />}
                 </div>
               )}

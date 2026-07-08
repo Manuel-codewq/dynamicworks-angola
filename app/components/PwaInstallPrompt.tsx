@@ -54,7 +54,7 @@ export default function PwaInstallPrompt() {
     <div style={{
       position: "fixed", bottom: 72, left: 12, right: 12, zIndex: 1100,
       background: "#111827",
-      border: "1px solid rgba(245,166,35,0.4)",
+      border: "1px solid rgba(255,255,255,0.4)",
       borderRadius: 16,
       padding: "16px",
       boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
@@ -71,9 +71,9 @@ export default function PwaInstallPrompt() {
       {/* Ícone da app */}
       <div style={{
         width: 46, height: 46, borderRadius: 12, flexShrink: 0,
-        background: "linear-gradient(135deg,#f5a623,#e8940f)",
+        background: "linear-gradient(135deg,#ffffff,#cbd5e1)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 4px 12px rgba(245,166,35,0.4)",
+        boxShadow: "0 4px 12px rgba(255,255,255,0.4)",
       }}>
         <TrendingUp size={24} color="#0a0f1e" strokeWidth={2.5} />
       </div>
@@ -93,7 +93,7 @@ export default function PwaInstallPrompt() {
         <button
           onClick={handleInstall}
           style={{
-            background: "#f5a623", color: "#0a0f1e",
+            background: "#ffffff", color: "#0a0f1e",
             border: "none", borderRadius: 10,
             padding: "9px 14px", fontSize: 13, fontWeight: 700,
             cursor: "pointer", display: "flex", alignItems: "center", gap: 5,

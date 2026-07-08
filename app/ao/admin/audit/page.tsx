@@ -11,8 +11,8 @@ const ACTION_COLOR: Record<string, string> = {
   APPROVE_TXN: "#22c55e", REJECT_TXN: "#ef4444",
   APPROVE_KYC: "#22c55e", REJECT_KYC: "#ef4444",
   BLOCK_USER: "#ef4444",  UNBLOCK_USER: "#22c55e",
-  EDIT_BALANCE: "#f5a623", BROADCAST: "#38bdf8",
-  NOTIFY_USER: "#a78bfa", SAVE_SETTINGS: "#f5a623",
+  EDIT_BALANCE: "#ffffff", BROADCAST: "#38bdf8",
+  NOTIFY_USER: "#a78bfa", SAVE_SETTINGS: "#ffffff",
 };
 
 function formatDate(s: string) {
@@ -50,7 +50,7 @@ export default function AdminAuditPage() {
 
       <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "16px 20px", borderBottom: "1px solid #1e2d50" }}>
-          <ShieldCheck size={16} color="#f5a623" />
+          <ShieldCheck size={16} color="#ffffff" />
           <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Histórico de ações admin</span>
         </div>
 

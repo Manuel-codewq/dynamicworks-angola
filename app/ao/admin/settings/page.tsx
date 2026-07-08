@@ -133,7 +133,7 @@ export default function AdminSettingsPage() {
             <RefreshCw size={14} />
           </button>
           <button onClick={save} disabled={saving}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: saved ? "rgba(34,197,94,0.15)" : "rgba(245,166,35,0.15)", border: `1px solid ${saved ? "rgba(34,197,94,0.3)" : "rgba(245,166,35,0.3)"}`, borderRadius: 8, padding: "8px 18px", color: saved ? "#22c55e" : "#f5a623", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+            style={{ display: "flex", alignItems: "center", gap: 6, background: saved ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.15)", border: `1px solid ${saved ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.3)"}`, borderRadius: 8, padding: "8px 18px", color: saved ? "#22c55e" : "#ffffff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
             <Save size={14} /> {saved ? "Guardado!" : saving ? "A guardar..." : "Guardar"}
           </button>
         </div>
@@ -265,7 +265,7 @@ export default function AdminSettingsPage() {
             <input type="number" min={0} step={10000}
               value={draft.largeTradePushThreshold ?? 0}
               onChange={e => setDraft(d => d ? { ...d, largeTradePushThreshold: Math.max(0, Number(e.target.value)) } : d)}
-              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 12px", color: "#f5a623", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
+              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 12px", color: "#ffffff", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
           </div>
 
           <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px" }}>
@@ -276,7 +276,7 @@ export default function AdminSettingsPage() {
             <input type="number" min={0} step={50000}
               value={draft.largeWithdrawalThreshold ?? 0}
               onChange={e => setDraft(d => d ? { ...d, largeWithdrawalThreshold: Math.max(0, Number(e.target.value)) } : d)}
-              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 12px", color: "#f5a623", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
+              style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 12px", color: "#ffffff", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
           </div>
 
           <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px" }}>
@@ -288,8 +288,8 @@ export default function AdminSettingsPage() {
               <input type="range" min={0} max={100} step={5}
                 value={draft.dailyLossLimitPct ?? 0}
                 onChange={e => setDraft(d => d ? { ...d, dailyLossLimitPct: Number(e.target.value) } : d)}
-                style={{ flex: 1, accentColor: "#f5a623", cursor: "pointer" }} />
-              <span style={{ color: "#f5a623", fontWeight: 700, fontSize: 14, minWidth: 48, textAlign: "right" }}>
+                style={{ flex: 1, accentColor: "#ffffff", cursor: "pointer" }} />
+              <span style={{ color: "#ffffff", fontWeight: 700, fontSize: 14, minWidth: 48, textAlign: "right" }}>
                 {draft.dailyLossLimitPct > 0 ? `${draft.dailyLossLimitPct}%` : "OFF"}
               </span>
             </div>
@@ -308,11 +308,11 @@ export default function AdminSettingsPage() {
               <div key={pair} style={{ background: "#0a0f1e", borderRadius: 10, padding: "12px 16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <span style={{ color: "#94a3b8", fontSize: 13 }}>{pair}</span>
-                  <span style={{ color: "#f5a623", fontWeight: 700, fontSize: 14 }}>{pct}%</span>
+                  <span style={{ color: "#ffffff", fontWeight: 700, fontSize: 14 }}>{pct}%</span>
                 </div>
                 <input type="range" min={50} max={95} step={1} value={pct}
                   onChange={e => setPayout(pair, Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "#f5a623", cursor: "pointer" }} />
+                  style={{ width: "100%", accentColor: "#ffffff", cursor: "pointer" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
                   <span style={{ color: "#1e2d50", fontSize: 10 }}>50%</span>
                   <span style={{ color: "#1e2d50", fontSize: 10 }}>95%</span>

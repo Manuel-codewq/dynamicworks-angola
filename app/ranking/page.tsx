@@ -37,23 +37,23 @@ function formatDate(d: string) { return new Date(d).toLocaleDateString("pt-AO", 
 interface RankEntry { position: number; name: string; avatar: string | null; profit: number; wins: number; total: number; winRate: number; isMe?: boolean; }
 
 function AvatarCircle({ entry, size = 34, medal, crown }: { entry: RankEntry; size?: number; medal?: string; crown?: boolean }) {
-  const border = medal ? `2.5px solid ${medal}` : entry.isMe ? "2px solid #f5a623" : "2px solid #1e2d50";
+  const border = medal ? `2.5px solid ${medal}` : entry.isMe ? "2px solid #ffffff" : "2px solid #1e2d50";
   const glow   = medal ? `0 0 12px ${medal}55` : "none";
   return (
     <div style={{ position: "relative", width: size, height: size, margin: "0 auto 8px" }}>
       {entry.avatar
         ? <img src={entry.avatar} alt={entry.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border, boxShadow: glow }} />
-        : <div style={{ width: size, height: size, borderRadius: "50%", background: entry.isMe ? "rgba(245,166,35,0.15)" : "#1e2d50", border, boxShadow: glow, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#f5a623", fontWeight: 800, fontSize: Math.round(size * 0.38) }}>{entry.name.charAt(0).toUpperCase()}</span>
+        : <div style={{ width: size, height: size, borderRadius: "50%", background: entry.isMe ? "rgba(255,255,255,0.15)" : "#1e2d50", border, boxShadow: glow, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#ffffff", fontWeight: 800, fontSize: Math.round(size * 0.38) }}>{entry.name.charAt(0).toUpperCase()}</span>
           </div>
       }
-      {crown && <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)" }}><Crown size={16} color="#f5a623" fill="#f5a623" /></div>}
+      {crown && <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)" }}><Crown size={16} color="#ffffff" fill="#ffffff" /></div>}
     </div>
   );
 }
 
 const MEDAL: Record<number, { icon: React.ReactNode; color: string }> = {
-  1: { icon: <Trophy size={18} />, color: "#f5a623" },
+  1: { icon: <Trophy size={18} />, color: "#ffffff" },
   2: { icon: <Medal  size={18} />, color: "#94a3b8" },
   3: { icon: <Medal  size={18} />, color: "#cd7f32" },
 };
@@ -62,7 +62,7 @@ const RARITY_COLOR: Record<string, string> = {
   common:    "#94a3b8",
   rare:      "#3b82f6",
   epic:      "#a78bfa",
-  legendary: "#f5a623",
+  legendary: "#ffffff",
 };
 
 const PERIOD_OPTIONS = [
@@ -144,7 +144,7 @@ export default function RankingPage() {
         <button onClick={() => router.push("/trade")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }}>
           <ChevronLeft size={20} />
         </button>
-        <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 32, height: 32, background: "#ffffff", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Trophy size={18} color="#0a0f1e" strokeWidth={2.5} />
         </div>
         <span style={{ color: "#fff", fontWeight: 800, fontSize: 16, flex: 1 }}>{t("ranking.title")}</span>
@@ -163,7 +163,7 @@ export default function RankingPage() {
           { key: "conquistas", tKey: "ranking.tab.achievements", icon: <Star      size={13} /> },
         ] as const).map(ti => (
           <button key={ti.key} onClick={() => setTab(ti.key)}
-            style={{ flex: 1, padding: "13px 0", background: "none", border: "none", borderBottom: `2px solid ${tab === ti.key ? "#f5a623" : "transparent"}`, color: tab === ti.key ? "#f5a623" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            style={{ flex: 1, padding: "13px 0", background: "none", border: "none", borderBottom: `2px solid ${tab === ti.key ? "#ffffff" : "transparent"}`, color: tab === ti.key ? "#ffffff" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
             {ti.icon}{t(ti.tKey)}
           </button>
         ))}
@@ -178,7 +178,7 @@ export default function RankingPage() {
             <div style={{ display: "flex", gap: 6, marginBottom: 20, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4 }}>
               {PERIOD_OPTIONS.map(p => (
                 <button key={p.key} onClick={() => setPeriod(p.key)}
-                  style={{ flex: 1, padding: "7px 0", background: period === p.key ? "#f5a623" : "transparent", color: period === p.key ? "#0a0f1e" : "#64748b", border: "none", borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  style={{ flex: 1, padding: "7px 0", background: period === p.key ? "#ffffff" : "transparent", color: period === p.key ? "#0a0f1e" : "#64748b", border: "none", borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   {t(`ranking.period.${p.key}`)}
                 </button>
               ))}
@@ -186,28 +186,28 @@ export default function RankingPage() {
 
             {/* My position banner */}
             {myPosition && (
-              <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ color: "#94a3b8", fontSize: 13 }}>{t("ranking.myPosition")}</span>
-                <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 18 }}>#{myPosition}</span>
+                <span style={{ color: "#ffffff", fontWeight: 900, fontSize: 18 }}>#{myPosition}</span>
               </div>
             )}
 
             {/* Top 3 podium */}
             {ranking.length >= 3 && (
               <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "flex-end" }}>
-                <div style={{ flex: 1, background: ranking[1].isMe ? "rgba(245,166,35,0.08)" : "#111827", border: `1px solid ${ranking[1].isMe ? "rgba(245,166,35,0.35)" : "#1e2d50"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
+                <div style={{ flex: 1, background: ranking[1].isMe ? "rgba(255,255,255,0.08)" : "#111827", border: `1px solid ${ranking[1].isMe ? "rgba(255,255,255,0.35)" : "#1e2d50"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
                   <AvatarCircle entry={ranking[1]} size={44} medal="#94a3b8" />
                   <div style={{ color: "#94a3b8", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>2º</div>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[1].isMe ? t("ranking.me") : ranking[1].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 13 }}>{ranking[1].profit >= 0 ? "+" : ""}{formatKz(ranking[1].profit)}</div>
                 </div>
-                <div style={{ flex: 1, background: ranking[0].isMe ? "rgba(245,166,35,0.12)" : "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 12, padding: "20px 12px", textAlign: "center" }}>
-                  <AvatarCircle entry={ranking[0]} size={54} medal="#f5a623" crown />
-                  <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>1º</div>
+                <div style={{ flex: 1, background: ranking[0].isMe ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 12, padding: "20px 12px", textAlign: "center" }}>
+                  <AvatarCircle entry={ranking[0]} size={54} medal="#ffffff" crown />
+                  <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>1º</div>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{ranking[0].isMe ? t("ranking.me") : ranking[0].name.split(" ")[0]}</div>
                   <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 14 }}>{ranking[0].profit >= 0 ? "+" : ""}{formatKz(ranking[0].profit)}</div>
                 </div>
-                <div style={{ flex: 1, background: ranking[2].isMe ? "rgba(245,166,35,0.08)" : "#111827", border: `1px solid ${ranking[2].isMe ? "rgba(245,166,35,0.35)" : "#1e2d50"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
+                <div style={{ flex: 1, background: ranking[2].isMe ? "rgba(255,255,255,0.08)" : "#111827", border: `1px solid ${ranking[2].isMe ? "rgba(255,255,255,0.35)" : "#1e2d50"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
                   <AvatarCircle entry={ranking[2]} size={44} medal="#cd7f32" />
                   <div style={{ color: "#cd7f32", fontWeight: 800, fontSize: 11, marginBottom: 4 }}>3º</div>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ranking[2].isMe ? t("ranking.me") : ranking[2].name.split(" ")[0]}</div>
@@ -227,18 +227,18 @@ export default function RankingPage() {
               {ranking.map(e => {
                 const medal = MEDAL[e.position];
                 return (
-                  <div key={e.position} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #0d1526", background: e.isMe ? "rgba(245,166,35,0.05)" : e.position <= 3 ? "rgba(245,166,35,0.02)" : "transparent" }}>
+                  <div key={e.position} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #0d1526", background: e.isMe ? "rgba(255,255,255,0.05)" : e.position <= 3 ? "rgba(255,255,255,0.02)" : "transparent" }}>
                     <div style={{ width: 32, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {medal ? <span style={{ color: medal.color }}>{medal.icon}</span> : <span style={{ color: e.isMe ? "#f5a623" : "#4b5563", fontSize: 13, fontWeight: 700 }}>{e.position}</span>}
+                      {medal ? <span style={{ color: medal.color }}>{medal.icon}</span> : <span style={{ color: e.isMe ? "#ffffff" : "#4b5563", fontSize: 13, fontWeight: 700 }}>{e.position}</span>}
                     </div>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: e.isMe ? "rgba(245,166,35,0.15)" : "#1e2d50", border: `2px solid ${e.isMe ? "#f5a623" : "#1e2d50"}`, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 10, flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: e.isMe ? "rgba(255,255,255,0.15)" : "#1e2d50", border: `2px solid ${e.isMe ? "#ffffff" : "#1e2d50"}`, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 10, flexShrink: 0 }}>
                       {e.avatar
                         ? <img src={e.avatar} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} />
-                        : <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 14 }}>{e.name[0].toUpperCase()}</span>
+                        : <span style={{ color: "#ffffff", fontWeight: 800, fontSize: 14 }}>{e.name[0].toUpperCase()}</span>
                       }
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: e.isMe ? "#f5a623" : "#fff", fontWeight: 600, fontSize: 14 }}>{e.isMe ? t("ranking.me") : e.name}</div>
+                      <div style={{ color: e.isMe ? "#ffffff" : "#fff", fontWeight: 600, fontSize: 14 }}>{e.isMe ? t("ranking.me") : e.name}</div>
                       <div style={{ color: "#64748b", fontSize: 11 }}>{e.wins}/{e.total} {t("ranking.wins")}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -255,15 +255,15 @@ export default function RankingPage() {
               {myRankEntry && (
                 <>
                   <div style={{ padding: "6px 16px", textAlign: "center", color: "#1e2d50", fontSize: 18, letterSpacing: 4 }}>· · ·</div>
-                  <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: "rgba(245,166,35,0.08)", borderTop: "1px solid rgba(245,166,35,0.2)" }}>
+                  <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: "rgba(255,255,255,0.08)", borderTop: "1px solid rgba(255,255,255,0.2)" }}>
                     <div style={{ width: 32, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ color: "#f5a623", fontSize: 13, fontWeight: 700 }}>{myRankEntry.position}</span>
+                      <span style={{ color: "#ffffff", fontSize: 13, fontWeight: 700 }}>{myRankEntry.position}</span>
                     </div>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(245,166,35,0.15)", border: "2px solid #f5a623", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 10, flexShrink: 0 }}>
-                      <span style={{ color: "#f5a623", fontWeight: 800, fontSize: 14 }}>T</span>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid #ffffff", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 10, flexShrink: 0 }}>
+                      <span style={{ color: "#ffffff", fontWeight: 800, fontSize: 14 }}>T</span>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 14 }}>{t("ranking.me")}</div>
+                      <div style={{ color: "#ffffff", fontWeight: 700, fontSize: 14 }}>{t("ranking.me")}</div>
                       <div style={{ color: "#64748b", fontSize: 11 }}>{myRankEntry.wins}/{myRankEntry.total} {t("ranking.wins")}</div>
                     </div>
                     <div style={{ color: myRankEntry.profit >= 0 ? "#22c55e" : "#ef4444", fontWeight: 800, fontSize: 14 }}>
@@ -282,7 +282,7 @@ export default function RankingPage() {
           <div>
             {(session?.user as any)?.role === "admin" && (
               <button onClick={() => router.push("/ao/admin/tournaments")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 12, padding: "13px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: "pointer", marginBottom: 20 }}>
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 12, padding: "13px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: "pointer", marginBottom: 20 }}>
                 <Trophy size={16} /> Criar / Gerir Torneios
               </button>
             )}
@@ -295,7 +295,7 @@ export default function RankingPage() {
             )}
             {upcomingTournaments.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                <h3 style={{ color: "#f5a623", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>{t("ranking.status.upcoming")}</h3>
+                <h3 style={{ color: "#ffffff", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>{t("ranking.status.upcoming")}</h3>
                 {upcomingTournaments.map(tour => <TournamentCard key={tour.id} tour={tour} router={router} />)}
               </div>
             )}
@@ -321,10 +321,10 @@ export default function RankingPage() {
             <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{t("ranking.yourAchievements")}</span>
-                <span style={{ color: "#f5a623", fontWeight: 900, fontSize: 16 }}>{achUnlocked}/{achTotal}</span>
+                <span style={{ color: "#ffffff", fontWeight: 900, fontSize: 16 }}>{achUnlocked}/{achTotal}</span>
               </div>
               <div style={{ height: 8, background: "#1e2d50", borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${achTotal ? Math.round(achUnlocked / achTotal * 100) : 0}%`, background: "linear-gradient(90deg, #f5a623, #fb923c)", borderRadius: 4, transition: "width 0.6s ease" }} />
+                <div style={{ height: "100%", width: `${achTotal ? Math.round(achUnlocked / achTotal * 100) : 0}%`, background: "linear-gradient(90deg, #ffffff, #fb923c)", borderRadius: 4, transition: "width 0.6s ease" }} />
               </div>
               <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>{achTotal ? Math.round(achUnlocked / achTotal * 100) : 0}{t("ranking.pctComplete")}</div>
             </div>
@@ -336,7 +336,7 @@ export default function RankingPage() {
                 <h3 style={{ color: "#64748b", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>{t(`ranking.cat.${cat}`) ?? cat}</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {items.map((a: any) => (
-                    <div key={a.id} style={{ background: a.unlocked ? "rgba(245,166,35,0.06)" : "#111827", border: `1px solid ${a.unlocked ? "rgba(245,166,35,0.3)" : "#1e2d50"}`, borderRadius: 12, padding: "14px 14px", opacity: a.unlocked ? 1 : 0.6, position: "relative", overflow: "hidden" }}>
+                    <div key={a.id} style={{ background: a.unlocked ? "rgba(255,255,255,0.06)" : "#111827", border: `1px solid ${a.unlocked ? "rgba(255,255,255,0.3)" : "#1e2d50"}`, borderRadius: 12, padding: "14px 14px", opacity: a.unlocked ? 1 : 0.6, position: "relative", overflow: "hidden" }}>
                       {/* Rarity strip */}
                       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: RARITY_COLOR[a.rarity], opacity: a.unlocked ? 1 : 0.3 }} />
                       <div style={{ marginBottom: 6, color: RARITY_COLOR[a.rarity], opacity: a.unlocked ? 1 : 0.4 }}>{ACH_ICON[a.icon] ?? <Star size={20} />}</div>
@@ -352,7 +352,7 @@ export default function RankingPage() {
                         </>
                       )}
                       {a.unlocked && (
-                        <div style={{ color: "#f5a623", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}><Check size={10} /> {t("ranking.unlocked")}</div>
+                        <div style={{ color: "#ffffff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}><Check size={10} /> {t("ranking.unlocked")}</div>
                       )}
                       <div style={{ position: "absolute", top: 10, right: 10, color: RARITY_COLOR[a.rarity], fontSize: 9, fontWeight: 700, textTransform: "uppercase", opacity: 0.8 }}>{a.rarity}</div>
                     </div>
@@ -382,13 +382,13 @@ function TournamentCard({ tour, router }: { tour: any; router: any }) {
     finished: t("ranking.statusLabel.finished"),
   };
   const STATUS_COLOR: Record<string, { color: string; bg: string }> = {
-    upcoming: { color: "#f5a623", bg: "rgba(245,166,35,0.12)" },
+    upcoming: { color: "#ffffff", bg: "rgba(255,255,255,0.12)" },
     active:   { color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
     finished: { color: "#64748b", bg: "rgba(100,116,139,0.12)"},
   };
   const s      = STATUS_COLOR[tour.status] ?? STATUS_COLOR.upcoming;
   const prizes = Array.isArray(tour.prizes) ? tour.prizes : [];
-  const bannerColor = tour.bannerColor ?? "#f5a623";
+  const bannerColor = tour.bannerColor ?? "#ffffff";
   return (
     <div onClick={() => router.push(`/tournaments/${tour.id}`)}
       style={{ background: "#111827", border: `1px solid ${bannerColor}33`, borderRadius: 14, marginBottom: 10, cursor: "pointer", overflow: "hidden" }}
@@ -422,7 +422,7 @@ function TournamentCard({ tour, router }: { tour: any; router: any }) {
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Users size={11} />{tour._count?.participants ?? 0}{tour.maxParticipants ? `/${tour.maxParticipants}` : ""} {t("ranking.participants")}</span>
           {tour.status !== "finished" && (
-            <span style={{ color: tour.status === "active" ? "#22c55e" : "#f5a623", fontWeight: 700 }}>
+            <span style={{ color: tour.status === "active" ? "#22c55e" : "#ffffff", fontWeight: 700 }}>
               {tour.status === "active"
                 ? `${Math.max(0, Math.ceil((new Date(tour.endDate).getTime() - Date.now()) / 86400000))} ${t("ranking.daysLeft")}`
                 : `${t("ranking.startsIn")} ${Math.max(0, Math.ceil((new Date(tour.startDate).getTime() - Date.now()) / 86400000))} ${t("ranking.days")}`}
@@ -434,7 +434,7 @@ function TournamentCard({ tour, router }: { tour: any; router: any }) {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: prizes.length > 0 ? 10 : 0 }}>
           {tour.isFree
             ? <span style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Entrada gratuita</span>
-            : <span style={{ background: "rgba(245,166,35,0.1)", color: "#f5a623", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Entrada {formatKz(tour.entryFee)}</span>
+            : <span style={{ background: "rgba(255,255,255,0.1)", color: "#ffffff", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Entrada {formatKz(tour.entryFee)}</span>
           }
           {tour.startingBalance > 0 && (
             <span style={{ background: "rgba(99,102,241,0.1)", color: "#a5b4fc", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Banca {formatKz(tour.startingBalance)}</span>
@@ -443,7 +443,7 @@ function TournamentCard({ tour, router }: { tour: any; router: any }) {
             <span style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Recarga {formatKz(tour.rechargeAmount)}</span>
           )}
           {tour.prizePool > 0 && (
-            <span style={{ background: `rgba(${bannerColor === "#f5a623" ? "245,166,35" : "14,203,129"},0.1)`, color: bannerColor, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Prémio {formatKz(tour.prizePool)}</span>
+            <span style={{ background: `rgba(${bannerColor === "#ffffff" ? "255,255,255" : "14,203,129"},0.1)`, color: bannerColor, borderRadius: 6, fontSize: 10, fontWeight: 700, padding: "3px 8px" }}>Prémio {formatKz(tour.prizePool)}</span>
           )}
         </div>
 
@@ -451,7 +451,7 @@ function TournamentCard({ tour, router }: { tour: any; router: any }) {
         {prizes.length > 0 && (
           <div style={{ display: "flex", gap: 6 }}>
             {prizes.slice(0, 3).map((p: any, i: number) => (
-              <div key={i} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 6, padding: "3px 9px", fontSize: 11, color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#b45309", fontWeight: 700 }}>
+              <div key={i} style={{ background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 6, padding: "3px 9px", fontSize: 11, color: i === 0 ? "#ffffff" : i === 1 ? "#94a3b8" : "#b45309", fontWeight: 700 }}>
                 {i + 1}º {(p.amount as number).toLocaleString("pt-PT")} Kz
               </div>
             ))}

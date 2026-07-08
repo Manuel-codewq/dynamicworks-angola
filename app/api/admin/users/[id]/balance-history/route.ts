@@ -66,7 +66,7 @@ export async function GET(
         detail:   tx.reference ?? tx.method ?? "",
         amount:   tx.amount,
         sign:     isCredit ? "+" : "-",
-        color:    tx.status === "pending" ? "#f5a623" : "#ef4444",
+        color:    tx.status === "pending" ? "#ffffff" : "#ef4444",
         status:   tx.status,
         affectsBalance: false,
       });
@@ -121,7 +121,7 @@ export async function GET(
       detail:   `Por: ${log.adminName} — ${log.detail ?? ""}`,
       amount:   null,
       sign:     "~",
-      color:    "#f5a623",
+      color:    "#ffffff",
       status:   "info",
       affectsBalance: true,
     });

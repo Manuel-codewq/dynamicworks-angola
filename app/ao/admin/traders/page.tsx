@@ -112,7 +112,7 @@ export default function AdminTradersPage() {
                   {r.paresNegociados && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Pares: </span>{r.paresNegociados}</p>}
                   {r.estrategia && <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Estratégia: </span>{r.estrategia}</p>}
                   <p style={{ color: "#e2e8f0", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Observações: </span>{r.observacoes}</p>
-                  {r.planoAmanha && <p style={{ color: "#f5a623", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Amanhã: </span>{r.planoAmanha}</p>}
+                  {r.planoAmanha && <p style={{ color: "#ffffff", fontSize: 13, margin: "0 0 8px" }}><span style={{ color: "#94a3b8" }}>Amanhã: </span>{r.planoAmanha}</p>}
                   {r.imagemProva && <img src={r.imagemProva} alt="prova" style={{ marginTop: 8, maxWidth: "100%", maxHeight: 250, borderRadius: 8, border: "1px solid #1e2d50", objectFit: "contain" }} />}
                 </div>
               )}

@@ -361,9 +361,9 @@ export default function BotPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         .bot-inp { background:#0a0f1e; border:1px solid #1e2d50; border-radius:9px; padding:9px 12px; color:#fff; font-size:13px; outline:none; width:100%; box-sizing:border-box; }
-        .bot-inp:focus { border-color:rgba(245,166,35,.5); box-shadow:0 0 0 3px rgba(245,166,35,.1); }
+        .bot-inp:focus { border-color:rgba(255,255,255,.5); box-shadow:0 0 0 3px rgba(255,255,255,.1); }
         .bot-sel { background:#0a0f1e; border:1px solid #1e2d50; border-radius:9px; padding:9px 12px; color:#fff; font-size:13px; outline:none; width:100%; box-sizing:border-box; appearance:none; cursor:pointer; }
-        .bot-sel:focus { border-color:rgba(245,166,35,.5); box-shadow:0 0 0 3px rgba(245,166,35,.1); }
+        .bot-sel:focus { border-color:rgba(255,255,255,.5); box-shadow:0 0 0 3px rgba(255,255,255,.1); }
         @media(max-width:720px){.bot-grid{grid-template-columns:1fr!important}}
         @media(min-width:721px){.bot-cfg{display:flex!important}.bot-log{display:flex!important}}
       `}</style>
@@ -373,7 +373,7 @@ export default function BotPage() {
         <button onClick={() => router.back()} style={{ background:"rgba(255,255,255,.05)", border:"1px solid rgba(30,45,80,.5)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", width:36, height:36, borderRadius:9, color:"#94a3b8" }}>
           <ChevronLeft size={18} />
         </button>
-        <Bot size={18} color="#f5a623" />
+        <Bot size={18} color="#ffffff" />
         <span style={{ color:"#fff", fontWeight:800, fontSize:16, flex:1 }}>Bot de Trading</span>
         {running && (
           <span style={{ background:"rgba(34,197,94,.12)", border:"1px solid rgba(34,197,94,.3)", color:"#22c55e", borderRadius:20, padding:"4px 12px", fontSize:12, fontWeight:700, display:"flex", alignItems:"center", gap:5 }}>
@@ -387,9 +387,9 @@ export default function BotPage() {
 
         {/* Aviso demo */}
         {cfg.isDemo && (
-          <div style={{ background:"rgba(245,166,35,.06)", border:"1px solid rgba(245,166,35,.2)", borderRadius:12, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
-            <AlertTriangle size={15} color="#f5a623" style={{ flexShrink:0 }} />
-            <span style={{ color:"#f5a623", fontSize:13 }}>Modo Demo — as operações não usam saldo real. Activa conta Real na configuração.</span>
+          <div style={{ background:"rgba(255,255,255,.06)", border:"1px solid rgba(255,255,255,.2)", borderRadius:12, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
+            <AlertTriangle size={15} color="#ffffff" style={{ flexShrink:0 }} />
+            <span style={{ color:"#ffffff", fontSize:13 }}>Modo Demo — as operações não usam saldo real. Activa conta Real na configuração.</span>
           </div>
         )}
 
@@ -397,7 +397,7 @@ export default function BotPage() {
         <div style={{ display:"flex", gap:4, background:"rgba(17,24,39,.8)", border:"1px solid rgba(30,45,80,.5)", borderRadius:10, padding:4, marginBottom:16, width:"fit-content" }}>
           {(["config","log"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              style={{ padding:"7px 20px", borderRadius:7, border:"none", fontSize:13, fontWeight:700, cursor:"pointer", background: tab === t ? "#f5a623" : "transparent", color: tab === t ? "#0a0f1e" : "#64748b" }}>
+              style={{ padding:"7px 20px", borderRadius:7, border:"none", fontSize:13, fontWeight:700, cursor:"pointer", background: tab === t ? "#ffffff" : "transparent", color: tab === t ? "#0a0f1e" : "#64748b" }}>
               {t === "config" ? "Configuração" : "Log"}
             </button>
           ))}
@@ -476,8 +476,8 @@ export default function BotPage() {
                 ] as { id: Strategy; label: string; desc: string }[]).map(s => (
                   <button key={s.id} onClick={() => !running && updateCfg("strategy", s.id)}
                     disabled={running}
-                    style={{ padding:"10px 8px", borderRadius:10, border:`1px solid ${cfg.strategy === s.id ? "#f5a623" : "rgba(30,45,80,.5)"}`, background: cfg.strategy === s.id ? "rgba(245,166,35,.1)" : "rgba(17,24,39,.6)", cursor: running ? "not-allowed" : "pointer", textAlign:"center" }}>
-                    <div style={{ color: cfg.strategy === s.id ? "#f5a623" : "#94a3b8", fontWeight:700, fontSize:12 }}>{s.label}</div>
+                    style={{ padding:"10px 8px", borderRadius:10, border:`1px solid ${cfg.strategy === s.id ? "#ffffff" : "rgba(30,45,80,.5)"}`, background: cfg.strategy === s.id ? "rgba(255,255,255,.1)" : "rgba(17,24,39,.6)", cursor: running ? "not-allowed" : "pointer", textAlign:"center" }}>
+                    <div style={{ color: cfg.strategy === s.id ? "#ffffff" : "#94a3b8", fontWeight:700, fontSize:12 }}>{s.label}</div>
                     <div style={{ color:"#334155", fontSize:10, marginTop:2 }}>{s.desc}</div>
                   </button>
                 ))}
@@ -506,7 +506,7 @@ export default function BotPage() {
 
             {/* Botão Start/Stop */}
             <button onClick={running ? stopBot : startBot}
-              style={{ width:"100%", background: running ? "rgba(239,68,68,.12)" : "linear-gradient(135deg,#f5a623,#f97316)", color: running ? "#ef4444" : "#0a0f1e", border: running ? "1px solid rgba(239,68,68,.3)" : "none", borderRadius:12, padding:"16px", fontSize:15, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all .18s", boxShadow: running ? "none" : "0 6px 24px rgba(245,166,35,.3)" }}>
+              style={{ width:"100%", background: running ? "rgba(239,68,68,.12)" : "linear-gradient(135deg,#ffffff,#f97316)", color: running ? "#ef4444" : "#0a0f1e", border: running ? "1px solid rgba(239,68,68,.3)" : "none", borderRadius:12, padding:"16px", fontSize:15, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all .18s", boxShadow: running ? "none" : "0 6px 24px rgba(255,255,255,.3)" }}>
               {running ? <><Square size={17} fill="#ef4444" /> Parar Bot</> : <><Play size={17} fill="#0a0f1e" /> Iniciar Bot</>}
             </button>
           </div>
@@ -559,9 +559,9 @@ export default function BotPage() {
 
             {/* Trade activa */}
             {activeTradeId && (
-              <div style={{ background:"rgba(245,166,35,.08)", border:"1px solid rgba(245,166,35,.3)", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ width:8, height:8, borderRadius:"50%", background:"#f5a623", display:"inline-block", animation:"pulse 1s ease infinite", flexShrink:0 }} />
-                <span style={{ color:"#f5a623", fontSize:13, fontWeight:700 }}>Trade activa — a aguardar resultado...</span>
+              <div style={{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.3)", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:"#ffffff", display:"inline-block", animation:"pulse 1s ease infinite", flexShrink:0 }} />
+                <span style={{ color:"#ffffff", fontSize:13, fontWeight:700 }}>Trade activa — a aguardar resultado...</span>
               </div>
             )}
 
@@ -579,7 +579,7 @@ export default function BotPage() {
                       <span style={{ color:"#334155", fontSize:10, fontFamily:"monospace", flexShrink:0, marginTop:1 }}>{e.time}</span>
                       <span style={{ color:
                         e.type === "signal" ? (e.direction === "call" ? "#22c55e" : "#ef4444") :
-                        e.type === "trade"  ? (e.result === "win" ? "#22c55e" : e.result === "loss" ? "#ef4444" : "#f5a623") :
+                        e.type === "trade"  ? (e.result === "win" ? "#22c55e" : e.result === "loss" ? "#ef4444" : "#ffffff") :
                         e.type === "warn"   ? "#ef4444" : "#64748b",
                         fontSize:12, lineHeight:1.5
                       }}>{e.msg}</span>

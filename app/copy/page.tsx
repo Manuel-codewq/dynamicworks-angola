@@ -106,7 +106,7 @@ export default function CopyTradingPage() {
   }
 
   const statusMap: Record<string, { label: string; color: string }> = {
-    pending:  { label: t("copy.status.pending"),  color: "#f5a623" },
+    pending:  { label: t("copy.status.pending"),  color: "#ffffff" },
     approved: { label: t("copy.status.approved"), color: "#22c55e" },
     rejected: { label: t("copy.status.rejected"), color: "#ef4444" },
   };
@@ -125,13 +125,13 @@ export default function CopyTradingPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px" }}>
         {/* Hero */}
         <div style={{ ...CARD, background: "linear-gradient(135deg,#1a2544 0%,#0f1c38 100%)", marginBottom: 20, textAlign: "center", padding: "28px 20px" }}>
-          <Copy size={36} color="#f5a623" style={{ marginBottom: 10 }} />
+          <Copy size={36} color="#ffffff" style={{ marginBottom: 10 }} />
           <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>Copy Trading</h1>
           <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 14px", lineHeight: 1.6 }}>
             {t("copy.heroDesc")}
           </p>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 8, padding: "8px 14px" }}>
-            <span style={{ fontSize: 13, color: "#f5a623", fontWeight: 700 }}>{t("copy.realOnly")}</span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "8px 14px" }}>
+            <span style={{ fontSize: 13, color: "#ffffff", fontWeight: 700 }}>{t("copy.realOnly")}</span>
           </div>
         </div>
 
@@ -141,7 +141,7 @@ export default function CopyTradingPage() {
             <button key={tabKey} onClick={() => setTab(tabKey)}
               style={{
                 flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14,
-                background: tab === tabKey ? "#f5a623" : "#111827",
+                background: tab === tabKey ? "#ffffff" : "#111827",
                 color: tab === tabKey ? "#0a0f1e" : "#94a3b8",
               }}>
               {tabKey === "experts" ? t("copy.tab.experts") : t("copy.tab.myFollows")}
@@ -167,14 +167,14 @@ export default function CopyTradingPage() {
                       {expert.avatar ? (
                         <img src={expert.avatar} alt={expert.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                       ) : (
-                        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18, color: "#f5a623", fontWeight: 800 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18, color: "#ffffff", fontWeight: 800 }}>
                           {expert.name.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>{expert.name}</span>
-                          <Award size={14} color="#f5a623" />
+                          <Award size={14} color="#ffffff" />
                         </div>
                         {expert.bio && <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0", lineHeight: 1.5 }}>{expert.bio}</p>}
                       </div>
@@ -188,7 +188,7 @@ export default function CopyTradingPage() {
                         { label: t("copy.commission"),  value: `${(expert.commission * 100).toFixed(0)}%` },
                       ].map(s => (
                         <div key={s.label} style={{ flex: 1, background: "#0a0f1e", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
-                          <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 16 }}>{s.value}</div>
+                          <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 16 }}>{s.value}</div>
                           <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{s.label}</div>
                         </div>
                       ))}
@@ -215,7 +215,7 @@ export default function CopyTradingPage() {
                           style={{ flex: 1, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "10px 12px", color: "#fff", fontSize: 14, outline: "none" }}
                         />
                         <button onClick={() => handleFollow(expert)} disabled={busy === expert.id}
-                          style={{ background: "#f5a623", border: "none", borderRadius: 8, padding: "10px 18px", color: "#0a0f1e", cursor: "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
+                          style={{ background: "#ffffff", border: "none", borderRadius: 8, padding: "10px 18px", color: "#0a0f1e", cursor: "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
                           {busy === expert.id ? "..." : t("copy.copyBtn")}
                         </button>
                       </div>
@@ -231,7 +231,7 @@ export default function CopyTradingPage() {
             {/* Expert application */}
             <div style={{ ...CARD, marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <TrendingUp size={18} color="#f5a623" />
+                <TrendingUp size={18} color="#ffffff" />
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>{t("copy.applyTitle")}</span>
               </div>
               {myProfile?.traderProfile ? (
@@ -266,7 +266,7 @@ export default function CopyTradingPage() {
                     </div>
                   )}
                   <button onClick={handleApply} disabled={applyBusy}
-                    style={{ width: "100%", background: applyBusy ? "#1e2d50" : "#f5a623", color: applyBusy ? "#64748b" : "#0a0f1e", border: "none", borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: 14, cursor: applyBusy ? "not-allowed" : "pointer" }}>
+                    style={{ width: "100%", background: applyBusy ? "#1e2d50" : "#ffffff", color: applyBusy ? "#64748b" : "#0a0f1e", border: "none", borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: 14, cursor: applyBusy ? "not-allowed" : "pointer" }}>
                     {applyBusy ? t("copy.sending") : t("copy.applyBtn")}
                   </button>
                 </>
@@ -288,7 +288,7 @@ export default function CopyTradingPage() {
                   {f.trader.user.avatar ? (
                     <img src={f.trader.user.avatar} alt={f.trader.user.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
                   ) : (
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", color: "#f5a623", fontWeight: 800, fontSize: 16 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontWeight: 800, fontSize: 16 }}>
                       {f.trader.user.name.charAt(0).toUpperCase()}
                     </div>
                   )}

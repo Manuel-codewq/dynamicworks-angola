@@ -77,7 +77,7 @@ export default function AiSupportChat() {
     <div style={{ position: "fixed", bottom: 24, right: 20, zIndex: 9999, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
-        @keyframes pulse  { 0%,100% { box-shadow:0 4px 20px rgba(245,166,35,0.4) } 50% { box-shadow:0 4px 28px rgba(245,166,35,0.7) } }
+        @keyframes pulse  { 0%,100% { box-shadow:0 4px 20px rgba(255,255,255,0.4) } 50% { box-shadow:0 4px 28px rgba(255,255,255,0.7) } }
         .dw-chat-bubble { animation: fadeUp .22s ease }
         .dw-chat-btn-pulse { animation: pulse 2s ease-in-out infinite }
       `}</style>
@@ -91,7 +91,7 @@ export default function AiSupportChat() {
           maxHeight: "min(520px, calc(100vh - 120px))",
         }}>
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg,#f5a623,#e8940f)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ background: "linear-gradient(135deg,#ffffff,#cbd5e1)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, background: "rgba(0,0,0,0.2)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Bot size={20} color="#fff" />
             </div>
@@ -110,12 +110,12 @@ export default function AiSupportChat() {
               <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", flexDirection: m.role === "user" ? "row-reverse" : "row" }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                  background: m.role === "user" ? "#1e2d50" : "rgba(245,166,35,0.15)",
+                  background: m.role === "user" ? "#1e2d50" : "rgba(255,255,255,0.15)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
                   {m.role === "user"
                     ? <User size={14} color="#94a3b8" />
-                    : <Bot  size={14} color="#f5a623" />
+                    : <Bot  size={14} color="#ffffff" />
                   }
                 </div>
                 <div style={{
@@ -132,12 +132,12 @@ export default function AiSupportChat() {
 
             {loading && (
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(245,166,35,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Bot size={14} color="#f5a623" />
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Bot size={14} color="#ffffff" />
                 </div>
                 <div style={{ padding: "9px 14px", background: "#0d1829", border: "1px solid #1e2d50", borderRadius: "14px 14px 14px 4px", display: "flex", gap: 5, alignItems: "center" }}>
                   {[0,1,2].map(j => (
-                    <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", background: "#f5a623", opacity: 0.6, animation: `pulse ${0.8 + j * 0.2}s ease-in-out infinite` }} />
+                    <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", background: "#ffffff", opacity: 0.6, animation: `pulse ${0.8 + j * 0.2}s ease-in-out infinite` }} />
                   ))}
                 </div>
               </div>
@@ -173,7 +173,7 @@ export default function AiSupportChat() {
               disabled={loading || escalated || !input.trim()}
               style={{
                 width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer",
-                background: !input.trim() || loading || escalated ? "#1e2d50" : "linear-gradient(135deg,#f5a623,#e8940f)",
+                background: !input.trim() || loading || escalated ? "#1e2d50" : "linear-gradient(135deg,#ffffff,#cbd5e1)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 transition: "background .2s", flexShrink: 0,
               }}>
@@ -193,7 +193,7 @@ export default function AiSupportChat() {
         style={{
           width: 52, height: 52, borderRadius: "50%",
           background: open ? "#1e2d50" : "#0a0f1e",
-          border: open ? "none" : "2px solid rgba(245,166,35,0.4)",
+          border: open ? "none" : "2px solid rgba(255,255,255,0.4)",
           cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
           transition: "background .2s",
           overflow: "hidden",

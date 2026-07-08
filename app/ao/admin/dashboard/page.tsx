@@ -34,7 +34,7 @@ interface OnlineUser {
 
 const KYC_STYLE: Record<string, { label: string; color: string }> = {
   "no-submit": { label: "Sem docs",   color: "#64748b" },
-  pending:     { label: "A rever",    color: "#f5a623" },
+  pending:     { label: "A rever",    color: "#ffffff" },
   approved:    { label: "Verificado", color: "#22c55e" },
   rejected:    { label: "Rejeitado",  color: "#ef4444" },
 };
@@ -127,10 +127,10 @@ export default function AdminDashboard() {
   const mainCards = s ? [
     { label: "Total utilizadores",         value: s.totalUsers.toString(),                                                                    Icon: Users,        color: "#94a3b8" },
     { label: isDemo ? "Saldo (Demo)" : "Saldo (Real)",
-                                            value: formatKz(Math.floor(isDemo ? s.totalDemoBalance : s.totalBalance)),                        Icon: Wallet,       color: isDemo ? "#f5a623" : "#22c55e" },
-    { label: "Operações hoje",             value: (isDemo ? s.demoTodayTradesCount : s.todayTradesCount).toString(),                          Icon: BarChart2,    color: "#f5a623" },
+                                            value: formatKz(Math.floor(isDemo ? s.totalDemoBalance : s.totalBalance)),                        Icon: Wallet,       color: isDemo ? "#ffffff" : "#22c55e" },
+    { label: "Operações hoje",             value: (isDemo ? s.demoTodayTradesCount : s.todayTradesCount).toString(),                          Icon: BarChart2,    color: "#ffffff" },
     { label: "Lucro hoje",                 value: formatKz(Math.floor(isDemo ? s.demoPlatformProfit : s.platformProfit)),                     Icon: TrendingDown, color: "#22c55e" },
-    { label: "Taxa de vitória",            value: `${isDemo ? s.demoWinRate : s.winRate}%`,                                                   Icon: Trophy,       color: "#f5a623" },
+    { label: "Taxa de vitória",            value: `${isDemo ? s.demoWinRate : s.winRate}%`,                                                   Icon: Trophy,       color: "#ffffff" },
     { label: "Total operações",            value: (isDemo ? s.demoTotalTrades : s.totalTrades).toString(),                                    Icon: BarChart2,    color: "#94a3b8" },
   ] : [];
 
@@ -165,10 +165,10 @@ export default function AdminDashboard() {
       {s && (s.pendingDeposits > 0 || s.pendingWithdrawals > 0) && (
         <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
           {s.pendingDeposits > 0 && (
-            <a href="/ao/admin/transactions" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, padding: "10px 16px", textDecoration: "none" }}>
-              <Clock size={15} color="#f5a623" />
-              <span style={{ color: "#f5a623", fontWeight: 700, fontSize: 13 }}>{s.pendingDeposits} depósito{s.pendingDeposits !== 1 ? "s" : ""} pendente{s.pendingDeposits !== 1 ? "s" : ""}</span>
-              <ExternalLink size={12} color="#f5a623" />
+            <a href="/ao/admin/transactions" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, padding: "10px 16px", textDecoration: "none" }}>
+              <Clock size={15} color="#ffffff" />
+              <span style={{ color: "#ffffff", fontWeight: 700, fontSize: 13 }}>{s.pendingDeposits} depósito{s.pendingDeposits !== 1 ? "s" : ""} pendente{s.pendingDeposits !== 1 ? "s" : ""}</span>
+              <ExternalLink size={12} color="#ffffff" />
             </a>
           )}
           {s.pendingWithdrawals > 0 && (
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
         {(["real","demo"] as const).map(m => (
           <button key={m} onClick={() => setMode(m)} style={{
             padding: "8px 22px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
-            background: mode === m ? (m === "real" ? "#22c55e" : "#f5a623") : "transparent",
+            background: mode === m ? (m === "real" ? "#22c55e" : "#ffffff") : "transparent",
             color:      mode === m ? "#0a0f1e" : "#94a3b8",
           }}>
             {m === "real"
@@ -294,7 +294,7 @@ export default function AdminDashboard() {
               />
             </div>
             <a href="/ao/admin/users"
-              style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, padding: "7px 12px", color: "#f5a623", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+              style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, padding: "7px 12px", color: "#ffffff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
               <ExternalLink size={12} /> Ver todos
             </a>
           </div>
@@ -329,7 +329,7 @@ export default function AdminDashboard() {
                             <Circle size={7} fill="#22c55e" color="#22c55e" style={{ flexShrink: 0 }} />
                             <div>
                               <div>{u.name}</div>
-                              <div style={{ fontSize: 10, color: u.isDemo ? "#f5a623" : "#22c55e", fontWeight: 700, marginTop: 1 }}>
+                              <div style={{ fontSize: 10, color: u.isDemo ? "#ffffff" : "#22c55e", fontWeight: 700, marginTop: 1 }}>
                                 {u.isDemo ? "DEMO" : "REAL"}
                               </div>
                             </div>

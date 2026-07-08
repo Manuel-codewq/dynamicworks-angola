@@ -50,7 +50,7 @@ export default function ReferralPage() {
 
   const KYC_STYLE: Record<string, { label: string; color: string; Icon: any }> = {
     approved: { label: t("kyc.approved.label"), color: "#22c55e", Icon: CheckCircle },
-    pending:  { label: t("kyc.pending.label"),  color: "#f5a623", Icon: Clock       },
+    pending:  { label: t("kyc.pending.label"),  color: "#ffffff", Icon: Clock       },
     rejected: { label: t("kyc.rejected.label"), color: "#ef4444", Icon: XCircle     },
     none:     { label: t("kyc.none.label"),      color: "#64748b", Icon: Clock       },
   };
@@ -59,7 +59,7 @@ export default function ReferralPage() {
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -74,8 +74,8 @@ export default function ReferralPage() {
         <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
-        <div style={{ width: 34, height: 34, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Gift size={18} color="#f5a623" />
+        <div style={{ width: 34, height: 34, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Gift size={18} color="#ffffff" />
         </div>
         <div>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{t("referral.title")}</div>
@@ -87,14 +87,14 @@ export default function ReferralPage() {
 
         {/* How it works */}
         <div style={{ ...card, background: "linear-gradient(135deg,#111827,#0f1e38)", marginBottom: 20 }}>
-          <div style={{ color: "#f5a623", fontWeight: 800, fontSize: 15, marginBottom: 16 }}>{t("referral.howItWorks")}</div>
+          <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 15, marginBottom: 16 }}>{t("referral.howItWorks")}</div>
           {[
             { n: "1", text: t("referral.step1") },
             { n: "2", text: t("referral.step2") },
             { n: "3", text: t("referral.step3") },
           ].map(s => (
             <div key={s.n} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#f5a623", color: "#0a0f1e", fontWeight: 900, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.n}</div>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#ffffff", color: "#0a0f1e", fontWeight: 900, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.n}</div>
               <span style={{ color: "#94a3b8", fontSize: 14 }}>{s.text}</span>
             </div>
           ))}
@@ -119,11 +119,11 @@ export default function ReferralPage() {
           <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>{t("referral.yourCode")}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             <div style={{ flex: 1, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 10, padding: "14px 18px", textAlign: "center" }}>
-              <span style={{ color: "#f5a623", fontSize: 28, fontWeight: 900, letterSpacing: 6 }}>{data?.code ?? "—"}</span>
+              <span style={{ color: "#ffffff", fontSize: 28, fontWeight: 900, letterSpacing: 6 }}>{data?.code ?? "—"}</span>
             </div>
             <button onClick={copyCode}
-              style={{ width: 48, height: 52, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-              {copied ? <Check size={18} color="#22c55e" /> : <Copy size={18} color="#f5a623" />}
+              style={{ width: 48, height: 52, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+              {copied ? <Check size={18} color="#22c55e" /> : <Copy size={18} color="#ffffff" />}
             </button>
           </div>
 
@@ -133,7 +133,7 @@ export default function ReferralPage() {
               {link}
             </div>
             <button onClick={copyLink}
-              style={{ background: "#f5a623", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+              style={{ background: "#ffffff", color: "#0a0f1e", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
               {copied ? <><Check size={14} /> {t("referral.copied")}</> : <><Copy size={14} /> {t("referral.copy")}</>}
             </button>
           </div>
@@ -148,7 +148,7 @@ export default function ReferralPage() {
               return (
                 <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: i < data!.referredUsers.length - 1 ? "1px solid rgba(30,45,80,0.4)" : "none" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#f5a623", fontSize: 14 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1e2d50", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#ffffff", fontSize: 14 }}>
                       {u.name.charAt(0).toUpperCase()}
                     </div>
                     <div>

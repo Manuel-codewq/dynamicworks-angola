@@ -64,7 +64,7 @@ export default function ReportPrintPage() {
         td { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
         tr:last-child td { border-bottom: none; }
         tfoot td { font-weight: 700; background: #f8fafc; border-top: 2px solid #cbd5e1; }
-        h2 { color: #0f172a; font-size: 14px; font-weight: 700; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #f5a623; display: inline-block; }
+        h2 { color: #0f172a; font-size: 14px; font-weight: 700; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #ffffff; display: inline-block; }
         .section { margin-bottom: 32px; }
         .pos { color: #16a34a; }
         .neg { color: #dc2626; }
@@ -74,7 +74,7 @@ export default function ReportPrintPage() {
       {/* Botão de impressão — oculto ao imprimir */}
       <div className="no-print" style={{ position: "fixed", top: 16, right: 16, display: "flex", gap: 8, zIndex: 100 }}>
         <button onClick={() => window.print()}
-          style={{ background: "#f5a623", color: "#000", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>
+          style={{ background: "#ffffff", color: "#000", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>
           Imprimir / Guardar PDF
         </button>
         <button onClick={() => window.close()}
@@ -86,7 +86,7 @@ export default function ReportPrintPage() {
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "40px 32px" }}>
 
         {/* Cabeçalho do relatório */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, borderBottom: "3px solid #f5a623", paddingBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, borderBottom: "3px solid #ffffff", paddingBottom: 16 }}>
           <div>
             <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", letterSpacing: -0.5 }}>Dynamic Works</div>
             <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Relatório de Desempenho — últimos {days} dias</div>

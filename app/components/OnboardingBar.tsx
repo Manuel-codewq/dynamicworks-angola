@@ -72,7 +72,7 @@ export default function OnboardingBar() {
           <div style={{
             height: "100%",
             width: `${Math.round((data.completed / data.total) * 100)}%`,
-            background: "linear-gradient(90deg, #f5a623, #fb923c)",
+            background: "linear-gradient(90deg, #ffffff, #fb923c)",
             transition: "width 0.6s ease",
             borderRadius: "0 2px 2px 0",
           }} />
@@ -97,13 +97,13 @@ export default function OnboardingBar() {
                         width: active ? 28 : 22, height: active ? 28 : 22,
                         borderRadius: "50%",
                         background: done   ? "#22c55e"
-                                  : active ? "linear-gradient(135deg,#f5a623,#e8940f)"
+                                  : active ? "linear-gradient(135deg,#ffffff,#cbd5e1)"
                                            : "#141c2e",
-                        border: `2px solid ${done ? "#22c55e" : active ? "#f5a623" : "#1e2d50"}`,
+                        border: `2px solid ${done ? "#22c55e" : active ? "#ffffff" : "#1e2d50"}`,
                         display: "flex", alignItems: "center", justifyContent: "center",
                         transition: "all 0.3s ease",
                         flexShrink: 0,
-                        boxShadow: active ? "0 0 12px rgba(245,166,35,0.4)" : "none",
+                        boxShadow: active ? "0 0 12px rgba(255,255,255,0.4)" : "none",
                       }}>
                         {done
                           ? <CheckCircle size={13} color="#fff" />
@@ -112,7 +112,7 @@ export default function OnboardingBar() {
                       </div>
                       <span style={{
                         fontSize: 9, fontWeight: active ? 800 : 600,
-                        color: done ? "#22c55e" : active ? "#f5a623" : "#334155",
+                        color: done ? "#22c55e" : active ? "#ffffff" : "#334155",
                         whiteSpace: "nowrap",
                       }}>{step.label}</span>
                     </div>
@@ -144,28 +144,28 @@ export default function OnboardingBar() {
               onClick={() => router.push(nextStep.href)}
               style={{
                 display: "flex", alignItems: "center", gap: 10, width: "100%",
-                background: "rgba(245,166,35,0.07)",
-                border: "1px solid rgba(245,166,35,0.25)",
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.25)",
                 borderRadius: 10, padding: "8px 12px",
                 cursor: "pointer", textAlign: "left",
               }}
             >
               <div style={{
                 width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-                background: "rgba(245,166,35,0.15)",
+                background: "rgba(255,255,255,0.15)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <NextIcon size={15} color="#f5a623" />
+                <NextIcon size={15} color="#ffffff" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#f5a623", marginBottom: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginBottom: 1 }}>
                   {nextStep.fullLabel}
                 </div>
                 <div style={{ fontSize: 11, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {nextStep.desc}
                 </div>
               </div>
-              <ArrowRight size={14} color="#f5a623" style={{ flexShrink: 0 }} />
+              <ArrowRight size={14} color="#ffffff" style={{ flexShrink: 0 }} />
             </button>
           )}
         </div>

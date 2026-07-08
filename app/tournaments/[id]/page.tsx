@@ -11,7 +11,7 @@ import {
 
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  upcoming: { label: "Próximo",     color: "#f5a623", bg: "rgba(245,166,35,0.12)" },
+  upcoming: { label: "Próximo",     color: "#ffffff", bg: "rgba(255,255,255,0.12)" },
   active:   { label: "A decorrer",  color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
   finished: { label: "Terminado",   color: "#64748b", bg: "rgba(100,116,139,0.12)"},
 };
@@ -94,7 +94,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   if (loading || !tournament) {
-    return <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", color: "#f5a623", fontFamily: "system-ui" }}>A carregar...</div>;
+    return <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontFamily: "system-ui" }}>A carregar...</div>;
   }
 
   const s = STATUS_STYLE[tournament.status] ?? STATUS_STYLE.upcoming;
@@ -108,7 +108,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const activeBalance = tournament.isDemo ? demoBalance : balance;
   const hasFunds = activeBalance >= (tournament.entryFee ?? 0);
   const saldoLabel = tournament.isDemo ? "saldo demo" : "saldo real";
-  const bannerColor = tournament.bannerColor ?? "#f5a623";
+  const bannerColor = tournament.bannerColor ?? "#ffffff";
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui, sans-serif" }}>
@@ -135,7 +135,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
             {tournament.isFree
               ? <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34,197,94,0.12)", color: "#22c55e", borderRadius: 8, fontSize: 12, fontWeight: 800, padding: "5px 12px" }}><Unlock size={13} /> ENTRADA GRATUITA</span>
-              : <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(245,166,35,0.12)", color: "#f5a623", borderRadius: 8, fontSize: 12, fontWeight: 800, padding: "5px 12px" }}><Lock size={13} /> ENTRADA PAGA · {formatKz(tournament.entryFee)}</span>
+              : <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "#ffffff", borderRadius: 8, fontSize: 12, fontWeight: 800, padding: "5px 12px" }}><Lock size={13} /> ENTRADA PAGA · {formatKz(tournament.entryFee)}</span>
             }
             {tournament.status === "active" && hoursLeft <= 24 && (
               <span style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(239,68,68,0.12)", color: "#ef4444", borderRadius: 8, fontSize: 12, fontWeight: 800, padding: "5px 12px" }}>
@@ -177,7 +177,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   <div>
                     <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 13 }}>Saldo insuficiente</div>
                     <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>Precisas de {formatKz(tournament.entryFee)} no {saldoLabel}. O teu saldo actual é {formatKz(activeBalance)}.</div>
-                    {!tournament.isDemo && <a href="/wallet" style={{ display: "inline-block", marginTop: 8, color: "#f5a623", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Depositar agora →</a>}
+                    {!tournament.isDemo && <a href="/wallet" style={{ display: "inline-block", marginTop: 8, color: "#ffffff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Depositar agora →</a>}
                   </div>
                 </div>
               )}
@@ -190,16 +190,16 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
           {/* Payment confirmation */}
           {confirmPaid && (
-            <div style={{ background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 14, padding: "18px" }}>
+            <div style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 14, padding: "18px" }}>
               <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                <Lock size={16} color="#f5a623" /> Confirmar pagamento de entrada
+                <Lock size={16} color="#ffffff" /> Confirmar pagamento de entrada
               </div>
               <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 16px", lineHeight: 1.6 }}>
-                Serão debitados <strong style={{ color: "#f5a623" }}>{formatKz(tournament.entryFee)}</strong> do teu {saldoLabel} ({formatKz(activeBalance)} disponível).<br />Esta acção não pode ser revertida.
+                Serão debitados <strong style={{ color: "#ffffff" }}>{formatKz(tournament.entryFee)}</strong> do teu {saldoLabel} ({formatKz(activeBalance)} disponível).<br />Esta acção não pode ser revertida.
               </p>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setConfirmPaid(false)} style={{ flex: 1, background: "#0d1526", border: "1px solid #1e2d50", borderRadius: 10, padding: "11px", color: "#64748b", fontWeight: 700, cursor: "pointer" }}>Cancelar</button>
-                <button onClick={join} disabled={joining} style={{ flex: 2, background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 10, padding: "11px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: joining ? "not-allowed" : "pointer", opacity: joining ? 0.7 : 1 }}>
+                <button onClick={join} disabled={joining} style={{ flex: 2, background: "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 10, padding: "11px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: joining ? "not-allowed" : "pointer", opacity: joining ? 0.7 : 1 }}>
                   <Check size={15} /> Confirmar e participar
                 </button>
               </div>
@@ -226,10 +226,10 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                 <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "14px", marginBottom: 12 }}>
                   <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 13, marginBottom: 6 }}>Banca esgotada!</div>
                   <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
-                    Paga <strong style={{ color: "#f5a623" }}>{formatKz(tournament.rechargeAmount)}</strong> do teu {tournament.isDemo ? "saldo demo" : "saldo real"} para repor a banca de <strong style={{ color: "#fff" }}>{formatKz(tournament.startingBalance)}</strong> e continuar a competir.
+                    Paga <strong style={{ color: "#ffffff" }}>{formatKz(tournament.rechargeAmount)}</strong> do teu {tournament.isDemo ? "saldo demo" : "saldo real"} para repor a banca de <strong style={{ color: "#fff" }}>{formatKz(tournament.startingBalance)}</strong> e continuar a competir.
                   </div>
                   <button onClick={recharge} disabled={recharging}
-                    style={{ width: "100%", background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 9, padding: "12px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: recharging ? "not-allowed" : "pointer", opacity: recharging ? 0.7 : 1 }}>
+                    style={{ width: "100%", background: "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 9, padding: "12px", color: "#0a0f1e", fontWeight: 900, fontSize: 14, cursor: recharging ? "not-allowed" : "pointer", opacity: recharging ? 0.7 : 1 }}>
                     {recharging ? "A processar..." : `Recarregar por ${formatKz(tournament.rechargeAmount)}`}
                   </button>
                 </div>
@@ -282,19 +282,19 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
         {prizes.length > 0 && (
           <div style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 16, padding: "20px 22px", marginBottom: 20 }}>
             <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 800, color: "#94a3b8", letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 8 }}>
-              <Gift size={14} color="#f5a623" /> PRÉMIOS
+              <Gift size={14} color="#ffffff" /> PRÉMIOS
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {prizes.map((p: any, i: number) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: i === 0 ? "rgba(245,166,35,0.06)" : "#0d1526", border: `1px solid ${i === 0 ? "rgba(245,166,35,0.25)" : "#1e2d50"}`, borderRadius: 12, padding: "14px 18px" }}>
+                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: i === 0 ? "rgba(255,255,255,0.06)" : "#0d1526", border: `1px solid ${i === 0 ? "rgba(255,255,255,0.25)" : "#1e2d50"}`, borderRadius: 12, padding: "14px 18px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    {i === 0 ? <Trophy size={20} color="#f5a623" /> : i === 1 ? <Crown size={20} color="#94a3b8" /> : <Star size={20} color="#cd7f32" />}
+                    {i === 0 ? <Trophy size={20} color="#ffffff" /> : i === 1 ? <Crown size={20} color="#94a3b8" /> : <Star size={20} color="#cd7f32" />}
                     <div>
-                      <div style={{ color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#cd7f32", fontWeight: 800, fontSize: 15 }}>{p.position}º Lugar</div>
+                      <div style={{ color: i === 0 ? "#ffffff" : i === 1 ? "#94a3b8" : "#cd7f32", fontWeight: 800, fontSize: 15 }}>{p.position}º Lugar</div>
                       <div style={{ color: "#64748b", fontSize: 12 }}>{i === 0 ? "Campeão" : i === 1 ? "Vice-Campeão" : `${p.position}º Classificado`}</div>
                     </div>
                   </div>
-                  <div style={{ color: i === 0 ? "#f5a623" : "#fff", fontWeight: 900, fontSize: 18 }}>{formatKz(p.amount)}</div>
+                  <div style={{ color: i === 0 ? "#ffffff" : "#fff", fontWeight: 900, fontSize: 18 }}>{formatKz(p.amount)}</div>
                 </div>
               ))}
             </div>
@@ -317,12 +317,12 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
             participants.map((p: any, i: number) => {
               const isMe = (session?.user as any)?.id === p.userId;
               return (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #0d1526", background: isMe ? `${bannerColor}08` : i < 3 ? "rgba(245,166,35,0.02)" : "transparent", borderLeft: isMe ? `3px solid ${bannerColor}` : "3px solid transparent" }}>
+                <div key={p.id} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #0d1526", background: isMe ? `${bannerColor}08` : i < 3 ? "rgba(255,255,255,0.02)" : "transparent", borderLeft: isMe ? `3px solid ${bannerColor}` : "3px solid transparent" }}>
                   <div style={{ width: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {i === 0 ? <Trophy size={18} color="#f5a623" /> : i === 1 ? <Crown size={18} color="#94a3b8" /> : i === 2 ? <Star size={18} color="#cd7f32" /> : <span style={{ color: "#4b5563", fontSize: 13, fontWeight: 700 }}>{i + 1}</span>}
+                    {i === 0 ? <Trophy size={18} color="#ffffff" /> : i === 1 ? <Crown size={18} color="#94a3b8" /> : i === 2 ? <Star size={18} color="#cd7f32" /> : <span style={{ color: "#4b5563", fontSize: 13, fontWeight: 700 }}>{i + 1}</span>}
                   </div>
                   <div style={{ width: 36, height: 36, background: isMe ? bannerColor : "#1e2d50", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 12, flexShrink: 0 }}>
-                    <span style={{ color: isMe ? "#0a0f1e" : "#f5a623", fontWeight: 900, fontSize: 14 }}>{p.user?.name?.charAt(0)?.toUpperCase() ?? "?"}</span>
+                    <span style={{ color: isMe ? "#0a0f1e" : "#ffffff", fontWeight: 900, fontSize: 14 }}>{p.user?.name?.charAt(0)?.toUpperCase() ?? "?"}</span>
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: isMe ? bannerColor : "#fff", fontWeight: isMe ? 800 : 600, fontSize: 14 }}>
@@ -334,7 +334,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                     <div style={{ color: p.profit > 0 ? "#22c55e" : p.profit < 0 ? "#ef4444" : "#64748b", fontWeight: 800, fontSize: 15 }}>
                       {p.profit > 0 ? "+" : ""}{formatKz(p.profit)}
                     </div>
-                    {i < prizes.length && <div style={{ color: i === 0 ? "#f5a623" : i === 1 ? "#94a3b8" : "#cd7f32", fontSize: 11, fontWeight: 700, display:"flex", alignItems:"center", gap:4 }}><Gift size={10} /> {formatKz(prizes[i].amount)}</div>}
+                    {i < prizes.length && <div style={{ color: i === 0 ? "#ffffff" : i === 1 ? "#94a3b8" : "#cd7f32", fontSize: 11, fontWeight: 700, display:"flex", alignItems:"center", gap:4 }}><Gift size={10} /> {formatKz(prizes[i].amount)}</div>}
                   </div>
                 </div>
               );

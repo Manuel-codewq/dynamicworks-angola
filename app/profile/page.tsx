@@ -13,7 +13,7 @@ import PageGuide from "@/app/components/PageGuide";
 import { useT } from "@/lib/i18n";
 
 const PROFILE_GUIDE = [
-  { icon: <User    size={26} color="#f5a623" />, iconColor: "#f5a623", title: "O teu Perfil",            description: "Aqui podes editar os teus dados pessoais, ver o teu saldo, verificar o estado KYC e alterar a senha da conta.", tip: "Mantém o teu número de telefone actualizado para facilitar o suporte." },
+  { icon: <User    size={26} color="#ffffff" />, iconColor: "#ffffff", title: "O teu Perfil",            description: "Aqui podes editar os teus dados pessoais, ver o teu saldo, verificar o estado KYC e alterar a senha da conta.", tip: "Mantém o teu número de telefone actualizado para facilitar o suporte." },
   { icon: <ScanFace size={26} color="#38bdf8" />, iconColor: "#38bdf8", title: "Verificação KYC",        description: "O KYC (Know Your Customer) é a verificação da tua identidade. É obrigatório para fazer levantamentos. Submete o teu BI e fotos do rosto.", tip: "O KYC é aprovado pelo admin em até 24 horas." },
   { icon: <Shield  size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Segurança",               description: "Clica no card 'Segurança' para activar o 2FA, ver sessões activas e o histórico de acessos à tua conta.", tip: "Recomendamos activar o 2FA para proteger a conta." },
   { icon: <Lock    size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Alterar Senha",           description: "Para alterar a senha, clica em 'Alterar senha'. Vais receber um código OTP no email para confirmar a alteração.", tip: "Usa uma senha forte com letras, números e símbolos." },
@@ -45,7 +45,7 @@ type Feedback = { text: string; ok: boolean } | null;
 type PwdStep = "idle" | "sending" | "verify";
 
 const KYC_CFG = {
-  pending:     { color: "#f5a623", bg: "rgba(245,166,35,0.10)", border: "rgba(245,166,35,0.25)", Icon: Clock,          label: "Pendente",     desc: "A aguardar verificação da identidade" },
+  pending:     { color: "#ffffff", bg: "rgba(255,255,255,0.10)", border: "rgba(255,255,255,0.25)", Icon: Clock,          label: "Pendente",     desc: "A aguardar verificação da identidade" },
   approved:    { color: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.25)",  Icon: CheckCircle,    label: "Verificado",   desc: "Identidade verificada com sucesso" },
   rejected:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.25)",  Icon: XCircle,        label: "Rejeitado",    desc: "Documentos rejeitados. Submeta novamente." },
   unsubmitted: { color: "#64748b", bg: "rgba(100,116,139,0.10)",border: "rgba(100,116,139,0.25)",Icon: AlertTriangle,  label: "Não iniciado", desc: "Inicie a verificação para desbloquear saques" },
@@ -61,9 +61,9 @@ function KycRedirectBanner() {
     </div>
   );
   if (kycParam === "pending") return (
-    <div style={{ background: "rgba(245,166,35,0.08)", borderBottom: "1px solid rgba(245,166,35,0.25)", padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-      <Clock size={16} color="#f5a623" />
-      <span style={{ color: "#f5a623", fontSize: 13, fontWeight: 600 }}>Os teus documentos já foram submetidos e estão em análise. Aguarda a aprovação.</span>
+    <div style={{ background: "rgba(255,255,255,0.08)", borderBottom: "1px solid rgba(255,255,255,0.25)", padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+      <Clock size={16} color="#ffffff" />
+      <span style={{ color: "#ffffff", fontSize: 13, fontWeight: 600 }}>Os teus documentos já foram submetidos e estão em análise. Aguarda a aprovação.</span>
     </div>
   );
   return null;
@@ -282,7 +282,7 @@ export default function ProfilePage() {
   }
 
   const KYC_CFG_T = {
-    pending:     { color: "#f5a623", bg: "rgba(245,166,35,0.10)", border: "rgba(245,166,35,0.25)", Icon: Clock,         label: t("kyc.pending.label"),  desc: t("kyc.pending.desc")  },
+    pending:     { color: "#ffffff", bg: "rgba(255,255,255,0.10)", border: "rgba(255,255,255,0.25)", Icon: Clock,         label: t("kyc.pending.label"),  desc: t("kyc.pending.desc")  },
     approved:    { color: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.25)",  Icon: CheckCircle,   label: t("kyc.approved.label"), desc: t("kyc.approved.desc") },
     rejected:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.25)",  Icon: XCircle,       label: t("kyc.rejected.label"), desc: t("kyc.rejected.desc") },
     unsubmitted: { color: "#64748b", bg: "rgba(100,116,139,0.10)",border: "rgba(100,116,139,0.25)",Icon: AlertTriangle, label: t("kyc.none.label"),     desc: t("kyc.none.desc")     },
@@ -309,7 +309,7 @@ export default function ProfilePage() {
 
   if (loading || status === "loading") return (
     <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -347,7 +347,7 @@ export default function ProfilePage() {
 
         {/* Hero */}
         <div style={{ ...card, padding: "28px 24px", textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1e38 100%)", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, background: "radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, background: "radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
 
           {/* Avatar */}
           <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarChange} />
@@ -357,13 +357,13 @@ export default function ProfilePage() {
             style={{ position: "relative", width: 84, height: 84, borderRadius: "50%", margin: "0 auto 14px", cursor: avatarLoading ? "default" : "pointer" }}>
             {/* Photo or initials */}
             {avatar
-              ? <img src={avatar} alt="avatar" style={{ width: 84, height: 84, borderRadius: "50%", objectFit: "cover", boxShadow: "0 0 0 4px rgba(245,166,35,0.3)" }} />
-              : <div style={{ width: 84, height: 84, borderRadius: "50%", background: "linear-gradient(135deg,#f5a623,#e8950f)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800, color: "#000", boxShadow: "0 0 0 4px rgba(245,166,35,0.2)" }}>
+              ? <img src={avatar} alt="avatar" style={{ width: 84, height: 84, borderRadius: "50%", objectFit: "cover", boxShadow: "0 0 0 4px rgba(255,255,255,0.3)" }} />
+              : <div style={{ width: 84, height: 84, borderRadius: "50%", background: "linear-gradient(135deg,#ffffff,#e8950f)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800, color: "#000", boxShadow: "0 0 0 4px rgba(255,255,255,0.2)" }}>
                   {initials(name) || "?"}
                 </div>
             }
             {/* Camera overlay */}
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: 26, height: 26, borderRadius: "50%", background: avatarLoading ? "#1e2d50" : "#f5a623", border: "2px solid #070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 26, height: 26, borderRadius: "50%", background: avatarLoading ? "#1e2d50" : "#ffffff", border: "2px solid #070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {avatarLoading
                 ? <Loader2 size={12} color="#94a3b8" style={{ animation: "spin .8s linear infinite" }} />
                 : <Camera size={13} color="#0a0f1e" strokeWidth={2.5} />
@@ -379,7 +379,7 @@ export default function ProfilePage() {
               <span title={t("kyc.approved.label")}><BadgeCheck size={22} color="#22c55e" /></span>
             )}
             {tournamentWins >= 1 && (
-              <span title={t("profile.champion")} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "linear-gradient(135deg,rgba(245,166,35,0.2),rgba(245,166,35,0.08))", border: "1px solid rgba(245,166,35,0.4)", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 800, color: "#f5a623" }}>
+              <span title={t("profile.champion")} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "linear-gradient(135deg,rgba(255,255,255,0.2),rgba(255,255,255,0.08))", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 800, color: "#ffffff" }}>
                 <Trophy size={12} /> {tournamentWins === 1 ? t("profile.champion") : `${tournamentWins}${t("profile.championX")}`}
               </span>
             )}
@@ -391,10 +391,10 @@ export default function ProfilePage() {
           </p>
 
           {/* Saldo */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 12, padding: "10px 24px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "10px 24px" }}>
             <div>
               <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px" }}>{t("profile.realBalance")}</div>
-              <div style={{ color: "#f5a623", fontSize: 22, fontWeight: 800 }}>
+              <div style={{ color: "#ffffff", fontSize: 22, fontWeight: 800 }}>
                 {maskValue(formatKz(Math.floor(balance)), !showValues)}
               </div>
             </div>
@@ -412,7 +412,7 @@ export default function ProfilePage() {
             { label: t("profile.winRateStat"), value: maskValue(`${winRate}%`, !showValues),                      icon: <TrendingUp size={15} color="#22c55e" />,  color: "#22c55e" },
             { label: t("profile.totalProfit"), value: maskValue(formatKz(Math.floor(totalProfit)), !showValues),   icon: totalProfit >= 0 ? <TrendingUp size={15} color="#22c55e" /> : <TrendingDown size={15} color="#ef4444" />, color: totalProfit >= 0 ? "#22c55e" : "#ef4444" },
             { label: t("profile.today"),       value: maskValue((todayPnl >= 0 ? "+" : "") + formatKz(Math.abs(Math.floor(todayPnl))), !showValues), icon: <BarChart2 size={15} color={todayPnl >= 0 ? "#22c55e" : "#ef4444"} />, color: todayPnl >= 0 ? "#22c55e" : "#ef4444" },
-            ...(bestAsset ? [{ label: t("profile.bestPair"), value: maskValue(bestAsset, !showValues), icon: <Trophy size={15} color="#f5a623" />, color: "#f5a623" }] : []),
+            ...(bestAsset ? [{ label: t("profile.bestPair"), value: maskValue(bestAsset, !showValues), icon: <Trophy size={15} color="#ffffff" />, color: "#ffffff" }] : []),
           ].map(s => (
             <div key={s.label} style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "13px 15px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -428,10 +428,10 @@ export default function ProfilePage() {
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-              <ScanFace size={17} color="#f5a623" /> {t("profile.kyc")}
+              <ScanFace size={17} color="#ffffff" /> {t("profile.kyc")}
             </p>
             {kycAttempts > 0 && kycStatus !== "approved" && (
-              <span style={{ color: kycAttempts >= 2 ? "#ef4444" : "#f5a623", fontSize: 12, fontWeight: 600 }}>{kycAttempts}/2 {t("profile.kycAttempts")}</span>
+              <span style={{ color: kycAttempts >= 2 ? "#ef4444" : "#ffffff", fontSize: 12, fontWeight: 600 }}>{kycAttempts}/2 {t("profile.kycAttempts")}</span>
             )}
           </div>
           <div style={{ background: kyc.bg, border: `1px solid ${kyc.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: kycStatus !== "approved" ? 14 : 0 }}>
@@ -445,7 +445,7 @@ export default function ProfilePage() {
             </div>
           </div>
           {kycStatus !== "approved" && !blockedUntil && (
-            <button onClick={() => router.push("/kyc")} style={{ width: "100%", background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <button onClick={() => router.push("/kyc")} style={{ width: "100%", background: "#ffffff", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <ScanFace size={17} />
               {kycStatus === "unsubmitted" ? t("profile.kycStart") : kycStatus === "rejected" ? t("profile.kycResubmit") : t("profile.kycViewStatus")}
             </button>
@@ -454,8 +454,8 @@ export default function ProfilePage() {
 
         {/* Conquistas */}
         <a href="/achievements" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
-          <div style={{ width: 42, height: 42, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Star size={20} color="#f5a623" />
+          <div style={{ width: 42, height: 42, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Star size={20} color="#ffffff" />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t("profile.achievements")}</div>
@@ -478,8 +478,8 @@ export default function ProfilePage() {
 
         {/* Segurança */}
         <a href="/security" style={{ ...card, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", cursor: "pointer" }}>
-          <div style={{ width: 42, height: 42, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Shield size={20} color="#f5a623" />
+          <div style={{ width: 42, height: 42, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Shield size={20} color="#ffffff" />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t("profile.securityLabel")}</div>
@@ -492,10 +492,10 @@ export default function ProfilePage() {
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
             <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-              <User size={17} color="#f5a623" /> {t("profile.personalData")}
+              <User size={17} color="#ffffff" /> {t("profile.personalData")}
             </p>
             {!editMode && (
-              <button onClick={() => setEditMode(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 8, padding: "6px 12px", color: "#f5a623", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              <button onClick={() => setEditMode(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", color: "#ffffff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 <Edit3 size={13} /> {t("profile.editProfile")}
               </button>
             )}
@@ -540,7 +540,7 @@ export default function ProfilePage() {
               </div>
               <Msg fb={profileMsg} />
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={saveProfile} disabled={profileBusy} style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: profileBusy ? "not-allowed" : "pointer", opacity: profileBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                <button onClick={saveProfile} disabled={profileBusy} style={{ flex: 1, background: "#ffffff", color: "#000", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: profileBusy ? "not-allowed" : "pointer", opacity: profileBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
                   <Save size={15} /> {profileBusy ? t("profile.saving") : t("profile.save")}
                 </button>
                 <button onClick={() => { setEditMode(false); setProfileMsg(null); }} style={{ padding: "12px 18px", background: "transparent", border: "1px solid #1e2d50", borderRadius: 10, color: "#64748b", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
@@ -554,7 +554,7 @@ export default function ProfilePage() {
         {/* Segurança — Alterar senha via OTP */}
         <div style={card}>
           <p style={{ margin: "0 0 18px", color: "#fff", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-            <Lock size={17} color="#f5a623" /> {t("profile.changePassword")}
+            <Lock size={17} color="#ffffff" /> {t("profile.changePassword")}
           </p>
 
           {pwdStep === "idle" && (
@@ -582,7 +582,7 @@ export default function ProfilePage() {
                 <input
                   value={otpInput} onChange={e => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="000000" maxLength={6}
-                  style={{ ...inp, fontSize: 24, letterSpacing: 8, textAlign: "center", fontWeight: 800, color: "#f5a623" }}
+                  style={{ ...inp, fontSize: 24, letterSpacing: 8, textAlign: "center", fontWeight: 800, color: "#ffffff" }}
                 />
               </div>
 
@@ -600,7 +600,7 @@ export default function ProfilePage() {
 
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={confirmPassword} disabled={passwordBusy}
-                  style={{ flex: 1, background: "#f5a623", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: passwordBusy ? "not-allowed" : "pointer", opacity: passwordBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  style={{ flex: 1, background: "#ffffff", color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 700, cursor: passwordBusy ? "not-allowed" : "pointer", opacity: passwordBusy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <KeyRound size={16} /> {passwordBusy ? t("profile.confirming") : t("profile.confirmNewPassword")}
                 </button>
                 <button onClick={() => { setPwdStep("idle"); setPasswordMsg(null); setOtpInput(""); setNewPwd(""); setConfPwd(""); }}
@@ -610,7 +610,7 @@ export default function ProfilePage() {
               </div>
 
               {otpTimer === 0 && (
-                <button onClick={sendOtp} disabled={sendingOtp} style={{ background: "none", border: "none", color: "#f5a623", fontSize: 13, cursor: "pointer", padding: "4px 0", textDecoration: "underline" }}>
+                <button onClick={sendOtp} disabled={sendingOtp} style={{ background: "none", border: "none", color: "#ffffff", fontSize: 13, cursor: "pointer", padding: "4px 0", textDecoration: "underline" }}>
                   {t("profile.otpResend")}
                 </button>
               )}

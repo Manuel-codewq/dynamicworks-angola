@@ -272,7 +272,7 @@ export default function TradePage() {
   interface RayDrawing    { id: string; type: "ray" | "extline"; p1Time: number; p1Price: number; p2Time: number; p2Price: number; color: string; lineWidth: number; lineStyle: number; }
   type Drawing = HLineDrawing | TrendDrawing | VLineDrawing | RayDrawing;
 
-  const TOOL_COLORS = ["#f5a623","#3b82f6","#0ecb81","#f6465d","#a78bfa","#22d3ee","#e2e8f0"];
+  const TOOL_COLORS = ["#ffffff","#3b82f6","#0ecb81","#f6465d","#a78bfa","#22d3ee","#e2e8f0"];
 
   const [activeTool,     setActiveTool]     = useState<DrawingTool>(null);
   const [drawings,       setDrawings]       = useState<Drawing[]>(() => {
@@ -283,7 +283,7 @@ export default function TradePage() {
     return [];
   });
   const [showTools,      setShowTools]      = useState(false);
-  const [toolColor,      setToolColor]      = useState("#f5a623");
+  const [toolColor,      setToolColor]      = useState("#ffffff");
   const [toolLineStyle,  setToolLineStyle]  = useState(0);
   const [toolLineWidth,  setToolLineWidth]  = useState(1);
   const [toolLabel,      setToolLabel]      = useState("");
@@ -530,7 +530,7 @@ export default function TradePage() {
   const activeToolRef    = useRef<DrawingTool>(null);
   const pendingPointRef  = useRef<{ time: number; price: number } | null>(null);
   const drawingsRef      = useRef<Drawing[]>([]);
-  const toolColorRef     = useRef("#f5a623");
+  const toolColorRef     = useRef("#ffffff");
   const toolLineStyleRef = useRef(0);
   const toolLineWidthRef = useRef(1);
   const toolLabelRef     = useRef("");
@@ -832,7 +832,7 @@ export default function TradePage() {
   // Defined as a standalone function (not useCallback) so it always captures
   // the current refs without needing to be listed as a dependency anywhere.
   // Colors for MA/EMA multi-period lines
-  const MA_COLORS:  Record<number, string> = { 9: "#f5a623", 20: "#3b82f6", 50: "#a78bfa" };
+  const MA_COLORS:  Record<number, string> = { 9: "#ffffff", 20: "#3b82f6", 50: "#a78bfa" };
   const EMA_COLORS: Record<number, string> = { 9: "#fbbf24", 20: "#60a5fa", 50: "#c084fc" };
 
   function runRecalc(cfg: typeof indicators, preserveRange = false) {
@@ -853,7 +853,7 @@ export default function TradePage() {
         if (!active.has(p)) { chart.removeSeries(s); maSeriesRefs.current.delete(p); }
       });
       cfg.ma.periods.forEach(p => {
-        const color = MA_COLORS[p] ?? "#f5a623";
+        const color = MA_COLORS[p] ?? "#ffffff";
         if (!maSeriesRefs.current.has(p))
           maSeriesRefs.current.set(p, chart.addSeries(LineSeries, { ...lineOpts, color, lineWidth: 2 }));
         const d = calcSMA(data, p);
@@ -1108,7 +1108,7 @@ export default function TradePage() {
     if (cfg.adx.enabled) {
       if (!adxSeriesRef.current) {
         const pi = chart.panes().length;
-        adxSeriesRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#f5a623", lineWidth: 2 }, pi);
+        adxSeriesRef.current  = chart.addSeries(LineSeries, { ...lineOpts, color: "#ffffff", lineWidth: 2 }, pi);
         adxPlusRef.current    = chart.addSeries(LineSeries, { ...lineOpts, color: "#0ecb81",  lineWidth: 1, lastValueVisible: false }, pi);
         adxMinusRef.current   = chart.addSeries(LineSeries, { ...lineOpts, color: "#f6465d",  lineWidth: 1, lastValueVisible: false }, pi);
         adxPaneRef.current    = chart.panes()[pi];
@@ -1118,7 +1118,7 @@ export default function TradePage() {
       adxSeriesRef.current.setData(adxData.adx);
       adxPlusRef.current!.setData(adxData.diPlus);
       adxMinusRef.current!.setData(adxData.diMinus);
-      if (adxData.adx.length > 0) leg.push({ label: `ADX`, value: adxData.adx[adxData.adx.length-1].value.toFixed(1), color: "#f5a623" });
+      if (adxData.adx.length > 0) leg.push({ label: `ADX`, value: adxData.adx[adxData.adx.length-1].value.toFixed(1), color: "#ffffff" });
     } else if (adxSeriesRef.current) {
       [adxSeriesRef, adxPlusRef, adxMinusRef].forEach(r => { if (r.current) { chart.removeSeries(r.current); r.current = null; } });
       removePane(adxPaneRef);
@@ -1197,7 +1197,7 @@ export default function TradePage() {
     // ── Zig Zag (overlay) ──
     if (cfg.zigzag.enabled) {
       if (!zigzagRef.current) {
-        zigzagRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#f5a623", lineWidth: 2, lineStyle: 0 });
+        zigzagRef.current = chart.addSeries(LineSeries, { ...oLine, color: "#ffffff", lineWidth: 2, lineStyle: 0 });
       }
       zigzagRef.current.setData(calcZigZag(data, cfg.zigzag.deviation));
     } else if (zigzagRef.current) { chart.removeSeries(zigzagRef.current); zigzagRef.current = null; }
@@ -1648,7 +1648,7 @@ export default function TradePage() {
           cfg.ma.periods.forEach(p => {
             const s = maSeriesRefs.current.get(p);
             const d = s ? (param.seriesData.get(s) as { value?: number } | undefined) : undefined;
-            if (d?.value !== undefined) leg.push({ label: `MA ${p}`, value: d.value.toFixed(dec), color: MA_COLORS[p] ?? "#f5a623" });
+            if (d?.value !== undefined) leg.push({ label: `MA ${p}`, value: d.value.toFixed(dec), color: MA_COLORS[p] ?? "#ffffff" });
           });
         }
         if (cfg.ema.enabled) {
@@ -1689,9 +1689,9 @@ export default function TradePage() {
       const ct = chartTypeRef.current;
       let series: ISeriesApi<any>;
       if (ct === "line") {
-        series = chart.addSeries(LineSeries, { color: "#f5a623", lineWidth: 2, priceFormat, lastValueVisible: true, priceLineVisible: true });
+        series = chart.addSeries(LineSeries, { color: "#ffffff", lineWidth: 2, priceFormat, lastValueVisible: true, priceLineVisible: true });
       } else if (ct === "area") {
-        series = chart.addSeries(AreaSeries, { lineColor: "#f5a623", topColor: "rgba(245,166,35,0.3)", bottomColor: "rgba(245,166,35,0.0)", lineWidth: 2, priceFormat, lastValueVisible: true, priceLineVisible: true });
+        series = chart.addSeries(AreaSeries, { lineColor: "#ffffff", topColor: "rgba(255,255,255,0.3)", bottomColor: "rgba(255,255,255,0.0)", lineWidth: 2, priceFormat, lastValueVisible: true, priceLineVisible: true });
       } else if (ct === "bar") {
         series = chart.addSeries(BarSeries, { upColor: "#0ecb81", downColor: "#f6465d", priceFormat, lastValueVisible: false });
       } else {
@@ -1806,7 +1806,7 @@ export default function TradePage() {
           } else {
             // Draw Fibonacci levels as price lines
             const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
-            const colors  = ["#f6465d","#f97316","#f5a623","#0ecb81","#38bdf8","#818cf8","#f6465d"];
+            const colors  = ["#f6465d","#f97316","#ffffff","#0ecb81","#38bdf8","#818cf8","#f6465d"];
             const diff = pending.price - price;
             levels.forEach((lvl, i) => {
               const p = price + diff * lvl;
@@ -2492,8 +2492,8 @@ export default function TradePage() {
       {
         type: "demo" as const, label: "Conta Demo", bal: demoBalance,
         active: !isReal && !isTournament, show: true,
-        color: "#f5a623", colorBg: "rgba(245,166,35,0.08)", colorBorder: "rgba(245,166,35,0.35)",
-        colorGlow: "rgba(245,166,35,0.15)",
+        color: "#ffffff", colorBg: "rgba(255,255,255,0.08)", colorBorder: "rgba(255,255,255,0.35)",
+        colorGlow: "rgba(255,255,255,0.15)",
         icon: "demo",
         pnl: todayDemo?.pnl ?? 0, wins: todayDemo?.wins ?? 0, losses: todayDemo?.losses ?? 0,
         description: "Saldo virtual · sem risco",
@@ -2608,7 +2608,7 @@ export default function TradePage() {
   const decimals       = selectedPair?.decimals ?? 5;
   const priceStr       = currentPrice > 0 ? currentPrice.toFixed(decimals) : "—";
 
-  const accountToastColor = activeAccount === "tournament" ? "#6366f1" : activeAccount === "real" ? "#0ecb81" : "#f5a623";
+  const accountToastColor = activeAccount === "tournament" ? "#6366f1" : activeAccount === "real" ? "#0ecb81" : "#ffffff";
   const accountToastJSX = accountToast ? (
     <div style={{
       position: "fixed", top: 72, left: "50%", transform: "translateX(-50%)",
@@ -2643,7 +2643,7 @@ export default function TradePage() {
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <span style={{ color: "#fff", fontSize: 13, fontWeight: 800, letterSpacing: 0.3 }}>{selectedPair?.label}</span>
-          <span style={{ background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.35)", color: "#f5a623", fontSize: 12, fontWeight: 900, borderRadius: 6, padding: "2px 8px" }}>
+          <span style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.35)", color: "#ffffff", fontSize: 12, fontWeight: 900, borderRadius: 6, padding: "2px 8px" }}>
             {Math.round(currentPayout * 100)}%
           </span>
         </div>
@@ -2663,7 +2663,7 @@ export default function TradePage() {
           <button className="dw-btn" onClick={() => setAmount(a => Math.max(1000, (a || 1000) - 1000))}
             style={{ width: 40, height: 42, background: "#141824", border: "1px solid #262d40", borderRadius: 8, color: "#94a3b8", fontSize: 20, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>−</button>
           <div style={{ position: "relative", flex: 1 }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#f5a623", fontWeight: 800, fontSize: 11, pointerEvents: "none" }}>Kz</span>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#ffffff", fontWeight: 800, fontSize: 11, pointerEvents: "none" }}>Kz</span>
             <input type="number" value={amount || ""}
               onChange={e => { const v = parseInt(e.target.value); setAmount(isNaN(v) ? 0 : Math.min(500000, v)); }}
               onBlur={() => setAmount(a => Math.max(1000, a || 1000))}
@@ -2677,9 +2677,9 @@ export default function TradePage() {
           {QUICK_AMOUNTS.map(q => (
             <button key={q} className="dw-chip" onClick={() => setAmount(q)} style={{
               flex: 1, height: 28,
-              background: amount === q ? "rgba(245,166,35,0.15)" : "#141824",
-              color: amount === q ? "#f5a623" : "#64748b",
-              border: `1px solid ${amount === q ? "#f5a623" : "#262d40"}`,
+              background: amount === q ? "rgba(255,255,255,0.15)" : "#141824",
+              color: amount === q ? "#ffffff" : "#64748b",
+              border: `1px solid ${amount === q ? "#ffffff" : "#262d40"}`,
               borderRadius: 7, fontSize: 11, fontWeight: 800, cursor: "pointer",
               transition: "all 0.12s",
             }}>{q >= 1000 ? `${q / 1000}k` : q}</button>
@@ -2688,7 +2688,7 @@ export default function TradePage() {
         {displayBalance > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
             <span style={{ color: "#334155", fontSize: 10 }}>Risco do saldo</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: amount / displayBalance > 0.2 ? "#f6465d" : amount / displayBalance > 0.1 ? "#f5a623" : "#0ecb81", fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: amount / displayBalance > 0.2 ? "#f6465d" : amount / displayBalance > 0.1 ? "#ffffff" : "#0ecb81", fontVariantNumeric: "tabular-nums" }}>
               {((amount / displayBalance) * 100).toFixed(1)}%
             </span>
           </div>
@@ -2706,7 +2706,7 @@ export default function TradePage() {
           }}
             style={{ width: 40, height: 42, background: "#141824", border: "1px solid #262d40", borderRadius: 8, color: "#94a3b8", fontSize: 20, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>−</button>
           <div style={{ flex: 1, height: 42, background: "#141824", border: "1px solid #262d40", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <Clock size={13} color="#f5a623" />
+            <Clock size={13} color="#ffffff" />
             <span style={{ color: "#fff", fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{comutacaoActive ? `⇄ ${candleTimer || "vela"}` : expiry.label}</span>
           </div>
           <button className="dw-btn" onClick={() => {
@@ -2719,9 +2719,9 @@ export default function TradePage() {
           {EXPIRY_OPTIONS.map(opt => (
             <button key={opt.secs} className="dw-chip" onClick={() => { setExpiry(opt); setComutacaoActive(false); setCustomMins(String(Math.max(1, Math.round(opt.secs / 60)))); }} style={{
               height: 28,
-              background: !comutacaoActive && expiry.secs === opt.secs ? "rgba(245,166,35,0.15)" : "#141824",
-              color: !comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "#64748b",
-              border: `1px solid ${!comutacaoActive && expiry.secs === opt.secs ? "#f5a623" : "#262d40"}`,
+              background: !comutacaoActive && expiry.secs === opt.secs ? "rgba(255,255,255,0.15)" : "#141824",
+              color: !comutacaoActive && expiry.secs === opt.secs ? "#ffffff" : "#64748b",
+              border: `1px solid ${!comutacaoActive && expiry.secs === opt.secs ? "#ffffff" : "#262d40"}`,
               borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer",
               transition: "all 0.12s",
             }}>{opt.label}</button>
@@ -2782,8 +2782,8 @@ export default function TradePage() {
       </div>
 
       {/* ── Retorno potencial ── */}
-      <div data-tour="dw-payout" style={{ background: "linear-gradient(90deg,rgba(245,166,35,0.12) 0%,rgba(245,166,35,0.04) 100%)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
-        <div style={{ color: "#f5a623", fontWeight: 900, fontSize: compact ? 18 : 21, fontVariantNumeric: "tabular-nums" }}>
+      <div data-tour="dw-payout" style={{ background: "linear-gradient(90deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.04) 100%)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
+        <div style={{ color: "#ffffff", fontWeight: 900, fontSize: compact ? 18 : 21, fontVariantNumeric: "tabular-nums" }}>
           +{formatKz(Math.round(profit))}
         </div>
         <div style={{ color: "#94a3b8", fontSize: 10, fontWeight: 600, letterSpacing: 0.5, marginTop: 2 }}>
@@ -2797,7 +2797,7 @@ export default function TradePage() {
           <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 13, marginBottom: 4 }}>Banca do torneio esgotada!</div>
           <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 10 }}>Paga {formatKz(tournamentRecharge ?? 0)} para repor {formatKz(tournamentStartBalance ?? 0)} e continuar.</div>
           <button onClick={rechargeTournament} disabled={tournamentRecharging}
-            style={{ width: "100%", background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 8, padding: "10px", color: "#0a0f1e", fontWeight: 900, fontSize: 13, cursor: tournamentRecharging ? "not-allowed" : "pointer", opacity: tournamentRecharging ? 0.7 : 1 }}>
+            style={{ width: "100%", background: "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 8, padding: "10px", color: "#0a0f1e", fontWeight: 900, fontSize: 13, cursor: tournamentRecharging ? "not-allowed" : "pointer", opacity: tournamentRecharging ? 0.7 : 1 }}>
             {tournamentRecharging ? "A processar..." : `Recarregar por ${formatKz(tournamentRecharge ?? 0)}`}
           </button>
         </div>
@@ -2882,7 +2882,7 @@ export default function TradePage() {
         if (s.total === 0 && all.total === 0) return null;
         const pnlColor   = s.pnl >= 0 ? "#0ecb81" : "#f6465d";
         const winRate    = all.total > 0 ? Math.round((all.wins / all.total) * 100) : 0;
-        const winRateColor = winRate >= 60 ? "#0ecb81" : winRate >= 45 ? "#f5a623" : "#f6465d";
+        const winRateColor = winRate >= 60 ? "#0ecb81" : winRate >= 45 ? "#ffffff" : "#f6465d";
         return (
           <div style={{ background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, overflow: "hidden" }}>
             {/* Stats row */}
@@ -2916,7 +2916,7 @@ export default function TradePage() {
         <div style={{ background: "#161a26", border: "1px solid #262d40", borderRadius: 12, padding: compact ? 10 : 12 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}>Operações ativas</span>
-            <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontSize: 10, fontWeight: 800, borderRadius: 10, padding: "1px 8px" }}>{activeTrades.length}</span>
+            <span style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", fontSize: 10, fontWeight: 800, borderRadius: 10, padding: "1px 8px" }}>{activeTrades.length}</span>
           </div>
           {activeTrades.map(t => {
             const winning = isTradeWinning(t.direction, t.entryPrice);
@@ -2951,7 +2951,7 @@ export default function TradePage() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{
-                    color: closing ? "#64748b" : "#f5a623",
+                    color: closing ? "#64748b" : "#ffffff",
                     fontWeight: 800, fontSize: 14,
                     fontVariantNumeric: "tabular-nums",
                     animation: closing ? "pulse 1s ease-in-out infinite" : "none",
@@ -2980,9 +2980,9 @@ export default function TradePage() {
             <button
               onClick={() => setRecentWinsFilter("demo")}
               style={{ padding: "2px 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 800,
-                background: recentWinsFilter === "demo" ? "rgba(245,166,35,0.15)" : "transparent",
-                color: recentWinsFilter === "demo" ? "#f5a623" : "#475569",
-                outline: recentWinsFilter === "demo" ? "1px solid rgba(245,166,35,0.4)" : "1px solid transparent",
+                background: recentWinsFilter === "demo" ? "rgba(255,255,255,0.15)" : "transparent",
+                color: recentWinsFilter === "demo" ? "#ffffff" : "#475569",
+                outline: recentWinsFilter === "demo" ? "1px solid rgba(255,255,255,0.4)" : "1px solid transparent",
               }}
             >Demo</button>
           </div>
@@ -2993,7 +2993,7 @@ export default function TradePage() {
           recentWins.map((w, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < recentWins.length - 1 ? "1px solid #141824" : "none" }}>
               <span style={{ color: "#94a3b8", fontSize: 12 }}>{w.asset}</span>
-              <span style={{ color: recentWinsFilter === "demo" ? "#f5a623" : "#0ecb81", fontWeight: 700, fontSize: 12 }}>+{formatKz(w.amount)}</span>
+              <span style={{ color: recentWinsFilter === "demo" ? "#ffffff" : "#0ecb81", fontWeight: 700, fontSize: 12 }}>+{formatKz(w.amount)}</span>
             </div>
           ))
         )}
@@ -3037,7 +3037,7 @@ export default function TradePage() {
     const groups: Record<string, DerivPair[]> = {};
     pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
     const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
-    const catColors: Record<string, string> = { Forex: "#f5a623", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
+    const catColors: Record<string, string> = { Forex: "#ffffff", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
     return (
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}
@@ -3058,7 +3058,7 @@ export default function TradePage() {
                     style={{ width: "100%", background: selectedPair?.symbol === p.symbol ? "#262d40" : "transparent", border: "none", padding: mobile ? "10px 14px" : "8px 14px", color: "#fff", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, minHeight: 40 }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       <span style={{ fontWeight: 600 }}>{p.label}</span>
-                      <span style={{ color: "#f5a623", fontSize: 10, fontWeight: 800, background: "rgba(245,166,35,0.12)", borderRadius: 5, padding: "1px 5px" }}>
+                      <span style={{ color: "#ffffff", fontSize: 10, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
                         {Math.round((payoutMap[p.label] ?? 0.74) * 100)}%
                       </span>
                     </span>
@@ -3085,7 +3085,7 @@ export default function TradePage() {
     const isOn = (key: keyof typeof indicators) => (indicators[key] as any).enabled;
 
     const INDS: { key: keyof typeof indicators; label: string; color: string; cat: "trend"|"oscillator"; sub?: string }[] = [
-      { key: "ma",         label: "Média Móvel (MA)",        color: "#f5a623", cat: "trend",      sub: `Períodos: ${indicators.ma.periods.join(", ")}` },
+      { key: "ma",         label: "Média Móvel (MA)",        color: "#ffffff", cat: "trend",      sub: `Períodos: ${indicators.ma.periods.join(", ")}` },
       { key: "ema",        label: "EMA",                     color: "#a78bfa", cat: "trend",      sub: `Períodos: ${indicators.ema.periods.join(", ")}` },
       { key: "bb",         label: "Bollinger Bands",         color: "#38bdf8", cat: "trend",      sub: `Período ${indicators.bb.period}` },
       { key: "alligator",  label: "Alligator",               color: "#0ecb81", cat: "trend" },
@@ -3094,7 +3094,7 @@ export default function TradePage() {
       { key: "sar",        label: "Parabolic SAR",           color: "#f97316", cat: "trend",      sub: `Step ${indicators.sar.step}` },
       { key: "supertrend", label: "Supertrend",              color: "#0ecb81", cat: "trend",      sub: `P${indicators.supertrend.period} M${indicators.supertrend.mult}` },
       { key: "ichimoku",   label: "Ichimoku Cloud",          color: "#22d3ee", cat: "trend" },
-      { key: "fractal",    label: "Fractal",                 color: "#f5a623", cat: "trend" },
+      { key: "fractal",    label: "Fractal",                 color: "#ffffff", cat: "trend" },
       { key: "zigzag",     label: "Zig Zag",                 color: "#f59e0b", cat: "trend",      sub: `Dev ${indicators.zigzag.deviation}%` },
       { key: "rsi",        label: "RSI",                     color: "#f97316", cat: "oscillator", sub: `Período ${indicators.rsi.period}` },
       { key: "macd",       label: "MACD",                    color: "#0ecb81", cat: "oscillator", sub: `${indicators.macd.fast}/${indicators.macd.slow}/${indicators.macd.signal}` },
@@ -3104,7 +3104,7 @@ export default function TradePage() {
       { key: "willr",      label: "Williams %R",             color: "#818cf8", cat: "oscillator", sub: `Período ${indicators.willr.period}` },
       { key: "momentum",   label: "Momentum",                color: "#2dd4bf", cat: "oscillator", sub: `Período ${indicators.momentum.period}` },
       { key: "ao",         label: "Awesome Oscillator",      color: "#0ecb81", cat: "oscillator" },
-      { key: "adx",        label: "ADX",                     color: "#f5a623", cat: "oscillator", sub: `Período ${indicators.adx.period}` },
+      { key: "adx",        label: "ADX",                     color: "#ffffff", cat: "oscillator", sub: `Período ${indicators.adx.period}` },
       { key: "bearsbulls", label: "Bears/Bulls Power",       color: "#f6465d", cat: "oscillator", sub: `Período ${indicators.bearsbulls.period}` },
       { key: "aroon",      label: "Aroon",                   color: "#0ecb81", cat: "oscillator", sub: `Período ${indicators.aroon.period}` },
       { key: "roc",        label: "Rate of Change",          color: "#38bdf8", cat: "oscillator", sub: `Período ${indicators.roc.period}` },
@@ -3166,9 +3166,9 @@ export default function TradePage() {
           <div style={{ display: "flex", padding: "8px 18px", gap: 6, borderBottom: "1px solid #1a2540", flexShrink: 0 }}>
             {(["all", "trend", "oscillator"] as const).map(cat => (
               <button key={cat} onClick={() => setIndCategory(cat)} style={{
-                background: indCategory === cat ? "rgba(245,166,35,0.12)" : "transparent",
-                color: indCategory === cat ? "#f5a623" : "#64748b",
-                border: `1px solid ${indCategory === cat ? "rgba(245,166,35,0.35)" : "#262d40"}`,
+                background: indCategory === cat ? "rgba(255,255,255,0.12)" : "transparent",
+                color: indCategory === cat ? "#ffffff" : "#64748b",
+                border: `1px solid ${indCategory === cat ? "rgba(255,255,255,0.35)" : "#262d40"}`,
                 borderRadius: 7, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer",
               }}>{{ all: "Todos", trend: "Tendência", oscillator: "Osciladores" }[cat]}</button>
             ))}
@@ -3204,7 +3204,7 @@ export default function TradePage() {
                     {/* Toggle */}
                     <button onClick={() => toggle(ind.key)} style={{
                       width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer", position: "relative", flexShrink: 0,
-                      background: on ? "#f5a623" : "#262d40", transition: "background 0.2s",
+                      background: on ? "#ffffff" : "#262d40", transition: "background 0.2s",
                     }}>
                       <span style={{ position: "absolute", top: 3, left: on ? 21 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
                     </button>
@@ -3237,21 +3237,21 @@ export default function TradePage() {
                           <input type="number" min={2} max={200}
                             value={(indicators[ind.key] as any).period}
                             onChange={e => setIndicators(p => ({ ...p, [ind.key]: { ...(p[ind.key] as any), period: Math.max(2, parseInt(e.target.value)||14) } }))}
-                            style={{ width: 52, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 7px", outline: "none", textAlign: "center" }} />
+                            style={{ width: 52, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#ffffff", fontSize: 11, padding: "3px 7px", outline: "none", textAlign: "center" }} />
                         </label>
                       )}
                       {ind.key === "stoch" && (<>
-                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>K <input type="number" min={2} max={50} value={indicators.stoch.kPeriod} onChange={e => setIndicators(p => ({ ...p, stoch: { ...p.stoch, kPeriod: Math.max(2, parseInt(e.target.value)||14) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
-                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>D <input type="number" min={2} max={20} value={indicators.stoch.dPeriod} onChange={e => setIndicators(p => ({ ...p, stoch: { ...p.stoch, dPeriod: Math.max(2, parseInt(e.target.value)||3) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>K <input type="number" min={2} max={50} value={indicators.stoch.kPeriod} onChange={e => setIndicators(p => ({ ...p, stoch: { ...p.stoch, kPeriod: Math.max(2, parseInt(e.target.value)||14) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#ffffff", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>D <input type="number" min={2} max={20} value={indicators.stoch.dPeriod} onChange={e => setIndicators(p => ({ ...p, stoch: { ...p.stoch, dPeriod: Math.max(2, parseInt(e.target.value)||3) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#ffffff", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
                       </>)}
                       {ind.key === "macd" && (<>
-                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>Fast <input type="number" min={2} value={indicators.macd.fast} onChange={e => setIndicators(p => ({ ...p, macd: { ...p.macd, fast: Math.max(2, parseInt(e.target.value)||12) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
-                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>Slow <input type="number" min={2} value={indicators.macd.slow} onChange={e => setIndicators(p => ({ ...p, macd: { ...p.macd, slow: Math.max(2, parseInt(e.target.value)||26) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>Fast <input type="number" min={2} value={indicators.macd.fast} onChange={e => setIndicators(p => ({ ...p, macd: { ...p.macd, fast: Math.max(2, parseInt(e.target.value)||12) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#ffffff", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 }}>Slow <input type="number" min={2} value={indicators.macd.slow} onChange={e => setIndicators(p => ({ ...p, macd: { ...p.macd, slow: Math.max(2, parseInt(e.target.value)||26) } }))} style={{ width: 44, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#ffffff", fontSize: 11, padding: "3px 6px", outline: "none", textAlign: "center" }} /></label>
                       </>)}
                       {ind.key === "rsi" && (
                         <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#64748b", fontSize: 11 }}>
                           Período
-                          <input type="number" min={2} max={100} value={indicators.rsi.period} onChange={e => setIndicators(p => ({ ...p, rsi: { ...p.rsi, period: Math.max(2, parseInt(e.target.value)||14) } }))} style={{ width: 52, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#f5a623", fontSize: 11, padding: "3px 7px", outline: "none", textAlign: "center" }} />
+                          <input type="number" min={2} max={100} value={indicators.rsi.period} onChange={e => setIndicators(p => ({ ...p, rsi: { ...p.rsi, period: Math.max(2, parseInt(e.target.value)||14) } }))} style={{ width: 52, background: "#141824", border: "1px solid #262d40", borderRadius: 5, color: "#ffffff", fontSize: 11, padding: "3px 7px", outline: "none", textAlign: "center" }} />
                         </label>
                       )}
                     </div>
@@ -3277,14 +3277,14 @@ export default function TradePage() {
     const sBtn = (active: boolean, onClick: () => void, icon: React.ReactNode, label: string, badge?: number) => (
       <button title={label} onClick={onClick} style={{
         position: "relative", width: 36, height: 36,
-        background: active ? "rgba(245,166,35,0.15)" : "transparent",
-        border: active ? "1px solid rgba(245,166,35,0.4)" : "1px solid transparent",
-        borderRadius: 8, color: active ? "#f5a623" : "#64748b", cursor: "pointer",
+        background: active ? "rgba(255,255,255,0.15)" : "transparent",
+        border: active ? "1px solid rgba(255,255,255,0.4)" : "1px solid transparent",
+        borderRadius: 8, color: active ? "#ffffff" : "#64748b", cursor: "pointer",
         display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s",
       }}>
         {icon}
         {badge != null && badge > 0 && (
-          <span style={{ position: "absolute", top: 2, right: 2, background: "#f5a623", color: "#11141d", borderRadius: "50%", width: 13, height: 13, fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>{badge}</span>
+          <span style={{ position: "absolute", top: 2, right: 2, background: "#ffffff", color: "#11141d", borderRadius: "50%", width: 13, height: 13, fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>{badge}</span>
         )}
       </button>
     );
@@ -3308,15 +3308,15 @@ export default function TradePage() {
             <div style={{ position: "absolute", left: 42, top: 0, background: "#141824", border: "1px solid #262d40", borderRadius: 10, padding: 5, display: "flex", flexDirection: "column", gap: 2, zIndex: 200, minWidth: 148, boxShadow: "4px 4px 24px rgba(0,0,0,0.6)" }}>
               {CHART_TYPES.map(ct => (
                 <button key={ct.id} onClick={() => { setChartType(ct.id); setExpandedItem(null); }} style={{
-                  background: chartType === ct.id ? "rgba(245,166,35,0.12)" : "transparent",
-                  color: chartType === ct.id ? "#f5a623" : "#94a3b8",
+                  background: chartType === ct.id ? "rgba(255,255,255,0.12)" : "transparent",
+                  color: chartType === ct.id ? "#ffffff" : "#94a3b8",
                   border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer",
                   fontSize: 12, fontWeight: chartType === ct.id ? 700 : 400,
                   display: "flex", alignItems: "center", gap: 8,
                 }}>
-                  <span style={{ color: chartType === ct.id ? "#f5a623" : "#64748b" }}>{ct.icon}</span>
+                  <span style={{ color: chartType === ct.id ? "#ffffff" : "#64748b" }}>{ct.icon}</span>
                   {ct.label}
-                  {chartType === ct.id && <Check size={13} color="#f5a623" style={{ marginLeft: "auto" }} />}
+                  {chartType === ct.id && <Check size={13} color="#ffffff" style={{ marginLeft: "auto" }} />}
                 </button>
               ))}
             </div>
@@ -3345,7 +3345,7 @@ export default function TradePage() {
     const OSC_ICON = (color: string) => <BarChart2 size={13} style={{ color }} />;
     const INDICATOR_LIST = [
       { section: "TENDÊNCIA", items: [
-        { key: "ma",        label: "Média Móvel (MA/EMA/WMA)", icon: IND_ICON("#f5a623") },
+        { key: "ma",        label: "Média Móvel (MA/EMA/WMA)", icon: IND_ICON("#ffffff") },
         { key: "bb",        label: "Bollinger Bands",          icon: IND_ICON("#38bdf8") },
         { key: "alligator", label: "Alligator",                icon: IND_ICON("#0ecb81") },
         { key: "donchian",  label: "Donchian Channel",         icon: IND_ICON("#fbbf24") },
@@ -3353,7 +3353,7 @@ export default function TradePage() {
         { key: "sar",       label: "Parabolic SAR",            icon: IND_ICON("#f97316") },
         { key: "ichimoku",  label: "Ichimoku Cloud",  icon: IND_ICON("#22d3ee") },
         { key: "supertrend",label: "Supertrend",      icon: IND_ICON("#0ecb81") },
-        { key: "fractal",   label: "Fractal",         icon: IND_ICON("#f5a623") },
+        { key: "fractal",   label: "Fractal",         icon: IND_ICON("#ffffff") },
         { key: "zigzag",    label: "Zig Zag",         icon: IND_ICON("#f59e0b") },
       ]},
       { section: "OSCILADORES", items: [
@@ -3362,7 +3362,7 @@ export default function TradePage() {
         { key: "stoch",      label: "Stochastic",         icon: OSC_ICON("#fb923c") },
         { key: "atr",        label: "ATR",                icon: OSC_ICON("#fb923c") },
         { key: "cci",        label: "CCI",                icon: OSC_ICON("#f43f5e") },
-        { key: "adx",        label: "ADX",                icon: OSC_ICON("#f5a623") },
+        { key: "adx",        label: "ADX",                icon: OSC_ICON("#ffffff") },
         { key: "willr",      label: "Williams %R",        icon: OSC_ICON("#818cf8") },
         { key: "momentum",   label: "Momentum",           icon: OSC_ICON("#2dd4bf") },
         { key: "ao",         label: "Awesome Oscillator", icon: OSC_ICON("#0ecb81") },
@@ -3430,13 +3430,13 @@ export default function TradePage() {
       );
       const applyBtn = (onApply: () => void) => (
         <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-          <button onClick={onApply} style={{ flex: 1, background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 7, color: "#f5a623", fontSize: 11, fontWeight: 700, padding: "6px 0", cursor: "pointer" }}>Aplicar</button>
+          <button onClick={onApply} style={{ flex: 1, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 7, color: "#ffffff", fontSize: 11, fontWeight: 700, padding: "6px 0", cursor: "pointer" }}>Aplicar</button>
           <button onClick={() => setPendingCfg(p => ({ ...p, [key]: {} }))} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid #262d40", borderRadius: 7, color: "#64748b", fontSize: 11, padding: "6px 10px", cursor: "pointer" }}>Reset</button>
         </div>
       );
 
       const fields: Record<string, React.ReactElement[]> = {
-        ma: [field("Período", "period", "ex: 20"), field("Tipo", "type", "SMA/EMA/WMA", "text"), colorField("Cor", "color", "#f5a623")],
+        ma: [field("Período", "period", "ex: 20"), field("Tipo", "type", "SMA/EMA/WMA", "text"), colorField("Cor", "color", "#ffffff")],
         bb: [field("Período", "period", "ex: 20"), field("Desvio padrão", "mult", "ex: 2"), colorField("Cor superior", "colorUp", "#38bdf8"), colorField("Cor inferior", "colorDn", "#38bdf8")],
         alligator: [field("Período Jaw", "jaw", "ex: 13"), field("Período Teeth", "teeth", "ex: 8"), field("Período Lips", "lips", "ex: 5"), colorField("Cor Jaw", "colorJaw", "#3b82f6"), colorField("Cor Teeth", "colorTeeth", "#f6465d"), colorField("Cor Lips", "colorLips", "#0ecb81")],
         donchian: [field("Período", "period", "ex: 20"), colorField("Cor superior", "colorUp", "#fbbf24"), colorField("Cor inferior", "colorDn", "#fbbf24")],
@@ -3447,7 +3447,7 @@ export default function TradePage() {
         stoch: [field("Período K", "kp", "ex: 14"), field("Período D", "dp", "ex: 3"), field("Sobrecompra", "ob", "ex: 80"), field("Sobrevenda", "os", "ex: 20"), colorField("Cor K", "colorK", "#22d3ee"), colorField("Cor D", "colorD", "#f59e0b")],
         atr: [field("Período", "period", "ex: 14"), colorField("Cor", "color", "#fb923c")],
         cci: [field("Período", "period", "ex: 20"), field("Sobrecompra", "ob", "ex: 100"), field("Sobrevenda", "os", "ex: -100"), colorField("Cor", "color", "#f43f5e")],
-        adx: [field("Período", "period", "ex: 14"), field("Nível ref.", "level", "ex: 25"), colorField("Cor ADX", "colorAdx", "#f5a623"), colorField("Cor +DI", "colorPlus", "#0ecb81"), colorField("Cor -DI", "colorMinus", "#f6465d")],
+        adx: [field("Período", "period", "ex: 14"), field("Nível ref.", "level", "ex: 25"), colorField("Cor ADX", "colorAdx", "#ffffff"), colorField("Cor +DI", "colorPlus", "#0ecb81"), colorField("Cor -DI", "colorMinus", "#f6465d")],
         willr: [field("Período", "period", "ex: 14"), field("Sobrecompra", "ob", "ex: -20"), field("Sobrevenda", "os", "ex: -80"), colorField("Cor", "color", "#818cf8")],
         momentum: [field("Período", "period", "ex: 10"), colorField("Cor", "color", "#2dd4bf")],
         ao: [colorField("Cor positiva", "colorPos", "#0ecb81"), colorField("Cor negativa", "colorNeg", "#f6465d")],
@@ -3523,13 +3523,13 @@ export default function TradePage() {
             <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>Espessura</span>
               <div style={{ display: "flex", gap: 4 }}>
-                {[1,2,3].map(w => <button key={w} onClick={() => { setD("width", w); setToolLineWidth(w); }} style={{ flex: 1, background: toolLineWidth === w ? "rgba(245,166,35,0.15)" : "#141824", border: `1px solid ${toolLineWidth === w ? "#f5a623" : "#262d40"}`, borderRadius: 5, color: toolLineWidth === w ? "#f5a623" : "#64748b", fontSize: 11, padding: "4px 0", cursor: "pointer" }}>{w}px</button>)}
+                {[1,2,3].map(w => <button key={w} onClick={() => { setD("width", w); setToolLineWidth(w); }} style={{ flex: 1, background: toolLineWidth === w ? "rgba(255,255,255,0.15)" : "#141824", border: `1px solid ${toolLineWidth === w ? "#ffffff" : "#262d40"}`, borderRadius: 5, color: toolLineWidth === w ? "#ffffff" : "#64748b", fontSize: 11, padding: "4px 0", cursor: "pointer" }}>{w}px</button>)}
               </div>
             </label>
             <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <span style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>Estilo</span>
               <div style={{ display: "flex", gap: 4 }}>
-                {[["───",0],["---",1],["···",2]].map(([l,s]) => <button key={s} onClick={() => { setD("style", s); setToolLineStyle(s as number); }} style={{ flex: 1, background: toolLineStyle === s ? "rgba(245,166,35,0.15)" : "#141824", border: `1px solid ${toolLineStyle === s ? "#f5a623" : "#262d40"}`, borderRadius: 5, color: toolLineStyle === s ? "#f5a623" : "#64748b", fontSize: 9, padding: "4px 0", cursor: "pointer" }}>{l}</button>)}
+                {[["───",0],["---",1],["···",2]].map(([l,s]) => <button key={s} onClick={() => { setD("style", s); setToolLineStyle(s as number); }} style={{ flex: 1, background: toolLineStyle === s ? "rgba(255,255,255,0.15)" : "#141824", border: `1px solid ${toolLineStyle === s ? "#ffffff" : "#262d40"}`, borderRadius: 5, color: toolLineStyle === s ? "#ffffff" : "#64748b", fontSize: 9, padding: "4px 0", cursor: "pointer" }}>{l}</button>)}
               </div>
             </label>
           </div>
@@ -3549,7 +3549,7 @@ export default function TradePage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #262d40", flexShrink: 0, background: "#161a26" }}>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{title}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {activeCount > 0 && <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{activeCount}</span>}
+            {activeCount > 0 && <span style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{activeCount}</span>}
             <button onClick={() => setLeftPanel(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 6, width: 26, height: 26, color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
           </div>
         </div>
@@ -3570,7 +3570,7 @@ export default function TradePage() {
                     const prefix = d.id.replace(/_\d+$/, "").replace(/fib_(\d+)_\d+/, "fib_$1");
                     const siblings = drawings.filter(x => x.id.startsWith(`fib_${d.id.split("_")[1]}`));
                     siblings.forEach(s => used.add(s.id));
-                    groups.push({ ids: siblings.map(s => s.id), label: `Fibonacci (${siblings.length} níveis)`, color: (d as any).color ?? "#f5a623", icon: <GitFork size={11} /> });
+                    groups.push({ ids: siblings.map(s => s.id), label: `Fibonacci (${siblings.length} níveis)`, color: (d as any).color ?? "#ffffff", icon: <GitFork size={11} /> });
                   } else if (d.id.startsWith("rect_top_") || d.id.startsWith("rect_bot_")) {
                     const ts = d.id.replace("rect_top_","").replace("rect_bot_","");
                     const pair = drawings.filter(x => x.id === `rect_top_${ts}` || x.id === `rect_bot_${ts}`);
@@ -3625,9 +3625,9 @@ export default function TradePage() {
                       } else {
                         setExpandedItem(p => p === item.key ? null : item.key);
                       }
-                    }} style={{ width: "100%", display: "flex", alignItems: "center", padding: "11px 16px", background: isActive ? "rgba(245,166,35,0.04)" : "transparent", border: "none", cursor: item.soon ? "default" : "pointer", textAlign: "left", gap: 10 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: 6, background: isActive ? "rgba(245,166,35,0.15)" : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", color: isActive ? "#f5a623" : "#64748b", flexShrink: 0 }}>
-                        {(item as any).icon ?? <div style={{ width: 6, height: 6, borderRadius: "50%", background: isActive ? "#f5a623" : "#262d40" }} />}
+                    }} style={{ width: "100%", display: "flex", alignItems: "center", padding: "11px 16px", background: isActive ? "rgba(255,255,255,0.04)" : "transparent", border: "none", cursor: item.soon ? "default" : "pointer", textAlign: "left", gap: 10 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 6, background: isActive ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", color: isActive ? "#ffffff" : "#64748b", flexShrink: 0 }}>
+                        {(item as any).icon ?? <div style={{ width: 6, height: 6, borderRadius: "50%", background: isActive ? "#ffffff" : "#262d40" }} />}
                       </div>
                       <span style={{ flex: 1, color: isActive ? "#fff" : item.soon ? "#334155" : "#94a3b8", fontSize: 13, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
                       {item.soon && <span style={{ background: "rgba(100,116,139,0.1)", color: "#334155", borderRadius: 4, padding: "1px 6px", fontSize: 9, fontWeight: 600 }}>EM BREVE</span>}
@@ -3667,16 +3667,16 @@ export default function TradePage() {
       <div style={{ position: "absolute", top: 4, right: 4, zIndex: 10, display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
         {tournamentPositions.map((tp: any) => {
           const pos = tp.position;
-          const medalColor = pos === 1 ? "#f5c518" : pos === 2 ? "#94a3b8" : pos === 3 ? "#cd7f32" : "#f5a623";
+          const medalColor = pos === 1 ? "#f5c518" : pos === 2 ? "#94a3b8" : pos === 3 ? "#cd7f32" : "#ffffff";
           const profitColor = tp.profit >= 0 ? "#0ecb81" : "#f6465d";
           return (
-            <div key={tp.tournamentId} style={{ background: "rgba(10,15,30,0.82)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 7, padding: "4px 7px", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", gap: 5 }}>
+            <div key={tp.tournamentId} style={{ background: "rgba(10,15,30,0.82)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 7, padding: "4px 7px", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", gap: 5 }}>
               {pos <= 3
                 ? <Medal size={13} color={medalColor} />
-                : <span style={{ fontSize: 10, fontWeight: 900, color: "#f5a623" }}>{`#${pos}`}</span>
+                : <span style={{ fontSize: 10, fontWeight: 900, color: "#ffffff" }}>{`#${pos}`}</span>
               }
               <div>
-                <div style={{ color: "#f5a623", fontSize: 8, fontWeight: 700, letterSpacing: 0.3 }}>TORNEIO {tp.isDemo ? "DEMO" : "REAL"}</div>
+                <div style={{ color: "#ffffff", fontSize: 8, fontWeight: 700, letterSpacing: 0.3 }}>TORNEIO {tp.isDemo ? "DEMO" : "REAL"}</div>
                 <div style={{ color: profitColor, fontWeight: 800, fontSize: 10, fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>
                   {tp.profit >= 0 ? "+" : ""}{Math.floor(tp.profit).toLocaleString("pt-PT")} Kz
                 </div>
@@ -3713,12 +3713,12 @@ export default function TradePage() {
           else { setActiveTool(id); setPendingPoint(null); pendingPointRef.current = null; }
         }} title={label} style={{
           display: "flex", alignItems: "center", gap: 4,
-          background: active ? "rgba(245,166,35,0.15)" : "transparent",
-          color: active ? "#f5a623" : "#64748b",
-          border: `1px solid ${active ? "rgba(245,166,35,0.5)" : "#262d40"}`,
+          background: active ? "rgba(255,255,255,0.15)" : "transparent",
+          color: active ? "#ffffff" : "#64748b",
+          border: `1px solid ${active ? "rgba(255,255,255,0.5)" : "#262d40"}`,
           borderRadius: 7, padding: compact ? "3px 8px" : "4px 10px",
           fontSize: compact ? 10 : 11, fontWeight: 700, cursor: "pointer",
-          boxShadow: active ? "0 0 8px rgba(245,166,35,0.3)" : "none",
+          boxShadow: active ? "0 0 8px rgba(255,255,255,0.3)" : "none",
           transition: "all 0.13s", whiteSpace: "nowrap", flexShrink: 0,
         }}>
           <span style={{ fontSize: compact ? 11 : 13 }}>{icon}</span>
@@ -3743,7 +3743,7 @@ export default function TradePage() {
 
           {/* Pending point indicator */}
           {pendingPoint && (
-            <span style={{ fontSize: 10, color: "#f5a623", background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 6, padding: "2px 7px", flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: "#ffffff", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, padding: "2px 7px", flexShrink: 0 }}>
               1º ponto: {pendingPoint.price.toFixed(dec)} — clique no 2º ponto (Esc cancela)
             </span>
           )}
@@ -3802,7 +3802,7 @@ export default function TradePage() {
         <div style={{ display: "flex", gap: compact ? 4 : 5, alignItems: "center", flexWrap: "nowrap", overflowX: "auto" }}>
           <span style={{ color: "#475569", fontSize: 9, fontWeight: 700, flexShrink: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>Indicadores:</span>
           {([
-            { key: "ma",   label: "MA",    color: "#f5a623", toggle: () => setIndicators(p => ({ ...p, ma:   { ...p.ma,   enabled: !p.ma.enabled   } })) },
+            { key: "ma",   label: "MA",    color: "#ffffff", toggle: () => setIndicators(p => ({ ...p, ma:   { ...p.ma,   enabled: !p.ma.enabled   } })) },
             { key: "ema",  label: "EMA",   color: "#a78bfa", toggle: () => setIndicators(p => ({ ...p, ema:  { ...p.ema,  enabled: !p.ema.enabled  } })) },
             { key: "bb",   label: "BB",    color: "#38bdf8", toggle: () => setIndicators(p => ({ ...p, bb:   { ...p.bb,   enabled: !p.bb.enabled   } })) },
             { key: "rsi",  label: "RSI",   color: "#f97316", toggle: () => setIndicators(p => ({ ...p, rsi:  { ...p.rsi,  enabled: !p.rsi.enabled  } })) },
@@ -3832,9 +3832,9 @@ export default function TradePage() {
               const periods = has ? prev.ma.periods.filter(x => x !== p) : [...prev.ma.periods, p];
               return { ...prev, ma: { ...prev.ma, periods: periods.length ? periods : [p] } };
             })} style={{
-              background: indicators.ma.periods.includes(p) ? "#f5a62333" : "transparent",
-              color: indicators.ma.periods.includes(p) ? "#f5a623" : "#4b5563",
-              border: `1px solid ${indicators.ma.periods.includes(p) ? "#f5a623" : "#262d40"}`,
+              background: indicators.ma.periods.includes(p) ? "#ffffff33" : "transparent",
+              color: indicators.ma.periods.includes(p) ? "#ffffff" : "#4b5563",
+              border: `1px solid ${indicators.ma.periods.includes(p) ? "#ffffff" : "#262d40"}`,
               borderRadius: 10, padding: "2px 6px", fontSize: 9, fontWeight: 800, cursor: "pointer", flexShrink: 0,
             }}>{p}</button>
           ))}
@@ -3876,7 +3876,7 @@ export default function TradePage() {
   if (status === "loading" || !selectedPair) {
     return (
       <div style={{ minHeight: "100vh", background: "#11141d", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "#f5a623", fontSize: 18, fontFamily: "system-ui, sans-serif" }}>A carregar...</div>
+        <div style={{ color: "#ffffff", fontSize: 18, fontFamily: "system-ui, sans-serif" }}>A carregar...</div>
       </div>
     );
   }
@@ -3892,14 +3892,14 @@ export default function TradePage() {
         style={{ background: "#0d1526", border: "1px solid #1e3a5f", borderRadius: 18, padding: 24, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(0,0,0,0.8)" }}
       >
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <RefreshCw size={24} color="#f5a623" style={{ animation: demoReloading ? "spin 1s linear infinite" : "none" }} />
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <RefreshCw size={24} color="#ffffff" style={{ animation: demoReloading ? "spin 1s linear infinite" : "none" }} />
           </div>
         </div>
 
         <h3 style={{ color: "#fff", fontWeight: 800, fontSize: 17, margin: "0 0 8px", textAlign: "center" }}>Repor saldo Demo?</h3>
         <p style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.65, margin: "0 0 16px", textAlign: "center" }}>
-          O teu saldo demo será reposto para <strong style={{ color: "#f5a623" }}>10.000 Kz</strong>.
+          O teu saldo demo será reposto para <strong style={{ color: "#ffffff" }}>10.000 Kz</strong>.
         </p>
 
         {demoResetError && (
@@ -3928,7 +3928,7 @@ export default function TradePage() {
                 setDemoResetError("Não foi possível repor o saldo. Tenta novamente.");
               }
             }}
-            style={{ flex: 1, height: 44, background: demoReloading ? "#7a5118" : "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 10, color: "#0a0f1e", fontSize: 14, fontWeight: 800, cursor: demoReloading ? "not-allowed" : "pointer" }}
+            style={{ flex: 1, height: 44, background: demoReloading ? "#7a5118" : "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 10, color: "#0a0f1e", fontSize: 14, fontWeight: 800, cursor: demoReloading ? "not-allowed" : "pointer" }}
           >
             {demoReloading ? "A repor..." : "Repor saldo"}
           </button>
@@ -4018,7 +4018,7 @@ export default function TradePage() {
           {botEnabled && (
             <div style={{ background: "#1c2130", borderRadius: 12, padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <Trophy size={14} color="#f5a623" />
+                <Trophy size={14} color="#ffffff" />
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Meta de vitórias</span>
                 <span style={{ background: "rgba(246,70,93,0.15)", color: "#f6465d", fontSize: 9, fontWeight: 800, borderRadius: 4, padding: "1px 5px" }}>OBRIGATÓRIO</span>
               </div>
@@ -4028,7 +4028,7 @@ export default function TradePage() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {[1,2,3,5,10].map(n => (
                   <button key={n} onClick={() => setBotWinTarget(n)}
-                    style={{ flex: 1, height: 34, background: botWinTarget === n ? "linear-gradient(135deg,#f5a623,#e8940f)" : "#111827", border: `1px solid ${botWinTarget === n ? "#f5a623" : "#262d40"}`, borderRadius: 8, color: botWinTarget === n ? "#0a0f1e" : "#64748b", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                    style={{ flex: 1, height: 34, background: botWinTarget === n ? "linear-gradient(135deg,#ffffff,#cbd5e1)" : "#111827", border: `1px solid ${botWinTarget === n ? "#ffffff" : "#262d40"}`, borderRadius: 8, color: botWinTarget === n ? "#0a0f1e" : "#64748b", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
                     {n}
                   </button>
                 ))}
@@ -4120,9 +4120,9 @@ export default function TradePage() {
 
           {(() => {
             const narrow    = typeof window !== "undefined" && window.innerWidth < 380;
-            const acctColor = activeAccount === "tournament" ? "#a5b4fc" : activeAccount === "demo" ? "#f5a623" : "#0ecb81";
+            const acctColor = activeAccount === "tournament" ? "#a5b4fc" : activeAccount === "demo" ? "#ffffff" : "#0ecb81";
             return (
-              <button data-tour="dw-account" onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "4px 7px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0 }}>
+              <button data-tour="dw-account" onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(255,255,255,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(255,255,255,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "4px 7px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", flexShrink: 0 }}>
                 {activeAccount === "tournament" ? <Trophy size={10} color="#a5b4fc" style={{ flexShrink: 0 }} /> : <Wallet size={10} color={acctColor} style={{ flexShrink: 0 }} />}
                 <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
                   <span key={balanceHidden ? "h" : Math.floor(displayBalance)} className="dw-value-pop" style={{ color: acctColor, fontWeight: 800, fontSize: narrow ? 10 : 11 }}>{balanceHidden ? "••••••" : formatKz(Math.floor(displayBalance))}</span>
@@ -4137,7 +4137,7 @@ export default function TradePage() {
         {/* ── Timeframe strip ── */}
         {mobileTab === "chart" && <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#161a26", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
           {["1m", "5m", "15m", "1h", "1D"].map(tf => (
-            <button key={tf} className="dw-chip" onClick={() => setTimeframe(tf)} style={{ height: 24, padding: "0 9px", background: timeframe === tf ? "#f5a623" : "transparent", color: timeframe === tf ? "#11141d" : "#64748b", border: `1px solid ${timeframe === tf ? "#f5a623" : "#262d40"}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+            <button key={tf} className="dw-chip" onClick={() => setTimeframe(tf)} style={{ height: 24, padding: "0 9px", background: timeframe === tf ? "#ffffff" : "transparent", color: timeframe === tf ? "#11141d" : "#64748b", border: `1px solid ${timeframe === tf ? "#ffffff" : "#262d40"}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {tf}
             </button>
           ))}
@@ -4145,7 +4145,7 @@ export default function TradePage() {
             {candleTimer && <span style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", fontVariantNumeric: "tabular-nums" }}>{candleTimer}</span>}
 
 
-            <button onClick={() => setLeftPanel(p => p === "indicators" ? null : "indicators")} style={{ height: 24, padding: "0 8px", background: leftPanel === "indicators" ? "rgba(245,166,35,0.12)" : "transparent", color: leftPanel === "indicators" ? "#f5a623" : "#4b5563", border: `1px solid ${leftPanel === "indicators" ? "rgba(245,166,35,0.4)" : "#262d40"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            <button onClick={() => setLeftPanel(p => p === "indicators" ? null : "indicators")} style={{ height: 24, padding: "0 8px", background: leftPanel === "indicators" ? "rgba(255,255,255,0.12)" : "transparent", color: leftPanel === "indicators" ? "#ffffff" : "#4b5563", border: `1px solid ${leftPanel === "indicators" ? "rgba(255,255,255,0.4)" : "#262d40"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
               <Activity size={11} /> IND
             </button>
             <button onClick={() => { setLeftPanel(p => p === "drawings" ? null : "drawings"); if (leftPanel === "drawings") { setActiveTool(null); setPendingPoint(null); } }} style={{ height: 24, padding: "0 8px", background: leftPanel === "drawings" ? "rgba(14,203,129,0.1)" : "transparent", color: leftPanel === "drawings" ? "#0ecb81" : "#4b5563", border: `1px solid ${leftPanel === "drawings" ? "rgba(14,203,129,0.4)" : "#262d40"}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
@@ -4223,7 +4223,7 @@ export default function TradePage() {
             <div style={{ display: "flex", borderBottom: "1px solid #262d40", flexShrink: 0 }}>
               {(["open", "history"] as const).map(tab => (
                 <button key={tab} onClick={() => { setTradeHistoryTab(tab); if (tab === "history") fetchTradeHistory(); }}
-                  style={{ flex: 1, padding: "9px 0", background: "none", border: "none", borderBottom: `2px solid ${tradeHistoryTab === tab ? "#f5a623" : "transparent"}`, color: tradeHistoryTab === tab ? "#f5a623" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  style={{ flex: 1, padding: "9px 0", background: "none", border: "none", borderBottom: `2px solid ${tradeHistoryTab === tab ? "#ffffff" : "transparent"}`, color: tradeHistoryTab === tab ? "#ffffff" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   {tab === "open" ? `Em aberto (${activeTrades.length})` : "Histórico"}
                 </button>
               ))}
@@ -4237,7 +4237,7 @@ export default function TradePage() {
               const all = isDemo ? traderStats.allTime.demo : traderStats.allTime.real;
               if (s.total === 0 && all.total === 0) return null;
               const wr = all.total > 0 ? Math.round((all.wins / all.total) * 100) : 0;
-              const wrColor = wr >= 60 ? "#0ecb81" : wr >= 45 ? "#f5a623" : "#f6465d";
+              const wrColor = wr >= 60 ? "#0ecb81" : wr >= 45 ? "#ffffff" : "#f6465d";
               return (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid #262d40", flexShrink: 0 }}>
                   {[
@@ -4353,7 +4353,7 @@ export default function TradePage() {
                       <div style={{ width: 6, height: 6, borderRadius: "50%", background: isWinning ? "#0ecb81" : "#f6465d", flexShrink: 0 }} />
                       <span style={{ color: "#fff", fontWeight: 700, fontSize: 11 }}>{t.asset}</span>
                       <span style={{ color: t.direction === "call" ? "#0ecb81" : "#f6465d", fontSize: 10, fontWeight: 800 }}>{t.direction === "call" ? "▲" : "▼"}</span>
-                      <span style={{ color: urgent ? "#f6465d" : "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 32, textAlign: "right" }}>{mm}:{ss}</span>
+                      <span style={{ color: urgent ? "#f6465d" : "#ffffff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 32, textAlign: "right" }}>{mm}:{ss}</span>
                     </button>
                   );
                 })}
@@ -4384,7 +4384,7 @@ export default function TradePage() {
                       {comutacaoActive ? "⇄ VELA" : timerDisplay}
                     </div>
                   </div>
-                  <div style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#f5a623" : "#1a2540"}`, borderRadius: 9, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ flex: 2, background: "#0b1220", border: `1px solid ${amountEditing ? "#ffffff" : "#1a2540"}`, borderRadius: 9, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ flex: 1, minWidth: 0 }} onClick={() => { if (!amountEditing) { setAmountEditing(true); setAmountInput(String(amount)); } }}>
                       <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Investimento</div>
                       {amountEditing ? (
@@ -4393,7 +4393,7 @@ export default function TradePage() {
                             onChange={e => setAmountInput(e.target.value)}
                             onKeyDown={e => { if (e.key === "Enter") { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); } if (e.key === "Escape") setAmountEditing(false); }}
                             onBlur={() => { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); }}
-                            style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f5a623", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }} />
+                            style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#ffffff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }} />
                           <span style={{ color: "#4b5563", fontSize: 9, flexShrink: 0 }}>Kz</span>
                         </div>
                       ) : (
@@ -4414,9 +4414,9 @@ export default function TradePage() {
                   {QUICK_AMOUNTS.map(q => (
                     <button key={q} onClick={() => setAmount(q)} style={{
                       flex: 1, height: 24,
-                      background: amount === q ? "#f5a623" : "transparent",
+                      background: amount === q ? "#ffffff" : "transparent",
                       color:      amount === q ? "#11141d" : "#4b5563",
-                      border:     `1px solid ${amount === q ? "#f5a623" : "#1a2540"}`,
+                      border:     `1px solid ${amount === q ? "#ffffff" : "#1a2540"}`,
                       borderRadius: 6, fontSize: 10, fontWeight: 800, cursor: "pointer",
                       transition: "all 0.12s",
                     }}>{q >= 1000 ? `${q / 1000}k` : q}</button>
@@ -4429,7 +4429,7 @@ export default function TradePage() {
                 <div className="dw-pills-in" style={{ display: "flex", gap: 5, padding: "4px 12px", flexShrink: 0 }}>
                   <div style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center" }}>
                     <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Retorno</span>
-                    <span key={selectedPair?.symbol ?? "p"} className="dw-value-pop" style={{ color: "#f5a623", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{Math.round(currentPayout * 100)}%</span>
+                    <span key={selectedPair?.symbol ?? "p"} className="dw-value-pop" style={{ color: "#ffffff", fontWeight: 900, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{Math.round(currentPayout * 100)}%</span>
                   </div>
                   <div onClick={() => setPanelCollapsed(false)} style={{ flex: 1, background: "#0b1220", border: "1px solid #1a2540", borderRadius: 8, padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
                     <span style={{ color: "#475569", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo</span>
@@ -4450,7 +4450,7 @@ export default function TradePage() {
                     <div style={{ color: "#94a3b8", fontSize: 9 }}>Recarrega por {formatKz(tournamentRecharge)} para continuar</div>
                   </div>
                   <button onClick={rechargeTournament} disabled={tournamentRecharging}
-                    style={{ background: "linear-gradient(135deg,#f5a623,#e8940f)", border: "none", borderRadius: 7, padding: "6px 12px", color: "#0a0f1e", fontWeight: 900, fontSize: 11, cursor: tournamentRecharging ? "not-allowed" : "pointer", flexShrink: 0 }}>
+                    style={{ background: "linear-gradient(135deg,#ffffff,#cbd5e1)", border: "none", borderRadius: 7, padding: "6px 12px", color: "#0a0f1e", fontWeight: 900, fontSize: 11, cursor: tournamentRecharging ? "not-allowed" : "pointer", flexShrink: 0 }}>
                     {tournamentRecharging ? "..." : `Recarregar`}
                   </button>
                 </div>
@@ -4551,7 +4551,7 @@ export default function TradePage() {
                       const active = !comutacaoActive && expiry.secs === opt.secs;
                       return (
                         <button key={opt.secs} onClick={() => { setExpiry(opt); setComutacaoActive(false); setExpirySheetOpen(false); }}
-                          style={{ padding: "14px 0", background: active ? "#f5a623" : "#1c2130", color: active ? "#11141d" : "#94a3b8", border: `1px solid ${active ? "#f5a623" : "#262d40"}`, borderRadius: 12, fontSize: 15, fontWeight: 800, cursor: "pointer", transition: "all 0.12s" }}>
+                          style={{ padding: "14px 0", background: active ? "#ffffff" : "#1c2130", color: active ? "#11141d" : "#94a3b8", border: `1px solid ${active ? "#ffffff" : "#262d40"}`, borderRadius: 12, fontSize: 15, fontWeight: 800, cursor: "pointer", transition: "all 0.12s" }}>
                           {opt.label}
                         </button>
                       );
@@ -4573,7 +4573,7 @@ export default function TradePage() {
                       style={{ flex: 1, background: "#11141d", border: "1px solid #262d40", borderRadius: 8, padding: "8px 10px", color: "#fff", fontSize: 15, fontWeight: 700, outline: "none", textAlign: "center", width: 0 }} />
                     <span style={{ color: "#64748b", fontSize: 13 }}>min</span>
                     <button onClick={() => { const m = Math.max(1, Math.min(60, parseInt(sheetManualMins) || 1)); setExpiry({ label: `${m} min`, secs: m * 60 }); setComutacaoActive(false); setExpirySheetOpen(false); }}
-                      style={{ background: "#f5a623", color: "#11141d", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      style={{ background: "#ffffff", color: "#11141d", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                       OK
                     </button>
                   </div>
@@ -4597,7 +4597,7 @@ export default function TradePage() {
                 const groups: Record<string, DerivPair[]> = {};
                 pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
                 const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
-                const catColors: Record<string, string> = { Forex: "#f5a623", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
+                const catColors: Record<string, string> = { Forex: "#ffffff", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
                 return catOrder.filter(cat => groups[cat]).map(cat => (
                   <div key={cat}>
                     <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>
@@ -4612,14 +4612,14 @@ export default function TradePage() {
                       const payout  = Math.round((payoutMap[p.label] ?? 0.74) * 100);
                       return (
                         <button key={p.symbol} onClick={() => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
-                          style={{ width: "100%", background: isActive ? "rgba(245,166,35,0.07)" : "transparent", border: "none", borderBottom: "1px solid #141824", padding: "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                          style={{ width: "100%", background: isActive ? "rgba(255,255,255,0.07)" : "transparent", border: "none", borderBottom: "1px solid #141824", padding: "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            {isActive && <div style={{ width: 3, height: 28, background: "#f5a623", borderRadius: 2, position: "absolute", left: 0 }} />}
+                            {isActive && <div style={{ width: 3, height: 28, background: "#ffffff", borderRadius: 2, position: "absolute", left: 0 }} />}
                             <div style={{ textAlign: "left" }}>
-                              <div style={{ color: isActive ? "#f5a623" : "#fff", fontWeight: 700, fontSize: 14 }}>{p.label}</div>
+                              <div style={{ color: isActive ? "#ffffff" : "#fff", fontWeight: 700, fontSize: 14 }}>{p.label}</div>
                               <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                                 <span style={{ color: "#334155", fontSize: 11 }}>{p.category}</span>
-                                <span key={payout} className="dw-value-pop" style={{ color: "#f5a623", fontSize: 9, fontWeight: 800, background: "rgba(245,166,35,0.12)", borderRadius: 5, padding: "1px 5px" }}>
+                                <span key={payout} className="dw-value-pop" style={{ color: "#ffffff", fontSize: 9, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
                                   {payout}%
                                 </span>
                               </div>
@@ -4656,7 +4656,7 @@ export default function TradePage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                   <span style={{ color: "#fff", fontWeight: 900, fontSize: 17, letterSpacing: 0.2 }}>Posições</span>
                   {openCount > 0 && (
-                    <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontWeight: 800, fontSize: 11, borderRadius: 20, padding: "2px 10px", border: "1px solid rgba(245,166,35,0.3)" }}>
+                    <span style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", fontWeight: 800, fontSize: 11, borderRadius: 20, padding: "2px 10px", border: "1px solid rgba(255,255,255,0.3)" }}>
                       {openCount} em aberto
                     </span>
                   )}
@@ -4665,7 +4665,7 @@ export default function TradePage() {
                 <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #1a2540" }}>
                   {(["open", "history"] as const).map(tab => (
                     <button key={tab} onClick={() => { setTradeHistoryTab(tab); if (tab === "history") fetchTradeHistory(); }}
-                      style={{ flex: 1, padding: "8px 0", background: "none", border: "none", borderBottom: `2px solid ${tradeHistoryTab === tab ? "#f5a623" : "transparent"}`, color: tradeHistoryTab === tab ? "#f5a623" : "#4b5563", fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.2s" }}>
+                      style={{ flex: 1, padding: "8px 0", background: "none", border: "none", borderBottom: `2px solid ${tradeHistoryTab === tab ? "#ffffff" : "transparent"}`, color: tradeHistoryTab === tab ? "#ffffff" : "#4b5563", fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.2s" }}>
                       {tab === "open" ? `Em aberto${openCount > 0 ? ` (${openCount})` : ""}` : "Histórico"}
                     </button>
                   ))}
@@ -4684,7 +4684,7 @@ export default function TradePage() {
                       </div>
                       <span style={{ color: "#4b5563", fontSize: 14, fontWeight: 600 }}>Nenhuma operação em aberto</span>
                       <button onClick={() => setMobileTab("chart")}
-                        style={{ marginTop: 4, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 10, padding: "9px 22px", color: "#f5a623", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                        style={{ marginTop: 4, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, padding: "9px 22px", color: "#ffffff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                         Ir para o gráfico
                       </button>
                     </div>
@@ -4719,7 +4719,7 @@ export default function TradePage() {
                             </div>
                             {/* Countdown */}
                             <div style={{ textAlign: "right" }}>
-                              <div style={{ color: remSec <= 10 ? "#f6465d" : "#f5a623", fontWeight: 900, fontSize: 22, fontVariantNumeric: "tabular-nums", letterSpacing: 1, lineHeight: 1 }}>{mm}:{ss}</div>
+                              <div style={{ color: remSec <= 10 ? "#f6465d" : "#ffffff", fontWeight: 900, fontSize: 22, fontVariantNumeric: "tabular-nums", letterSpacing: 1, lineHeight: 1 }}>{mm}:{ss}</div>
                               <div style={{ color: "#334155", fontSize: 9, marginTop: 2 }}>restante</div>
                             </div>
                           </div>
@@ -4737,7 +4737,7 @@ export default function TradePage() {
                             </div>
                             <div style={{ textAlign: "right" }}>
                               <div style={{ color: "#4b5563", fontSize: 10, marginBottom: 1 }}>Payout</div>
-                              <div style={{ color: "#f5a623", fontWeight: 700, fontSize: 13 }}>{Math.round(t.payout * 100)}%</div>
+                              <div style={{ color: "#ffffff", fontWeight: 700, fontSize: 13 }}>{Math.round(t.payout * 100)}%</div>
                             </div>
                           </div>
                         </div>
@@ -4803,12 +4803,12 @@ export default function TradePage() {
           <div className="dw-pills-in" style={{ position: "fixed", top: OVERLAY_TOP, left: 0, right: 0, bottom: BOTTOMNAV_H, zIndex: 115, background: "#161a26", display: "flex", flexDirection: "column", overflowY: "auto" }}>
             <div style={{ padding: "14px 14px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Carteira</span>
-              <button onClick={() => setWalletData(null)} style={{ background: "none", border: "none", color: "#f5a623", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px" }}>↺ Actualizar</button>
+              <button onClick={() => setWalletData(null)} style={{ background: "none", border: "none", color: "#ffffff", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px" }}>↺ Actualizar</button>
             </div>
 
             {walletLoading ? (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#f5a623", fontSize: 13 }}>A carregar...</span>
+                <span style={{ color: "#ffffff", fontSize: 13 }}>A carregar...</span>
               </div>
             ) : walletData ? (
               <div style={{ padding: "12px 14px", flex: 1 }}>
@@ -4818,9 +4818,9 @@ export default function TradePage() {
                     <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, marginBottom: 4 }}>SALDO REAL</div>
                     <div key={Math.floor(walletData.balance)} className="dw-value-pop" style={{ color: "#0ecb81", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.balance))}</div>
                   </div>
-                  <div style={{ background: "linear-gradient(135deg,#1a1206,#261b08)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 12, padding: "12px 14px" }}>
+                  <div style={{ background: "linear-gradient(135deg,#1a1206,#261b08)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 12, padding: "12px 14px" }}>
                     <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: 0.8, marginBottom: 4 }}>SALDO DEMO</div>
-                    <div key={Math.floor(walletData.demoBalance)} className="dw-value-pop" style={{ color: "#f5a623", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.demoBalance))}</div>
+                    <div key={Math.floor(walletData.demoBalance)} className="dw-value-pop" style={{ color: "#ffffff", fontWeight: 900, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{formatKz(Math.floor(walletData.demoBalance))}</div>
                   </div>
                 </div>
 
@@ -4843,7 +4843,7 @@ export default function TradePage() {
                   <div style={{ color: "#334155", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Sem movimentos ainda</div>
                 ) : walletData.transactions.map((tx: any) => {
                   const isDeposit = tx.type === "deposit";
-                  const statusColor = tx.status === "completed" ? "#0ecb81" : tx.status === "rejected" ? "#f6465d" : "#f5a623";
+                  const statusColor = tx.status === "completed" ? "#0ecb81" : tx.status === "rejected" ? "#f6465d" : "#ffffff";
                   return (
                     <div key={tx.id} style={{ background: "#141824", borderRadius: 10, padding: "10px 12px", marginBottom: 7, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -4881,7 +4881,7 @@ export default function TradePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{session?.user?.name}</span>
                     {tournamentWins >= 1 && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#f5a623" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#ffffff" }}>
                         <Trophy size={10} /> {tournamentWins === 1 ? "Campeão" : `${tournamentWins}× Campeão`}
                       </span>
                     )}
@@ -4896,25 +4896,25 @@ export default function TradePage() {
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>Modo de conta</div>
                   <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{activeAccount === "tournament" ? "A negociar no torneio" : activeAccount === "demo" ? "A negociar com saldo demo" : "A negociar com saldo real"}</div>
                 </div>
-                <button onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.15)" : activeAccount === "demo" ? "rgba(245,166,35,0.15)" : "rgba(14,203,129,0.15)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.4)" : activeAccount === "demo" ? "rgba(245,166,35,0.4)" : "rgba(14,203,129,0.4)"}`, borderRadius: 8, padding: "6px 14px", color: activeAccount === "tournament" ? "#6366f1" : activeAccount === "demo" ? "#f5a623" : "#0ecb81", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                <button onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.15)" : activeAccount === "demo" ? "rgba(255,255,255,0.15)" : "rgba(14,203,129,0.15)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.4)" : activeAccount === "demo" ? "rgba(255,255,255,0.4)" : "rgba(14,203,129,0.4)"}`, borderRadius: 8, padding: "6px 14px", color: activeAccount === "tournament" ? "#6366f1" : activeAccount === "demo" ? "#ffffff" : "#0ecb81", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
                   {activeAccount === "tournament" ? "TORNEIO" : activeAccount === "demo" ? "DEMO" : "REAL"}
                 </button>
               </div>
 
               {/* Nav links */}
               {[
-                { href: "/profile",   icon: <User size={16} color="#f5a623" />,       label: "Perfil",             desc: "Editar dados pessoais" },
+                { href: "/profile",   icon: <User size={16} color="#ffffff" />,       label: "Perfil",             desc: "Editar dados pessoais" },
                 { href: "/copy",      icon: <Copy size={16} color="#38bdf8" />,        label: "Copy Trading",       desc: "Copia experts · torna-te expert" },
                 { href: "/referral",  icon: <Gift size={16} color="#0ecb81" />,        label: "Referidos",          desc: "Convida amigos · ganha 2%" },
-                { href: "/security",  icon: <Shield size={16} color="#f5a623" />,      label: "Segurança",          desc: "2FA, sessões e log de acessos" },
-                { href: "/bot",       icon: <Bot size={16} color="#f5a623" />,        label: "Bot de Estratégia",  desc: "Bot automático RSI · MA · BB" },
-                { href: "/dashboard", icon: <BarChart2 size={16} color="#f5a623" />,   label: "Dashboard",          desc: "Estatísticas das operações" },
-                { href: "/history",   icon: <History size={16} color="#f5a623" />,     label: "Histórico",          desc: "Todas as operações fechadas" },
-                { href: "/ranking",   icon: <Trophy size={16} color="#f5a623" />,      label: "Ranking & Torneios", desc: "Competir com outros traders" },
-                { href: "/wallet",    icon: <Wallet size={16} color="#f5a623" />,      label: "Carteira completa",  desc: "Depósitos e levantamentos" },
+                { href: "/security",  icon: <Shield size={16} color="#ffffff" />,      label: "Segurança",          desc: "2FA, sessões e log de acessos" },
+                { href: "/bot",       icon: <Bot size={16} color="#ffffff" />,        label: "Bot de Estratégia",  desc: "Bot automático RSI · MA · BB" },
+                { href: "/dashboard", icon: <BarChart2 size={16} color="#ffffff" />,   label: "Dashboard",          desc: "Estatísticas das operações" },
+                { href: "/history",   icon: <History size={16} color="#ffffff" />,     label: "Histórico",          desc: "Todas as operações fechadas" },
+                { href: "/ranking",   icon: <Trophy size={16} color="#ffffff" />,      label: "Ranking & Torneios", desc: "Competir com outros traders" },
+                { href: "/wallet",    icon: <Wallet size={16} color="#ffffff" />,      label: "Carteira completa",  desc: "Depósitos e levantamentos" },
               ].map(({ href, icon, label, desc }) => (
                 <a key={href} href={href} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "#141824", border: "1px solid #1a2540", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
-                  <div style={{ width: 32, height: 32, background: "rgba(245,166,35,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{ width: 32, height: 32, background: "rgba(255,255,255,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     {icon}
                   </div>
                   <div style={{ flex: 1 }}>
@@ -4926,8 +4926,8 @@ export default function TradePage() {
               ))}
 
               {/* Suporte — ticket interno */}
-              <a href="/support" style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
-                <div style={{ width: 32, height: 32, background: "#f5a623", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <a href="/support" style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, marginBottom: 8, textDecoration: "none" }}>
+                <div style={{ width: 32, height: 32, background: "#ffffff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Headphones size={16} color="#11141d" />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -4977,10 +4977,10 @@ export default function TradePage() {
                     if (id !== "wallet") setWalletData(null);
                     if (id === "trade") { setTradeHistoryTab("open"); fetchTradeHistory(); }
                     setShowTradesPanel(false);
-                  }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer", color: active ? "#f5a623" : "#334155", transition: "color 0.2s" }}>
+                  }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer", color: active ? "#ffffff" : "#334155", transition: "color 0.2s" }}>
                     {icon}
                     <span style={{ fontSize: 9, fontWeight: active ? 800 : 600, letterSpacing: 0.3 }}>{label}</span>
-                    {active && <div style={{ position: "absolute", bottom: "env(safe-area-inset-bottom, 0px)", width: 28, height: 2, background: "#f5a623", borderRadius: 2 }} />}
+                    {active && <div style={{ position: "absolute", bottom: "env(safe-area-inset-bottom, 0px)", width: 28, height: 2, background: "#ffffff", borderRadius: 2 }} />}
                   </button>
                 );
               })}
@@ -5048,10 +5048,10 @@ export default function TradePage() {
         </button>
 
         {/* Botão de conta — abre modal com real/demo/torneio */}
-        <button onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(245,166,35,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(245,166,35,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "5px 12px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-          {activeAccount === "tournament" ? <Trophy size={13} color="#6366f1" /> : <Wallet size={13} color={activeAccount === "demo" ? "#f5a623" : "#0ecb81"} />}
+        <button onClick={toggleAccount} style={{ background: activeAccount === "tournament" ? "rgba(99,102,241,0.12)" : activeAccount === "demo" ? "rgba(255,255,255,0.1)" : "rgba(14,203,129,0.1)", border: `1px solid ${activeAccount === "tournament" ? "rgba(99,102,241,0.35)" : activeAccount === "demo" ? "rgba(255,255,255,0.3)" : "rgba(14,203,129,0.3)"}`, borderRadius: 8, padding: "5px 12px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+          {activeAccount === "tournament" ? <Trophy size={13} color="#6366f1" /> : <Wallet size={13} color={activeAccount === "demo" ? "#ffffff" : "#0ecb81"} />}
           <span key={balanceHidden ? "h" : Math.floor(displayBalance)} className="dw-value-pop" style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{balanceHidden ? "••••••" : formatKz(Math.floor(displayBalance))}</span>
-          <span style={{ background: activeAccount === "tournament" ? "#6366f1" : activeAccount === "demo" ? "#f5a623" : "#0ecb81", color: activeAccount === "tournament" ? "#fff" : "#11141d", borderRadius: 4, fontSize: 9, padding: "2px 5px", fontWeight: 900 }}>{activeAccount === "tournament" ? "Torneio" : activeAccount === "demo" ? "Demo" : "Real"}</span>
+          <span style={{ background: activeAccount === "tournament" ? "#6366f1" : activeAccount === "demo" ? "#ffffff" : "#0ecb81", color: activeAccount === "tournament" ? "#fff" : "#11141d", borderRadius: 4, fontSize: 9, padding: "2px 5px", fontWeight: 900 }}>{activeAccount === "tournament" ? "Torneio" : activeAccount === "demo" ? "Demo" : "Real"}</span>
           <ChevronDown size={12} color="#64748b" />
         </button>
 
@@ -5066,7 +5066,7 @@ export default function TradePage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <span style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{session?.user?.name}</span>
                   {tournamentWins >= 1 && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(245,166,35,0.15)", border: "1px solid rgba(245,166,35,0.35)", borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 800, color: "#f5a623" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 800, color: "#ffffff" }}>
                       <Trophy size={10} /> {tournamentWins === 1 ? "Campeão" : `${tournamentWins}× Campeão`}
                     </span>
                   )}
@@ -5121,19 +5121,19 @@ export default function TradePage() {
           <div style={{ padding: "5px 14px", background: "#161a26", display: "flex", gap: 4, borderBottom: "1px solid #262d40", alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
             {["1m", "3m", "5m", "15m", "30m", "1h", "4h", "1D"].map(tf => (
               <button key={tf} className="dw-chip" onClick={() => setTimeframe(tf)} style={{
-                background: timeframe === tf ? "rgba(245,166,35,0.12)" : "transparent",
-                color: timeframe === tf ? "#f5a623" : "#4b5563",
-                border: `1px solid ${timeframe === tf ? "rgba(245,166,35,0.4)" : "transparent"}`,
+                background: timeframe === tf ? "rgba(255,255,255,0.12)" : "transparent",
+                color: timeframe === tf ? "#ffffff" : "#4b5563",
+                border: `1px solid ${timeframe === tf ? "rgba(255,255,255,0.4)" : "transparent"}`,
                 borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                boxShadow: timeframe === tf ? "0 0 8px rgba(245,166,35,0.15)" : "none",
+                boxShadow: timeframe === tf ? "0 0 8px rgba(255,255,255,0.15)" : "none",
                 transition: "all 0.12s", flexShrink: 0,
               }}>{tf}</button>
             ))}
             <div style={{ flex: 1 }} />
             {candleTimer && (
               <div style={{ display: "flex", alignItems: "center", gap: 5, background: "#141824", border: "1px solid #262d40", borderRadius: 6, padding: "3px 10px", flexShrink: 0 }}>
-                <Clock size={11} color="#f5a623" />
-                <span style={{ fontSize: 12, fontWeight: 800, color: candleRemSecs <= 10 ? "#f6465d" : "#f5a623", fontVariantNumeric: "tabular-nums", letterSpacing: 1, transition: "color 0.3s" }}>
+                <Clock size={11} color="#ffffff" />
+                <span style={{ fontSize: 12, fontWeight: 800, color: candleRemSecs <= 10 ? "#f6465d" : "#ffffff", fontVariantNumeric: "tabular-nums", letterSpacing: 1, transition: "color 0.3s" }}>
                   {candleTimer}
                 </span>
               </div>

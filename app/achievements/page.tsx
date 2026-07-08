@@ -16,7 +16,7 @@ const RARITY_CFG: Record<Achievement["rarity"], { label: string; color: string; 
   common:    { label: "Comum",    color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.2)" },
   rare:      { label: "Raro",     color: "#38bdf8", bg: "rgba(56,189,248,0.08)",  border: "rgba(56,189,248,0.2)"  },
   epic:      { label: "Épico",    color: "#a78bfa", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)" },
-  legendary: { label: "Lendário", color: "#f5a623", bg: "rgba(245,166,35,0.10)",  border: "rgba(245,166,35,0.3)"  },
+  legendary: { label: "Lendário", color: "#ffffff", bg: "rgba(255,255,255,0.10)",  border: "rgba(255,255,255,0.3)"  },
 };
 
 const CAT_TABS: { key: CategoryFilter; label: string }[] = [
@@ -156,7 +156,7 @@ export default function AchievementsPage() {
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#070d1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -169,8 +169,8 @@ export default function AchievementsPage() {
         <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, color: "#94a3b8" }}>
           <ChevronLeft size={20} />
         </button>
-        <div style={{ width: 34, height: 34, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Trophy size={18} color="#f5a623" />
+        <div style={{ width: 34, height: 34, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Trophy size={18} color="#ffffff" />
         </div>
         <div>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>Conquistas</div>
@@ -181,11 +181,11 @@ export default function AchievementsPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px" }}>
 
         {/* Summary card */}
-        <div style={{ background: "linear-gradient(135deg, #111827 0%, #0f1e38 100%)", border: "1px solid rgba(245,166,35,0.2)", borderRadius: 16, padding: "20px 22px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, background: "radial-gradient(circle, rgba(245,166,35,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ background: "linear-gradient(135deg, #111827 0%, #0f1e38 100%)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 16, padding: "20px 22px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, background: "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ width: 60, height: 60, background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Trophy size={28} color="#f5a623" />
+            <div style={{ width: 60, height: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Trophy size={28} color="#ffffff" />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>
@@ -198,11 +198,11 @@ export default function AchievementsPage() {
                 <div style={{
                   height: "100%", borderRadius: 4,
                   width: `${pct}%`,
-                  background: "linear-gradient(90deg, #f5a623, #e8950f)",
+                  background: "linear-gradient(90deg, #ffffff, #e8950f)",
                   transition: "width .6s ease",
                 }} />
               </div>
-              <div style={{ color: "#f5a623", fontSize: 11, fontWeight: 700, marginTop: 5 }}>{pct}% completo</div>
+              <div style={{ color: "#ffffff", fontSize: 11, fontWeight: 700, marginTop: 5 }}>{pct}% completo</div>
             </div>
           </div>
 
@@ -228,7 +228,7 @@ export default function AchievementsPage() {
               key={tab.key}
               onClick={() => setCat(tab.key)}
               style={{
-                background: cat === tab.key ? "#f5a623" : "rgba(255,255,255,0.04)",
+                background: cat === tab.key ? "#ffffff" : "rgba(255,255,255,0.04)",
                 color: cat === tab.key ? "#0a0f1e" : "#94a3b8",
                 border: cat === tab.key ? "none" : "1px solid #1e2d50",
                 borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700,

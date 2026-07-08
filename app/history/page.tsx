@@ -105,7 +105,7 @@ export default function HistoryPage() {
     background: "#111827", border: "1px solid #1e2d50", borderRadius: 7,
     padding: "7px 10px", color: "#fff", fontSize: 13, outline: "none",
   };
-  const filterBtn = (active: boolean, color = "#f5a623"): React.CSSProperties => ({
+  const filterBtn = (active: boolean, color = "#ffffff"): React.CSSProperties => ({
     padding: "6px 14px", borderRadius: 20, border: `1px solid ${active ? color : "#1e2d50"}`,
     background: active ? `${color}18` : "transparent",
     color: active ? color : "#64748b", fontSize: 12, fontWeight: 700, cursor: "pointer",
@@ -113,7 +113,7 @@ export default function HistoryPage() {
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#070d1c", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#f5a623", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+      <div style={{ width: 36, height: 36, border: "3px solid #1e2d50", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -145,7 +145,7 @@ export default function HistoryPage() {
           {(["real","all","demo"] as ModeFilter[]).map(m => (
             <button key={m} onClick={() => { setModeFilter(m); setPage(1); }}
               style={{ padding: "8px 18px", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s",
-                background: modeFilter === m ? (m === "real" ? "#22c55e" : m === "demo" ? "#f5a623" : "#64748b") : "transparent",
+                background: modeFilter === m ? (m === "real" ? "#22c55e" : m === "demo" ? "#ffffff" : "#64748b") : "transparent",
                 color: modeFilter === m ? "#0a0f1e" : "#64748b",
               }}>
               {m === "real" ? t("history.filter.real") : m === "demo" ? t("history.filter.demo") : t("history.filter.both")}
@@ -156,7 +156,7 @@ export default function HistoryPage() {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: t("history.winRate"), value: `${winRate}%`, color: "#f5a623", bg: "rgba(245,166,35,.06)", border: "rgba(245,166,35,.18)", Icon: Trophy },
+            { label: t("history.winRate"), value: `${winRate}%`, color: "#ffffff", bg: "rgba(255,255,255,.06)", border: "rgba(255,255,255,.18)", Icon: Trophy },
             { label: t("history.totalPnl"), value: formatKz(Math.floor(totalPnl)), color: totalPnl >= 0 ? "#22c55e" : "#ef4444", bg: totalPnl >= 0 ? "rgba(34,197,94,.06)" : "rgba(239,68,68,.06)", border: totalPnl >= 0 ? "rgba(34,197,94,.18)" : "rgba(239,68,68,.18)", Icon: BarChart2 },
             { label: `${wins}V / ${losses}D`, value: `${total} ${t("dash.trades")}`, color: "#94a3b8", bg: "rgba(148,163,184,.04)", border: "rgba(30,45,80,.5)", Icon: Target },
             { label: t("history.volume"), value: formatKz(Math.floor(totalVol)), color: "#64748b", bg: "rgba(30,45,80,.15)", border: "rgba(30,45,80,.4)", Icon: BarChart2 },
@@ -230,7 +230,7 @@ export default function HistoryPage() {
                       <span style={{ background: tr.direction === "call" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)", color: tr.direction === "call" ? "#22c55e" : "#ef4444", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>
                         {tr.direction === "call" ? t("history.call") : t("history.put")}
                       </span>
-                      <span style={{ background: tr.isDemo ? "rgba(245,166,35,.1)" : "rgba(34,197,94,.1)", color: tr.isDemo ? "#f5a623" : "#22c55e", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>
+                      <span style={{ background: tr.isDemo ? "rgba(255,255,255,.1)" : "rgba(34,197,94,.1)", color: tr.isDemo ? "#ffffff" : "#22c55e", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>
                         {tr.isDemo ? "DEMO" : "REAL"}
                       </span>
                       <span style={{ background: "rgba(30,45,80,.4)", color: "#64748b", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600 }}>{formatExpiry(tr.expirySecs)}</span>
