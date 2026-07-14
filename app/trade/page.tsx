@@ -216,6 +216,7 @@ export default function TradePage() {
     return false;
   });
   const [tournamentWins,     setTournamentWins]     = useState(0);
+  const [achievementsSummary, setAchievementsSummary] = useState<{ unlocked: number; total: number } | null>(null);
   const [tournamentPositions, setTournamentPositions] = useState<any[]>([]);
   const [demoReloading,  setDemoReloading]  = useState(false);
   const [showDemoReset,  setShowDemoReset]  = useState(false);
@@ -1357,6 +1358,7 @@ export default function TradePage() {
       });
       fetchBalance();
       fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => { if (d) { setTournamentWins(d.tournamentWins ?? 0); setUserAvatar(d.avatar ?? ""); } });
+      fetch("/api/achievements").then(r => r.ok ? r.json() : null).then(d => { if (d) setAchievementsSummary({ unlocked: d.unlocked, total: d.total }); });
       const loadStats = () => fetch("/api/trade/stats").then(r => r.ok ? r.json() : null).then(d => { if (d) setTraderStats(d); });
       loadStats();
       const statsId = setInterval(loadStats, 30_000);
@@ -2558,6 +2560,22 @@ export default function TradePage() {
                           {a.active && <span style={{ background: a.color, color: "#11141d", borderRadius: 4, fontSize: 9, padding: "1px 6px", fontWeight: 900, letterSpacing: 0.5 }}>ACTIVA</span>}
                         </div>
                         <div style={{ color: "#475569", fontSize: 11, marginTop: 1 }}>{a.description}</div>
+                        {a.type === "real" && achievementsSummary && (() => {
+                          const complete = achievementsSummary.unlocked >= achievementsSummary.total && achievementsSummary.total > 0;
+                          return (
+                            <a href="/ranking" onClick={e => e.stopPropagation()}
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 4, marginTop: 5, borderRadius: 20, padding: "2px 8px", textDecoration: "none",
+                                background: complete ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)",
+                                border: `1px solid rgba(255,255,255,${complete ? 0.35 : 0.25})`,
+                              }}>
+                              <Trophy size={10} color="#ffffff" />
+                              <span style={{ color: "#ffffff", fontSize: 10, fontWeight: 800 }}>
+                                {complete ? "Campeão · Conquistas Completas" : `${achievementsSummary.unlocked}/${achievementsSummary.total} conquistas`}
+                              </span>
+                            </a>
+                          );
+                        })()}
                       </div>
                     </div>
                     {/* Right — balance */}
