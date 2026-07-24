@@ -1372,8 +1372,6 @@ export default function TradePage() {
   // ── Deriv WebSocket — connect once, register handlers ───────────────────
   useEffect(() => {
     derivWS.connect();
-    // Carregar preços de fecho reais para escalar os pares OTC
-    derivWS.loadForexCloses();
 
     const unsubTick = derivWS.onTick((tick) => {
       // Sincronizar relógio com o servidor Deriv usando o epoch do tick
@@ -1397,9 +1395,8 @@ export default function TradePage() {
       const q   = tick.quote;
       const prev = lastPriceRef.current;
 
-      // Sanity check ANTES de actualizar lastPriceRef — filtra spikes > 8% (excepto OTC)
-      const isOtc = tick.symbol.startsWith("OTC_") || tick.symbol.startsWith("1HZ") || tick.symbol.startsWith("R_") || tick.symbol.startsWith("RD") || tick.symbol.startsWith("WLD");
-      if (!isOtc && prev > 0 && Math.abs(q - prev) / prev > 0.08) return;
+      // Filtra spikes > 8% (protecção contra ticks corrompidos)
+      if (prev > 0 && Math.abs(q - prev) / prev > 0.08) return;
 
       const up = q >= prev;
       setPriceUp(up);
@@ -1545,9 +1542,12 @@ export default function TradePage() {
       if (!candleSeriesRef.current) return;
       try {
         const res = await fetch(`/api/market-candles?asset=${encodeURIComponent(label)}&timeframe=${tf}&count=300`);
-        if (!res.ok) return;
+        if (!res.ok) { reconnectingRef.current = false; return; }
         const data = await res.json();
-        if (!data.hasData || !data.candles?.length) return;
+        if (!data.hasData || !data.candles?.length) {
+          reconnectingRef.current = false; // sem dados históricos, mas deixar ticks passarem
+          return;
+        }
         if (candleDataRef.current.length > 0) return; // WS entregou entretanto
         const candles: CandlestickData[] = data.candles;
         const ct = chartTypeRef.current;
@@ -1569,10 +1569,13 @@ export default function TradePage() {
           setCurrentPrice(last);
         }
         reconnectingRef.current = false;
-      } catch { /* silent */ }
+      } catch { reconnectingRef.current = false; }
     }, 2000);
 
-    return () => clearTimeout(fallbackTimer);
+    // Segurança: se ao fim de 6s ainda estiver bloqueado, liberta os ticks de qualquer forma
+    const unblockTimer = setTimeout(() => { reconnectingRef.current = false; }, 6000);
+
+    return () => { clearTimeout(fallbackTimer); clearTimeout(unblockTimer); };
   }, [selectedPair, timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Re-subscribe ticks when pairs list changes (ticker strip) ─────────────
@@ -3054,8 +3057,8 @@ export default function TradePage() {
   function renderAssetDropdown(mobile = false) {
     const groups: Record<string, DerivPair[]> = {};
     pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-    const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
-    const catColors: Record<string, string> = { Forex: "#ffffff", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
+    const catOrder  = ["Cripto"];
+    const catColors: Record<string, string> = { Cripto: "#a78bfa" };
     return (
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}

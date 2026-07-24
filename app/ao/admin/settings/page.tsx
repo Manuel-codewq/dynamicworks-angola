@@ -2,46 +2,16 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Save, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react";
 
-// Pares reais agrupados por categoria
+// Pares Binance — únicos pares da plataforma (preços reais 24/7)
 const REAL_PAIR_OPTIONS = [
-  { label: "EUR/USD",    cat: "Forex" }, { label: "GBP/USD",    cat: "Forex" },
-  { label: "USD/JPY",    cat: "Forex" }, { label: "AUD/USD",    cat: "Forex" },
-  { label: "USD/CAD",    cat: "Forex" }, { label: "EUR/GBP",    cat: "Forex" },
-  { label: "USD/CHF",    cat: "Forex" }, { label: "NZD/USD",    cat: "Forex" },
-  { label: "EUR/JPY",    cat: "Forex" }, { label: "GBP/JPY",    cat: "Forex" },
-  { label: "EUR/CAD",    cat: "Forex" }, { label: "AUD/JPY",    cat: "Forex" },
-  { label: "GBP/AUD",    cat: "Forex" }, { label: "EUR/CHF",    cat: "Forex" },
-  { label: "AUD/CAD",    cat: "Forex" }, { label: "AUD/CHF",    cat: "Forex" },
-  { label: "AUD/NZD",    cat: "Forex" }, { label: "EUR/AUD",    cat: "Forex" },
-  { label: "EUR/NZD",    cat: "Forex" }, { label: "GBP/CAD",    cat: "Forex" },
-  { label: "GBP/CHF",    cat: "Forex" }, { label: "GBP/NOK",    cat: "Forex" },
-  { label: "GBP/NZD",    cat: "Forex" }, { label: "NZD/JPY",    cat: "Forex" },
-  { label: "USD/MXN",    cat: "Forex" }, { label: "USD/NOK",    cat: "Forex" },
-  { label: "USD/PLN",    cat: "Forex" }, { label: "USD/SEK",    cat: "Forex" },
-  { label: "BTC/USD",    cat: "Cripto" }, { label: "ETH/USD",    cat: "Cripto" },
-  { label: "Prata/USD",  cat: "Metal"  }, { label: "Paládio/USD", cat: "Metal" },
-  { label: "Platina/USD", cat: "Metal" },
-];
-
-// Pares sintéticos disponíveis para configurar no fim de semana
-const SYNTHETIC_OPTIONS = [
-  { symbol: "1HZ10V",  label: "EUR/USD" },
-  { symbol: "1HZ25V",  label: "GBP/USD" },
-  { symbol: "1HZ50V",  label: "USD/JPY" },
-  { symbol: "1HZ75V",  label: "AUD/USD" },
-  { symbol: "1HZ100V", label: "USD/CAD" },
-  { symbol: "R_10",    label: "EUR/GBP" },
-  { symbol: "R_25",    label: "USD/CHF" },
-  { symbol: "R_50",    label: "NZD/USD" },
-  { symbol: "R_75",    label: "EUR/JPY" },
-  { symbol: "R_100",   label: "GBP/JPY" },
-  { symbol: "RDBEAR",  label: "EUR/CHF" },
-  { symbol: "RDBULL",  label: "AUD/CHF" },
-  { symbol: "WLDAUD",  label: "AUD/JPY" },
-  { symbol: "WLDEUR",  label: "EUR/CAD" },
-  { symbol: "WLDGBP",  label: "GBP/CAD" },
-  { symbol: "WLDUSD",  label: "USD/MXN" },
-  { symbol: "WLDXAU",  label: "Ouro/USD" },
+  { label: "BTC/USD",  cat: "Cripto" },
+  { label: "ETH/USD",  cat: "Cripto" },
+  { label: "BNB/USD",  cat: "Cripto" },
+  { label: "SOL/USD",  cat: "Cripto" },
+  { label: "XRP/USD",  cat: "Cripto" },
+  { label: "ADA/USD",  cat: "Cripto" },
+  { label: "DOGE/USD", cat: "Cripto" },
+  { label: "LTC/USD",  cat: "Cripto" },
 ];
 
 interface Settings {
@@ -223,34 +193,6 @@ export default function AdminSettingsPage() {
         })}
       </div>
 
-      {/* Pares de fim de semana */}
-      <div style={card}>
-        <p style={sectionTitle}>Pares Sintéticos (24/7)</p>
-        <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
-          Disponíveis a qualquer hora, incluindo fins de semana e fora do horário de mercado.
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
-          {SYNTHETIC_OPTIONS.map(opt => {
-            const active = draft.weekendPairs?.includes(opt.symbol) ?? true;
-            return (
-              <button key={opt.symbol} onClick={() => setDraft(d => {
-                if (!d) return d;
-                const cur = d.weekendPairs ?? SYNTHETIC_OPTIONS.map(o => o.symbol);
-                return { ...d, weekendPairs: active ? cur.filter(s => s !== opt.symbol) : [...cur, opt.symbol] };
-              })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "10px 14px", border: `1px solid ${active ? "rgba(99,102,241,0.4)" : "#1e2d50"}`, cursor: "pointer" }}>
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</div>
-                  <div style={{ color: "#475569", fontSize: 10, marginTop: 1 }}>{opt.symbol}</div>
-                </div>
-                {active
-                  ? <ToggleRight size={20} color="#6366f1" />
-                  : <ToggleLeft  size={20} color="#334155" />
-                }
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Risk controls */}
       <div style={card}>

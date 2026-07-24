@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveExpiredTrade } from "@/lib/resolveExpiredTrade";
-import { isOtcAsset } from "@/lib/derivPrice";
 
 function isAuthorized(req: NextRequest): boolean {
   const workerSecret = process.env.WORKER_SECRET;
@@ -43,13 +42,6 @@ export async function GET(req: NextRequest) {
     const expiresAt = trade.expiresAt ?? new Date(trade.createdAt.getTime() + trade.expirySecs * 1000);
     if (new Date() < expiresAt) return;
 
-    // Trades OTC: o cliente envia o exitPrice via WebSocket.
-    // Se passaram mais de 2 minutos após expiração e ainda está activa, resolve como loss
-    // para evitar que fiquem presas indefinidamente (ex: cliente fechou browser).
-    if (isOtcAsset(trade.asset)) {
-      const expiredForMs = Date.now() - expiresAt.getTime();
-      if (expiredForMs < 120_000) return; // aguarda 2min antes de forçar
-    }
 
     const outcome = await resolveExpiredTrade(trade);
     if (outcome === "pending" || outcome === "already_closed") return;

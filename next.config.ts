@@ -10,10 +10,9 @@ const ALLOWED_IMG_SRCS = [
 const ALLOWED_CONNECT_SRCS = [
   "'self'",
   "https://api.anthropic.com",
-  "wss://ws.derivws.com",
-  "wss://ws.binaryws.com",
-  "wss://frontend.binaryws.com",
-  "https://api.pwnedpasswords.com",
+  // Binance — preços reais crypto 24/7
+  "wss://stream.binance.com:9443",
+  "https://api.binance.com",
   "https://sme.gov.ao",
   "https://api.resend.com",
   "https://www.google-analytics.com",

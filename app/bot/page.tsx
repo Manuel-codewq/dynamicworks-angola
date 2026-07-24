@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, Settings, Activity,
   CheckCircle, XCircle, Clock, Zap,
 } from "lucide-react";
-import { derivWS, DerivCandle, FOREX_PAIRS, SYNTHETIC_PAIRS, CRYPTO_PAIRS } from "@/lib/derivWebSocket";
+import { derivWS, DerivCandle, CRYPTO_PAIRS } from "@/lib/derivWebSocket";
 import { formatKz } from "@/lib/format";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -93,8 +93,6 @@ function calcBB(closes: number[], period: number, stdDevMult: number) {
 function ts() { return new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
 
 const ALL_PAIRS = [
-  ...SYNTHETIC_PAIRS.map(p => ({ label: p.label, symbol: p.symbol, group: "OTC 24/7" })),
-  ...FOREX_PAIRS.map(p => ({ label: p.label, symbol: p.symbol, group: "Forex" })),
   ...CRYPTO_PAIRS.map(p => ({ label: p.label, symbol: p.symbol, group: "Cripto" })),
 ];
 

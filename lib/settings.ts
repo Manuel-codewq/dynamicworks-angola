@@ -1,18 +1,9 @@
 import { prisma } from "./prisma";
-import { FOREX_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS, SYNTHETIC_PAIRS } from "./derivWebSocket";
+import { FOREX_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS } from "./derivWebSocket";
 
 const ALL_PAIRS = [
-  // Forex
-  "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD",
-  "USD/CAD", "EUR/GBP", "USD/CHF", "NZD/USD",
-  "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY", "GBP/AUD", "EUR/CHF",
-  // Cripto
-  "BTC/USD", "ETH/USD",
-  // Metais (sem XAU/USD)
-  "XAG/USD",
-  // Sintéticos OTC (24/7)
-  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
-  "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC", "EUR/JPY OTC", "GBP/JPY OTC",
+  "BTC/USD", "ETH/USD", "BNB/USD", "SOL/USD",
+  "XRP/USD", "ADA/USD", "DOGE/USD", "LTC/USD",
 ] as const;
 
 // Labels de todos os pares reais (usado como default de activePairs)
@@ -25,7 +16,7 @@ export const ALL_REAL_PAIR_LABELS = [
 export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));
 export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.47]));
 export const DEFAULT_RANKING_RESET: Date | null = null;
-export const DEFAULT_WEEKEND_PAIRS   = SYNTHETIC_PAIRS.map(p => p.symbol);
+export const DEFAULT_WEEKEND_PAIRS: string[] = [];
 export const DEFAULT_ACTIVE_PAIRS    = ALL_REAL_PAIR_LABELS;
 
 export const ALL_PAIR_KEYS = ALL_PAIRS as unknown as string[];

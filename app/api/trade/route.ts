@@ -3,43 +3,23 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getDerivPrice, isOtcAsset } from "@/lib/derivPrice";
+import { getDerivPrice } from "@/lib/derivPrice";
 import { sendPushToUser } from "@/lib/webPush";
 
+// Pares Binance — únicos pares aceites na plataforma
 const ALLOWED_ASSETS = new Set([
-  // Forex real
-  "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", "EUR/GBP",
-  "USD/CHF", "NZD/USD", "EUR/JPY", "GBP/JPY", "EUR/CAD", "AUD/JPY",
-  "GBP/AUD", "EUR/CHF", "AUD/CAD", "AUD/CHF", "AUD/NZD", "EUR/AUD",
-  "EUR/NZD", "GBP/CAD", "GBP/CHF", "GBP/NOK", "GBP/NZD", "NZD/JPY",
-  "USD/MXN", "USD/NOK", "USD/PLN", "USD/SEK",
-  // Cripto + Metais
-  "BTC/USD", "ETH/USD",
-  "Prata/USD", "Paládio/USD", "Platina/USD",
-  "XAG/USD",
-  // Pares sintéticos OTC — todos os 17 (índices Deriv 24/7)
-  "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC", "USD/CAD OTC",
-  "EUR/GBP OTC", "USD/CHF OTC", "NZD/USD OTC", "EUR/JPY OTC", "GBP/JPY OTC",
-  "EUR/CHF OTC", "AUD/CHF OTC",
-  "AUD/JPY OTC", "EUR/CAD OTC", "GBP/CAD OTC", "USD/MXN OTC", "Ouro/USD OTC",
+  "BTC/USD", "ETH/USD", "BNB/USD", "SOL/USD",
+  "XRP/USD", "ADA/USD", "DOGE/USD", "LTC/USD",
 ]);
 
-// Símbolos sintéticos válidos (índices Deriv 24/7) — todos os 17 confirmados
-const SYNTHETIC_SYMBOLS = new Set([
-  "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V",
-  "R_10", "R_25", "R_50", "R_75", "R_100",
-  "RDBEAR", "RDBULL",
-  "WLDAUD", "WLDEUR", "WLDGBP", "WLDUSD", "WLDXAU",
-]);
-
-async function fetchServerEntryPrice(asset: string, isSynthetic: boolean): Promise<number | null> {
-  // 1. Tick ao vivo da Deriv — preço sub-segundo, igual ao que o utilizador vê no gráfico
+async function fetchServerEntryPrice(asset: string): Promise<number | null> {
+  // 1. Preço ao vivo da Binance
   try {
-    const price = await getDerivPrice(asset, !isSynthetic);
+    const price = await getDerivPrice(asset);
     if (price && price > 0) return price;
   } catch { /* fallback abaixo */ }
 
-  // 2. Fallback: PriceCandle DB (pode ter até ~90s de atraso — apenas para resiliência)
+  // 2. Fallback: PriceCandle DB
   try {
     const cutoff = new Date(Date.now() - 300_000);
     const candle = await prisma.priceCandle.findFirst({
@@ -164,8 +144,6 @@ export async function POST(req: NextRequest) {
   }
 
   const { asset, symbol, direction, amount, expirySecs, skipTournament, tournamentId: clientTournamentId, entryPrice: clientEntryPrice } = body ?? {};
-  const isSynthetic = typeof symbol === "string" && SYNTHETIC_SYMBOLS.has(symbol);
-
   if (!ALLOWED_ASSETS.has(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
   }
@@ -263,7 +241,7 @@ export async function POST(req: NextRequest) {
   // Entry price determinado exclusivamente pelo servidor. O preço enviado pelo
   // cliente serve apenas para detectar um ecrã desatualizado — nunca define a
   // entrada (confiar nele permitiria abrir operações a um preço escolhido).
-  const entryPrice = await fetchServerEntryPrice(asset, isSynthetic);
+  const entryPrice = await fetchServerEntryPrice(asset);
   if (!entryPrice) {
     return NextResponse.json(
       { error: "Preço de mercado indisponível. Tente novamente em instantes." },

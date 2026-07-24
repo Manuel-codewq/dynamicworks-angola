@@ -1,4 +1,10 @@
-const DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=36544";
+const BINANCE_WS_URL = "wss://stream.binance.com:9443/ws";
+const BINANCE_REST   = "https://api.binance.com/api/v3";
+
+const BINANCE_INTERVAL: Record<number, string> = {
+  60: "1m", 180: "3m", 300: "5m", 900: "15m",
+  1800: "30m", 3600: "1h", 14400: "4h", 86400: "1d",
+};
 
 export interface DerivPair {
   symbol:   string;
@@ -7,90 +13,28 @@ export interface DerivPair {
   decimals: number;
 }
 
-export const FOREX_PAIRS: DerivPair[] = [
-  { symbol: "frxEURUSD", label: "EUR/USD", category: "Forex", decimals: 5 },
-  { symbol: "frxGBPUSD", label: "GBP/USD", category: "Forex", decimals: 5 },
-  { symbol: "frxUSDJPY", label: "USD/JPY", category: "Forex", decimals: 3 },
-  { symbol: "frxAUDUSD", label: "AUD/USD", category: "Forex", decimals: 5 },
-  { symbol: "frxUSDCAD", label: "USD/CAD", category: "Forex", decimals: 5 },
-  { symbol: "frxEURGBP", label: "EUR/GBP", category: "Forex", decimals: 5 },
-  { symbol: "frxUSDCHF", label: "USD/CHF", category: "Forex", decimals: 5 },
-  { symbol: "frxNZDUSD", label: "NZD/USD", category: "Forex", decimals: 5 },
-  { symbol: "frxEURJPY", label: "EUR/JPY", category: "Forex", decimals: 3 },
-  { symbol: "frxGBPJPY", label: "GBP/JPY", category: "Forex", decimals: 3 },
-  { symbol: "frxEURCAD", label: "EUR/CAD", category: "Forex", decimals: 5 },
-  { symbol: "frxAUDJPY", label: "AUD/JPY", category: "Forex", decimals: 3 },
-  { symbol: "frxGBPAUD", label: "GBP/AUD", category: "Forex", decimals: 5 },
-  { symbol: "frxEURCHF", label: "EUR/CHF", category: "Forex", decimals: 5 },
-  { symbol: "frxAUDCAD", label: "AUD/CAD", category: "Forex", decimals: 5 },
-  { symbol: "frxAUDCHF", label: "AUD/CHF", category: "Forex", decimals: 5 },
-  { symbol: "frxAUDNZD", label: "AUD/NZD", category: "Forex", decimals: 5 },
-  { symbol: "frxEURAUD", label: "EUR/AUD", category: "Forex", decimals: 5 },
-  { symbol: "frxEURNZD", label: "EUR/NZD", category: "Forex", decimals: 5 },
-  { symbol: "frxGBPCAD", label: "GBP/CAD", category: "Forex", decimals: 5 },
-  { symbol: "frxGBPCHF", label: "GBP/CHF", category: "Forex", decimals: 5 },
-  { symbol: "frxGBPNOK", label: "GBP/NOK", category: "Forex", decimals: 3 },
-  { symbol: "frxGBPNZD", label: "GBP/NZD", category: "Forex", decimals: 5 },
-  { symbol: "frxNZDJPY", label: "NZD/JPY", category: "Forex", decimals: 3 },
-  { symbol: "frxUSDMXN", label: "USD/MXN", category: "Forex", decimals: 3 },
-  { symbol: "frxUSDNOK", label: "USD/NOK", category: "Forex", decimals: 3 },
-  { symbol: "frxUSDPLN", label: "USD/PLN", category: "Forex", decimals: 4 },
-  { symbol: "frxUSDSEK", label: "USD/SEK", category: "Forex", decimals: 3 },
-];
-
+// Todos os pares são agora Binance — preços reais, 24/7
 export const CRYPTO_PAIRS: DerivPair[] = [
-  { symbol: "cryBTCUSD", label: "BTC/USD", category: "Cripto", decimals: 2 },
-  { symbol: "cryETHUSD", label: "ETH/USD", category: "Cripto", decimals: 2 },
+  { symbol: "BTCUSDT",  label: "BTC/USD",  category: "Cripto", decimals: 2 },
+  { symbol: "ETHUSDT",  label: "ETH/USD",  category: "Cripto", decimals: 2 },
+  { symbol: "BNBUSDT",  label: "BNB/USD",  category: "Cripto", decimals: 2 },
+  { symbol: "SOLUSDT",  label: "SOL/USD",  category: "Cripto", decimals: 2 },
+  { symbol: "XRPUSDT",  label: "XRP/USD",  category: "Cripto", decimals: 4 },
+  { symbol: "ADAUSDT",  label: "ADA/USD",  category: "Cripto", decimals: 4 },
+  { symbol: "DOGEUSDT", label: "DOGE/USD", category: "Cripto", decimals: 5 },
+  { symbol: "LTCUSDT",  label: "LTC/USD",  category: "Cripto", decimals: 2 },
 ];
 
-export const COMMODITY_PAIRS: DerivPair[] = [
-  { symbol: "frxXAGUSD", label: "Prata/USD",   category: "Metal", decimals: 3 },
-  { symbol: "frxXPDUSD", label: "Paládio/USD", category: "Metal", decimals: 2 },
-  { symbol: "frxXPTUSD", label: "Platina/USD", category: "Metal", decimals: 2 },
-];
-
-// Pares sintéticos — índices Deriv 24/7 confirmados com preço activo
-export const SYNTHETIC_PAIRS: DerivPair[] = [
-  // Volatility Index 1s (confirmados)
-  { symbol: "1HZ10V",  label: "EUR/USD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "1HZ25V",  label: "GBP/USD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "1HZ50V",  label: "USD/JPY OTC", category: "Forex OTC", decimals: 3 },
-  { symbol: "1HZ75V",  label: "AUD/USD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "1HZ100V", label: "USD/CAD OTC", category: "Forex OTC", decimals: 5 },
-  // Volatility Index (confirmados)
-  { symbol: "R_10",  label: "EUR/GBP OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "R_25",  label: "USD/CHF OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "R_50",  label: "NZD/USD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "R_75",  label: "EUR/JPY OTC", category: "Forex OTC", decimals: 3 },
-  { symbol: "R_100", label: "GBP/JPY OTC", category: "Forex OTC", decimals: 3 },
-  // Range Break (confirmados)
-  { symbol: "RDBEAR", label: "EUR/CHF OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "RDBULL", label: "AUD/CHF OTC", category: "Forex OTC", decimals: 5 },
-  // World Indices Deriv — movimento suave (a testar)
-  { symbol: "WLDAUD", label: "AUD/JPY OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "WLDEUR", label: "EUR/CAD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "WLDGBP", label: "GBP/CAD OTC", category: "Forex OTC", decimals: 5 },
-  { symbol: "WLDUSD", label: "USD/MXN OTC", category: "Forex OTC", decimals: 3 },
-  { symbol: "WLDXAU", label: "Ouro/USD OTC", category: "Forex OTC", decimals: 2 },
-];
-
-// Mapa: label → símbolo do índice (para resolução de preço server-side)
+// Mantidos vazios para compatibilidade com imports existentes
+export const FOREX_PAIRS:      DerivPair[] = [];
+export const COMMODITY_PAIRS:  DerivPair[] = [];
+export const SYNTHETIC_PAIRS:  DerivPair[] = [];
 export const SYNTHETIC_LABEL_TO_SYMBOL: Record<string, string> = {};
-SYNTHETIC_PAIRS.forEach(p => { SYNTHETIC_LABEL_TO_SYMBOL[p.label] = p.symbol; });
 
-// Angola WAT = UTC+1. Forex: Seg-Sex 02h-18h WAT (01h-17h UTC)
-export function isRealMarketOpen(): boolean {
-  const now    = new Date();
-  const utcDay = now.getUTCDay();
-  const utcH   = now.getUTCHours();
-  return utcDay >= 1 && utcDay <= 5 && utcH >= 1 && utcH < 17;
-}
+export function isRealMarketOpen(): boolean { return true; } // Binance é sempre 24/7
 
 export function getAvailablePairs(): DerivPair[] {
-  if (isRealMarketOpen()) {
-    return [...FOREX_PAIRS, ...CRYPTO_PAIRS, ...COMMODITY_PAIRS];
-  }
-  return [...SYNTHETIC_PAIRS, ...CRYPTO_PAIRS];
+  return [...CRYPTO_PAIRS];
 }
 
 export const GRANULARITY: Record<string, number> = {
@@ -104,12 +48,12 @@ export interface DerivCandle { epoch: number; open: number; high: number; low: n
 type TickHandler   = (tick: DerivTick) => void;
 type CandleHandler = (symbol: string, candles: DerivCandle[]) => void;
 
-export class DerivWS {
+// ── Binance WebSocket (todos os pares, preços reais 24/7) ────────────────────
+
+class BinanceWS {
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private pendingMessages: object[] = [];
-  private subscribedSymbols = new Set<string>();
-  private pendingCandleSymbol = "";
+  private subscribedStreams = new Set<string>();
   private tickHandlers    = new Set<TickHandler>();
   private candleHandlers  = new Set<CandleHandler>();
   private connectHandlers = new Set<() => void>();
@@ -117,14 +61,16 @@ export class DerivWS {
 
   connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
-    this.ws = new WebSocket(DERIV_WS_URL);
+    this.ws = new WebSocket(BINANCE_WS_URL);
 
     this.ws.onopen = () => {
-      const q = this.pendingMessages.splice(0);
-      q.forEach(m => this.ws!.send(JSON.stringify(m)));
-      this.subscribedSymbols.forEach(sym =>
-        this.ws!.send(JSON.stringify({ ticks: sym, subscribe: 1 }))
-      );
+      if (this.subscribedStreams.size > 0) {
+        this.ws!.send(JSON.stringify({
+          method: "SUBSCRIBE",
+          params: Array.from(this.subscribedStreams),
+          id: 1,
+        }));
+      }
       if (!this.isFirstConnect) this.connectHandlers.forEach(h => h());
       this.isFirstConnect = false;
     };
@@ -132,30 +78,15 @@ export class DerivWS {
     this.ws.onmessage = (e) => {
       let data: any;
       try { data = JSON.parse(e.data); } catch { return; }
-      if (data.error) return;
+      // Ignorar acks de controlo (subscribe/unsubscribe)
+      if (!data || data.result !== undefined || !data.e) return;
 
-      if (data.tick) {
-        const t     = data.tick;
-        const sym   = t.symbol as string;
-        const quote = typeof t.quote === "number" ? t.quote : parseFloat(t.quote);
-        const epoch = t.epoch as number;
-        this.tickHandlers.forEach(h => h({ symbol: sym, quote, epoch }));
-      }
-
-      if (data.candles && Array.isArray(data.candles)) {
-        const sym = data.echo_req?.ticks_history ?? this.pendingCandleSymbol;
-        const candles: DerivCandle[] = data.candles
-          .map((c: any) => ({
-            epoch: Number(c.epoch),
-            open:  parseFloat(c.open),
-            high:  parseFloat(c.high),
-            low:   parseFloat(c.low),
-            close: parseFloat(c.close),
-          }))
-          .filter((c: DerivCandle) =>
-            isFinite(c.open) && isFinite(c.high) && isFinite(c.low) && isFinite(c.close) && c.high >= c.low
-          );
-        if (candles.length > 0) this.candleHandlers.forEach(h => h(sym, candles));
+      if (data.e === "trade") {
+        const quote = parseFloat(data.p);
+        const epoch = Math.floor(Number(data.T) / 1000);
+        if (isFinite(quote) && quote > 0) {
+          this.tickHandlers.forEach(h => h({ symbol: data.s as string, quote, epoch }));
+        }
       }
     };
 
@@ -163,31 +94,53 @@ export class DerivWS {
     this.ws.onerror  = () => { this.ws?.close(); };
   }
 
-  private send(msg: object) {
-    if (this.ws?.readyState === WebSocket.OPEN) { this.ws.send(JSON.stringify(msg)); }
-    else { this.pendingMessages.push(msg); this.connect(); }
-  }
-
-  // Mantido por compatibilidade — não faz nada com pares OTC removidos
-  async loadForexCloses() {}
+  async loadForexCloses() {} // compatibilidade — não faz nada
 
   subscribeToTicks(symbols: string[]) {
+    const newStreams: string[] = [];
     symbols.forEach(sym => {
-      if (!this.subscribedSymbols.has(sym)) {
-        this.subscribedSymbols.add(sym);
-        this.send({ ticks: sym, subscribe: 1 });
+      const stream = `${sym.toLowerCase()}@trade`;
+      if (!this.subscribedStreams.has(stream)) {
+        this.subscribedStreams.add(stream);
+        newStreams.push(stream);
+        console.log("[BinanceWS] Subscrito:", sym);
       }
     });
+    if (newStreams.length === 0) return;
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ method: "SUBSCRIBE", params: newStreams, id: Date.now() }));
+    } else {
+      this.connect();
+    }
+  }
+
+  async getCandles(symbol: string, granularity: number, count = 150) {
+    const interval = BINANCE_INTERVAL[granularity] ?? "1m";
+    try {
+      const url = `${BINANCE_REST}/klines?symbol=${symbol}&interval=${interval}&limit=${Math.min(count, 1000)}`;
+      const res  = await fetch(url);
+      if (!res.ok) { console.warn("[BinanceWS] REST erro:", res.status); return; }
+      const rows: any[][] = await res.json();
+      const candles: DerivCandle[] = rows
+        .map(k => ({
+          epoch: Math.floor(Number(k[0]) / 1000),
+          open:  parseFloat(k[1]),
+          high:  parseFloat(k[2]),
+          low:   parseFloat(k[3]),
+          close: parseFloat(k[4]),
+        }))
+        .filter(c => isFinite(c.open) && isFinite(c.high) && isFinite(c.low) && isFinite(c.close) && c.high >= c.low);
+      if (candles.length > 0) this.candleHandlers.forEach(h => h(symbol, candles));
+    } catch (e) {
+      console.warn("[BinanceWS] Erro ao buscar velas:", (e as Error).message);
+    }
   }
 
   unsubscribeAll() {
-    this.send({ forget_all: "ticks" });
-    this.subscribedSymbols.clear();
-  }
-
-  getCandles(symbol: string, granularity: number, count = 150) {
-    this.pendingCandleSymbol = symbol;
-    this.send({ ticks_history: symbol, style: "candles", granularity, count, end: "latest" });
+    if (this.ws?.readyState === WebSocket.OPEN && this.subscribedStreams.size > 0) {
+      this.ws.send(JSON.stringify({ method: "UNSUBSCRIBE", params: Array.from(this.subscribedStreams), id: Date.now() }));
+    }
+    this.subscribedStreams.clear();
   }
 
   onTick(handler: TickHandler):      () => void { this.tickHandlers.add(handler);    return () => this.tickHandlers.delete(handler); }
@@ -197,8 +150,8 @@ export class DerivWS {
   disconnect() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.ws?.close(); this.ws = null;
-    this.subscribedSymbols.clear(); this.pendingMessages = [];
+    this.subscribedStreams.clear();
   }
 }
 
-export const derivWS = new DerivWS();
+export const derivWS = new BinanceWS();

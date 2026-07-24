@@ -3,18 +3,10 @@ import { getDerivPrice } from "@/lib/derivPrice";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
-const SYNTHETIC_SYMBOLS = new Set([
-  "1HZ10V", "1HZ25V", "1HZ50V", "1HZ75V", "1HZ100V",
-  "R_10", "R_25", "R_50", "R_75", "R_100",
-  "RDBEAR", "RDBULL",
-  "WLDAUD", "WLDEUR", "WLDGBP", "WLDUSD", "WLDXAU",
-]);
-
-async function getClosePriceForAsset(asset: string, symbol?: string | null): Promise<number | null> {
-  // 1ª prioridade: tick ao vivo da Deriv — mesmo preço que o gráfico mostra ao utilizador
-  const isSynthetic = typeof symbol === "string" && SYNTHETIC_SYMBOLS.has(symbol);
+async function getClosePriceForAsset(asset: string): Promise<number | null> {
+  // 1ª prioridade: preço ao vivo da Binance
   try {
-    const livePrice = await getDerivPrice(asset, !isSynthetic);
+    const livePrice = await getDerivPrice(asset);
     if (livePrice && livePrice > 0) return livePrice;
   } catch { /* fallback para DB */ }
 
@@ -83,7 +75,7 @@ export async function resolveExpiredTrade(
   let returnAmount: number;
 
   // Preço de fecho: PriceCandle DB → Deriv WS. Apenas fontes do servidor.
-  const resolvedPrice: number | null = await getClosePriceForAsset(trade.asset, trade.symbol);
+  const resolvedPrice: number | null = await getClosePriceForAsset(trade.asset);
 
   const expiredForMs = Date.now() - expiresAt.getTime();
 

@@ -1,103 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { DerivWSClient, type DerivCandle } from "@/lib/derivServerWS";
+import { CRYPTO_PAIRS } from "@/lib/derivWebSocket";
 
-const FOREX_PAIRS = [
-  { asset: "EUR/USD", symbol: "frxEURUSD" },
-  { asset: "GBP/USD", symbol: "frxGBPUSD" },
-  { asset: "USD/JPY", symbol: "frxUSDJPY" },
-  { asset: "AUD/USD", symbol: "frxAUDUSD" },
-  { asset: "USD/CAD", symbol: "frxUSDCAD" },
-  { asset: "EUR/GBP", symbol: "frxEURGBP" },
-  { asset: "USD/CHF", symbol: "frxUSDCHF" },
-  { asset: "NZD/USD", symbol: "frxNZDUSD" },
-  { asset: "EUR/JPY", symbol: "frxEURJPY" },
-  { asset: "GBP/JPY", symbol: "frxGBPJPY" },
-  { asset: "EUR/CAD", symbol: "frxEURCAD" },
-  { asset: "AUD/JPY", symbol: "frxAUDJPY" },
-  { asset: "GBP/AUD", symbol: "frxGBPAUD" },
-  { asset: "EUR/CHF", symbol: "frxEURCHF" },
-];
-
-// Crypto, commodities e sintéticos — disponíveis 24/7
-const ALWAYS_ON_PAIRS = [
-  { asset: "BTC/USD",       symbol: "cryBTCUSD"  },
-  { asset: "ETH/USD",       symbol: "cryETHUSD"  },
-  { asset: "Prata/USD",     symbol: "frxXAGUSD"  },
-  { asset: "Paládio/USD",   symbol: "frxXPDUSD"  },
-  { asset: "Platina/USD",   symbol: "frxXPTUSD"  },
-  // Sintéticos OTC — todos os 17 confirmados (labels exactos do UI)
-  { asset: "EUR/USD OTC",   symbol: "1HZ10V"  },
-  { asset: "GBP/USD OTC",   symbol: "1HZ25V"  },
-  { asset: "USD/JPY OTC",   symbol: "1HZ50V"  },
-  { asset: "AUD/USD OTC",   symbol: "1HZ75V"  },
-  { asset: "USD/CAD OTC",   symbol: "1HZ100V" },
-  { asset: "EUR/GBP OTC",   symbol: "R_10"    },
-  { asset: "USD/CHF OTC",   symbol: "R_25"    },
-  { asset: "NZD/USD OTC",   symbol: "R_50"    },
-  { asset: "EUR/JPY OTC",   symbol: "R_75"    },
-  { asset: "GBP/JPY OTC",   symbol: "R_100"   },
-  { asset: "EUR/CHF OTC",   symbol: "RDBEAR"  },
-  { asset: "AUD/CHF OTC",   symbol: "RDBULL"  },
-  { asset: "AUD/JPY OTC",   symbol: "WLDAUD"  },
-  { asset: "EUR/CAD OTC",   symbol: "WLDEUR"  },
-  { asset: "GBP/CAD OTC",   symbol: "WLDGBP"  },
-  { asset: "USD/MXN OTC",   symbol: "WLDUSD"  },
-  { asset: "Ouro/USD OTC",  symbol: "WLDXAU"  },
-];
+const BINANCE_REST = "https://api.binance.com/api/v3";
 
 const TIMEFRAMES = [
-  { label: "1m",  granularity: 60  },
-  { label: "5m",  granularity: 300 },
-  { label: "15m", granularity: 900 },
+  { label: "1m",  interval: "1m",  granularity: 60  },
+  { label: "5m",  interval: "5m",  granularity: 300 },
+  { label: "15m", interval: "15m", granularity: 900 },
 ];
-
-function isMarketOpen(): boolean {
-  const now  = new Date();
-  const day  = now.getUTCDay();   // 0=Sun, 6=Sat
-  const hour = now.getUTCHours();
-  if (day === 0 || day === 6) return false;
-  return hour >= 6 && hour < 17;
-}
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-async function recordPairs(
-  client: DerivWSClient,
-  pairList: { asset: string; symbol: string }[],
-  saved: { count: number },
-  assets: string[],
-) {
-  for (const tf of TIMEFRAMES) {
-    const results = await Promise.allSettled(
-      pairList.map(async (pair, idx) => {
-        await delay(idx * 200);
-        const candles = await client.fetchCandles(pair.symbol, tf.granularity, 5);
-        const upserts = await Promise.allSettled(
-          candles.map(c => {
-            const ts    = new Date(Number(c.epoch) * 1000);
-            const open  = Number(c.open);
-            const high  = Number(c.high);
-            const low   = Number(c.low);
-            const close = Number(c.close);
-            if (!isFinite(open) || !isFinite(close)) return Promise.resolve(null);
-            return prisma.priceCandle.upsert({
-              where:  { asset_timeframe_timestamp: { asset: pair.asset, timeframe: tf.label, timestamp: ts } },
-              update: { open, high, low, close },
-              create: { asset: pair.asset, timeframe: tf.label, timestamp: ts, open, high, low, close },
-            });
-          })
-        );
-        const ok = upserts.filter(r => r.status === "fulfilled" && r.value !== null).length;
-        if (ok > 0 && !assets.includes(pair.asset)) assets.push(pair.asset);
-        return ok;
-      })
-    );
-    for (const r of results) {
-      if (r.status === "fulfilled") saved.count += r.value;
-      else console.error("[price-recorder]", r.reason);
-    }
-  }
+async function fetchBinanceCandles(symbol: string, interval: string, limit = 5) {
+  const url = `${BINANCE_REST}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error(`Binance ${symbol} ${interval}: HTTP ${res.status}`);
+  const rows: any[][] = await res.json();
+  return rows.map(k => ({
+    epoch: Math.floor(Number(k[0]) / 1000),
+    open:  parseFloat(k[1]),
+    high:  parseFloat(k[2]),
+    low:   parseFloat(k[3]),
+    close: parseFloat(k[4]),
+  })).filter(c => isFinite(c.open) && isFinite(c.close) && c.high >= c.low);
 }
 
 function isAuthorized(req: NextRequest): boolean {
@@ -116,23 +42,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
-  const saved  = { count: 0 };
+  let saved = 0;
   const assets: string[] = [];
 
-  const client = new DerivWSClient();
-  try {
-    await client.connect();
-
-    // Always record crypto and commodities (24/7 markets)
-    await recordPairs(client, ALWAYS_ON_PAIRS, saved, assets);
-
-    // Only record forex during market hours
-    if (isMarketOpen()) {
-      await recordPairs(client, FOREX_PAIRS, saved, assets);
+  for (const tf of TIMEFRAMES) {
+    const results = await Promise.allSettled(
+      CRYPTO_PAIRS.map(async (pair, idx) => {
+        await delay(idx * 100);
+        const candles = await fetchBinanceCandles(pair.symbol, tf.interval, 5);
+        const upserts = await Promise.allSettled(
+          candles.map(c => {
+            const ts = new Date(c.epoch * 1000);
+            return prisma.priceCandle.upsert({
+              where:  { asset_timeframe_timestamp: { asset: pair.label, timeframe: tf.label, timestamp: ts } },
+              update: { open: c.open, high: c.high, low: c.low, close: c.close },
+              create: { asset: pair.label, timeframe: tf.label, timestamp: ts, open: c.open, high: c.high, low: c.low, close: c.close },
+            });
+          })
+        );
+        const ok = upserts.filter(r => r.status === "fulfilled").length;
+        if (ok > 0 && !assets.includes(pair.label)) assets.push(pair.label);
+        return ok;
+      })
+    );
+    for (const r of results) {
+      if (r.status === "fulfilled") saved += r.value;
+      else console.error("[price-recorder]", r.reason);
     }
-  } finally {
-    client.close();
   }
 
-  return NextResponse.json({ saved: saved.count, assets });
+  return NextResponse.json({ saved, assets });
 }
