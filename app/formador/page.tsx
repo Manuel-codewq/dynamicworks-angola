@@ -228,7 +228,7 @@ export default function EquipaPage() {
                 <div><label style={lbl}>Nº de operações</label><input type="number" min={0} value={operacoes} onChange={e => setOperacoes(e.target.value)} placeholder="Ex: 12" style={inp} /></div>
                 <div><label style={lbl}>Lucro/Prejuízo (Kz)</label><input type="number" value={lucro} onChange={e => setLucro(e.target.value)} placeholder="Ex: 15000" style={inp} /></div>
               </div>
-              <div style={{ marginBottom: 14 }}><label style={lbl}>Pares negociados</label><input type="text" value={pares} onChange={e => setPares(e.target.value)} placeholder="Ex: EUR/USD, BTC/USD" style={inp} /></div>
+              <div style={{ marginBottom: 14 }}><label style={lbl}>Pares negociados</label><input type="text" value={pares} onChange={e => setPares(e.target.value)} placeholder="Ex: BTC/USD, ETH/USD" style={inp} /></div>
               <div style={{ marginBottom: 14 }}><label style={lbl}>Estratégia usada</label><input type="text" value={estrategia} onChange={e => setEstrategia(e.target.value)} placeholder="Ex: Suporte/Resistência" style={inp} /></div>
               <div style={{ marginBottom: 14 }}>
                 <label style={lbl}>Observações do dia <span style={{ color: "#ef4444" }}>*</span></label>

@@ -22,10 +22,10 @@ export const metadata: Metadata = {
   },
   description: DESC,
   keywords: [
-    "trading Angola", "opções binárias Angola", "forex Angola",
+    "trading Angola", "opções binárias Angola", "bitcoin Angola",
     "plataforma trading Kwanza", "investir Angola", "Multicaixa Express trading",
-    "broker Angola", "Dynamics Works", "trading AOA", "bitcoin Angola",
-    "ouro Angola", "EUR USD Angola", "ganhar dinheiro Angola", "opções binárias",
+    "broker Angola", "Dynamics Works", "trading AOA", "cripto Angola",
+    "BTC USD Angola", "ganhar dinheiro Angola", "opções binárias",
     "corretora Angola", "trading online Angola", "Luanda trading",
     "pagamentos Kwanza", "depósito Multicaixa", "negociação Angola",
   ],
@@ -183,7 +183,7 @@ const jsonLd = {
           name:             "Quais ativos posso negociar?",
           acceptedAnswer: {
             "@type": "Answer",
-            text:    "Pode negociar mais de 16 ativos: pares Forex (EUR/USD, GBP/USD, etc.), Criptomoedas (BTC/USD, ETH/USD) e Metais Preciosos (XAU/USD, XAG/USD).",
+            text:    "Pode negociar 8 criptomoedas disponíveis 24/7: BTC/USD, ETH/USD, BNB/USD, SOL/USD, XRP/USD, ADA/USD, DOGE/USD e LTC/USD.",
           },
         },
       ],

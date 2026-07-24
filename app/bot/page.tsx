@@ -38,7 +38,7 @@ interface BotConfig {
 }
 
 const DEFAULT: BotConfig = {
-  pair: "EUR/USD OTC", symbol: "1HZ10V",
+  pair: "BTC/USD", symbol: "BTCUSDT",
   strategy: "rsi", timeframe: "1m",
   amountKz: 5000, expirySecs: 60, isDemo: true,
   maxTradesDay: 10, stopLossKz: 20000,

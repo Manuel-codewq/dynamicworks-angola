@@ -52,7 +52,7 @@ export async function generateMetadata(
     keywords: [
       t.name,
       "torneio trading Angola",
-      "competição forex Angola",
+      "competição cripto Angola",
       "torneio opções binárias",
       "prémios trading Angola",
       "Dynamics Works torneio",

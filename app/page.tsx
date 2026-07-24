@@ -54,10 +54,10 @@ function PlatformMockup() {
       </div>
       <div style={{ padding: "14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#3b82f6" }}>€$</div>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(247,147,26,0.12)", border: "1px solid rgba(247,147,26,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#F7931A" }}>₿</div>
           <div>
-            <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>EUR/USD</div>
-            <div style={{ color: "#334155", fontSize: 10 }}>OTC · 24/7</div>
+            <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>BTC/USD</div>
+            <div style={{ color: "#334155", fontSize: 10 }}>Cripto · 24/7</div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>

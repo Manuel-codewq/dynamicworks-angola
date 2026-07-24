@@ -2,9 +2,8 @@
 // In production use a DB-backed store; this is sufficient for the MVP.
 
 const ALL_PAIRS = [
-  "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", "EUR/GBP", "USD/CHF", "NZD/USD",
-  "EUR/USD (OTC)", "GBP/USD (OTC)", "USD/JPY (OTC)", "AUD/USD (OTC)", "USD/CAD (OTC)", "EUR/GBP (OTC)",
-  "Vol. 10", "Vol. 25", "Vol. 50", "Vol. 75", "Vol. 100", "Boom 300", "Crash 300",
+  "BTC/USD", "ETH/USD", "BNB/USD", "SOL/USD",
+  "XRP/USD", "ADA/USD", "DOGE/USD", "LTC/USD",
 ];
 
 export interface AdminSettings {

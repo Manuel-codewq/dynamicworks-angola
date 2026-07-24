@@ -1,17 +1,12 @@
 import { prisma } from "./prisma";
-import { FOREX_PAIRS, CRYPTO_PAIRS, COMMODITY_PAIRS } from "./derivWebSocket";
+import { CRYPTO_PAIRS } from "./derivWebSocket";
 
 const ALL_PAIRS = [
   "BTC/USD", "ETH/USD", "BNB/USD", "SOL/USD",
   "XRP/USD", "ADA/USD", "DOGE/USD", "LTC/USD",
 ] as const;
 
-// Labels de todos os pares reais (usado como default de activePairs)
-export const ALL_REAL_PAIR_LABELS = [
-  ...FOREX_PAIRS.map(p => p.label),
-  ...CRYPTO_PAIRS.map(p => p.label),
-  ...COMMODITY_PAIRS.map(p => p.label),
-];
+export const ALL_REAL_PAIR_LABELS = CRYPTO_PAIRS.map(p => p.label);
 
 export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));
 export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.47]));
