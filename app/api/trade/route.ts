@@ -159,6 +159,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Expiração entre 30 segundos e 60 minutos" }, { status: 400 });
   }
 
+  // Dispara a busca do preço de entrada já aqui, em paralelo com as validações
+  // seguintes (utilizador, depósito, torneio, saldo) — estas são todas queries à
+  // BD e não dependem do preço. Isto minimiza o desfasamento entre o preço que o
+  // utilizador via no ecrã ao clicar e o preço realmente capturado pelo servidor.
+  const entryPricePromise = fetchServerEntryPrice(asset);
+
   // Buscar utilizador
   let user: any;
   try {
@@ -241,7 +247,7 @@ export async function POST(req: NextRequest) {
   // Entry price determinado exclusivamente pelo servidor. O preço enviado pelo
   // cliente serve apenas para detectar um ecrã desatualizado — nunca define a
   // entrada (confiar nele permitiria abrir operações a um preço escolhido).
-  const entryPrice = await fetchServerEntryPrice(asset);
+  const entryPrice = await entryPricePromise;
   if (!entryPrice) {
     return NextResponse.json(
       { error: "Preço de mercado indisponível. Tente novamente em instantes." },
