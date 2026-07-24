@@ -117,27 +117,12 @@ async function replicateToFollowers(
 }
 
 export async function POST(req: NextRequest) {
-  let session: any;
-  try {
-    session = await auth();
-  } catch (err) {
-    console.error("[trade/open] auth()", err);
-    return NextResponse.json({ error: "Erro de autenticação." }, { status: 500 });
-  }
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
-
-  const cfg = await getSettings().catch(() => null);
-  const { maintenanceMode, forceRealMarket } = cfg ?? { maintenanceMode: false, forceRealMarket: false };
-  if (maintenanceMode) {
-    return NextResponse.json({ error: "Plataforma em manutenção. Tenta mais tarde." }, { status: 503 });
-  }
-
-  if (!await checkRateLimit("trade", session.user.id, 10, 60_000)) {
-    return NextResponse.json({ error: "Demasiadas operações. Aguarde 1 minuto." }, { status: 429 });
-  }
-
+  // Parse e validação síncrona do pedido primeiro — não dependem de sessão nem
+  // de BD. Isto permite disparar a busca do preço de entrada o mais cedo
+  // possível (ver entryPricePromise abaixo), a correr em paralelo com auth,
+  // rate limit e todas as queries de validação, minimizando o desfasamento
+  // entre o preço que o utilizador via no ecrã ao clicar e o preço realmente
+  // capturado pelo servidor.
   let body: any;
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
@@ -159,11 +144,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Expiração entre 30 segundos e 60 minutos" }, { status: 400 });
   }
 
-  // Dispara a busca do preço de entrada já aqui, em paralelo com as validações
-  // seguintes (utilizador, depósito, torneio, saldo) — estas são todas queries à
-  // BD e não dependem do preço. Isto minimiza o desfasamento entre o preço que o
-  // utilizador via no ecrã ao clicar e o preço realmente capturado pelo servidor.
   const entryPricePromise = fetchServerEntryPrice(asset);
+
+  let session: any;
+  try {
+    session = await auth();
+  } catch (err) {
+    console.error("[trade/open] auth()", err);
+    return NextResponse.json({ error: "Erro de autenticação." }, { status: 500 });
+  }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  const cfg = await getSettings().catch(() => null);
+  const { maintenanceMode, forceRealMarket } = cfg ?? { maintenanceMode: false, forceRealMarket: false };
+  if (maintenanceMode) {
+    return NextResponse.json({ error: "Plataforma em manutenção. Tenta mais tarde." }, { status: 503 });
+  }
+
+  if (!await checkRateLimit("trade", session.user.id, 10, 60_000)) {
+    return NextResponse.json({ error: "Demasiadas operações. Aguarde 1 minuto." }, { status: 429 });
+  }
 
   // Buscar utilizador
   let user: any;
