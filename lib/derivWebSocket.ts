@@ -103,7 +103,6 @@ class BinanceWS {
       if (!this.subscribedStreams.has(stream)) {
         this.subscribedStreams.add(stream);
         newStreams.push(stream);
-        console.log("[BinanceWS] Subscrito:", sym);
       }
     });
     if (newStreams.length === 0) return;
