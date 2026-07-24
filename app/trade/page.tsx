@@ -210,6 +210,7 @@ export default function TradePage() {
     setIsMobile(window.innerWidth < 768);
     setWindowHeight(window.innerHeight);
     setSoundOn(isSoundEnabled());
+    try { if (localStorage.getItem("dw_balance_hidden") === "1") setBalanceHidden(true); } catch {}
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
@@ -280,10 +281,7 @@ export default function TradePage() {
   const [tickerPrices,   setTickerPrices]   = useState<Record<string, number>>({});
   const [userMenuOpen,       setUserMenuOpen]       = useState(false);
   const [userAvatar,         setUserAvatar]         = useState("");
-  const [balanceHidden,      setBalanceHidden]      = useState(() => {
-    try { return localStorage.getItem("dw_balance_hidden") === "1"; } catch {}
-    return false;
-  });
+  const [balanceHidden,      setBalanceHidden]      = useState(false);
   const [tournamentWins,     setTournamentWins]     = useState(0);
   const [achievementsSummary, setAchievementsSummary] = useState<{ unlocked: number; total: number } | null>(null);
   const [tournamentPositions, setTournamentPositions] = useState<any[]>([]);
