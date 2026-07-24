@@ -24,6 +24,11 @@ const COINGECKO_IDS: Record<string, string> = {
   "LTCUSDT":  "litecoin",
 };
 
+// Cache em memória: evita chamadas duplicadas dentro da mesma invocação do worker.
+// Cada invocação serverless começa com cache vazio — é intencional.
+const _cache = new Map<string, { price: number; at: number }>();
+const CACHE_TTL = 30_000; // 30 segundos
+
 async function fetchWithTimeout(url: string, timeoutMs = 4500): Promise<Response> {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -53,6 +58,22 @@ async function fetchBinancePrice(symbol: string): Promise<number | null> {
   return null;
 }
 
+// Coinbase — API pública sem restrições geográficas, boa cobertura global
+async function fetchCoinbasePrice(asset: string): Promise<number | null> {
+  // "BTC/USD" → "BTC-USD"
+  const pair = asset.replace("/", "-");
+  try {
+    const res = await fetchWithTimeout(
+      `https://api.coinbase.com/v2/prices/${pair}/spot`,
+      5000,
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { data?: { amount: string } };
+    const price = parseFloat(data.data?.amount ?? "");
+    return isFinite(price) && price > 0 ? price : null;
+  } catch { return null; }
+}
+
 async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
   const id = COINGECKO_IDS[symbol];
   if (!id) return null;
@@ -75,11 +96,26 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
   const sym = BINANCE_ASSET_TO_SYMBOL[asset];
   if (!sym) return null;
 
-  // 1. Binance (principal + US)
-  const binancePrice = await fetchBinancePrice(sym);
-  if (binancePrice) return binancePrice;
+  // Cache — dentro do mesmo worker os activos partilham o preço já obtido
+  const cached = _cache.get(asset);
+  if (cached && Date.now() - cached.at < CACHE_TTL) return cached.price;
 
-  // 2. CoinGecko como segundo fallback
+  // 1. Binance (global + US)
+  const binancePrice = await fetchBinancePrice(sym);
+  if (binancePrice) {
+    _cache.set(asset, { price: binancePrice, at: Date.now() });
+    return binancePrice;
+  }
+
+  // 2. Coinbase — sem restrições geográficas (fallback principal)
+  const coinbasePrice = await fetchCoinbasePrice(asset);
+  if (coinbasePrice) {
+    _cache.set(asset, { price: coinbasePrice, at: Date.now() });
+    return coinbasePrice;
+  }
+
+  // 3. CoinGecko como último fallback
   const cgPrice = await fetchCoinGeckoPrice(sym);
+  if (cgPrice) _cache.set(asset, { price: cgPrice, at: Date.now() });
   return cgPrice;
 }

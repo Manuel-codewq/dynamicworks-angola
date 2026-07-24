@@ -4,17 +4,17 @@ import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
 async function getClosePriceForAsset(asset: string): Promise<number | null> {
-  // 1ª prioridade: preço ao vivo da Binance
+  // 1ª prioridade: Binance → Coinbase → CoinGecko (via getDerivPrice)
   try {
     const livePrice = await getDerivPrice(asset);
     if (livePrice && livePrice > 0) return livePrice;
   } catch { /* fallback para DB */ }
 
-  // Fallback: última PriceCandle registada (caso a Deriv WS esteja indisponível)
+  // Fallback: última PriceCandle registada (janela 5 min — cobre falhas do cron)
   try {
-    const ninetySecsAgo = new Date(Date.now() - 90_000);
+    const fiveMinAgo = new Date(Date.now() - 5 * 60_000);
     const candle = await prisma.priceCandle.findFirst({
-      where:   { asset, timestamp: { gte: ninetySecsAgo } },
+      where:   { asset, timestamp: { gte: fiveMinAgo } },
       orderBy: { timestamp: "desc" },
       select:  { close: true },
     });
@@ -55,9 +55,11 @@ export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss";
  * operações (o resultado depende apenas de qual lado da entrada o preço fica).
  *
  * Ordem de prioridade para o preço de fecho:
- *   1. PriceCandle DB (gravado pelo price-recorder, < 90s)
- *   2. Deriv WS em tempo real
- *   3. Sem preço após 30s → loss automático (fallback de segurança)
+ *   1. Binance REST (api.binance.com + api.binance.us)
+ *   2. Coinbase REST (sem restrições geográficas)
+ *   3. CoinGecko REST
+ *   4. PriceCandle DB (gravado pelo price-recorder, < 5 min)
+ *   5. Sem preço após 30s → loss automático (fallback de segurança)
  */
 export async function resolveExpiredTrade(
   trade: TradeToResolve,
