@@ -51,6 +51,71 @@ const EXPIRY_OPTIONS = [
 
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
 
+// Identidade visual de cada criptomoeda
+const COIN_META: Record<string, { color: string; bg: string; icon: string }> = {
+  "BTC/USD":  { color: "#F7931A", bg: "rgba(247,147,26,0.18)",  icon: "₿" },
+  "ETH/USD":  { color: "#627EEA", bg: "rgba(98,126,234,0.18)",  icon: "Ξ" },
+  "BNB/USD":  { color: "#F3BA2F", bg: "rgba(243,186,47,0.18)",  icon: "B" },
+  "SOL/USD":  { color: "#9945FF", bg: "rgba(153,69,255,0.18)",  icon: "◎" },
+  "XRP/USD":  { color: "#00AAE4", bg: "rgba(0,170,228,0.18)",   icon: "✕" },
+  "ADA/USD":  { color: "#4DA6FF", bg: "rgba(77,166,255,0.18)",  icon: "₳" },
+  "DOGE/USD": { color: "#C2A633", bg: "rgba(194,166,51,0.18)",  icon: "Ð" },
+  "LTC/USD":  { color: "#A6A9AA", bg: "rgba(166,169,170,0.18)", icon: "Ł" },
+};
+
+function CoinIcon({ label, size = 22 }: { label: string; size?: number }) {
+  const m = COIN_META[label];
+  if (!m) return null;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: size, height: size, borderRadius: "50%",
+      background: m.bg, border: `1px solid ${m.color}50`,
+      color: m.color, fontSize: size * 0.48, fontWeight: 800,
+      flexShrink: 0, lineHeight: 1, fontFamily: "monospace",
+    }}>{m.icon}</span>
+  );
+}
+
+function CircularTimer({ expiresAt, totalSecs, size = 72 }: { expiresAt: number; totalSecs: number; size?: number }) {
+  const [rem, setRem] = useState(0);
+  useEffect(() => {
+    setRem(Math.max(0, expiresAt - Date.now()));
+    const id = setInterval(() => {
+      const r = Math.max(0, expiresAt - Date.now());
+      setRem(r);
+      if (r === 0) clearInterval(id);
+    }, 100);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  const pct = Math.min(1, Math.max(0, rem / (totalSecs * 1000)));
+  const remSec = Math.ceil(rem / 1000);
+  const R = size / 2 - 5;
+  const circ = 2 * Math.PI * R;
+  const offset = circ * (1 - pct);
+  const color = pct > 0.35 ? "#00c076" : pct > 0.12 ? "#fbbf24" : "#ff3b5c";
+  const mm = String(Math.floor(remSec / 60)).padStart(2, "0");
+  const ss = String(remSec % 60).padStart(2, "0");
+
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)", display: "block" }}>
+        <circle cx={size/2} cy={size/2} r={R} fill="none" stroke="#1a2035" strokeWidth={4} />
+        <circle cx={size/2} cy={size/2} r={R} fill="none" stroke={color} strokeWidth={4}
+          strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.12s linear, stroke 0.5s ease" }} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color, fontWeight: 900, fontSize: size * 0.19, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+          {remSec <= 0 ? "···" : `${mm}:${ss}`}
+        </span>
+        {remSec > 0 && <span style={{ color: "#334155", fontSize: size * 0.11, marginTop: 1 }}>seg</span>}
+      </div>
+    </div>
+  );
+}
+
 // Animações globais da página de trade (hover/press, entrada em cascata, ping do preço)
 const DW_ANIM_CSS = `
 @keyframes dwFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -66,8 +131,12 @@ const DW_ANIM_CSS = `
 .dw-btn { transition: transform 0.12s ease, box-shadow 0.18s ease, filter 0.18s ease; }
 .dw-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.07); }
 .dw-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
-.dw-btn-call:hover:not(:disabled) { box-shadow: 0 6px 26px rgba(14,203,129,0.55) !important; }
-.dw-btn-put:hover:not(:disabled) { box-shadow: 0 6px 26px rgba(246,70,93,0.55) !important; }
+@keyframes dwCallGlow { 0%,100% { box-shadow: 0 4px 18px rgba(0,192,118,0.45); } 50% { box-shadow: 0 4px 32px rgba(0,192,118,0.75); } }
+@keyframes dwPutGlow  { 0%,100% { box-shadow: 0 4px 18px rgba(255,59,92,0.45);  } 50% { box-shadow: 0 4px 32px rgba(255,59,92,0.75);  } }
+.dw-btn-call:not(:disabled) { animation: dwCallGlow 2.6s ease-in-out infinite; }
+.dw-btn-put:not(:disabled)  { animation: dwPutGlow  2.6s ease-in-out infinite; }
+.dw-btn-call:hover:not(:disabled) { box-shadow: 0 8px 36px rgba(0,192,118,0.75), 0 0 0 1px rgba(0,192,118,0.3) !important; filter: brightness(1.10) !important; }
+.dw-btn-put:hover:not(:disabled)  { box-shadow: 0 8px 36px rgba(255,59,92,0.75),  0 0 0 1px rgba(255,59,92,0.3)  !important; filter: brightness(1.10) !important; }
 @keyframes dwBotPulse { 0%,100% { box-shadow: 0 4px 22px rgba(99,102,241,0.55); } 50% { box-shadow: 0 4px 32px rgba(99,102,241,0.9); } }
 .dw-chip { transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.1s ease; }
 .dw-chip:hover { border-color: #3a4360 !important; }
@@ -1618,8 +1687,8 @@ export default function TradePage() {
       if (w === 0 || h === 0) return;
 
       const chart = createChart(el, {
-        layout: { background: { color: "#11141d" }, textColor: "#5b6786", fontSize: 11, attributionLogo: false },
-        grid:   { vertLines: { color: "#262d40" }, horzLines: { color: "#262d40" } },
+        layout: { background: { color: "#0d1117" }, textColor: "#4d5b7c", fontSize: 11, attributionLogo: false },
+        grid:   { vertLines: { color: "#141c2e" }, horzLines: { color: "#141c2e" } },
         crosshair: { mode: 1 },
         timeScale: {
           borderColor: "#262d40", timeVisible: true,
@@ -1698,9 +1767,9 @@ export default function TradePage() {
       } else if (ct === "area") {
         series = chart.addSeries(AreaSeries, { lineColor: "#ffffff", topColor: "rgba(255,255,255,0.3)", bottomColor: "rgba(255,255,255,0.0)", lineWidth: 2, priceFormat, lastValueVisible: true, priceLineVisible: true });
       } else if (ct === "bar") {
-        series = chart.addSeries(BarSeries, { upColor: "#0ecb81", downColor: "#f6465d", priceFormat, lastValueVisible: false });
+        series = chart.addSeries(BarSeries, { upColor: "#00c076", downColor: "#ff3b5c", priceFormat, lastValueVisible: false });
       } else {
-        series = chart.addSeries(CandlestickSeries, { upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d", lastValueVisible: false, priceFormat });
+        series = chart.addSeries(CandlestickSeries, { upColor: "#00c076", downColor: "#ff3b5c", borderUpColor: "#00c076", borderDownColor: "#ff3b5c", wickUpColor: "#00c076", wickDownColor: "#ff3b5c", lastValueVisible: false, priceFormat });
       }
       candleSeriesRef.current  = series;
       currentCandleRef.current = null;
@@ -2830,28 +2899,26 @@ export default function TradePage() {
       return (
       <div data-tour="dw-trade-btns" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         <button className="dw-btn dw-btn-call" onClick={() => openTrade("call")} disabled={btnDisabled} style={{
-          width: "100%", height: compact ? 50 : 54,
-          background: "linear-gradient(135deg,#0aa56a 0%,#0ecb81 100%)",
-          color: "#fff", border: "none", borderRadius: 10,
-          fontSize: compact ? 15 : 16, fontWeight: 900,
+          width: "100%", height: compact ? 52 : 58,
+          background: "linear-gradient(135deg,#07a86b 0%,#00c076 100%)",
+          color: "#fff", border: "none", borderRadius: 12,
+          fontSize: compact ? 15 : 17, fontWeight: 900,
           cursor: btnDisabled ? "not-allowed" : "pointer",
-          opacity: btnDisabled ? 0.6 : 1,
+          opacity: btnDisabled ? 0.55 : 1,
           display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          boxShadow: btnDisabled ? "none" : "0 4px 18px rgba(14,203,129,0.4)",
-          transition: "opacity 0.15s, box-shadow 0.15s",
-          letterSpacing: 1,
+          letterSpacing: 1.5,
         }}>
-          {loading ? "..." : <><TrendingUp size={20} strokeWidth={2.5} /><span>ALTA</span></>}
+          {loading ? "..." : <><TrendingUp size={21} strokeWidth={2.5} /><span>ALTA</span></>}
         </button>
 
         {/* Sentimento do mercado — entre os botões */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 2px" }}>
-          <span style={{ color: "#0ecb81", fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{sentiment}%</span>
+          <span style={{ color: "#00c076", fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{sentiment}%</span>
           <div style={{ flex: 1, height: 5, background: "#141824", borderRadius: 3, overflow: "hidden", display: "flex" }}>
-            <div style={{ height: "100%", width: `${sentiment}%`, background: "#0ecb81", transition: "width 0.6s ease" }} />
-            <div style={{ height: "100%", flex: 1, background: "#f6465d" }} />
+            <div style={{ height: "100%", width: `${sentiment}%`, background: "#00c076", transition: "width 0.6s ease" }} />
+            <div style={{ height: "100%", flex: 1, background: "#ff3b5c" }} />
           </div>
-          <span style={{ color: "#f6465d", fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{100 - sentiment}%</span>
+          <span style={{ color: "#ff3b5c", fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{100 - sentiment}%</span>
         </div>
 
         {/* ── Botão BOT IA — apenas na conta real / torneio ── */}
@@ -2880,18 +2947,16 @@ export default function TradePage() {
         )}
 
         <button className="dw-btn dw-btn-put" onClick={() => openTrade("put")} disabled={btnDisabled} style={{
-          width: "100%", height: compact ? 50 : 54,
-          background: "linear-gradient(135deg,#d92f44 0%,#f6465d 100%)",
-          color: "#fff", border: "none", borderRadius: 10,
-          fontSize: compact ? 15 : 16, fontWeight: 900,
+          width: "100%", height: compact ? 52 : 58,
+          background: "linear-gradient(135deg,#c4213b 0%,#ff3b5c 100%)",
+          color: "#fff", border: "none", borderRadius: 12,
+          fontSize: compact ? 15 : 17, fontWeight: 900,
           cursor: btnDisabled ? "not-allowed" : "pointer",
-          opacity: btnDisabled ? 0.6 : 1,
+          opacity: btnDisabled ? 0.55 : 1,
           display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          boxShadow: btnDisabled ? "none" : "0 4px 18px rgba(246,70,93,0.4)",
-          transition: "opacity 0.15s, box-shadow 0.15s",
-          letterSpacing: 1,
+          letterSpacing: 1.5,
         }}>
-          {loading ? "..." : <><TrendingDown size={20} strokeWidth={2.5} /><span>BAIXA</span></>}
+          {loading ? "..." : <><TrendingDown size={21} strokeWidth={2.5} /><span>BAIXA</span></>}
         </button>
       </div>
       ); })()}
@@ -2946,39 +3011,35 @@ export default function TradePage() {
             return (
               <div key={t.id} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                background: winning ? "rgba(14,203,129,0.06)" : "rgba(246,70,93,0.06)",
-                border: `1px solid ${winning ? "rgba(14,203,129,0.2)" : "rgba(246,70,93,0.2)"}`,
-                borderRadius: 10, padding: "10px 12px", marginBottom: 6,
+                background: winning ? "rgba(0,192,118,0.07)" : "rgba(255,59,92,0.07)",
+                border: `1px solid ${winning ? "rgba(0,192,118,0.22)" : "rgba(255,59,92,0.22)"}`,
+                borderRadius: 12, padding: "10px 12px", marginBottom: 6,
                 transition: "all 0.4s",
               }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <CoinIcon label={t.asset} size={18} />
                     <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{t.asset}</span>
                     <span style={{
-                      background: t.direction === "call" ? "rgba(14,203,129,0.15)" : "rgba(246,70,93,0.15)",
-                      color: t.direction === "call" ? "#0ecb81" : "#f6465d",
+                      background: t.direction === "call" ? "rgba(0,192,118,0.18)" : "rgba(255,59,92,0.18)",
+                      color: t.direction === "call" ? "#00c076" : "#ff3b5c",
                       fontSize: 9, fontWeight: 800, borderRadius: 4, padding: "1px 5px",
                     }}>{t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}</span>
                   </div>
                   <div style={{ color: "#64748b", fontSize: 11 }}>{formatKz(t.amount)}</div>
                   {currentPrice > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: winning ? "#0ecb81" : "#f6465d" }} />
-                      <span style={{ color: winning ? "#0ecb81" : "#f6465d", fontSize: 10, fontWeight: 700 }}>
-                        {winning ? "GANHO" : "PERDA"}
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: winning ? "#00c076" : "#ff3b5c" }} />
+                      <span style={{ color: winning ? "#00c076" : "#ff3b5c", fontSize: 10, fontWeight: 700 }}>
+                        {winning ? "A GANHAR" : "A PERDER"}
                       </span>
                     </div>
                   )}
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{
-                    color: closing ? "#64748b" : "#ffffff",
-                    fontWeight: 800, fontSize: 14,
-                    fontVariantNumeric: "tabular-nums",
-                    animation: closing ? "pulse 1s ease-in-out infinite" : "none",
-                  }}>{cd}</div>
-                  <div style={{ color: "#374151", fontSize: 9, marginTop: 1 }}>restante</div>
-                </div>
+                {closing
+                  ? <div style={{ color: "#64748b", fontWeight: 800, fontSize: 12 }}>A fechar…</div>
+                  : <CircularTimer expiresAt={t.expiresAt} totalSecs={t.expirySecs} size={68} />
+                }
               </div>
             );
           })}
@@ -3063,6 +3124,7 @@ export default function TradePage() {
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}
           style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, padding: mobile ? "5px 10px" : "6px 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: mobile ? 4 : 6, fontSize: mobile ? 13 : 14, fontWeight: 700, transition: "border-color 0.15s ease" }}>
+          {selectedPair && <CoinIcon label={selectedPair.label} size={18} />}
           <span key={selectedPair?.symbol ?? "none"} className="dw-value-pop">{selectedPair?.label ?? "…"}</span>
           <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" style={{ transition: "transform 0.15s ease", transform: assetDropdown ? "rotate(180deg)" : "none" }} />
         </button>
@@ -3073,21 +3135,31 @@ export default function TradePage() {
                 <div style={{ padding: "6px 14px 4px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1, textTransform: "uppercase", borderTop: "1px solid #262d40" }}>
                   {cat}
                 </div>
-                {groups[cat].map(p => (
+                {groups[cat].map(p => {
+                  const livePrice = tickerPrices[p.symbol];
+                  const openPrice = sessionOpenPrices[p.symbol];
+                  const priceDir = livePrice && openPrice ? (livePrice > openPrice ? 1 : livePrice < openPrice ? -1 : 0) : 0;
+                  const priceColor = priceDir === 1 ? "#00c076" : priceDir === -1 ? "#ff3b5c" : "#94a3b8";
+                  return (
                   <button key={p.symbol}
                     onClick={() => { setSelectedPair(p); setAssetDropdown(false); }}
                     style={{ width: "100%", background: selectedPair?.symbol === p.symbol ? "#262d40" : "transparent", border: "none", padding: mobile ? "10px 14px" : "8px 14px", color: "#fff", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, minHeight: 40 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <span style={{ fontWeight: 600 }}>{p.label}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <CoinIcon label={p.label} size={24} />
+                      <span style={{ fontWeight: 700 }}>{p.label}</span>
                       <span style={{ color: "#ffffff", fontSize: 10, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
                         {Math.round((payoutMap[p.label] ?? 0.74) * 100)}%
                       </span>
                     </span>
-                    {tickerPrices[p.symbol] ? (
-                      <span style={{ color: "#94a3b8", fontSize: 11 }}>{tickerPrices[p.symbol].toFixed(p.decimals)}</span>
+                    {livePrice ? (
+                      <span style={{ color: priceColor, fontSize: 11, fontWeight: 700, fontVariantNumeric: "tabular-nums", display: "flex", alignItems: "center", gap: 2 }}>
+                        {priceDir === 1 ? "▲" : priceDir === -1 ? "▼" : ""}
+                        {livePrice.toFixed(p.decimals)}
+                      </span>
                     ) : null}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -4482,7 +4554,7 @@ export default function TradePage() {
 
                 {/* ALTA — position relative + zIndex 1 para ficar abaixo do círculo */}
                 <button className="dw-btn dw-btn-call" onClick={() => openTrade("call")} disabled={btnDisabled}
-                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(145deg,#16a34a,#0ecb81)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "2px 0", paddingRight: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(14,203,129,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
+                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#0d1a10" : "linear-gradient(145deg,#07a86b,#00c076)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "2px 0", paddingRight: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0 }}>
                   {loading ? <span style={{ color: "#fff", fontSize: 12 }}>…</span> : <>
                     <TrendingUp size={11} strokeWidth={2.5} />
                     <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 0.4, lineHeight: 1.2 }}>ALTA</span>
@@ -4492,7 +4564,7 @@ export default function TradePage() {
 
                 {/* BAIXA — position relative + zIndex 1 */}
                 <button className="dw-btn dw-btn-put" onClick={() => openTrade("put")} disabled={btnDisabled}
-                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(145deg,#be123c,#f6465d)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "2px 0", paddingLeft: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0, boxShadow: btnDisabled ? "none" : "0 3px 12px rgba(246,70,93,0.3), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
+                  style={{ flex: 1, position: "relative", zIndex: 1, background: btnDisabled ? "#1a0d0d" : "linear-gradient(145deg,#c4213b,#ff3b5c)", color: "#fff", border: "none", borderRadius: 12, cursor: btnDisabled ? "not-allowed" : "pointer", opacity: btnDisabled ? 0.45 : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "2px 0", paddingLeft: (activeAccount === "real" || activeAccount === "tournament") ? 34 : 0 }}>
                   {loading ? <span style={{ color: "#fff", fontSize: 12 }}>…</span> : <>
                     <TrendingDown size={11} strokeWidth={2.5} />
                     <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 0.4, lineHeight: 1.2 }}>BAIXA</span>
@@ -4631,14 +4703,16 @@ export default function TradePage() {
                       const pct     = open > 0 && price > 0 ? ((price - open) / open * 100) : 0;
                       const isActive = selectedPair?.symbol === p.symbol;
                       const payout  = Math.round((payoutMap[p.label] ?? 0.74) * 100);
+                      const upColor = "#00c076"; const dnColor = "#ff3b5c";
                       return (
                         <button key={p.symbol} onClick={() => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
-                          style={{ width: "100%", background: isActive ? "rgba(255,255,255,0.07)" : "transparent", border: "none", borderBottom: "1px solid #141824", padding: "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            {isActive && <div style={{ width: 3, height: 28, background: "#ffffff", borderRadius: 2, position: "absolute", left: 0 }} />}
+                          style={{ width: "100%", background: isActive ? "rgba(255,255,255,0.07)" : "transparent", border: "none", borderBottom: "1px solid #141824", padding: "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", position: "relative" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            {isActive && <div style={{ width: 3, height: 32, background: "#ffffff", borderRadius: 2, position: "absolute", left: 0 }} />}
+                            <CoinIcon label={p.label} size={38} />
                             <div style={{ textAlign: "left" }}>
-                              <div style={{ color: isActive ? "#ffffff" : "#fff", fontWeight: 700, fontSize: 14 }}>{p.label}</div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                              <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 14 }}>{p.label}</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
                                 <span style={{ color: "#334155", fontSize: 11 }}>{p.category}</span>
                                 <span key={payout} className="dw-value-pop" style={{ color: "#ffffff", fontSize: 9, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
                                   {payout}%
@@ -4647,11 +4721,11 @@ export default function TradePage() {
                             </div>
                           </div>
                           <div style={{ textAlign: "right" }}>
-                            <div style={{ color: price > 0 ? (isUp ? "#0ecb81" : "#f6465d") : "#334155", fontWeight: 800, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
+                            <div style={{ color: price > 0 ? (isUp ? upColor : dnColor) : "#334155", fontWeight: 800, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
                               {price > 0 ? price.toFixed(p.decimals) : "—"}
                             </div>
                             {price > 0 && (
-                              <div style={{ color: isUp ? "#0ecb81" : "#f6465d", fontSize: 11, marginTop: 1 }}>
+                              <div style={{ color: isUp ? upColor : dnColor, fontSize: 11, fontWeight: 700, marginTop: 2 }}>
                                 {isUp ? "▲" : "▼"} {Math.abs(pct).toFixed(2)}%
                               </div>
                             )}
@@ -5117,15 +5191,19 @@ export default function TradePage() {
             const open  = sessionOpenPrices[p.symbol] ?? 0;
             const isUp  = price >= open;
             const pct   = open > 0 && price > 0 ? ((price - open) / open * 100) : 0;
+            const meta  = COIN_META[p.label];
             return (
               <span key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
-                <span style={{ color: "#64748b", fontWeight: 600 }}>{p.label}</span>
-                <span style={{ color: isUp ? "#0ecb81" : "#f6465d", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                {meta && (
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, borderRadius: "50%", background: meta.bg, color: meta.color, fontSize: 7, fontWeight: 900, fontFamily: "monospace", flexShrink: 0 }}>{meta.icon}</span>
+                )}
+                <span style={{ color: "#8393b0", fontWeight: 700, letterSpacing: 0.3 }}>{p.label}</span>
+                <span style={{ color: isUp ? "#00c076" : "#ff3b5c", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                   {price > 0 ? price.toFixed(p.decimals) : "—"}
                 </span>
                 {price > 0 && (
-                  <span style={{ color: isUp ? "#0aa56a" : "#e0364d", fontSize: 9, fontWeight: 600, background: isUp ? "rgba(14,203,129,0.1)" : "rgba(246,70,93,0.1)", borderRadius: 3, padding: "0px 3px" }}>
-                    {isUp ? "+" : ""}{pct.toFixed(2)}%
+                  <span style={{ color: isUp ? "#00c076" : "#ff3b5c", fontSize: 9, fontWeight: 700, background: isUp ? "rgba(0,192,118,0.12)" : "rgba(255,59,92,0.12)", borderRadius: 3, padding: "0px 4px" }}>
+                    {isUp ? "▲" : "▼"}{Math.abs(pct).toFixed(2)}%
                   </span>
                 )}
               </span>

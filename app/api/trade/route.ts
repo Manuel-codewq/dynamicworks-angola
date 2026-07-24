@@ -21,7 +21,7 @@ async function fetchServerEntryPrice(asset: string): Promise<number | null> {
 
   // 2. Fallback: PriceCandle DB
   try {
-    const cutoff = new Date(Date.now() - 300_000);
+    const cutoff = new Date(Date.now() - 900_000); // 15 min — cobre lag do price-recorder
     const candle = await prisma.priceCandle.findFirst({
       where:   { asset, timestamp: { gte: cutoff } },
       orderBy: { timestamp: "desc" },
