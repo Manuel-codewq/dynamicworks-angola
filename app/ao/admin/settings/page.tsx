@@ -103,7 +103,7 @@ export default function AdminSettingsPage() {
             <RefreshCw size={14} />
           </button>
           <button onClick={save} disabled={saving}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: saved ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.15)", border: `1px solid ${saved ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.3)"}`, borderRadius: 8, padding: "8px 18px", color: saved ? "#22c55e" : "#ffffff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+            style={{ display: "flex", alignItems: "center", gap: 6, background: saved ? "rgba(0,192,118,0.15)" : "rgba(255,255,255,0.15)", border: `1px solid ${saved ? "rgba(0,192,118,0.3)" : "rgba(255,255,255,0.3)"}`, borderRadius: 8, padding: "8px 18px", color: saved ? "#00c076" : "#ffffff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
             <Save size={14} /> {saved ? "Guardado!" : saving ? "A guardar..." : "Guardar"}
           </button>
         </div>
@@ -125,7 +125,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
             <button onClick={resetRanking} disabled={resetting}
-              style={{ background: resetDone ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.1)", border: `1px solid ${resetDone ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "7px 14px", color: resetDone ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 12, cursor: resetting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6, opacity: resetting ? 0.6 : 1, flexShrink: 0 }}>
+              style={{ background: resetDone ? "rgba(0,192,118,0.15)" : "rgba(239,68,68,0.1)", border: `1px solid ${resetDone ? "rgba(0,192,118,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "7px 14px", color: resetDone ? "#00c076" : "#ef4444", fontWeight: 700, fontSize: 12, cursor: resetting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6, opacity: resetting ? 0.6 : 1, flexShrink: 0 }}>
               <RotateCcw size={13} /> {resetDone ? "Zerado!" : resetting ? "..." : "Zerar"}
             </button>
           </div>
@@ -143,7 +143,7 @@ export default function AdminSettingsPage() {
           </div>
 
           {/* Force real market */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#0a0f1e", borderRadius: 10, padding: "14px 18px", flex: 1, minWidth: 220, border: draft.forceRealMarket ? "1px solid rgba(34,197,94,0.3)" : "1px solid transparent" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#0a0f1e", borderRadius: 10, padding: "14px 18px", flex: 1, minWidth: 220, border: draft.forceRealMarket ? "1px solid rgba(0,192,118,0.3)" : "1px solid transparent" }}>
             <div style={{ flex: 1 }}>
               <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Forçar pares reais</div>
               <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
@@ -151,7 +151,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
             <button onClick={() => setDraft(d => d ? { ...d, forceRealMarket: !d.forceRealMarket } : d)}
-              style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: draft.forceRealMarket ? "#22c55e" : "#1e2d50", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+              style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: draft.forceRealMarket ? "#00c076" : "#1e2d50", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
               <span style={{ position: "absolute", top: 3, left: draft.forceRealMarket ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
             </button>
           </div>
@@ -159,38 +159,30 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      {/* Pares do mercado real */}
+      {/* Pares activos */}
       <div style={card}>
-        <p style={sectionTitle}>Pares do Mercado Real</p>
+        <p style={sectionTitle}>Pares Activos</p>
         <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
-          Pares activos durante o horário de mercado (Seg–Sex, 07h–20h WAT).
+          Pares disponíveis para negociar. Desactivar um par impede novas operações nesse par.
         </p>
-        {(["Forex", "Cripto", "Metal"] as const).map(cat => {
-          const catPairs = REAL_PAIR_OPTIONS.filter(p => p.cat === cat);
-          return (
-            <div key={cat} style={{ marginBottom: 16 }}>
-              <div style={{ color: "#475569", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{cat}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
-                {catPairs.map(opt => {
-                  const active = draft.activePairs?.includes(opt.label) ?? true;
-                  return (
-                    <button key={opt.label} onClick={() => setDraft(d => {
-                      if (!d) return d;
-                      const cur = d.activePairs ?? REAL_PAIR_OPTIONS.map(o => o.label);
-                      return { ...d, activePairs: active ? cur.filter(l => l !== opt.label) : [...cur, opt.label] };
-                    })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "9px 12px", border: `1px solid ${active ? "rgba(34,197,94,0.3)" : "#1e2d50"}`, cursor: "pointer" }}>
-                      <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
-                      {active
-                        ? <ToggleRight size={18} color="#22c55e" />
-                        : <ToggleLeft  size={18} color="#334155" />
-                      }
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
+          {REAL_PAIR_OPTIONS.map(opt => {
+            const active = draft.activePairs?.includes(opt.label) ?? true;
+            return (
+              <button key={opt.label} onClick={() => setDraft(d => {
+                if (!d) return d;
+                const cur = d.activePairs ?? REAL_PAIR_OPTIONS.map(o => o.label);
+                return { ...d, activePairs: active ? cur.filter(l => l !== opt.label) : [...cur, opt.label] };
+              })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "11px 14px", border: `1px solid ${active ? "rgba(0,192,118,0.3)" : "#1e2d50"}`, cursor: "pointer", transition: "border-color 0.15s" }}>
+                <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
+                {active
+                  ? <ToggleRight size={20} color="#00c076" />
+                  : <ToggleLeft  size={20} color="#334155" />
+                }
+              </button>
+            );
+          })}
+        </div>
       </div>
 
 
