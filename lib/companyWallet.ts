@@ -65,16 +65,19 @@ export async function onWithdrawalRejected(txId: string, userId: string, amount:
 }
 
 export async function getWallet() {
-  const w = await prisma.companyWallet.upsert({
-    where:  { id: "singleton" },
-    create: { id: "singleton" },
-    update: {},
-  });
-  return {
-    balance:      w.balance,
-    pendingOut:   w.pendingOut,
-    available:    w.balance - w.pendingOut,
-    totalFees:    w.totalFees,
-    totalPaidOut: w.totalPaidOut,
-  };
+  const [depAgg, pendAgg, paidAgg] = await Promise.all([
+    prisma.transaction.aggregate({ where: { type: "deposit",    status: "completed" }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { type: "withdrawal", status: "pending"   }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { type: "withdrawal", status: "completed" }, _sum: { amount: true } }),
+  ]);
+
+  const totalDeposited   = depAgg._sum.amount  ?? 0;
+  const pendingOut       = pendAgg._sum.amount  ?? 0;
+  const totalWithdrawn   = paidAgg._sum.amount  ?? 0;
+  const totalFees        = Math.round(totalWithdrawn * WITHDRAWAL_FEE);
+  const totalPaidOut     = totalWithdrawn - totalFees;
+  const balance          = totalDeposited - totalWithdrawn;
+  const available        = balance - pendingOut;
+
+  return { balance, pendingOut, available, totalFees, totalPaidOut, totalDeposited };
 }
