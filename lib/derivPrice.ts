@@ -24,10 +24,13 @@ const COINGECKO_IDS: Record<string, string> = {
   "LTCUSDT":  "litecoin",
 };
 
-// Cache em memória: evita chamadas duplicadas dentro da mesma invocação do worker.
-// Cada invocação serverless começa com cache vazio — é intencional.
-const _cache = new Map<string, { price: number; at: number }>();
-const CACHE_TTL = 30_000; // 30 segundos
+// Deduplicação de pedidos em curso: evita chamadas duplicadas quando o worker
+// resolve várias operações do mesmo activo em paralelo (Promise.all na mesma
+// invocação). NÃO é uma cache por tempo — instâncias serverless na Vercel
+// podem ficar "quentes" e sobreviver entre pedidos HTTP diferentes, por isso
+// uma cache com TTL a nível de módulo devolveria preços desactualizados entre
+// pedidos, o que é inaceitável ao resolver operações com dinheiro real.
+const _inFlight = new Map<string, Promise<number | null>>();
 
 async function fetchWithTimeout(url: string, timeoutMs = 4500): Promise<Response> {
   const ctrl = new AbortController();
@@ -96,26 +99,30 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
   const sym = BINANCE_ASSET_TO_SYMBOL[asset];
   if (!sym) return null;
 
-  // Cache — dentro do mesmo worker os activos partilham o preço já obtido
-  const cached = _cache.get(asset);
-  if (cached && Date.now() - cached.at < CACHE_TTL) return cached.price;
+  // Já existe um pedido em curso para este activo (ex.: várias operações do
+  // mesmo activo a resolver em paralelo) — partilha a mesma promise em vez de
+  // disparar pedidos HTTP duplicados.
+  const existing = _inFlight.get(asset);
+  if (existing) return existing;
 
-  // 1. Binance (global + US)
-  const binancePrice = await fetchBinancePrice(sym);
-  if (binancePrice) {
-    _cache.set(asset, { price: binancePrice, at: Date.now() });
-    return binancePrice;
-  }
+  const fetchPromise = (async (): Promise<number | null> => {
+    try {
+      // 1. Binance (global + US)
+      const binancePrice = await fetchBinancePrice(sym);
+      if (binancePrice) return binancePrice;
 
-  // 2. Coinbase — sem restrições geográficas (fallback principal)
-  const coinbasePrice = await fetchCoinbasePrice(asset);
-  if (coinbasePrice) {
-    _cache.set(asset, { price: coinbasePrice, at: Date.now() });
-    return coinbasePrice;
-  }
+      // 2. Coinbase — sem restrições geográficas (fallback principal)
+      const coinbasePrice = await fetchCoinbasePrice(asset);
+      if (coinbasePrice) return coinbasePrice;
 
-  // 3. CoinGecko como último fallback
-  const cgPrice = await fetchCoinGeckoPrice(sym);
-  if (cgPrice) _cache.set(asset, { price: cgPrice, at: Date.now() });
-  return cgPrice;
+      // 3. CoinGecko como último fallback
+      return await fetchCoinGeckoPrice(sym);
+    } finally {
+      // Remove assim que resolve — nunca serve um preço antigo a um pedido futuro
+      _inFlight.delete(asset);
+    }
+  })();
+
+  _inFlight.set(asset, fetchPromise);
+  return fetchPromise;
 }
