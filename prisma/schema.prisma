@@ -431,6 +431,28 @@ model TraderReport {
   @@index([date])
 }
 
+model CompanyWallet {
+  id           String   @id @default("singleton")
+  balance      Float    @default(0)
+  pendingOut   Float    @default(0)
+  totalFees    Float    @default(0)
+  totalPaidOut Float    @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
+model CompanyLedger {
+  id          String   @id @default(cuid())
+  type        String
+  amount      Float
+  description String?
+  userId      String?
+  txId        String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type])
+}
+
 model MarketingReport {
   id               String   @id @default(cuid())
   userId           String

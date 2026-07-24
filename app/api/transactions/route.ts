@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { checkSuspiciousDeposit } from "@/lib/fraudDetection";
 import { getSettings } from "@/lib/settings";
+import { onWithdrawalPending } from "@/lib/companyWallet";
 import { sendPushToUser } from "@/lib/webPush";
 
 export async function GET() {
@@ -81,6 +82,7 @@ export async function POST(req: NextRequest) {
         if (deducted.count === 0) {
           throw Object.assign(new Error("INSUFFICIENT_BALANCE"), { code: "INSUFFICIENT_BALANCE" });
         }
+        await onWithdrawalPending("pending", userId, amountNum, dbTx);
       }
 
       // Validar e invalidar OTP atomicamente — um único updateMany cujo WHERE inclui o código

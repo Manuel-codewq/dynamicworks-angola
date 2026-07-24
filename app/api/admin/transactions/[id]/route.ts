@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
+import { onDepositApproved, onWithdrawalApproved, onWithdrawalRejected } from "@/lib/companyWallet";
 import {
   sendDepositApprovedEmail, sendDepositRejectedEmail,
   sendWithdrawalApprovedEmail, sendWithdrawalRejectedEmail,
@@ -50,6 +51,7 @@ export async function PATCH(
     updated = await prisma.$transaction(async (dbTx) => {
       if (status === "completed") {
         if (tx.type === "deposit") {
+          await onDepositApproved(tx.id, tx.userId, tx.amount, dbTx);
           // Creditar saldo ao utilizador
           const depositor = await dbTx.user.update({
             where: { id: tx.userId },
@@ -114,8 +116,12 @@ export async function PATCH(
             }
           }
         }
-        // levantamento aprovado: saldo já foi debitado na submissão — nada a fazer
+        // levantamento aprovado: saldo já foi debitado na submissão
+        if (tx.type === "withdrawal") {
+          await onWithdrawalApproved(tx.id, tx.userId, tx.amount, dbTx);
+        }
       } else if (status === "rejected" && tx.type === "withdrawal") {
+        await onWithdrawalRejected(tx.id, tx.userId, tx.amount, dbTx);
         // Devolver saldo ao utilizador
         await dbTx.user.update({
           where: { id: tx.userId },
