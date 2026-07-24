@@ -112,10 +112,14 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
       if (binancePrice) return binancePrice;
 
       // 2. Coinbase — sem restrições geográficas (fallback principal)
+      // Binance falhou (bloqueio/rate-limit de IP de datacenter é comum) — regista
+      // para diagnóstico, já que o Coinbase/CoinGecko actualizam com menos frequência.
+      console.warn(`[derivPrice] Binance falhou para ${sym} — a usar fallback`);
       const coinbasePrice = await fetchCoinbasePrice(asset);
       if (coinbasePrice) return coinbasePrice;
 
       // 3. CoinGecko como último fallback
+      console.warn(`[derivPrice] Coinbase também falhou para ${asset} — a usar CoinGecko`);
       return await fetchCoinGeckoPrice(sym);
     } finally {
       // Remove assim que resolve — nunca serve um preço antigo a um pedido futuro

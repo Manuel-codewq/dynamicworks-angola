@@ -2007,11 +2007,14 @@ export default function TradePage() {
       );
       if (unnotified) {
         notifiedTradesRef.current.add(unnotified.id);
-        const isWin = unnotified.result === "win";
-        if (isWin) playWin(); else playLoss();
+        const isWin  = unnotified.result === "win";
+        const isDraw = unnotified.result === "draw";
+        if (isWin) playWin(); else if (!isDraw) playLoss();
         setNotification({
-          msg:  isWin ? `Win +${formatKz(Math.round(unnotified.profit))}` : `Loss ${formatKz(unnotified.amount)}`,
-          type: isWin ? "win" : "loss",
+          msg:  isWin ? `Win +${formatKz(Math.round(unnotified.profit))}`
+              : isDraw ? `Empate — valor devolvido`
+              : `Loss ${formatKz(unnotified.amount)}`,
+          type: isWin ? "win" : isDraw ? "info" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);
         fetchBalance();
@@ -2094,9 +2097,9 @@ export default function TradePage() {
       .map((t: any) => ({
         time:     Math.floor(new Date(t.createdAt).getTime() / 1000) as Time,
         position: t.direction === "call" ? "belowBar" : "aboveBar",
-        color:    t.result === "win" ? "#0ecb81" : "#f6465d",
+        color:    t.result === "win" ? "#0ecb81" : t.result === "draw" ? "#94a3b8" : "#f6465d",
         shape:    t.direction === "call" ? "arrowUp" : "arrowDown",
-        text:     t.result === "win" ? "W" : "L",
+        text:     t.result === "win" ? "W" : t.result === "draw" ? "D" : "L",
         size:     1,
       }))
       .sort((a: any, b: any) => (a.time as number) - (b.time as number));
@@ -2172,11 +2175,14 @@ export default function TradePage() {
       // Só notifica trades desta sessão — trades antigos fecham silenciosamente
       if (t?.status === "closed" && !notifiedTradesRef.current.has(t.id) && sessionTradeIdsRef.current.has(tradeId)) {
         notifiedTradesRef.current.add(t.id);
-        const isWin = t.result === "win";
-        if (isWin) playWin(); else playLoss();
+        const isWin  = t.result === "win";
+        const isDraw = t.result === "draw";
+        if (isWin) playWin(); else if (!isDraw) playLoss();
         setNotification({
-          msg:  isWin ? `Win +${formatKz(Math.round(t.profit ?? 0))}` : `Loss ${formatKz(t.amount)}`,
-          type: isWin ? "win" : "loss",
+          msg:  isWin ? `Win +${formatKz(Math.round(t.profit ?? 0))}`
+              : isDraw ? `Empate — valor devolvido`
+              : `Loss ${formatKz(t.amount)}`,
+          type: isWin ? "win" : isDraw ? "info" : "loss",
         });
         setTimeout(() => setNotification(null), 4000);
         // Contabiliza vitória do bot e verifica meta
@@ -3089,16 +3095,18 @@ export default function TradePage() {
             </button>
           </div>
           {tradeHistory.slice(0, 6).map((t: any) => {
-            const isWin = t.result === "win";
-            const profit = t.profit ?? (isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : -t.amount);
+            const isWin  = t.result === "win";
+            const isDraw = t.result === "draw";
+            const barColor = isWin ? "#0ecb81" : isDraw ? "#94a3b8" : "#f6465d";
+            const profit = t.profit ?? (isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : isDraw ? 0 : -t.amount);
             return (
-              <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", borderBottom: "1px solid #141824", borderLeft: `2px solid ${isWin ? "#0ecb81" : "#f6465d"}` }}>
+              <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", borderBottom: "1px solid #141824", borderLeft: `2px solid ${barColor}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                   <span style={{ fontSize: 9, fontWeight: 900, color: t.direction === "call" ? "#0ecb81" : "#f6465d" }}>{t.direction === "call" ? "▲" : "▼"}</span>
                   <span style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.asset}</span>
                   <span style={{ color: "#334155", fontSize: 10 }}>{new Date(t.createdAt).toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}</span>
                 </div>
-                <span style={{ color: isWin ? "#0ecb81" : "#f6465d", fontWeight: 800, fontSize: 12, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                <span style={{ color: barColor, fontWeight: 800, fontSize: 12, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
                   {isWin ? "+" : ""}{formatKz(profit)}
                 </span>
               </div>
@@ -4384,20 +4392,23 @@ export default function TradePage() {
                   </div>
                 ) : (
                   tradeHistory.map((t: any) => {
-                    const isWin = t.result === "win";
-                    const profit = t.profit ?? (isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : -t.amount);
+                    const isWin   = t.result === "win";
+                    const isDraw  = t.result === "draw";
+                    const accent  = isWin ? "#0ecb81" : isDraw ? "#94a3b8" : "#f6465d";
+                    const profit  = t.profit ?? (isWin ? Math.round(t.amount * (t.payout ?? 0.74)) : isDraw ? 0 : -t.amount);
+                    const badgeText = isWin ? "GANHOU" : isDraw ? "EMPATE" : "PERDEU";
                     return (
-                      <div key={t.id} style={{ background: "#141824", border: `1px solid ${isWin ? "rgba(14,203,129,0.2)" : "rgba(246,70,93,0.2)"}`, borderRadius: 10, padding: "10px 12px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div key={t.id} style={{ background: "#141824", border: `1px solid ${isWin ? "rgba(14,203,129,0.2)" : isDraw ? "rgba(148,163,184,0.2)" : "rgba(246,70,93,0.2)"}`, borderRadius: 10, padding: "10px 12px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                             <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{t.asset}</span>
                             <span style={{ background: t.direction === "call" ? "rgba(14,203,129,0.15)" : "rgba(246,70,93,0.15)", color: t.direction === "call" ? "#0ecb81" : "#f6465d", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "1px 6px" }}>{t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}</span>
-                            <span style={{ background: isWin ? "rgba(14,203,129,0.1)" : "rgba(246,70,93,0.1)", color: isWin ? "#0ecb81" : "#f6465d", borderRadius: 4, fontSize: 9, fontWeight: 900, padding: "1px 5px" }}>{isWin ? "GANHOU" : "PERDEU"}</span>
+                            <span style={{ background: isWin ? "rgba(14,203,129,0.1)" : isDraw ? "rgba(148,163,184,0.15)" : "rgba(246,70,93,0.1)", color: accent, borderRadius: 4, fontSize: 9, fontWeight: 900, padding: "1px 5px" }}>{badgeText}</span>
                           </div>
                           <div style={{ color: "#64748b", fontSize: 11 }}>{formatKz(t.amount)} · {new Date(t.createdAt).toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}</div>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                          <div style={{ color: isWin ? "#0ecb81" : "#f6465d", fontWeight: 800, fontSize: 14 }}>
+                          <div style={{ color: accent, fontWeight: 800, fontSize: 14 }}>
                             {isWin ? "+" : ""}{formatKz(profit)}
                           </div>
                           <TradeShareButton trade={{ ...t, profit }} size="sm" />

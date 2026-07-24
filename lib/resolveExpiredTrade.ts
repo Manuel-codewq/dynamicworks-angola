@@ -24,7 +24,8 @@ async function getClosePriceForAsset(asset: string): Promise<number | null> {
   return null;
 }
 
-// Empates removidos — qualquer movimento determina win ou loss
+// Qualquer movimento determina win ou loss; só um preço de fecho idêntico ao
+// cêntimo ao de entrada conta como empate (draw) — devolve-se o valor apostado.
 
 export type TradeToResolve = {
   id:         string;
@@ -44,7 +45,7 @@ export type TradeToResolve = {
   user:       { id: string; isDemo: boolean; email: string; name: string | null };
 };
 
-export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss";
+export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss" | "draw";
 
 /**
  * Resolve uma operação expirada.
@@ -92,12 +93,19 @@ export async function resolveExpiredTrade(
     closePrice = resolvedPrice;
     const diff = closePrice - trade.entryPrice;
 
-    // Qualquer movimento — mesmo mínimo — determina win ou loss; sem empates
-    const priceWon = trade.direction === "call" ? diff > 0 : diff < 0;
-    result = priceWon ? "win" : "loss";
+    if (diff === 0) {
+      // Preço de fecho idêntico ao de entrada (ao cêntimo) — não é justo contar
+      // como derrota para qualquer direcção. Devolve-se o valor apostado.
+      result       = "draw";
+      profit       = 0;
+      returnAmount = trade.amount;
+    } else {
+      const priceWon = trade.direction === "call" ? diff > 0 : diff < 0;
+      result = priceWon ? "win" : "loss";
 
-    profit       = result === "win" ? trade.amount * trade.payout : -trade.amount;
-    returnAmount = result === "win" ? trade.amount + trade.amount * trade.payout : 0;
+      profit       = result === "win" ? trade.amount * trade.payout : -trade.amount;
+      returnAmount = result === "win" ? trade.amount + trade.amount * trade.payout : 0;
+    }
   }
 
   let resolved = false;
@@ -159,31 +167,31 @@ export async function resolveExpiredTrade(
     prisma.notification.create({
       data: {
         userId:  trade.userId,
-        type:    result === "win" ? "trade_win" : "trade_loss",
-        title:   result === "win"
-          ? `Ganhou ${profitKz} Kz${demoTag}`
-          : `Operação encerrada — ${trade.asset}${demoTag}`,
-        message: result === "win"
-          ? `A tua operação de ${amountKz} Kz em ${trade.asset} foi resolvida a teu favor!`
-          : `Perdeste ${amountKz} Kz em ${trade.asset}. Analisa e tenta novamente.`,
+        type:    result === "win" ? "trade_win" : result === "draw" ? "trade_draw" : "trade_loss",
+        title:   result === "win"  ? `Ganhou ${profitKz} Kz${demoTag}`
+                : result === "draw" ? `Operação empatada — ${trade.asset}${demoTag}`
+                : `Operação encerrada — ${trade.asset}${demoTag}`,
+        message: result === "win"  ? `A tua operação de ${amountKz} Kz em ${trade.asset} foi resolvida a teu favor!`
+                : result === "draw" ? `O preço não se mexeu em ${trade.asset} — o valor de ${amountKz} Kz foi devolvido.`
+                : `Perdeste ${amountKz} Kz em ${trade.asset}. Analisa e tenta novamente.`,
         read: false,
       },
     }).catch(() => {});
 
     // ── 2. Push — sempre, demo e real ────────────────────────────────────────
     sendPushToUser(trade.userId, {
-      title: result === "win"
-        ? `Ganhou ${profitKz} Kz${demoTag}`
-        : `Operação perdida — ${trade.asset}`,
-      body: result === "win"
-        ? `${trade.asset} · A operação foi resolvida a teu favor!`
-        : `Perdeste ${amountKz} Kz. Continua a tentar!`,
+      title: result === "win"  ? `Ganhou ${profitKz} Kz${demoTag}`
+           : result === "draw" ? `Operação empatada — ${trade.asset}`
+           : `Operação perdida — ${trade.asset}`,
+      body: result === "win"  ? `${trade.asset} · A operação foi resolvida a teu favor!`
+          : result === "draw" ? `O preço não se mexeu — o valor de ${amountKz} Kz foi devolvido.`
+          : `Perdeste ${amountKz} Kz. Continua a tentar!`,
       url:   "/trade",
       tag:   "trade-result",
     }).catch(() => {});
 
-    // ── 3. Email — só para trades reais, throttle 4h ──────────────────────────
-    if (!trade.user.isDemo) {
+    // ── 3. Email — só para trades reais win/loss, throttle 4h (empates não enviam email) ──
+    if (!trade.user.isDemo && result !== "draw") {
       const userName = trade.user.name ?? "Trader";
       try {
         const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
