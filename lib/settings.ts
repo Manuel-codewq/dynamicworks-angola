@@ -51,11 +51,14 @@ export async function getSettings(): Promise<PlatformSettings> {
     }) as any;
     const savedPairs        = Array.isArray(row.activePairs)  ? row.activePairs  as string[] : null;
     const savedWeekendPairs = Array.isArray(row.weekendPairs) ? row.weekendPairs as string[] : null;
+    const validKeys = new Set<string>(ALL_PAIRS);
+    const rawPayout = (row.payout as Record<string, number>) ?? {};
+    const rawWinProb = (row.winProbability as Record<string, number>) ?? {};
     cache = {
       maintenanceMode: row.maintenanceMode,
       forceRealMarket: row.forceRealMarket ?? false,
-      payout:          { ...DEFAULT_PAYOUT,          ...(row.payout          as Record<string, number> ?? {}) },
-      winProbability:  { ...DEFAULT_WIN_PROBABILITY, ...(row.winProbability  as Record<string, number> ?? {}) },
+      payout:         { ...DEFAULT_PAYOUT,          ...Object.fromEntries(Object.entries(rawPayout).filter(([k]) => validKeys.has(k))) },
+      winProbability: { ...DEFAULT_WIN_PROBABILITY, ...Object.fromEntries(Object.entries(rawWinProb).filter(([k]) => validKeys.has(k))) },
       activePairs:     savedPairs  !== null ? savedPairs  : DEFAULT_ACTIVE_PAIRS,
       weekendPairs:    savedWeekendPairs !== null ? savedWeekendPairs : DEFAULT_WEEKEND_PAIRS,
       rankingResetAt:  row.rankingResetAt ? new Date(row.rankingResetAt) : null,
