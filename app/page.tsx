@@ -56,7 +56,7 @@ function PlatformMockup() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(247,147,26,0.12)", border: "1px solid rgba(247,147,26,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#F7931A" }}>₿</div>
           <div>
-            <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>BTC/USD</div>
+            <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>ATIVO/USD</div>
             <div style={{ color: "#334155", fontSize: 10 }}>Cripto · 24/7</div>
           </div>
         </div>

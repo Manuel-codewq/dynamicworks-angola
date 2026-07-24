@@ -135,7 +135,7 @@ export default function AdminTradesPage() {
           <option value="loss">Perda</option>
           <option value="active">Ativo</option>
         </select>
-        <input placeholder="Par (ex: BTC/USD)" value={asset} onChange={e => setAsset(e.target.value)}
+        <input placeholder="Par" value={asset} onChange={e => setAsset(e.target.value)}
           style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 7, padding: "7px 12px", color: "#fff", fontSize: 13, outline: "none", width: 160 }} />
         <input type="date" value={from} onChange={e => setFrom(e.target.value)}
           style={{ background: "#111827", border: "1px solid #1e2d50", borderRadius: 7, padding: "7px 12px", color: from ? "#fff" : "#94a3b8", fontSize: 13, outline: "none", colorScheme: "dark" }} />

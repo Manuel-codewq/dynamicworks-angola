@@ -184,7 +184,7 @@ export default function HistoryPage() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ position: "relative" }}>
               <Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#475569", pointerEvents: "none" }} />
-              <input placeholder="BTC/USD" value={assetSearch} onChange={e => { setAssetSearch(e.target.value); setPage(1); }}
+              <input placeholder="Pesquisar activo" value={assetSearch} onChange={e => { setAssetSearch(e.target.value); setPage(1); }}
                 style={{ ...inp, paddingLeft: 28, width: 150 }} />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

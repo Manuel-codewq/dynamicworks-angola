@@ -183,7 +183,7 @@ const jsonLd = {
           name:             "Quais ativos posso negociar?",
           acceptedAnswer: {
             "@type": "Answer",
-            text:    "Pode negociar 8 criptomoedas disponíveis 24/7: BTC/USD, ETH/USD, BNB/USD, SOL/USD, XRP/USD, ADA/USD, DOGE/USD e LTC/USD.",
+            text:    "Consulta a plataforma para veres os ativos disponíveis para negociação.",
           },
         },
       ],

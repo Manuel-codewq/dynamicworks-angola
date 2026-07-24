@@ -61,7 +61,7 @@ _Para mais informações fala com o suporte: +244 921 825 299_`,
 
   "3": `📊 *Como negociar opções binárias:*
 
-1. Escolhe um par (BTC/USD, ETH/USD, etc.)
+1. Escolhe um par disponível na plataforma
 2. Analisa o gráfico
 3. Define o valor da aposta
 4. Clica em ⬆️ SUBIR ou ⬇️ DESCER
@@ -110,7 +110,7 @@ Informações sobre a Dynamic Works:
 - Registo gratuito com 10.000 AOA de conta demo
 - Depósitos em USDT (mínimo $5)
 - Payout até 85% por operação ganhe
-- Pares disponíveis: Criptomoedas (BTC/USD, ETH/USD, BNB/USD, SOL/USD, XRP/USD, ADA/USD, DOGE/USD, LTC/USD) — disponíveis 24/7
+- Pares disponíveis: consulta a plataforma
 - Grupo de aulas gratuitas: ${GROUP_LINK}
 - Suporte via WhatsApp: +244 921 825 299
 - A empresa desenvolvedora é a Digikap Lda

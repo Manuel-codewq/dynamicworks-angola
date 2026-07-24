@@ -27,42 +27,8 @@ export interface Asset {
   active:        boolean;
 }
 
-// Cada entrada confirmada individualmente contra fonte primária em 2026-07-24:
-// símbolo Binance + status TRADING + tickSize via GET /api/v3/exchangeInfo;
-// id CoinGecko via GET /api/v3/coins/{id}.
-export const ASSETS: Asset[] = [
-  // Binance: BTCUSDT, status TRADING, tickSize 0.01 → 2 casas.
-  // CoinGecko: id "bitcoin" → symbol btc, name Bitcoin.
-  { label: "BTC/USD", binanceSymbol: "BTCUSDT", coingeckoId: "bitcoin", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: ETHUSDT, status TRADING, tickSize 0.01 → 2 casas.
-  // CoinGecko: id "ethereum" → symbol eth, name Ethereum.
-  { label: "ETH/USD", binanceSymbol: "ETHUSDT", coingeckoId: "ethereum", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: BNBUSDT, status TRADING, tickSize 0.01 → 2 casas.
-  // CoinGecko: id "binancecoin" → symbol bnb, name BNB.
-  { label: "BNB/USD", binanceSymbol: "BNBUSDT", coingeckoId: "binancecoin", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: SOLUSDT, status TRADING, tickSize 0.01 → 2 casas.
-  // CoinGecko: id "solana" → symbol sol, name Solana.
-  { label: "SOL/USD", binanceSymbol: "SOLUSDT", coingeckoId: "solana", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: XRPUSDT, status TRADING, tickSize 0.0001 → 4 casas.
-  // CoinGecko: id "ripple" → symbol xrp, name XRP.
-  { label: "XRP/USD", binanceSymbol: "XRPUSDT", coingeckoId: "ripple", category: "Cripto", decimals: 4, active: true },
-
-  // Binance: ADAUSDT, status TRADING, tickSize 0.0001 → 4 casas.
-  // CoinGecko: id "cardano" → symbol ada, name Cardano.
-  { label: "ADA/USD", binanceSymbol: "ADAUSDT", coingeckoId: "cardano", category: "Cripto", decimals: 4, active: true },
-
-  // Binance: DOGEUSDT, status TRADING, tickSize 0.00001 → 5 casas.
-  // CoinGecko: id "dogecoin" → symbol doge, name Dogecoin.
-  { label: "DOGE/USD", binanceSymbol: "DOGEUSDT", coingeckoId: "dogecoin", category: "Cripto", decimals: 5, active: true },
-
-  // Binance: LTCUSDT, status TRADING, tickSize 0.01 → 2 casas.
-  // CoinGecko: id "litecoin" → symbol ltc, name Litecoin.
-  { label: "LTC/USD", binanceSymbol: "LTCUSDT", coingeckoId: "litecoin", category: "Cripto", decimals: 2, active: true },
-];
+// Vazio de propósito — sem pares/activos definidos.
+export const ASSETS: Asset[] = [];
 
 // ── Helpers derivados — cada um substitui uma das listas duplicadas mapeadas na Fase 1 ──
 

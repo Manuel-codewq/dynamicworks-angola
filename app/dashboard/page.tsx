@@ -16,7 +16,7 @@ const DASHBOARD_GUIDE = [
   { icon: <BarChart2 size={26} color="#ffffff" />, iconColor: "#ffffff", title: "O teu Dashboard",       description: "Aqui encontras todas as estatísticas das tuas operações reais — taxa de vitória, lucro total, volume e evolução ao longo do tempo.", tip: "As estatísticas são actualizadas em tempo real após cada trade." },
   { icon: <Trophy    size={26} color="#ffffff" />, iconColor: "#ffffff", title: "Taxa de Vitória",       description: "Percentagem de operações que terminaram em ganho. Uma taxa acima de 55% é considerada positiva na maioria das estratégias de opções binárias.", tip: "Mais importante que a taxa de vitória é o valor médio ganho vs perdido." },
   { icon: <TrendingUp size={26} color="#22c55e" />, iconColor: "#22c55e", title: "Gráfico P&L (30 dias)", description: "Mostra a evolução do teu lucro/prejuízo acumulado nos últimos 30 dias. Uma linha a subir significa que estás a ser consistente.", tip: "Se o gráfico estiver a descer, analisa os pares onde perdes mais." },
-  { icon: <Target    size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Desempenho por Par",    description: "Vê em quais criptomoedas (BTC/USD, ETH/USD, etc.) tens melhores resultados. Foca-te nos pares onde a tua taxa de vitória é maior.", tip: "Não tentes dominar todos os pares ao mesmo tempo — especializa-te em 2 ou 3." },
+  { icon: <Target    size={26} color="#a78bfa" />, iconColor: "#a78bfa", title: "Desempenho por Par",    description: "Vê em quais activos tens melhores resultados. Foca-te nos pares onde a tua taxa de vitória é maior.", tip: "Não tentes dominar todos os pares ao mesmo tempo — especializa-te em 2 ou 3." },
 ];
 
 type Stats = {

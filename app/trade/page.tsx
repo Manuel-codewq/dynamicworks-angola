@@ -51,17 +51,8 @@ const EXPIRY_OPTIONS = [
 
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
 
-// Identidade visual de cada criptomoeda
-const COIN_META: Record<string, { color: string; bg: string; icon: string }> = {
-  "BTC/USD":  { color: "#F7931A", bg: "rgba(247,147,26,0.18)",  icon: "₿" },
-  "ETH/USD":  { color: "#627EEA", bg: "rgba(98,126,234,0.18)",  icon: "Ξ" },
-  "BNB/USD":  { color: "#F3BA2F", bg: "rgba(243,186,47,0.18)",  icon: "B" },
-  "SOL/USD":  { color: "#9945FF", bg: "rgba(153,69,255,0.18)",  icon: "◎" },
-  "XRP/USD":  { color: "#00AAE4", bg: "rgba(0,170,228,0.18)",   icon: "✕" },
-  "ADA/USD":  { color: "#4DA6FF", bg: "rgba(77,166,255,0.18)",  icon: "₳" },
-  "DOGE/USD": { color: "#C2A633", bg: "rgba(194,166,51,0.18)",  icon: "Ð" },
-  "LTC/USD":  { color: "#A6A9AA", bg: "rgba(166,169,170,0.18)", icon: "Ł" },
-};
+// Identidade visual de cada criptomoeda — vazio de propósito, sem pares definidos
+const COIN_META: Record<string, { color: string; bg: string; icon: string }> = {};
 
 function CoinIcon({ label, size = 22 }: { label: string; size?: number }) {
   const m = COIN_META[label];
