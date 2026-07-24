@@ -1,3 +1,5 @@
+import { getActiveAssets, toDerivPairs, type DerivPairShape } from "@/lib/assets";
+
 const BINANCE_WS_URL = "wss://stream.binance.com:9443/ws";
 const BINANCE_REST   = "https://api.binance.com/api/v3";
 
@@ -6,30 +8,10 @@ const BINANCE_INTERVAL: Record<number, string> = {
   1800: "30m", 3600: "1h", 14400: "4h", 86400: "1d",
 };
 
-export interface DerivPair {
-  symbol:   string;
-  label:    string;
-  category: string;
-  decimals: number;
-}
+export type DerivPair = DerivPairShape;
 
-// Todos os pares são agora Binance — preços reais, 24/7
-export const CRYPTO_PAIRS: DerivPair[] = [
-  { symbol: "BTCUSDT",  label: "BTC/USD",  category: "Cripto", decimals: 2 },
-  { symbol: "ETHUSDT",  label: "ETH/USD",  category: "Cripto", decimals: 2 },
-  { symbol: "BNBUSDT",  label: "BNB/USD",  category: "Cripto", decimals: 2 },
-  { symbol: "SOLUSDT",  label: "SOL/USD",  category: "Cripto", decimals: 2 },
-  { symbol: "XRPUSDT",  label: "XRP/USD",  category: "Cripto", decimals: 4 },
-  { symbol: "ADAUSDT",  label: "ADA/USD",  category: "Cripto", decimals: 4 },
-  { symbol: "DOGEUSDT", label: "DOGE/USD", category: "Cripto", decimals: 5 },
-  { symbol: "LTCUSDT",  label: "LTC/USD",  category: "Cripto", decimals: 2 },
-];
-
-// Mantidos vazios para compatibilidade com imports existentes
-export const FOREX_PAIRS:      DerivPair[] = [];
-export const COMMODITY_PAIRS:  DerivPair[] = [];
-export const SYNTHETIC_PAIRS:  DerivPair[] = [];
-export const SYNTHETIC_LABEL_TO_SYMBOL: Record<string, string> = {};
+// Pares/activos — fonte única de verdade em lib/assets.ts
+export const CRYPTO_PAIRS: DerivPair[] = toDerivPairs(getActiveAssets());
 
 export function isRealMarketOpen(): boolean { return true; } // Binance é sempre 24/7
 

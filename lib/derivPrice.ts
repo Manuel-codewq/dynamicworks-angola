@@ -1,28 +1,7 @@
 // Preços de activos via Binance REST (crypto, 24/7)
 // Mantém o nome "derivPrice" por compatibilidade com imports existentes
 
-const BINANCE_ASSET_TO_SYMBOL: Record<string, string> = {
-  "BTC/USD":  "BTCUSDT",
-  "ETH/USD":  "ETHUSDT",
-  "BNB/USD":  "BNBUSDT",
-  "SOL/USD":  "SOLUSDT",
-  "XRP/USD":  "XRPUSDT",
-  "ADA/USD":  "ADAUSDT",
-  "DOGE/USD": "DOGEUSDT",
-  "LTC/USD":  "LTCUSDT",
-};
-
-// CoinGecko IDs usados como fallback se Binance falhar
-const COINGECKO_IDS: Record<string, string> = {
-  "BTCUSDT":  "bitcoin",
-  "ETHUSDT":  "ethereum",
-  "BNBUSDT":  "binancecoin",
-  "SOLUSDT":  "solana",
-  "XRPUSDT":  "ripple",
-  "ADAUSDT":  "cardano",
-  "DOGEUSDT": "dogecoin",
-  "LTCUSDT":  "litecoin",
-};
+import { ASSET_TO_BINANCE_SYMBOL, BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/assets";
 
 // Deduplicação de pedidos em curso: evita chamadas duplicadas quando o worker
 // resolve várias operações do mesmo activo em paralelo (Promise.all na mesma
@@ -78,7 +57,7 @@ async function fetchCoinbasePrice(asset: string): Promise<number | null> {
 }
 
 async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
-  const id = COINGECKO_IDS[symbol];
+  const id = BINANCE_SYMBOL_TO_COINGECKO_ID[symbol];
   if (!id) return null;
   try {
     const res = await fetchWithTimeout(
@@ -92,11 +71,8 @@ async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
   } catch { return null; }
 }
 
-// isOtcAsset mantido para não quebrar imports — sempre retorna false (sem OTC)
-export function isOtcAsset(_asset: string): boolean { return false; }
-
 export async function getDerivPrice(asset: string): Promise<number | null> {
-  const sym = BINANCE_ASSET_TO_SYMBOL[asset];
+  const sym = ASSET_TO_BINANCE_SYMBOL[asset];
   if (!sym) return null;
 
   // Já existe um pedido em curso para este activo (ex.: várias operações do
@@ -128,5 +104,44 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
   })();
 
   _inFlight.set(asset, fetchPromise);
+  return fetchPromise;
+}
+
+// ── Variante com fonte anexada — usada pela abertura de operações para poder
+// auditar/rejeitar por proveniência (ver app/api/trade/route.ts). Duplica a
+// cascata em vez de alterar getDerivPrice(), para não mudar o contrato dessa
+// função para os restantes consumidores (ex.: resolveExpiredTrade.ts).
+export type DerivPriceSource = "binance" | "coinbase" | "coingecko";
+
+const _inFlightWithSource = new Map<string, Promise<{ price: number; source: DerivPriceSource } | null>>();
+
+export async function getDerivPriceWithSource(
+  asset: string,
+): Promise<{ price: number; source: DerivPriceSource } | null> {
+  const sym = ASSET_TO_BINANCE_SYMBOL[asset];
+  if (!sym) return null;
+
+  const existing = _inFlightWithSource.get(asset);
+  if (existing) return existing;
+
+  const fetchPromise = (async (): Promise<{ price: number; source: DerivPriceSource } | null> => {
+    try {
+      const binancePrice = await fetchBinancePrice(sym);
+      if (binancePrice) return { price: binancePrice, source: "binance" };
+
+      console.warn(`[derivPrice] Binance falhou para ${sym} — a usar fallback`);
+      const coinbasePrice = await fetchCoinbasePrice(asset);
+      if (coinbasePrice) return { price: coinbasePrice, source: "coinbase" };
+
+      console.warn(`[derivPrice] Coinbase também falhou para ${asset} — a usar CoinGecko`);
+      const cgPrice = await fetchCoinGeckoPrice(sym);
+      if (cgPrice) return { price: cgPrice, source: "coingecko" };
+      return null;
+    } finally {
+      _inFlightWithSource.delete(asset);
+    }
+  })();
+
+  _inFlightWithSource.set(asset, fetchPromise);
   return fetchPromise;
 }

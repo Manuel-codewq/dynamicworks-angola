@@ -1,20 +1,15 @@
 import { prisma } from "./prisma";
-import { CRYPTO_PAIRS } from "./derivWebSocket";
+import { ASSET_LABELS } from "./assets";
 
-const ALL_PAIRS = [
-  "BTC/USD", "ETH/USD", "BNB/USD", "SOL/USD",
-  "XRP/USD", "ADA/USD", "DOGE/USD", "LTC/USD",
-] as const;
+export const ALL_REAL_PAIR_LABELS = ASSET_LABELS as string[];
 
-export const ALL_REAL_PAIR_LABELS = CRYPTO_PAIRS.map(p => p.label);
-
-export const DEFAULT_PAYOUT          = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.85]));
-export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ALL_PAIRS.map(p => [p, 0.47]));
+export const DEFAULT_PAYOUT          = Object.fromEntries(ASSET_LABELS.map(p => [p, 0.85]));
+export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ASSET_LABELS.map(p => [p, 0.47]));
 export const DEFAULT_RANKING_RESET: Date | null = null;
 export const DEFAULT_WEEKEND_PAIRS: string[] = [];
 export const DEFAULT_ACTIVE_PAIRS    = ALL_REAL_PAIR_LABELS;
 
-export const ALL_PAIR_KEYS = ALL_PAIRS as unknown as string[];
+export const ALL_PAIR_KEYS = ASSET_LABELS as string[];
 
 export interface PlatformSettings {
   payout:          Record<string, number>;
@@ -51,7 +46,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     }) as any;
     const savedPairs        = Array.isArray(row.activePairs)  ? row.activePairs  as string[] : null;
     const savedWeekendPairs = Array.isArray(row.weekendPairs) ? row.weekendPairs as string[] : null;
-    const validKeys = new Set<string>(ALL_PAIRS);
+    const validKeys = new Set<string>(ASSET_LABELS);
     const rawPayout = (row.payout as Record<string, number>) ?? {};
     const rawWinProb = (row.winProbability as Record<string, number>) ?? {};
     cache = {

@@ -1,18 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { RefreshCw, Save, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react";
+import { ASSETS } from "@/lib/assets";
 
 // Pares Binance — únicos pares da plataforma (preços reais 24/7)
-const REAL_PAIR_OPTIONS = [
-  { label: "BTC/USD",  cat: "Cripto" },
-  { label: "ETH/USD",  cat: "Cripto" },
-  { label: "BNB/USD",  cat: "Cripto" },
-  { label: "SOL/USD",  cat: "Cripto" },
-  { label: "XRP/USD",  cat: "Cripto" },
-  { label: "ADA/USD",  cat: "Cripto" },
-  { label: "DOGE/USD", cat: "Cripto" },
-  { label: "LTC/USD",  cat: "Cripto" },
-];
+const REAL_PAIR_OPTIONS = ASSETS.map(a => ({ label: a.label, cat: a.category }));
 
 interface Settings {
   payout:                   Record<string, number>;

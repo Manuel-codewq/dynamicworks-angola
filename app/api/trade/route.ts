@@ -5,12 +5,7 @@ import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getDerivPrice } from "@/lib/derivPrice";
 import { sendPushToUser } from "@/lib/webPush";
-
-// Pares Binance — únicos pares aceites na plataforma
-const ALLOWED_ASSETS = new Set([
-  "BTC/USD", "ETH/USD", "BNB/USD", "SOL/USD",
-  "XRP/USD", "ADA/USD", "DOGE/USD", "LTC/USD",
-]);
+import { ALLOWED_ASSET_LABELS } from "@/lib/assets";
 
 async function fetchServerEntryPrice(asset: string): Promise<number | null> {
   // 1. Preço ao vivo da Binance
@@ -129,7 +124,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { asset, symbol, direction, amount, expirySecs, skipTournament, tournamentId: clientTournamentId, entryPrice: clientEntryPrice } = body ?? {};
-  if (!ALLOWED_ASSETS.has(asset)) {
+  if (!ALLOWED_ASSET_LABELS.has(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
   }
   if (!["call", "put"].includes(direction)) {
