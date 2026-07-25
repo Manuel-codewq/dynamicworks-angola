@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum IndexType {
+  VOLATILITY
+  CRASH
+  BOOM
+  JUMP
+  STEP
+}
+
+model SyntheticIndex {
+  id          String    @id @default(cuid())
+  symbol      String    @unique   // ex: "EURUSD_OTC"
+  displayName String              // ex: "EUR/USD OTC"
+  type        IndexType @default(VOLATILITY)
+
+  basePrice   Float               // preço inicial de referência
+  lastPrice   Float               // último preço gerado (cache rápido)
+  volatility  Float               // sigma do random walk, em % por tick
+  drift       Float     @default(0) // tendência de longo prazo (ex: leve alta/baixa)
+  decimals    Int       @default(5) // casas decimais na formatação (forex=5, cripto-like=2)
+
+  // parâmetros específicos de eventos (crash/boom/jump)
+  eventProbability Float @default(0) // probabilidade de evento por tick (ex: 0.0005)
+  eventMagnitude   Float @default(0) // magnitude do salto/queda (ex: 0.15 = 15%)
+
+  tickIntervalMs Int      @default(1000)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  ticks   SyntheticTick[]
+  candles SyntheticCandle[]
+
+  @@index([active])
+}
+
+model SyntheticTick {
+  id        String   @id @default(cuid())
+  symbol    String
+  price     Float
+  timestamp DateTime @default(now())
+
+  index SyntheticIndex @relation(fields: [symbol], references: [symbol])
+
+  @@index([symbol, timestamp])
+}
+
+// candles OHLC pré-agregadas (job periódico condensa SyntheticTick -> aqui)
+model SyntheticCandle {
+  id        String   @id @default(cuid())
+  symbol    String
+  timeframe String   // "1m", "5m", "1h", etc.
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  timestamp DateTime
+
+  index SyntheticIndex @relation(fields: [symbol], references: [symbol])
+
+  @@unique([symbol, timeframe, timestamp])
+  @@index([symbol, timeframe, timestamp])
+}

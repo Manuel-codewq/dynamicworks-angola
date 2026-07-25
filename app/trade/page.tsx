@@ -3149,8 +3149,8 @@ export default function TradePage() {
   function renderAssetDropdown(mobile = false) {
     const groups: Record<string, DerivPair[]> = {};
     pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-    const catOrder  = ["Cripto"];
-    const catColors: Record<string, string> = { Cripto: "#a78bfa" };
+    const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
+    const catColors: Record<string, string> = { Forex: "#ffffff", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
     return (
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}

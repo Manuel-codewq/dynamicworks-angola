@@ -10,9 +10,8 @@ const ALLOWED_IMG_SRCS = [
 const ALLOWED_CONNECT_SRCS = [
   "'self'",
   "https://api.anthropic.com",
-  // Binance — preços reais crypto 24/7
-  "wss://stream.binance.com:9443",
-  "https://api.binance.com",
+  // Preços (synthetic-engine): stream em tempo real via SSE same-origin
+  // (app/api/price-stream), por isso não precisa de host externo aqui.
   "https://sme.gov.ao",
   "https://api.resend.com",
   "https://www.google-analytics.com",

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getDerivPriceWithSource, type DerivPriceSource } from "@/lib/derivPrice";
+import { getDerivPriceWithSource, type DerivPriceSource } from "@/lib/syntheticFeed";
 import { sendPushToUser } from "@/lib/webPush";
 import { ALLOWED_ASSET_LABELS } from "@/lib/assets";
 
@@ -13,7 +13,7 @@ type ServerEntryPrice = { price: number; source: ServerEntryPriceSource; ageMs: 
 async function fetchServerEntryPrice(asset: string): Promise<ServerEntryPrice | null> {
   const startedAt = Date.now();
 
-  // 1. Preço ao vivo da Binance (com fallback interno Coinbase → CoinGecko)
+  // 1. Preço ao vivo do synthetic-engine
   try {
     const result = await getDerivPriceWithSource(asset);
     if (result && result.price > 0) {
@@ -272,12 +272,12 @@ export async function POST(req: NextRequest) {
   const clientTickTsNum = typeof clientTickTs === "number" ? clientTickTs : parseInt(clientTickTs, 10);
   const clientLagMs = isFinite(clientTickTsNum) && clientTickTsNum > 0 ? priceCapturedAt - clientTickTsNum : null;
 
-  // Qualidade da fonte valida-se primeiro: CoinGecko actualiza muito menos vezes
-  // que a Binance/Coinbase, um candle da BD pode ter minutos de atraso, e um
+  // Qualidade da fonte valida-se primeiro: um candle da BD pode ter minutos
+  // de atraso (só é usado se o synthetic-engine estiver em baixo), e um
   // pedido demasiado lento é sinal de algo errado — rejeita antes mesmo de
   // comparar com o preço do cliente. Só um preço bom entra na verificação de
   // tolerância a seguir.
-  if (priceSource === "coingecko" || priceSource === "db-candle" || priceAgeMs > 1500) {
+  if (priceSource === "db-candle" || priceAgeMs > 1500) {
     return NextResponse.json(
       { error: "Mercado temporariamente indisponível, tenta novamente" },
       { status: 503 },

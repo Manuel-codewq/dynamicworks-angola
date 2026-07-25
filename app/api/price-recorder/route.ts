@@ -4,32 +4,38 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CRYPTO_PAIRS } from "@/lib/derivWebSocket";
 
-// Vercel: tempo máximo desta rota. Medido em produção com 16 pares (ver commit) —
-// ajusta para cima se o plano/latência da Binance mudar. Hobby ignora/limita a 10s;
-// Pro aceita este valor.
+// Vercel: tempo máximo desta rota. Plano Pro confirmado (tecto 300s) — este
+// job é um batch rápido (4 pares × 3 timeframes contra o synthetic-engine,
+// rede interna, tipicamente <2s), não precisa de se aproximar do tecto como
+// app/api/price-stream/route.ts (que mantém uma ligação SSE longa por
+// natureza) — 30s já dá margem generosa.
 export const maxDuration = 30;
 
-const BINANCE_REST = "https://api.binance.com/api/v3";
+const SYNTHETIC_ENGINE_URL = process.env.SYNTHETIC_ENGINE_URL ?? "http://localhost:4001";
 
 const TIMEFRAMES = [
-  { label: "1m",  interval: "1m",  granularity: 60  },
-  { label: "5m",  interval: "5m",  granularity: 300 },
-  { label: "15m", interval: "15m", granularity: 900 },
+  { label: "1m",  granularity: 60  },
+  { label: "5m",  granularity: 300 },
+  { label: "15m", granularity: 900 },
 ];
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-async function fetchBinanceCandles(symbol: string, interval: string, limit = 5) {
-  const url = `${BINANCE_REST}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-  const res  = await fetch(url);
-  if (!res.ok) throw new Error(`Binance ${symbol} ${interval}: HTTP ${res.status}`);
-  const rows: any[][] = await res.json();
-  return rows.map(k => ({
-    epoch: Math.floor(Number(k[0]) / 1000),
-    open:  parseFloat(k[1]),
-    high:  parseFloat(k[2]),
-    low:   parseFloat(k[3]),
-    close: parseFloat(k[4]),
+// NOTA: depende de synthetic-engine agregar SyntheticTick em SyntheticCandle
+// por timeframe (5m/15m incluído) — se esse job de agregação ainda não
+// existir do lado do synthetic-engine, este endpoint devolve [] em silêncio
+// (não é erro nosso, PriceCandle só fica sem dados novos até isso existir).
+async function fetchSyntheticCandles(symbol: string, timeframe: string, limit = 5) {
+  const url = `${SYNTHETIC_ENGINE_URL}/api/indices/${symbol}/candles?timeframe=${timeframe}&limit=${limit}`;
+  const res  = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`synthetic-engine ${symbol} ${timeframe}: HTTP ${res.status}`);
+  const rows = await res.json() as { open: number; high: number; low: number; close: number; timestamp: string }[];
+  return rows.map(c => ({
+    epoch: Math.floor(new Date(c.timestamp).getTime() / 1000),
+    open:  c.open,
+    high:  c.high,
+    low:   c.low,
+    close: c.close,
   })).filter(c => isFinite(c.open) && isFinite(c.close) && c.high >= c.low);
 }
 
@@ -97,14 +103,14 @@ export async function GET(req: NextRequest) {
 
   // Todos os pares × todos os timeframes, em paralelo (com um pequeno
   // desfasamento entre pedidos para não disparar tudo no mesmo instante sobre
-  // a Binance). Cada job é independente — a falha de um par/timeframe não
-  // afecta os outros (Promise.allSettled).
+  // o synthetic-engine). Cada job é independente — a falha de um par/timeframe
+  // não afecta os outros (Promise.allSettled).
   const jobs = CRYPTO_PAIRS.flatMap(pair => TIMEFRAMES.map(tf => ({ pair, tf })));
 
   const results = await Promise.allSettled(
     jobs.map(async ({ pair, tf }, idx) => {
       await delay(idx * 40);
-      const candles = await fetchBinanceCandles(pair.symbol, tf.interval, 5);
+      const candles = await fetchSyntheticCandles(pair.symbol, tf.label, 5);
       return candles.map((c): CandleRow => ({
         asset: pair.label, timeframe: tf.label, timestamp: new Date(c.epoch * 1000),
         open: c.open, high: c.high, low: c.low, close: c.close,

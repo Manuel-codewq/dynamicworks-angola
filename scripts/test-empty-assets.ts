@@ -31,7 +31,7 @@ function check(name: string, cond: boolean, detail?: string) {
 }
 
 async function main() {
-  const { ASSETS, ASSET_LABELS, ASSET_TO_BINANCE_SYMBOL, BINANCE_SYMBOL_TO_COINGECKO_ID, ALLOWED_ASSET_LABELS, getActiveAssets, toDerivPairs } =
+  const { ASSETS, ASSET_LABELS, ASSET_TO_SYNTHETIC_SYMBOL, ALLOWED_ASSET_LABELS, getActiveAssets, toDerivPairs } =
     await import("../lib/assets");
 
   console.log("── 1. Lógica pura — array vazio sintético (independente do ASSETS real) ──");
@@ -48,9 +48,8 @@ async function main() {
     console.log(`  (ASSETS tem ${ASSETS.length} par(es) neste momento — testes de estado vazio da BD/API não se aplicam agora, só a lógica pura acima)`);
   } else {
     check("ASSET_LABELS é [] quando ASSETS é []", ASSET_LABELS.length === 0);
-    check("ASSET_TO_BINANCE_SYMBOL é {} quando ASSETS é []", Object.keys(ASSET_TO_BINANCE_SYMBOL).length === 0);
-    check("BINANCE_SYMBOL_TO_COINGECKO_ID é {} quando ASSETS é []", Object.keys(BINANCE_SYMBOL_TO_COINGECKO_ID).length === 0);
-    check("ALLOWED_ASSET_LABELS.has(qualquer coisa) é false, não rebenta", ALLOWED_ASSET_LABELS.has("BTC/USD") === false);
+    check("ASSET_TO_SYNTHETIC_SYMBOL é {} quando ASSETS é []", Object.keys(ASSET_TO_SYNTHETIC_SYMBOL).length === 0);
+    check("ALLOWED_ASSET_LABELS.has(qualquer coisa) é false, não rebenta", ALLOWED_ASSET_LABELS.has("EUR/USD OTC") === false);
     check("getActiveAssets() é [] quando ASSETS é []", getActiveAssets().length === 0);
 
     const { CRYPTO_PAIRS, getAvailablePairs } = await import("../lib/derivWebSocket");

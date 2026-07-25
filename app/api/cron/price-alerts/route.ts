@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDerivPrice } from "@/lib/derivPrice";
+import { getDerivPrice } from "@/lib/syntheticFeed";
 import { sendPushToUser } from "@/lib/webPush";
 
 function isAuthorized(req: NextRequest): boolean {
@@ -13,7 +13,7 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 async function getAssetCurrentPrice(asset: string): Promise<number | null> {
-  // 1. Preço ao vivo da Deriv
+  // 1. Preço ao vivo do synthetic-engine
   const live = await getDerivPrice(asset).catch(() => null);
   if (live && live > 0) return live;
 

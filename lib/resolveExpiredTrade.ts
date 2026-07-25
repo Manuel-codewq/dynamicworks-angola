@@ -1,24 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import { getDerivPrice, getDerivPriceAt } from "@/lib/derivPrice";
+import { getDerivPrice, getDerivPriceAt } from "@/lib/syntheticFeed";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
-// expiresAt é o instante EXACTO em que a operação devia fechar — não "agora".
-// O worker que chama isto corre por cron a cada 60s, por isso pode processar
-// uma operação até ~59s depois do expiresAt real; usar o preço "agora" nesse
-// caso fecha a operação com um preço de um momento errado (o mercado já andou
-// no intervalo), o que é visto pelo utilizador como "estava verde e passou a
-// loss". getDerivPriceAt() busca a transacção real da Binance NAQUELE
-// instante, independente de quando o worker efectivamente corre.
+// expiresAt é o instante em que a operação devia fechar. getDerivPriceAt()
+// devolve o preço "agora" do synthetic-engine (ver lib/syntheticFeed.ts para
+// a limitação conhecida sobre fechos tardios via cron); mantido como
+// parâmetro explícito para deixar essa intenção clara neste call site.
 async function getClosePriceForAsset(asset: string, expiresAt: Date): Promise<number | null> {
-  // 1ª prioridade: preço real da Binance ancorado ao instante de expiração
+  // 1ª prioridade: preço do synthetic-engine ancorado ao instante de expiração
   try {
     const anchoredPrice = await getDerivPriceAt(asset, expiresAt.getTime());
     if (anchoredPrice && anchoredPrice > 0) return anchoredPrice;
   } catch { /* cai para preço "agora" */ }
 
-  // 2ª prioridade: preço "agora" (Binance → Coinbase → CoinGecko) — só chega
-  // aqui se a consulta histórica falhar (ex.: activo sem símbolo Binance)
+  // 2ª prioridade: preço "agora" — só chega aqui se a chamada acima falhar
+  // (ex.: synthetic-engine em baixo, ou activo sem símbolo mapeado)
   try {
     const livePrice = await getDerivPrice(asset);
     if (livePrice && livePrice > 0) return livePrice;
@@ -71,11 +68,9 @@ export type ResolveOutcome = "pending" | "already_closed" | "win" | "loss" | "dr
  * operações (o resultado depende apenas de qual lado da entrada o preço fica).
  *
  * Ordem de prioridade para o preço de fecho:
- *   1. Binance REST (api.binance.com + api.binance.us)
- *   2. Coinbase REST (sem restrições geográficas)
- *   3. CoinGecko REST
- *   4. PriceCandle DB (gravado pelo price-recorder, < 5 min)
- *   5. Sem preço após 30s → loss automático (fallback de segurança)
+ *   1. synthetic-engine, preço "agora" (ver lib/syntheticFeed.ts)
+ *   2. PriceCandle DB (gravado pelo price-recorder, < 5 min)
+ *   3. Sem preço após 30s → loss automático (fallback de segurança)
  */
 export async function resolveExpiredTrade(
   trade: TradeToResolve,

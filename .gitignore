@@ -42,3 +42,8 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# synthetic-engine (sub-projecto com o seu próprio package.json/build)
+synthetic-engine/node_modules
+synthetic-engine/dist
+synthetic-engine/*.tsbuildinfo

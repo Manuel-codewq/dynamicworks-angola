@@ -6,8 +6,8 @@ export async function GET() {
   const { activePairs } = await getSettings();
   const allowed = new Set(activePairs);
 
-  // Só pares Binance — disponíveis 24/7
-  // Se activePairs tem labels antigos (forex) que não coincidem, mostra todos os crypto
+  // Pares forex OTC sintéticos (synthetic-engine) — disponíveis 24/7
+  // Se activePairs tem labels antigos que não coincidem, mostra todos os pares activos
   const filtered = CRYPTO_PAIRS.filter(p => allowed.has(p.label));
   const pairs: DerivPair[] = filtered.length > 0 ? filtered : CRYPTO_PAIRS;
 

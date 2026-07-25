@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { RefreshCw, Save, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
 
-// Pares Binance — únicos pares da plataforma (preços reais 24/7)
+// Pares forex OTC sintéticos (synthetic-engine) — únicos pares da plataforma
 const REAL_PAIR_OPTIONS = ASSETS.map(a => ({ label: a.label, cat: a.category }));
 
 interface Settings {

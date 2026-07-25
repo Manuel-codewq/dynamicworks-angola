@@ -1,7 +1,10 @@
 // Fonte única de verdade para os pares/activos negociáveis na plataforma.
-// Substitui: CRYPTO_PAIRS (lib/derivWebSocket.ts), BINANCE_ASSET_TO_SYMBOL e
-// COINGECKO_IDS (lib/derivPrice.ts), ALLOWED_ASSETS (app/api/trade/route.ts),
-// ALL_PAIRS (lib/settings.ts) e REAL_PAIR_OPTIONS (app/ao/admin/settings/page.tsx).
+// Substitui: CRYPTO_PAIRS (lib/derivWebSocket.ts), ALLOWED_ASSETS
+// (app/api/trade/route.ts), ALL_PAIRS (lib/settings.ts) e REAL_PAIR_OPTIONS
+// (app/ao/admin/settings/page.tsx).
+//
+// Fonte do preço: synthetic-engine (serviço interno, ver synthetic-engine/)
+// — substitui a Binance/Coinbase/CoinGecko usadas até 2026-07-25.
 //
 // ATENÇÃO — chave estável: `label` é a string gravada em produção em
 // Trade.asset, PriceCandle.asset, PriceAlert.asset e em Settings.payout /
@@ -11,87 +14,35 @@
 // o histórico de operações já gravado. Só acrescentar ou desactivar (`active:
 // false`), nunca renomear um `label` existente sem migração explícita.
 
-export type AssetCategory = "Cripto";
+export type AssetCategory = "Cripto" | "Forex";
 
 export interface Asset {
-  /** Chave estável usada em toda a plataforma (BD, settings, UI). Ex: "BTC/USD" */
-  label:         string;
-  /** Símbolo do par na Binance. Ex: "BTCUSDT" */
-  binanceSymbol: string;
-  /** Id do activo na CoinGecko (fallback de preço). null se não houver mapeamento. */
-  coingeckoId:   string | null;
-  category:      AssetCategory;
+  /** Chave estável usada em toda a plataforma (BD, settings, UI). Ex: "EUR/USD OTC" */
+  label:           string;
+  /** Símbolo do par no synthetic-engine. Ex: "EURUSD_OTC" */
+  syntheticSymbol: string;
+  category:        AssetCategory;
   /** Casas decimais para apresentação de preço (gráfico, ticker, etc.) */
-  decimals:      number;
+  decimals:        number;
   /** Activo por omissão na plataforma (independente do toggle "Pares activos" do admin, que actua em runtime via Settings.activePairs) */
-  active:        boolean;
+  active:          boolean;
 }
 
-// Cada entrada confirmada individualmente contra fonte primária em 2026-07-25:
-// símbolo Binance + status TRADING + tickSize via GET /api/v3/exchangeInfo;
-// id CoinGecko via GET /api/v3/coins/markets.
+// Valores (symbol/displayName/decimals) idênticos aos gravados em
+// synthetic-engine/prisma/seed.ts — mantidos em sincronia manualmente, já
+// que são dois processos/bases de dados separados.
 export const ASSETS: Asset[] = [
-  // Binance: BTCUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: bitcoin → btc, Bitcoin.
-  { label: "BTC/USD", binanceSymbol: "BTCUSDT", coingeckoId: "bitcoin", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: ETHUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: ethereum → eth, Ethereum.
-  { label: "ETH/USD", binanceSymbol: "ETHUSDT", coingeckoId: "ethereum", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: BNBUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: binancecoin → bnb, BNB.
-  { label: "BNB/USD", binanceSymbol: "BNBUSDT", coingeckoId: "binancecoin", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: SOLUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: solana → sol, Solana.
-  { label: "SOL/USD", binanceSymbol: "SOLUSDT", coingeckoId: "solana", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: XRPUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: ripple → xrp, XRP.
-  { label: "XRP/USD", binanceSymbol: "XRPUSDT", coingeckoId: "ripple", category: "Cripto", decimals: 4, active: true },
-
-  // Binance: ADAUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: cardano → ada, Cardano.
-  { label: "ADA/USD", binanceSymbol: "ADAUSDT", coingeckoId: "cardano", category: "Cripto", decimals: 4, active: true },
-
-  // Binance: DOGEUSDT, TRADING, tickSize 0.00001 → 5 casas. CoinGecko: dogecoin → doge, Dogecoin.
-  { label: "DOGE/USD", binanceSymbol: "DOGEUSDT", coingeckoId: "dogecoin", category: "Cripto", decimals: 5, active: true },
-
-  // Binance: LTCUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: litecoin → ltc, Litecoin.
-  { label: "LTC/USD", binanceSymbol: "LTCUSDT", coingeckoId: "litecoin", category: "Cripto", decimals: 2, active: true },
-
-  // Binance: AVAXUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: avalanche-2 → avax, Avalanche.
-  { label: "AVAX/USD", binanceSymbol: "AVAXUSDT", coingeckoId: "avalanche-2", category: "Cripto", decimals: 3, active: true },
-
-  // Binance: LINKUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: chainlink → link, Chainlink.
-  { label: "LINK/USD", binanceSymbol: "LINKUSDT", coingeckoId: "chainlink", category: "Cripto", decimals: 3, active: true },
-
-  // Binance: DOTUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: polkadot → dot, Polkadot.
-  { label: "DOT/USD", binanceSymbol: "DOTUSDT", coingeckoId: "polkadot", category: "Cripto", decimals: 3, active: true },
-
-  // Binance: TRXUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: tron → trx, TRON.
-  { label: "TRX/USD", binanceSymbol: "TRXUSDT", coingeckoId: "tron", category: "Cripto", decimals: 4, active: true },
-
-  // Binance: BCHUSDT, TRADING, tickSize 0.1 → 1 casa. CoinGecko: bitcoin-cash → bch, Bitcoin Cash.
-  { label: "BCH/USD", binanceSymbol: "BCHUSDT", coingeckoId: "bitcoin-cash", category: "Cripto", decimals: 1, active: true },
-
-  // Binance: ATOMUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: cosmos → atom, Cosmos Hub.
-  { label: "ATOM/USD", binanceSymbol: "ATOMUSDT", coingeckoId: "cosmos", category: "Cripto", decimals: 3, active: true },
-
-  // Binance: NEARUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: near → near, NEAR Protocol.
-  { label: "NEAR/USD", binanceSymbol: "NEARUSDT", coingeckoId: "near", category: "Cripto", decimals: 3, active: true },
-
-  // Binance: XLMUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: stellar → xlm, Stellar.
-  { label: "XLM/USD", binanceSymbol: "XLMUSDT", coingeckoId: "stellar", category: "Cripto", decimals: 4, active: true },
+  { label: "EUR/USD OTC", syntheticSymbol: "EURUSD_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "GBP/USD OTC", syntheticSymbol: "GBPUSD_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "USD/JPY OTC", syntheticSymbol: "USDJPY_OTC", category: "Forex", decimals: 3, active: true },
+  { label: "AUD/USD OTC", syntheticSymbol: "AUDUSD_OTC", category: "Forex", decimals: 5, active: true },
 ];
 
 // ── Helpers derivados — cada um substitui uma das listas duplicadas mapeadas na Fase 1 ──
 
-/** label → símbolo Binance. Substitui BINANCE_ASSET_TO_SYMBOL (lib/derivPrice.ts). */
-export const ASSET_TO_BINANCE_SYMBOL: Record<string, string> =
-  Object.fromEntries(ASSETS.map(a => [a.label, a.binanceSymbol]));
-
-/** símbolo Binance → id CoinGecko. Substitui COINGECKO_IDS (lib/derivPrice.ts). */
-export const BINANCE_SYMBOL_TO_COINGECKO_ID: Record<string, string> =
-  Object.fromEntries(
-    ASSETS.filter((a): a is Asset & { coingeckoId: string } => a.coingeckoId !== null)
-      .map(a => [a.binanceSymbol, a.coingeckoId]),
-  );
+/** label → símbolo synthetic-engine. Substitui ASSET_TO_BINANCE_SYMBOL. */
+export const ASSET_TO_SYNTHETIC_SYMBOL: Record<string, string> =
+  Object.fromEntries(ASSETS.map(a => [a.label, a.syntheticSymbol]));
 
 /** Set dos labels permitidos para abrir operação. Substitui ALLOWED_ASSETS (app/api/trade/route.ts). */
 export const ALLOWED_ASSET_LABELS: ReadonlySet<string> = new Set(ASSETS.map(a => a.label));
@@ -110,8 +61,8 @@ export function getActiveAssets(): Asset[] {
 /**
  * Forma equivalente ao `DerivPair` existente em lib/derivWebSocket.ts
  * (symbol/label/category/decimals) — permite reconstruir CRYPTO_PAIRS /
- * getAvailablePairs() na Fase 3 sem alterar a forma consumida por
- * app/trade/page.tsx, app/bot/page.tsx e app/api/pairs/route.ts.
+ * getAvailablePairs() sem alterar a forma consumida por app/trade/page.tsx,
+ * app/bot/page.tsx e app/api/pairs/route.ts.
  *
  * TODO (shim transitório): esta forma existe só para preservar a interface
  * `DerivPair` já espalhada pelo frontend/API. Se um dia o frontend for
@@ -127,7 +78,7 @@ export interface DerivPairShape {
 
 export function toDerivPairs(assets: Asset[] = ASSETS): DerivPairShape[] {
   return assets.map(a => ({
-    symbol:   a.binanceSymbol,
+    symbol:   a.syntheticSymbol,
     label:    a.label,
     category: a.category,
     decimals: a.decimals,
