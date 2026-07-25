@@ -1,6 +1,13 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CRYPTO_PAIRS } from "@/lib/derivWebSocket";
+
+// Vercel: tempo máximo desta rota. Medido em produção com 16 pares (ver commit) —
+// ajusta para cima se o plano/latência da Binance mudar. Hobby ignora/limita a 10s;
+// Pro aceita este valor.
+export const maxDuration = 30;
 
 const BINANCE_REST = "https://api.binance.com/api/v3";
 
@@ -37,6 +44,44 @@ function isAuthorized(req: NextRequest): boolean {
   return false;
 }
 
+type CandleRow = {
+  asset:     string;
+  timeframe: string;
+  timestamp: Date;
+  open:      number;
+  high:      number;
+  low:       number;
+  close:     number;
+};
+
+/**
+ * Escreve todos os candles recolhidos numa ÚNICA instrução SQL (um round-trip
+ * à BD, não um por par/timeframe/candle). Usa INSERT ... ON CONFLICT DO UPDATE
+ * em vez de `createMany` porque `createMany` (com `skipDuplicates`) não
+ * actualiza linhas já existentes — e a vela ainda "em formação" de cada
+ * timeframe (sobretudo 5m/15m, cujo intervalo é maior que a cadência do cron
+ * de 1 min) é reescrita várias vezes com valores de high/low/close cada vez
+ * mais completos antes de fechar. Com `createMany` essa vela ficaria presa
+ * no primeiro valor parcial gravado, em vez de acabar com o valor final
+ * correcto — regressão silenciosa na qualidade dos dados dos gráficos.
+ */
+async function upsertCandlesBatch(rows: CandleRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+
+  const values = Prisma.join(
+    rows.map(r => Prisma.sql`(${randomUUID()}, ${r.asset}, ${r.timeframe}, ${r.open}, ${r.high}, ${r.low}, ${r.close}, ${r.timestamp}, 0)`),
+  );
+
+  await prisma.$executeRaw`
+    INSERT INTO "PriceCandle" (id, asset, timeframe, open, high, low, close, timestamp, volume)
+    VALUES ${values}
+    ON CONFLICT (asset, timeframe, timestamp)
+    DO UPDATE SET open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, close = EXCLUDED.close
+  `;
+
+  return rows.length;
+}
+
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -48,34 +93,45 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ saved: 0, assets: [] });
   }
 
-  let saved = 0;
-  const assets: string[] = [];
+  const startedAt = Date.now();
 
-  for (const tf of TIMEFRAMES) {
-    const results = await Promise.allSettled(
-      CRYPTO_PAIRS.map(async (pair, idx) => {
-        await delay(idx * 100);
-        const candles = await fetchBinanceCandles(pair.symbol, tf.interval, 5);
-        const upserts = await Promise.allSettled(
-          candles.map(c => {
-            const ts = new Date(c.epoch * 1000);
-            return prisma.priceCandle.upsert({
-              where:  { asset_timeframe_timestamp: { asset: pair.label, timeframe: tf.label, timestamp: ts } },
-              update: { open: c.open, high: c.high, low: c.low, close: c.close },
-              create: { asset: pair.label, timeframe: tf.label, timestamp: ts, open: c.open, high: c.high, low: c.low, close: c.close },
-            });
-          })
-        );
-        const ok = upserts.filter(r => r.status === "fulfilled").length;
-        if (ok > 0 && !assets.includes(pair.label)) assets.push(pair.label);
-        return ok;
-      })
-    );
-    for (const r of results) {
-      if (r.status === "fulfilled") saved += r.value;
-      else console.error("[price-recorder]", r.reason);
+  // Todos os pares × todos os timeframes, em paralelo (com um pequeno
+  // desfasamento entre pedidos para não disparar tudo no mesmo instante sobre
+  // a Binance). Cada job é independente — a falha de um par/timeframe não
+  // afecta os outros (Promise.allSettled).
+  const jobs = CRYPTO_PAIRS.flatMap(pair => TIMEFRAMES.map(tf => ({ pair, tf })));
+
+  const results = await Promise.allSettled(
+    jobs.map(async ({ pair, tf }, idx) => {
+      await delay(idx * 40);
+      const candles = await fetchBinanceCandles(pair.symbol, tf.interval, 5);
+      return candles.map((c): CandleRow => ({
+        asset: pair.label, timeframe: tf.label, timestamp: new Date(c.epoch * 1000),
+        open: c.open, high: c.high, low: c.low, close: c.close,
+      }));
+    })
+  );
+
+  const rows: CandleRow[] = [];
+  const assets = new Set<string>();
+  let fetchErrors = 0;
+
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") {
+      if (r.value.length > 0) assets.add(jobs[i].pair.label);
+      rows.push(...r.value);
+    } else {
+      fetchErrors++;
+      console.error("[price-recorder]", jobs[i].pair.symbol, jobs[i].tf.label, r.reason);
     }
-  }
+  });
 
-  return NextResponse.json({ saved, assets });
+  // Escrita em lote único — ver upsertCandlesBatch(). Se a execução for
+  // cortada ANTES desta linha (timeout a meio da recolha), nada é escrito
+  // nesta invocação: sem estado parcial. Ver nota sobre o cenário de corte
+  // durante a própria escrita no commit/PR.
+  const saved = await upsertCandlesBatch(rows);
+
+  const elapsedMs = Date.now() - startedAt;
+  return NextResponse.json({ saved, assets: [...assets], fetchErrors, elapsedMs });
 }
