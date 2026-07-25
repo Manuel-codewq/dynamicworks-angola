@@ -22,18 +22,28 @@ async function fetchWithTimeout(url: string, timeoutMs = 4500): Promise<Response
   }
 }
 
+// Usa /api/v3/trades (última transacção real, com timestamp) em vez de
+// /api/v3/ticker/price. Confirmado directamente (2026-07-25): ticker/price
+// devolve o mesmo valor, ao cêntimo, em chamadas sucessivas ao longo de
+// dezenas de segundos, mesmo com round-trip < 1,5s — parece ter um ciclo de
+// actualização próprio do lado da Binance, independente de quão depressa o
+// consultamos. /api/v3/trades?limit=1 devolve sempre a última execução real
+// (id de trade diferente em cada chamada, confirmado), e vem com `time` em
+// ms — isso é o que fazia o preço gravado no servidor parecer "congelado"
+// enquanto o gráfico do cliente (WebSocket @trade, esse sim por-trade) já
+// tinha claramente andado.
 async function fetchBinancePrice(symbol: string): Promise<number | null> {
   // Tenta os dois endpoints Binance (global + US)
   const urls = [
-    `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
-    `https://api.binance.us/api/v3/ticker/price?symbol=${symbol}`,
+    `https://api.binance.com/api/v3/trades?symbol=${symbol}&limit=1`,
+    `https://api.binance.us/api/v3/trades?symbol=${symbol}&limit=1`,
   ];
   for (const url of urls) {
     try {
       const res = await fetchWithTimeout(url, 4000);
       if (!res.ok) continue;
-      const data = await res.json() as { price: string };
-      const price = parseFloat(data.price);
+      const data = await res.json() as { price: string }[];
+      const price = parseFloat(data?.[0]?.price ?? "");
       if (isFinite(price) && price > 0) return price;
     } catch { /* tenta próximo */ }
   }
