@@ -275,8 +275,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const clientPrice = typeof clientEntryPrice === "number" ? clientEntryPrice : parseFloat(clientEntryPrice);
-  if (isFinite(clientPrice) && clientPrice > 0) {
+  const clientPrice      = typeof clientEntryPrice === "number" ? clientEntryPrice : parseFloat(clientEntryPrice);
+  const clientPriceValid = isFinite(clientPrice) && clientPrice > 0;
+  // Com sinal, de propósito — para medir se a divergência real entre o preço
+  // que o utilizador vê e o preço gravado tende sempre para o mesmo lado ou é
+  // aleatória. Positivo: entryPrice > clientPrice (servidor viu preço mais alto).
+  const entryDiffPct = clientPriceValid ? (entryPrice - clientPrice) / entryPrice : null;
+
+  if (clientPriceValid) {
     const pctDiff = Math.abs(clientPrice - entryPrice) / entryPrice;
     if (pctDiff > 0.0015) {
       console.warn(
@@ -327,6 +333,8 @@ export async function POST(req: NextRequest) {
         userId: user.id, asset, symbol: typeof symbol === "string" ? symbol : null, direction,
         amount: amountNum, entryPrice, payout,
         priceSource: priceSource, priceAgeMs: priceAgeMs,
+        clientEntryPrice: clientPriceValid ? clientPrice : null,
+        entryDiffPct,
         expirySecs: expiry, expiresAt, status: "active", isDemo: user.isDemo,
         tournamentParticipantId: isTournamentTrade ? activeTournamentParticipant!.id : null,
       },

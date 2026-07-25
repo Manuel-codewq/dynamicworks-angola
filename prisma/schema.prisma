@@ -135,6 +135,8 @@ model Trade {
   symbol                  String?
   priceSource             String?
   priceAgeMs              Int?
+  clientEntryPrice        Float?
+  entryDiffPct            Float?
   user                    User      @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
