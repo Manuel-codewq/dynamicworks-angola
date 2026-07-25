@@ -11,7 +11,7 @@ import {
   Maximize2, Minimize2, Minus, Sliders, Trash2,
   Square, GitFork, BarChart, Activity,
   Volume2, VolumeX, RefreshCw, Search, Banknote, Target, Medal,
-  Eye, EyeOff,
+  Eye, EyeOff, Info,
 } from "lucide-react";
 import {
   createChart, IChartApi, ISeriesApi, CandlestickData, Time,
@@ -65,6 +65,29 @@ function CoinIcon({ label, size = 22 }: { label: string; size?: number }) {
       color: m.color, fontSize: size * 0.48, fontWeight: 800,
       flexShrink: 0, lineHeight: 1, fontFamily: "monospace",
     }}>{m.icon}</span>
+  );
+}
+
+// Preço a que a operação realmente entrou (entryPrice devolvido pela API na
+// criação) — visualmente distinto do ticker no topo (que usa verde/vermelho
+// consoante o sentido do preço) de propósito, para não ser confundido com
+// esse valor em tempo real.
+function ExecutionPriceLabel({ price, decimals = 5, size = "sm" }: { price: number; decimals?: number; size?: "sm" | "md" }) {
+  const labelSize = size === "md" ? 11 : 10;
+  const valueSize = size === "md" ? 13 : 11;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <span style={{ color: "#4b5563", fontSize: labelSize }}>Preço de execução</span>
+      <span
+        title="A execução é feita ao preço do servidor no momento da confirmação, que pode diferir ligeiramente do preço no ecrã."
+        style={{ display: "inline-flex", cursor: "help", flexShrink: 0 }}
+      >
+        <Info size={11} color="#475569" />
+      </span>
+      <span style={{ color: "#a5b4fc", fontWeight: 700, fontSize: valueSize, fontVariantNumeric: "tabular-nums" }}>
+        {price.toFixed(decimals)}
+      </span>
+    </div>
   );
 }
 
@@ -3029,6 +3052,7 @@ export default function TradePage() {
                     }}>{t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}</span>
                   </div>
                   <div style={{ color: "#64748b", fontSize: 11 }}>{formatKz(t.amount)}</div>
+                  <ExecutionPriceLabel price={t.entryPrice} />
                   {currentPrice > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: winning ? "#00c076" : "#ff3b5c" }} />
@@ -4380,7 +4404,8 @@ export default function TradePage() {
                             <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{t.asset}</span>
                             <span style={{ background: t.direction === "call" ? "rgba(14,203,129,0.15)" : "rgba(246,70,93,0.15)", color: t.direction === "call" ? "#0ecb81" : "#f6465d", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "1px 6px" }}>{t.direction === "call" ? "▲ ALTA" : "▼ BAIXA"}</span>
                           </div>
-                          <div style={{ color: "#64748b", fontSize: 11 }}>{formatKz(t.amount)} · entrada {t.entryPrice.toFixed(5)}</div>
+                          <div style={{ color: "#64748b", fontSize: 11, marginBottom: 3 }}>{formatKz(t.amount)}</div>
+                          <ExecutionPriceLabel price={t.entryPrice} />
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <div style={{ color: isWinning ? "#0ecb81" : "#f6465d", fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{mm}:{ss}</div>
@@ -4823,9 +4848,7 @@ export default function TradePage() {
                                   {isWinning ? "A ganhar" : "A perder"}
                                 </span>
                               </div>
-                              <div style={{ color: "#4b5563", fontSize: 11 }}>
-                                Entrada: <span style={{ color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>{t.entryPrice.toFixed(5)}</span>
-                              </div>
+                              <ExecutionPriceLabel price={t.entryPrice} size="md" />
                             </div>
                             {/* Countdown */}
                             <div style={{ textAlign: "right" }}>
