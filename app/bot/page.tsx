@@ -303,6 +303,10 @@ export default function BotPage() {
   // ── Start / Stop ─────────────────────────────────────────────────────────────
 
   function startBot() {
+    if (!cfg.pair || ALL_PAIRS.length === 0) {
+      addLog({ type: "warn", msg: "Sem activos disponíveis de momento — não é possível iniciar o bot." });
+      return;
+    }
     runningRef.current = true;
     cfgRef.current     = cfg;
     tradesDayRef.current = 0;
@@ -382,6 +386,14 @@ export default function BotPage() {
       </div>
 
       <div style={{ maxWidth:900, margin:"0 auto", padding:"20px 16px", animation:"fadeUp .4s ease both" }}>
+
+        {/* Sem activos disponíveis */}
+        {ALL_PAIRS.length === 0 && (
+          <div style={{ background:"rgba(239,68,68,.08)", border:"1px solid rgba(239,68,68,.3)", borderRadius:12, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
+            <AlertTriangle size={15} color="#ef4444" style={{ flexShrink:0 }} />
+            <span style={{ color:"#ffffff", fontSize:13 }}>Sem activos disponíveis de momento.</span>
+          </div>
+        )}
 
         {/* Aviso demo */}
         {cfg.isDemo && (
@@ -503,8 +515,8 @@ export default function BotPage() {
             </Section>
 
             {/* Botão Start/Stop */}
-            <button onClick={running ? stopBot : startBot}
-              style={{ width:"100%", background: running ? "rgba(239,68,68,.12)" : "linear-gradient(135deg,#ffffff,#f97316)", color: running ? "#ef4444" : "#0a0f1e", border: running ? "1px solid rgba(239,68,68,.3)" : "none", borderRadius:12, padding:"16px", fontSize:15, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all .18s", boxShadow: running ? "none" : "0 6px 24px rgba(255,255,255,.3)" }}>
+            <button onClick={running ? stopBot : startBot} disabled={!running && ALL_PAIRS.length === 0}
+              style={{ width:"100%", background: running ? "rgba(239,68,68,.12)" : "linear-gradient(135deg,#ffffff,#f97316)", color: running ? "#ef4444" : "#0a0f1e", border: running ? "1px solid rgba(239,68,68,.3)" : "none", borderRadius:12, padding:"16px", fontSize:15, fontWeight:800, cursor: (!running && ALL_PAIRS.length === 0) ? "not-allowed" : "pointer", opacity: (!running && ALL_PAIRS.length === 0) ? 0.5 : 1, display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all .18s", boxShadow: running ? "none" : "0 6px 24px rgba(255,255,255,.3)" }}>
               {running ? <><Square size={17} fill="#ef4444" /> Parar Bot</> : <><Play size={17} fill="#0a0f1e" /> Iniciar Bot</>}
             </button>
           </div>

@@ -210,6 +210,10 @@ export default function TradePage() {
   const initialPairs = getAvailablePairs();
   const [pairs,        setPairs]        = useState<DerivPair[]>(initialPairs);
   const [selectedPair, setSelectedPair] = useState<DerivPair | null>(initialPairs[0] ?? null);
+  // Distingue "ainda a carregar" de "carregado, mas não há pares" — sem isto,
+  // com ASSETS vazio o ecrã ficava preso em "A carregar..." para sempre,
+  // porque `!selectedPair` nunca deixava de ser verdade.
+  const [pairsLoaded, setPairsLoaded] = useState(initialPairs.length > 0);
 
   useEffect(() => {
     async function refresh() {
@@ -221,7 +225,10 @@ export default function TradePage() {
         setSelectedPair(prev =>
           prev && list.some(p => p.symbol === prev.symbol) ? prev : (list[0] ?? null)
         );
-      } catch {}
+      } catch {
+      } finally {
+        setPairsLoaded(true);
+      }
     }
     refresh();
     const id = setInterval(refresh, 60_000);
@@ -3963,10 +3970,18 @@ export default function TradePage() {
     );
   }
 
-  if (status === "loading" || !selectedPair) {
+  if (status === "loading" || !pairsLoaded) {
     return (
       <div style={{ minHeight: "100vh", background: "#11141d", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ color: "#ffffff", fontSize: 18, fontFamily: "system-ui, sans-serif" }}>A carregar...</div>
+      </div>
+    );
+  }
+
+  if (!selectedPair) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#11141d", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "#94a3b8", fontSize: 16, fontFamily: "system-ui, sans-serif" }}>Sem activos disponíveis de momento.</div>
       </div>
     );
   }

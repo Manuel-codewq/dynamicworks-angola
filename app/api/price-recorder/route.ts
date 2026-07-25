@@ -42,6 +42,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  // Sem pares configurados (lib/assets.ts:ASSETS vazio) — nada a gravar.
+  // Termina cedo e em silêncio, em vez de percorrer TIMEFRAMES sem trabalho real.
+  if (CRYPTO_PAIRS.length === 0) {
+    return NextResponse.json({ saved: 0, assets: [] });
+  }
+
   let saved = 0;
   const assets: string[] = [];
 

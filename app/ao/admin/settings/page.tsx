@@ -157,24 +157,30 @@ export default function AdminSettingsPage() {
         <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
           Pares disponíveis para negociar. Desactivar um par impede novas operações nesse par.
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
-          {REAL_PAIR_OPTIONS.map(opt => {
-            const active = draft.activePairs?.includes(opt.label) ?? true;
-            return (
-              <button key={opt.label} onClick={() => setDraft(d => {
-                if (!d) return d;
-                const cur = d.activePairs ?? REAL_PAIR_OPTIONS.map(o => o.label);
-                return { ...d, activePairs: active ? cur.filter(l => l !== opt.label) : [...cur, opt.label] };
-              })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "11px 14px", border: `1px solid ${active ? "rgba(0,192,118,0.3)" : "#1e2d50"}`, cursor: "pointer", transition: "border-color 0.15s" }}>
-                <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
-                {active
-                  ? <ToggleRight size={20} color="#00c076" />
-                  : <ToggleLeft  size={20} color="#334155" />
-                }
-              </button>
-            );
-          })}
-        </div>
+        {REAL_PAIR_OPTIONS.length === 0 ? (
+          <p style={{ color: "#334155", fontSize: 13, padding: "8px 0" }}>
+            Sem activos disponíveis de momento.
+          </p>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
+            {REAL_PAIR_OPTIONS.map(opt => {
+              const active = draft.activePairs?.includes(opt.label) ?? true;
+              return (
+                <button key={opt.label} onClick={() => setDraft(d => {
+                  if (!d) return d;
+                  const cur = d.activePairs ?? REAL_PAIR_OPTIONS.map(o => o.label);
+                  return { ...d, activePairs: active ? cur.filter(l => l !== opt.label) : [...cur, opt.label] };
+                })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "11px 14px", border: `1px solid ${active ? "rgba(0,192,118,0.3)" : "#1e2d50"}`, cursor: "pointer", transition: "border-color 0.15s" }}>
+                  <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
+                  {active
+                    ? <ToggleRight size={20} color="#00c076" />
+                    : <ToggleLeft  size={20} color="#334155" />
+                  }
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
 
@@ -227,26 +233,32 @@ export default function AdminSettingsPage() {
       {/* Payout % */}
       <div style={card}>
         <p style={sectionTitle}>Payout por Par (50% – 95%)</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
-          {pairs.map(pair => {
-            const pct = toPercent(draft.payout[pair]);
-            return (
-              <div key={pair} style={{ background: "#0a0f1e", borderRadius: 10, padding: "12px 16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ color: "#94a3b8", fontSize: 13 }}>{pair}</span>
-                  <span style={{ color: "#ffffff", fontWeight: 700, fontSize: 14 }}>{pct}%</span>
+        {pairs.length === 0 ? (
+          <p style={{ color: "#334155", fontSize: 13, padding: "8px 0" }}>
+            Sem activos disponíveis de momento.
+          </p>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
+            {pairs.map(pair => {
+              const pct = toPercent(draft.payout[pair]);
+              return (
+                <div key={pair} style={{ background: "#0a0f1e", borderRadius: 10, padding: "12px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ color: "#94a3b8", fontSize: 13 }}>{pair}</span>
+                    <span style={{ color: "#ffffff", fontWeight: 700, fontSize: 14 }}>{pct}%</span>
+                  </div>
+                  <input type="range" min={50} max={95} step={1} value={pct}
+                    onChange={e => setPayout(pair, Number(e.target.value))}
+                    style={{ width: "100%", accentColor: "#ffffff", cursor: "pointer" }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                    <span style={{ color: "#1e2d50", fontSize: 10 }}>50%</span>
+                    <span style={{ color: "#1e2d50", fontSize: 10 }}>95%</span>
+                  </div>
                 </div>
-                <input type="range" min={50} max={95} step={1} value={pct}
-                  onChange={e => setPayout(pair, Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "#ffffff", cursor: "pointer" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                  <span style={{ color: "#1e2d50", fontSize: 10 }}>50%</span>
-                  <span style={{ color: "#1e2d50", fontSize: 10 }}>95%</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>
