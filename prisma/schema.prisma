@@ -133,6 +133,8 @@ model Trade {
   expiresAt               DateTime?
   tournamentParticipantId String?
   symbol                  String?
+  priceSource             String?
+  priceAgeMs              Int?
   user                    User      @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])

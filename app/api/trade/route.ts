@@ -3,15 +3,22 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getDerivPrice } from "@/lib/derivPrice";
+import { getDerivPriceWithSource, type DerivPriceSource } from "@/lib/derivPrice";
 import { sendPushToUser } from "@/lib/webPush";
 import { ALLOWED_ASSET_LABELS } from "@/lib/assets";
 
-async function fetchServerEntryPrice(asset: string): Promise<number | null> {
-  // 1. Preço ao vivo da Binance
+type ServerEntryPriceSource = DerivPriceSource | "db-candle";
+type ServerEntryPrice = { price: number; source: ServerEntryPriceSource; ageMs: number };
+
+async function fetchServerEntryPrice(asset: string): Promise<ServerEntryPrice | null> {
+  const startedAt = Date.now();
+
+  // 1. Preço ao vivo da Binance (com fallback interno Coinbase → CoinGecko)
   try {
-    const price = await getDerivPrice(asset);
-    if (price && price > 0) return price;
+    const result = await getDerivPriceWithSource(asset);
+    if (result && result.price > 0) {
+      return { price: result.price, source: result.source, ageMs: Date.now() - startedAt };
+    }
   } catch { /* fallback abaixo */ }
 
   // 2. Fallback: PriceCandle DB
@@ -22,7 +29,9 @@ async function fetchServerEntryPrice(asset: string): Promise<number | null> {
       orderBy: { timestamp: "desc" },
       select:  { close: true },
     });
-    if (candle?.close && candle.close > 0) return candle.close;
+    if (candle?.close && candle.close > 0) {
+      return { price: candle.close, source: "db-candle", ageMs: Date.now() - startedAt };
+    }
   } catch { /* silent */ }
 
   return null;
@@ -244,10 +253,24 @@ export async function POST(req: NextRequest) {
   // Entry price determinado exclusivamente pelo servidor. O preço enviado pelo
   // cliente serve apenas para detectar um ecrã desatualizado — nunca define a
   // entrada (confiar nele permitiria abrir operações a um preço escolhido).
-  const entryPrice = await entryPricePromise;
-  if (!entryPrice) {
+  const priceResult = await entryPricePromise;
+  if (!priceResult) {
     return NextResponse.json(
       { error: "Preço de mercado indisponível. Tente novamente em instantes." },
+      { status: 503 },
+    );
+  }
+  const { price: entryPrice, source: priceSource, ageMs: priceAgeMs } = priceResult;
+  const priceCapturedAt = Date.now(); // instante em que o preço ficou disponível ao servidor
+
+  // Qualidade da fonte valida-se primeiro: CoinGecko actualiza muito menos vezes
+  // que a Binance/Coinbase, um candle da BD pode ter minutos de atraso, e um
+  // pedido demasiado lento é sinal de algo errado — rejeita antes mesmo de
+  // comparar com o preço do cliente. Só um preço bom entra na verificação de
+  // tolerância a seguir.
+  if (priceSource === "coingecko" || priceSource === "db-candle" || priceAgeMs > 1500) {
+    return NextResponse.json(
+      { error: "Mercado temporariamente indisponível, tenta novamente" },
       { status: 503 },
     );
   }
@@ -255,9 +278,17 @@ export async function POST(req: NextRequest) {
   const clientPrice = typeof clientEntryPrice === "number" ? clientEntryPrice : parseFloat(clientEntryPrice);
   if (isFinite(clientPrice) && clientPrice > 0) {
     const pctDiff = Math.abs(clientPrice - entryPrice) / entryPrice;
-    if (pctDiff > 0.02) {
+    if (pctDiff > 0.0015) {
+      console.warn(
+        `[trade/open] Preço desatualizado — asset=${asset} source=${priceSource} ageMs=${priceAgeMs} diffPct=${(pctDiff * 100).toFixed(4)}`,
+      );
       return NextResponse.json(
-        { error: "Preço desatualizado. Recarrega e tenta novamente." },
+        {
+          error:       "Preço desatualizado. Recarrega e tenta novamente.",
+          clientPrice,
+          entryPrice,
+          diffPct:     Number((pctDiff * 100).toFixed(4)),
+        },
         { status: 409 },
       );
     }
@@ -295,6 +326,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: user.id, asset, symbol: typeof symbol === "string" ? symbol : null, direction,
         amount: amountNum, entryPrice, payout,
+        priceSource: priceSource, priceAgeMs: priceAgeMs,
         expirySecs: expiry, expiresAt, status: "active", isDemo: user.isDemo,
         tournamentParticipantId: isTournamentTrade ? activeTournamentParticipant!.id : null,
       },
@@ -336,7 +368,12 @@ export async function POST(req: NextRequest) {
 
   const serverTime = Date.now();
   const expiresAt  = trade.expiresAt.getTime();
-  return NextResponse.json({ trade: { ...trade, expiresAt }, entryPrice, serverTime });
+  return NextResponse.json({
+    trade: { ...trade, expiresAt },
+    entryPrice,
+    priceTimestamp: priceCapturedAt, // ms epoch — instante em que o preço foi obtido (não há timestamp de exchange no REST ticker/price)
+    serverTime,
+  });
 }
 
 export async function GET(req: NextRequest) {
