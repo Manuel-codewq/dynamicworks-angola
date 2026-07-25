@@ -171,6 +171,11 @@ const DW_ANIM_CSS = `
 .dw-sheet-panel { animation: dwSheetIn 0.26s cubic-bezier(0.16,1,0.3,1); }
 .dw-pills-in { animation: dwPillsIn 0.2s ease both; }
 @media (prefers-reduced-motion: reduce) { .dw-dropdown-in, .dw-value-pop, .dw-sheet-backdrop, .dw-sheet-panel, .dw-pills-in { animation: none !important; } }
+@keyframes dwDriftA { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-40px,30px) scale(1.1); } }
+@keyframes dwDriftB { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(35px,-30px) scale(1.06); } }
+.dw-glow-a { animation: dwDriftA 20s ease-in-out infinite; }
+.dw-glow-b { animation: dwDriftB 24s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .dw-glow-a, .dw-glow-b { animation: none !important; } }
 `;
 
 
@@ -5132,6 +5137,10 @@ export default function TradePage() {
   return (
     <div style={{ minHeight: "100vh", background: "#11141d", fontFamily: "system-ui, -apple-system, sans-serif", userSelect: "none" }}>
       <style>{DW_ANIM_CSS}</style>
+
+      {/* Ambient glows — puramente decorativo, atrás de tudo (fixed + z-index baixo) */}
+      <div className="dw-glow-a" style={{ position: "fixed", top: "-10%", right: "-5%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,.05) 0%,transparent 60%)", pointerEvents: "none", zIndex: 0 }} />
+      <div className="dw-glow-b" style={{ position: "fixed", bottom: "-15%", left: "-8%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(14,203,129,.035) 0%,transparent 60%)", pointerEvents: "none", zIndex: 0 }} />
 
       {/* Modal do Bot IA (desktop) */}
       {botModalJSX}

@@ -54,10 +54,10 @@ function PlatformMockup() {
       </div>
       <div style={{ padding: "14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(247,147,26,0.12)", border: "1px solid rgba(247,147,26,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#F7931A" }}>₿</div>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#3b82f6" }}>€</div>
           <div>
-            <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>ATIVO/USD</div>
-            <div style={{ color: "#334155", fontSize: 10 }}>Cripto · 24/7</div>
+            <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>EUR/USD OTC</div>
+            <div style={{ color: "#334155", fontSize: 10 }}>Forex OTC · 24/7</div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -114,6 +114,11 @@ export default function LandingPage() {
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
         @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+        @keyframes driftA { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-50px,40px) scale(1.12)} }
+        @keyframes driftB { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(40px,-35px) scale(1.08)} }
+        .glow-a { animation: driftA 18s ease-in-out infinite; }
+        .glow-b { animation: driftB 22s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .glow-a, .glow-b { animation: none !important; } }
         @keyframes fadeUp  { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
         @keyframes glow    { 0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.2)} 60%{box-shadow:0 0 0 18px rgba(255,255,255,0)} }
         .fu0  { animation: fadeUp .7s .05s both; }
@@ -200,8 +205,8 @@ export default function LandingPage() {
       {/* ── Hero ── */}
       <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
         {/* Ambient glows */}
-        <div style={{ position: "absolute", top: "10%", right: "0%", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle,rgba(255,255,255,.055) 0%,transparent 60%)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: "5%", left: "-8%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(14,203,129,.03) 0%,transparent 60%)", pointerEvents: "none" }} />
+        <div className="glow-a" style={{ position: "absolute", top: "10%", right: "0%", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle,rgba(255,255,255,.055) 0%,transparent 60%)", pointerEvents: "none" }} />
+        <div className="glow-b" style={{ position: "absolute", bottom: "5%", left: "-8%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(14,203,129,.03) 0%,transparent 60%)", pointerEvents: "none" }} />
 
         <div className="hero-wrap" style={{ maxWidth: 1200, margin: "0 auto", padding: "140px 48px 80px", display: "flex", alignItems: "center", gap: 80, width: "100%" }}>
 
