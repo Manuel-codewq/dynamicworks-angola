@@ -117,6 +117,47 @@ export async function getDerivPrice(asset: string): Promise<number | null> {
   return fetchPromise;
 }
 
+// ── Preço ANCORADO a um instante específico (fecho de operações) ──────────
+// getDerivPrice() devolve o preço "agora" — correcto para abrir uma operação,
+// mas ERRADO para fechar: o worker que resolve operações expiradas corre por
+// cron a cada 60s (vercel.json), por isso pode processar uma operação até ~59s
+// depois do expiresAt real. Usar getDerivPrice() nesse momento captura o preço
+// de ENTÃO (quando o worker correu), não o preço que existia no instante exacto
+// em que a operação expirou — o utilizador via a operação "verde" no ecrã ao
+// expirar e minutos depois recebia loss, porque o mercado tinha-se mexido no
+// intervalo entre o expiresAt real e a próxima execução do cron.
+// api/v3/aggTrades com startTime devolve a primeira transacção efectivamente
+// executada NAQUELE instante (histórico real da Binance), independente de
+// quando este código é chamado — corrige o problema na raiz.
+async function fetchBinancePriceAt(symbol: string, timestampMs: number): Promise<number | null> {
+  const urls = [
+    `https://api.binance.com/api/v3/aggTrades?symbol=${symbol}&startTime=${timestampMs}&limit=1`,
+    `https://api.binance.us/api/v3/aggTrades?symbol=${symbol}&startTime=${timestampMs}&limit=1`,
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetchWithTimeout(url, 4000);
+      if (!res.ok) continue;
+      const data = await res.json() as { p: string }[];
+      const price = parseFloat(data?.[0]?.p ?? "");
+      if (isFinite(price) && price > 0) return price;
+    } catch { /* tenta próximo */ }
+  }
+  return null;
+}
+
+// asset aqui é o label ("BTC/USD"), não o símbolo — mantém a mesma convenção
+// que fetchCoinbasePrice() usa, para poder reutilizar esse fallback tal como está.
+export async function getDerivPriceAt(asset: string, timestampMs: number): Promise<number | null> {
+  const sym = ASSET_TO_BINANCE_SYMBOL[asset];
+  if (!sym) return null;
+  try {
+    const price = await fetchBinancePriceAt(sym, timestampMs);
+    if (price) return price;
+  } catch { /* cai para o preço "agora" no chamador */ }
+  return null;
+}
+
 // ── Variante com fonte anexada — usada pela abertura de operações para poder
 // auditar/rejeitar por proveniência (ver app/api/trade/route.ts). Duplica a
 // cascata em vez de alterar getDerivPrice(), para não mudar o contrato dessa

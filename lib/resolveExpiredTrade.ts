@@ -1,20 +1,35 @@
 import { prisma } from "@/lib/prisma";
-import { getDerivPrice } from "@/lib/derivPrice";
+import { getDerivPrice, getDerivPriceAt } from "@/lib/derivPrice";
 import { sendTradeWinEmail, sendTradeLossEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/webPush";
 
-async function getClosePriceForAsset(asset: string): Promise<number | null> {
-  // 1ª prioridade: Binance → Coinbase → CoinGecko (via getDerivPrice)
+// expiresAt é o instante EXACTO em que a operação devia fechar — não "agora".
+// O worker que chama isto corre por cron a cada 60s, por isso pode processar
+// uma operação até ~59s depois do expiresAt real; usar o preço "agora" nesse
+// caso fecha a operação com um preço de um momento errado (o mercado já andou
+// no intervalo), o que é visto pelo utilizador como "estava verde e passou a
+// loss". getDerivPriceAt() busca a transacção real da Binance NAQUELE
+// instante, independente de quando o worker efectivamente corre.
+async function getClosePriceForAsset(asset: string, expiresAt: Date): Promise<number | null> {
+  // 1ª prioridade: preço real da Binance ancorado ao instante de expiração
+  try {
+    const anchoredPrice = await getDerivPriceAt(asset, expiresAt.getTime());
+    if (anchoredPrice && anchoredPrice > 0) return anchoredPrice;
+  } catch { /* cai para preço "agora" */ }
+
+  // 2ª prioridade: preço "agora" (Binance → Coinbase → CoinGecko) — só chega
+  // aqui se a consulta histórica falhar (ex.: activo sem símbolo Binance)
   try {
     const livePrice = await getDerivPrice(asset);
     if (livePrice && livePrice > 0) return livePrice;
   } catch { /* fallback para DB */ }
 
-  // Fallback: última PriceCandle registada (janela 5 min — cobre falhas do cron)
+  // Fallback final: candle da BD mais próxima do instante de expiração (não a
+  // mais recente disponível — teria o mesmo problema do preço "agora")
   try {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60_000);
+    const windowStart = new Date(expiresAt.getTime() - 5 * 60_000);
     const candle = await prisma.priceCandle.findFirst({
-      where:   { asset, timestamp: { gte: fiveMinAgo } },
+      where:   { asset, timestamp: { gte: windowStart, lte: expiresAt } },
       orderBy: { timestamp: "desc" },
       select:  { close: true },
     });
@@ -77,8 +92,9 @@ export async function resolveExpiredTrade(
   let profit:       number;
   let returnAmount: number;
 
-  // Preço de fecho: PriceCandle DB → Deriv WS. Apenas fontes do servidor.
-  const resolvedPrice: number | null = await getClosePriceForAsset(trade.asset);
+  // Preço de fecho: ancorado ao instante exacto de expiração — nunca ao
+  // instante em que o worker efectivamente corre. Apenas fontes do servidor.
+  const resolvedPrice: number | null = await getClosePriceForAsset(trade.asset, expiresAt);
 
   const expiredForMs = Date.now() - expiresAt.getTime();
 
