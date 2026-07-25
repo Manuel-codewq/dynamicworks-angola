@@ -137,6 +137,7 @@ model Trade {
   priceAgeMs              Int?
   clientEntryPrice        Float?
   entryDiffPct            Float?
+  clientLagMs             Int?
   user                    User      @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])

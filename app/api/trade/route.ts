@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const { asset, symbol, direction, amount, expirySecs, skipTournament, tournamentId: clientTournamentId, entryPrice: clientEntryPrice } = body ?? {};
+  const { asset, symbol, direction, amount, expirySecs, skipTournament, tournamentId: clientTournamentId, entryPrice: clientEntryPrice, clientTickTs } = body ?? {};
   if (!ALLOWED_ASSET_LABELS.has(asset)) {
     return NextResponse.json({ error: "Ativo não permitido" }, { status: 400 });
   }
@@ -263,6 +263,15 @@ export async function POST(req: NextRequest) {
   const { price: entryPrice, source: priceSource, ageMs: priceAgeMs } = priceResult;
   const priceCapturedAt = Date.now(); // instante em que o preço ficou disponível ao servidor
 
+  // clientTickTs: Date.now() do browser no momento em que recebeu o tick que
+  // gerou o preço mostrado (ver lastTickAtRef em app/trade/page.tsx). Os
+  // relógios de cliente e servidor não são garantidamente idênticos (deriva de
+  // relógio local), mas a magnitude aqui interessa mais do que a precisão
+  // absoluta — serve para perceber se a divergência medida em entryDiffPct é
+  // explicada por atraso real (rede + processamento) ou não.
+  const clientTickTsNum = typeof clientTickTs === "number" ? clientTickTs : parseInt(clientTickTs, 10);
+  const clientLagMs = isFinite(clientTickTsNum) && clientTickTsNum > 0 ? priceCapturedAt - clientTickTsNum : null;
+
   // Qualidade da fonte valida-se primeiro: CoinGecko actualiza muito menos vezes
   // que a Binance/Coinbase, um candle da BD pode ter minutos de atraso, e um
   // pedido demasiado lento é sinal de algo errado — rejeita antes mesmo de
@@ -335,6 +344,7 @@ export async function POST(req: NextRequest) {
         priceSource: priceSource, priceAgeMs: priceAgeMs,
         clientEntryPrice: clientPriceValid ? clientPrice : null,
         entryDiffPct,
+        clientLagMs,
         expirySecs: expiry, expiresAt, status: "active", isDemo: user.isDemo,
         tournamentParticipantId: isTournamentTrade ? activeTournamentParticipant!.id : null,
       },

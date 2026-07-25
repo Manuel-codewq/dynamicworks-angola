@@ -336,6 +336,7 @@ export default function TradePage() {
   const candleSeriesRef    = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const currentCandleRef   = useRef<CandlestickData | null>(null);
   const lastPriceRef       = useRef<number>(0);
+  const lastTickAtRef      = useRef<number>(0); // Date.now() no momento em que currentPrice foi actualizado (ms, cliente)
   const initialScrollDone  = useRef<boolean>(false);
   const serverTimeOffset   = useRef<number>(0); // segundos: serverEpoch - browserEpoch
   const reconnectingRef    = useRef<boolean>(false);
@@ -1489,6 +1490,7 @@ export default function TradePage() {
       const up = q >= prev;
       setPriceUp(up);
       lastPriceRef.current = q;
+      lastTickAtRef.current = Date.now();
       setCurrentPrice(q);
       if (livePriceLineRef.current) {
         livePriceLineRef.current.applyOptions({ price: q, color: up ? "#0ecb81" : "#f6465d" });
@@ -2268,6 +2270,7 @@ export default function TradePage() {
           amount,
           expirySecs:      comutacaoActive ? Math.max(30, candleRemSecs) : expiry.secs,
           entryPrice:      currentPrice || 0,
+          clientTickTs:    lastTickAtRef.current || undefined,
           skipTournament:  activeAccount !== "tournament",
           tournamentId:    activeAccount === "tournament" ? (tournamentId ?? undefined) : undefined,
         }),
