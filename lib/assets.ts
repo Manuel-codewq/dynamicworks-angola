@@ -27,8 +27,58 @@ export interface Asset {
   active:        boolean;
 }
 
-// Vazio de propósito — sem pares/activos definidos.
-export const ASSETS: Asset[] = [];
+// Cada entrada confirmada individualmente contra fonte primária em 2026-07-25:
+// símbolo Binance + status TRADING + tickSize via GET /api/v3/exchangeInfo;
+// id CoinGecko via GET /api/v3/coins/markets.
+export const ASSETS: Asset[] = [
+  // Binance: BTCUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: bitcoin → btc, Bitcoin.
+  { label: "BTC/USD", binanceSymbol: "BTCUSDT", coingeckoId: "bitcoin", category: "Cripto", decimals: 2, active: true },
+
+  // Binance: ETHUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: ethereum → eth, Ethereum.
+  { label: "ETH/USD", binanceSymbol: "ETHUSDT", coingeckoId: "ethereum", category: "Cripto", decimals: 2, active: true },
+
+  // Binance: BNBUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: binancecoin → bnb, BNB.
+  { label: "BNB/USD", binanceSymbol: "BNBUSDT", coingeckoId: "binancecoin", category: "Cripto", decimals: 2, active: true },
+
+  // Binance: SOLUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: solana → sol, Solana.
+  { label: "SOL/USD", binanceSymbol: "SOLUSDT", coingeckoId: "solana", category: "Cripto", decimals: 2, active: true },
+
+  // Binance: XRPUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: ripple → xrp, XRP.
+  { label: "XRP/USD", binanceSymbol: "XRPUSDT", coingeckoId: "ripple", category: "Cripto", decimals: 4, active: true },
+
+  // Binance: ADAUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: cardano → ada, Cardano.
+  { label: "ADA/USD", binanceSymbol: "ADAUSDT", coingeckoId: "cardano", category: "Cripto", decimals: 4, active: true },
+
+  // Binance: DOGEUSDT, TRADING, tickSize 0.00001 → 5 casas. CoinGecko: dogecoin → doge, Dogecoin.
+  { label: "DOGE/USD", binanceSymbol: "DOGEUSDT", coingeckoId: "dogecoin", category: "Cripto", decimals: 5, active: true },
+
+  // Binance: LTCUSDT, TRADING, tickSize 0.01 → 2 casas. CoinGecko: litecoin → ltc, Litecoin.
+  { label: "LTC/USD", binanceSymbol: "LTCUSDT", coingeckoId: "litecoin", category: "Cripto", decimals: 2, active: true },
+
+  // Binance: AVAXUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: avalanche-2 → avax, Avalanche.
+  { label: "AVAX/USD", binanceSymbol: "AVAXUSDT", coingeckoId: "avalanche-2", category: "Cripto", decimals: 3, active: true },
+
+  // Binance: LINKUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: chainlink → link, Chainlink.
+  { label: "LINK/USD", binanceSymbol: "LINKUSDT", coingeckoId: "chainlink", category: "Cripto", decimals: 3, active: true },
+
+  // Binance: DOTUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: polkadot → dot, Polkadot.
+  { label: "DOT/USD", binanceSymbol: "DOTUSDT", coingeckoId: "polkadot", category: "Cripto", decimals: 3, active: true },
+
+  // Binance: TRXUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: tron → trx, TRON.
+  { label: "TRX/USD", binanceSymbol: "TRXUSDT", coingeckoId: "tron", category: "Cripto", decimals: 4, active: true },
+
+  // Binance: BCHUSDT, TRADING, tickSize 0.1 → 1 casa. CoinGecko: bitcoin-cash → bch, Bitcoin Cash.
+  { label: "BCH/USD", binanceSymbol: "BCHUSDT", coingeckoId: "bitcoin-cash", category: "Cripto", decimals: 1, active: true },
+
+  // Binance: ATOMUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: cosmos → atom, Cosmos Hub.
+  { label: "ATOM/USD", binanceSymbol: "ATOMUSDT", coingeckoId: "cosmos", category: "Cripto", decimals: 3, active: true },
+
+  // Binance: NEARUSDT, TRADING, tickSize 0.001 → 3 casas. CoinGecko: near → near, NEAR Protocol.
+  { label: "NEAR/USD", binanceSymbol: "NEARUSDT", coingeckoId: "near", category: "Cripto", decimals: 3, active: true },
+
+  // Binance: XLMUSDT, TRADING, tickSize 0.0001 → 4 casas. CoinGecko: stellar → xlm, Stellar.
+  { label: "XLM/USD", binanceSymbol: "XLMUSDT", coingeckoId: "stellar", category: "Cripto", decimals: 4, active: true },
+];
 
 // ── Helpers derivados — cada um substitui uma das listas duplicadas mapeadas na Fase 1 ──
 
