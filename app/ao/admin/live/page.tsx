@@ -74,7 +74,7 @@ export default function LivePage() {
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 5000);
+    const id = setInterval(load, 1000);
     return () => clearInterval(id);
   }, [load]);
 
@@ -96,7 +96,7 @@ export default function LivePage() {
           <div>
             <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Operações ao Vivo</h1>
             <p style={{ color: "#64748b", fontSize: 12, margin: "3px 0 0" }}>
-              Atualiza a cada 5s · última: {lastUpdate || "—"}
+              Atualiza a cada 1s · última: {lastUpdate || "—"}
             </p>
           </div>
         </div>
