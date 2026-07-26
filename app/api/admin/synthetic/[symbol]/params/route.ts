@@ -12,10 +12,10 @@ export async function PATCH(
   }
 
   const { symbol } = await params;
-  const { drift, volatility } = await req.json();
+  const { drift, volatility, eventProbability, eventMagnitude } = await req.json();
 
   try {
-    const result = await updateSyntheticParams(symbol, { drift, volatility });
+    const result = await updateSyntheticParams(symbol, { drift, volatility, eventProbability, eventMagnitude });
     if (!result.ok) {
       return NextResponse.json({ error: result.error || "erro ao ajustar" }, { status: result.status });
     }

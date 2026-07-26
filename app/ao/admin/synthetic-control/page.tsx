@@ -8,6 +8,8 @@ interface IndexRow {
   lastPrice: number;
   volatility: number;
   drift: number;
+  eventProbability: number;
+  eventMagnitude: number;
   active: boolean;
 }
 
@@ -17,9 +19,20 @@ interface Draft {
   drift: string;
   volatility: string;
   magnitude: string;
+  autoFreq: string;       // eventProbability, como string do valor numérico (chave do FREQ_OPTIONS)
+  autoMagnitude: string;  // eventMagnitude em % (0-50)
 }
 
 const LIVE_REFRESH_MS = 1200; // dá a sensação de movimento ao vivo no painel
+
+// eventProbability é por tick (~1/seg) — traduzido para frequência humana,
+// já que "probabilidade por tick" não diz nada a ninguém.
+const FREQ_OPTIONS = [
+  { label: "Desligado", value: 0 },
+  { label: "Raro (~1x/hora)", value: 1 / 3600 },
+  { label: "Ocasional (~1x/15min)", value: 1 / 900 },
+  { label: "Frequente (~1x/3min)", value: 1 / 180 },
+];
 
 export default function SyntheticControlPage() {
   const [rows, setRows] = useState<IndexRow[]>([]);
@@ -43,7 +56,17 @@ export default function SyntheticControlPage() {
         const next = { ...prev };
         for (const r of data) {
           if (!next[r.symbol]) {
-            next[r.symbol] = { drift: String(r.drift), volatility: String(r.volatility), magnitude: "10" };
+            // encontra a opção de frequência mais próxima do que já está guardado
+            const closest = FREQ_OPTIONS.reduce((a, b) =>
+              Math.abs(b.value - r.eventProbability) < Math.abs(a.value - r.eventProbability) ? b : a
+            );
+            next[r.symbol] = {
+              drift: String(r.drift),
+              volatility: String(r.volatility),
+              magnitude: "10",
+              autoFreq: String(closest.value),
+              autoMagnitude: String(Math.round((r.eventMagnitude || 0.08) * 100)),
+            };
           }
         }
         return next;
@@ -71,12 +94,17 @@ export default function SyntheticControlPage() {
     const res = await fetch(`/api/admin/synthetic/${symbol}/params`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ drift: Number(draft.drift), volatility: Number(draft.volatility) }),
+      body: JSON.stringify({
+        drift: Number(draft.drift),
+        volatility: Number(draft.volatility),
+        eventProbability: Number(draft.autoFreq),
+        eventMagnitude: Number(draft.autoMagnitude) / 100,
+      }),
     });
     const data = await res.json();
     setSavingSymbol(null);
     if (res.ok) {
-      setMessage({ text: `${symbol}: drift/volatility actualizados`, ok: true });
+      setMessage({ text: `${symbol}: parâmetros actualizados`, ok: true });
     } else {
       setMessage({ text: `${symbol}: ${data.error || "erro ao guardar"}`, ok: false });
     }
@@ -154,7 +182,7 @@ export default function SyntheticControlPage() {
         <p style={sectionTitle}>Pares ({rows.length})</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {rows.map(r => {
-            const draft = drafts[r.symbol] ?? { drift: "0", volatility: "0", magnitude: "10" };
+            const draft = drafts[r.symbol] ?? { drift: "0", volatility: "0", magnitude: "10", autoFreq: "0", autoMagnitude: "8" };
             const saving = savingSymbol === r.symbol;
             return (
               <div key={r.symbol} style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px" }}>
@@ -181,6 +209,28 @@ export default function SyntheticControlPage() {
                       onChange={e => setDraft(r.symbol, { volatility: e.target.value })}
                       className="sc-input" />
                   </div>
+
+                  <div className="sc-divider" />
+
+                  <div className="sc-field">
+                    <label style={{ color: "#64748b", fontSize: 12 }}>Eventos automáticos</label>
+                    <select value={draft.autoFreq}
+                      onChange={e => setDraft(r.symbol, { autoFreq: e.target.value })}
+                      className="sc-input" style={{ width: 170 }}>
+                      {FREQ_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {Number(draft.autoFreq) > 0 && (
+                    <div className="sc-field">
+                      <label style={{ color: "#64748b", fontSize: 12 }}>Magnitude auto %</label>
+                      <input type="number" step={1} min={1} max={50} value={draft.autoMagnitude}
+                        onChange={e => setDraft(r.symbol, { autoMagnitude: e.target.value })}
+                        className="sc-input" />
+                    </div>
+                  )}
+
                   <button onClick={() => saveParams(r.symbol)} disabled={saving} className="sc-btn"
                     style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", cursor: saving ? "not-allowed" : "pointer" }}>
                     {saving ? "..." : "Guardar"}

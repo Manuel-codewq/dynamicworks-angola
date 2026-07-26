@@ -50,7 +50,7 @@ export async function fetchAllIndicesAdmin(): Promise<SyntheticIndexAdmin[]> {
 
 export async function updateSyntheticParams(
   symbol: string,
-  patch: { drift?: number; volatility?: number },
+  patch: { drift?: number; volatility?: number; eventProbability?: number; eventMagnitude?: number },
 ): Promise<{ ok: boolean; status: number; error?: string }> {
   const res = await fetchWithTimeout(`${SYNTHETIC_ENGINE_URL}/api/indices/${symbol}/params`, {
     method: "PATCH",
