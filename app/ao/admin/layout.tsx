@@ -1,7 +1,8 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { performLogout } from "@/lib/logout";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
   Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
@@ -158,7 +159,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", marginBottom: 6, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#ffffff", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
             <ExternalLink size={14} /> Ver plataforma
           </a>
-          <button onClick={() => signOut({ callbackUrl: "/login" })}
+          <button onClick={() => performLogout((session?.user as any)?.sessionId, "/login")}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#ef4444", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
             <LogOut size={15} /> Sair
           </button>

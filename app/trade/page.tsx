@@ -1,8 +1,9 @@
 "use client";
 import { formatKz } from "@/lib/format";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { performLogout } from "@/lib/logout";
 import {
   TrendingUp, TrendingDown, ChevronDown, ChevronUp, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy, Check,
@@ -1519,7 +1520,15 @@ export default function TradePage() {
 
       if (!c || (c.time as number) < (candleTime as number)) {
         currentCandleEpochRef.current = candleTime as number;
-        const newC: CandlestickData = { time: candleTime, open: q, high: q, low: q, close: q };
+        // open = fecho da vela anterior (continuidade visual) — não o tick
+        // actual. Sem isto, cada vela nova "nascia" isolada no preço do
+        // primeiro tick do período, criando um salto visual em relação ao
+        // fecho anterior (feed contínuo, sem gaps de mercado real). high/low
+        // têm de incluir esse open também — senão, sempre que q se afasta do
+        // fecho anterior, o open ficava fora do intervalo [low,high], uma
+        // vela geometricamente inválida.
+        const openPrice = c?.close ?? q;
+        const newC: CandlestickData = { time: candleTime, open: openPrice, high: Math.max(openPrice, q), low: Math.min(openPrice, q), close: q };
         currentCandleRef.current = newC;
         const ct3 = chartTypeRef.current;
         if (ct3 === "line" || ct3 === "area") {
@@ -5092,7 +5101,7 @@ export default function TradePage() {
               </a>
 
               {/* Logout */}
-              <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 14px", background: "rgba(246,70,93,0.07)", border: "1px solid rgba(246,70,93,0.2)", borderRadius: 12, color: "#f6465d", fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 4 }}>
+              <button onClick={() => performLogout((session?.user as any)?.sessionId, "/login")} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 14px", background: "rgba(246,70,93,0.07)", border: "1px solid rgba(246,70,93,0.2)", borderRadius: 12, color: "#f6465d", fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 4 }}>
                 <LogOut size={15} /> Sair da conta
               </button>
             </div>
@@ -5224,7 +5233,7 @@ export default function TradePage() {
               <a href="/wallet"    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><Wallet size={14} /> Carteira</a>
               <a href="/profile"   style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13 }}><User size={14} /> Perfil</a>
               <a href="/security"  style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#94a3b8", textDecoration: "none", fontSize: 13, borderTop: "1px solid #262d40" }}><Shield size={14} /> Segurança</a>
-              <button onClick={() => signOut({ callbackUrl: "/login" })}
+              <button onClick={() => performLogout((session?.user as any)?.sessionId, "/login")}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "#f6465d", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
                 <LogOut size={14} /> Sair
               </button>
