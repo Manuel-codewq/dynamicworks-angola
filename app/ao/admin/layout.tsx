@@ -6,7 +6,7 @@ import { performLogout } from "@/lib/logout";
 import {
   TrendingUp, LayoutDashboard, Users, BarChart2,
   Settings, LogOut, ArrowLeftRight, ExternalLink, ScanFace,
-  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal, Copy, Trash2, ShieldAlert, BookOpen, Megaphone, Wallet,
+  Trophy, MessageCircle, TrendingDown, Bell, ShieldCheck, Gift, LineChart, Activity, Medal, Copy, Trash2, ShieldAlert, BookOpen, Megaphone, Wallet, Zap, Menu, X,
 } from "lucide-react";
 
 type NavItem = {
@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
   { href: "/ao/admin/notifications",  label: "Notificações",   Icon: Bell },
   { href: "/ao/admin/bonuses",        label: "Bónus",          Icon: Gift },
   { href: "/ao/admin/copy",            label: "Copy Trading",   Icon: Copy },
+  { href: "/ao/admin/synthetic-control", label: "Controlo Sintético", Icon: Zap },
   { href: "/ao/admin/audit",          label: "Auditoria",      Icon: ShieldCheck },
   { href: "/ao/admin/security",       label: "Segurança",      Icon: ShieldAlert },
   { href: "/ao/admin/formadores",     label: "Formadores",     Icon: BookOpen },
@@ -47,11 +48,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [txnCount,     setTxnCount]     = useState(0);
   const [kycCount,     setKycCount]     = useState(0);
   const [supportCount, setSupportCount] = useState(0);
+  const [mobileOpen,   setMobileOpen]   = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated" && (session?.user as { role?: string })?.role !== "admin") router.push("/trade");
   }, [status, session, router]);
+
+  // fecha o menu ao navegar para outra página (mobile)
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -95,9 +100,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", background: "#0a0f1e", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <style>{`
+        .admin-hamburger { display: none; }
+        .admin-backdrop { display: none; }
+        @media (max-width: 860px) {
+          .admin-sidebar {
+            position: fixed; z-index: 60; top: 0; left: 0; height: 100vh;
+            transform: translateX(-100%); transition: transform 0.2s ease-out;
+          }
+          .admin-sidebar[data-open="true"] { transform: translateX(0); }
+          .admin-hamburger { display: flex !important; }
+          .admin-content { padding-top: 56px !important; }
+        }
+      `}</style>
+
+      {/* Hamburger (só visível em mobile) */}
+      <button className="admin-hamburger" onClick={() => setMobileOpen(v => !v)}
+        style={{
+          position: "fixed", top: 12, left: 12, zIndex: 70,
+          width: 40, height: 40, alignItems: "center", justifyContent: "center",
+          background: "#111827", border: "1px solid #1e2d50", borderRadius: 10,
+          color: "#fff", cursor: "pointer",
+        }}>
+        {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
+
+      {/* Backdrop (mobile, fecha ao tocar fora do menu) */}
+      {mobileOpen && (
+        <div onClick={() => setMobileOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 55 }} />
+      )}
 
       {/* Sidebar */}
-      <aside style={{ width: 240, flexShrink: 0, background: "#111827", borderRight: "1px solid #1e2d50", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
+      <aside className="admin-sidebar" data-open={mobileOpen}
+        style={{ width: 240, flexShrink: 0, background: "#111827", borderRight: "1px solid #1e2d50", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
 
         {/* Logo */}
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #1e2d50" }}>
@@ -167,7 +203,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Content */}
-      <main style={{ flex: 1, overflowY: "auto", minHeight: "100vh" }}>
+      <main className="admin-content" style={{ flex: 1, overflowY: "auto", minHeight: "100vh", minWidth: 0 }}>
         {children}
       </main>
     </div>

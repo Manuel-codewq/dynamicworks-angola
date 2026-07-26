@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw, TrendingDown, TrendingUp, Shuffle } from "lucide-react";
 
 interface IndexRow {
@@ -19,15 +19,22 @@ interface Draft {
   magnitude: string;
 }
 
+const LIVE_REFRESH_MS = 1200; // dá a sensação de movimento ao vivo no painel
+
 export default function SyntheticControlPage() {
   const [rows, setRows] = useState<IndexRow[]>([]);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [loading, setLoading] = useState(true);
   const [savingSymbol, setSavingSymbol] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
 
-  async function load() {
-    setLoading(true);
+  // fetch "silencioso" (não mexe no spinner nem nos drafts já preenchidos) —
+  // usado pelo polling em segundo plano, para o preço parecer vivo sem
+  // interromper o que o admin esteja a escrever nos inputs
+  async function refresh(showSpinner: boolean) {
+    if (showSpinner) setLoading(true);
     const res = await fetch("/api/admin/synthetic");
     if (res.ok) {
       const data: IndexRow[] = await res.json();
@@ -41,20 +48,24 @@ export default function SyntheticControlPage() {
         }
         return next;
       });
-    } else {
+    } else if (showSpinner) {
       setMessage({ text: "Erro ao carregar os índices", ok: false });
     }
-    setLoading(false);
+    if (showSpinner) setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    refresh(true);
+    const id = setInterval(() => refresh(false), LIVE_REFRESH_MS);
+    return () => clearInterval(id);
+  }, []);
 
   function setDraft(symbol: string, patch: Partial<Draft>) {
     setDrafts(d => ({ ...d, [symbol]: { ...d[symbol], ...patch } }));
   }
 
   async function saveParams(symbol: string) {
-    const draft = drafts[symbol];
+    const draft = draftsRef.current[symbol];
     setSavingSymbol(symbol);
     setMessage(null);
     const res = await fetch(`/api/admin/synthetic/${symbol}/params`, {
@@ -66,17 +77,16 @@ export default function SyntheticControlPage() {
     setSavingSymbol(null);
     if (res.ok) {
       setMessage({ text: `${symbol}: drift/volatility actualizados`, ok: true });
-      load();
     } else {
       setMessage({ text: `${symbol}: ${data.error || "erro ao guardar"}`, ok: false });
     }
   }
 
   async function fireEvent(symbol: string, type: "CRASH" | "BOOM" | "JUMP") {
-    const draft = drafts[symbol];
+    const draft = draftsRef.current[symbol];
     const pct = Number(draft.magnitude);
     const label = type === "CRASH" ? "queda" : type === "BOOM" ? "subida" : "salto";
-    if (!confirm(`Tens a certeza? Isto vai disparar uma ${label} garantida de ${pct}% em ${symbol} no próximo tick. Esta acção não pode ser desfeita.`)) return;
+    if (!confirm(`Tens a certeza? Isto vai disparar já uma ${label} de ${pct}% em ${symbol}. Esta acção não pode ser desfeita.`)) return;
 
     setMessage(null);
     const res = await fetch(`/api/admin/synthetic/${symbol}/event`, {
@@ -86,7 +96,7 @@ export default function SyntheticControlPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      setMessage({ text: `${symbol}: evento ${type} disparado — aplica-se no próximo tick`, ok: true });
+      setMessage({ text: `${symbol}: ${type} disparado — o preço já está a reagir`, ok: true });
     } else {
       setMessage({ text: `${symbol}: ${data.error || "erro ao disparar evento"}`, ok: false });
     }
@@ -94,21 +104,42 @@ export default function SyntheticControlPage() {
 
   const card: React.CSSProperties = { background: "#111827", border: "1px solid #1e2d50", borderRadius: 14, padding: "20px 22px", marginBottom: 20 };
   const sectionTitle: React.CSSProperties = { color: "#fff", fontSize: 15, fontWeight: 700, margin: "0 0 14px" };
-  const numInput: React.CSSProperties = { width: 70, background: "#0a0f1e", border: "1px solid #1e2d50", borderRadius: 8, padding: "6px 8px", color: "#fff", fontSize: 13, boxSizing: "border-box" };
 
   if (loading) return <div style={{ padding: 28 }}><p style={{ color: "#94a3b8" }}>A carregar...</p></div>;
 
   return (
-    <div style={{ padding: 28, maxWidth: 1100 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+    <div className="sc-page" style={{ padding: 28, maxWidth: 1100 }}>
+      <style>{`
+        .sc-input {
+          width: 70px; background: #0a0f1e; border: 1px solid #1e2d50; border-radius: 8px;
+          padding: 6px 8px; color: #fff; font-size: 13px; box-sizing: border-box;
+        }
+        .sc-field { display: flex; align-items: center; gap: 6px; }
+        .sc-controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .sc-divider { width: 1px; height: 24px; background: #1e2d50; }
+        .sc-btn {
+          display: flex; align-items: center; gap: 4px; border-radius: 8px; padding: 8px 14px;
+          font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+        }
+        @media (max-width: 640px) {
+          .sc-page { padding: 16px !important; }
+          .sc-controls { flex-direction: column; align-items: stretch; gap: 10px; }
+          .sc-field { justify-content: space-between; }
+          .sc-input { width: 100%; }
+          .sc-divider { display: none; }
+          .sc-btn { width: 100%; justify-content: center; }
+        }
+      `}</style>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0 }}>Controlo de Movimento Sintético</h1>
           <p style={{ color: "#94a3b8", fontSize: 13, margin: "4px 0 0" }}>
             Ajusta o comportamento dos preços sintéticos. Acção sensível — afecta directamente o que os traders vêem.
           </p>
         </div>
-        <button onClick={load}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>
+        <button onClick={() => refresh(true)}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e2d50", border: "none", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13, flexShrink: 0 }}>
           <RefreshCw size={14} />
         </button>
       </div>
@@ -132,45 +163,47 @@ export default function SyntheticControlPage() {
                     <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{r.displayName}</span>
                     <span style={{ color: "#64748b", fontSize: 12, marginLeft: 10 }}>{r.symbol}</span>
                   </div>
-                  <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>{r.lastPrice.toLocaleString("pt-PT", { maximumFractionDigits: 5 })}</span>
+                  <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                    {r.lastPrice.toLocaleString("pt-PT", { maximumFractionDigits: 5 })}
+                  </span>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className="sc-controls">
+                  <div className="sc-field">
                     <label style={{ color: "#64748b", fontSize: 12 }}>Drift</label>
                     <input type="number" step={0.01} value={draft.drift}
                       onChange={e => setDraft(r.symbol, { drift: e.target.value })}
-                      style={numInput} />
+                      className="sc-input" />
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="sc-field">
                     <label style={{ color: "#64748b", fontSize: 12 }}>Volatility</label>
                     <input type="number" step={0.01} value={draft.volatility}
                       onChange={e => setDraft(r.symbol, { volatility: e.target.value })}
-                      style={numInput} />
+                      className="sc-input" />
                   </div>
-                  <button onClick={() => saveParams(r.symbol)} disabled={saving}
-                    style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                  <button onClick={() => saveParams(r.symbol)} disabled={saving} className="sc-btn"
+                    style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", cursor: saving ? "not-allowed" : "pointer" }}>
                     {saving ? "..." : "Guardar"}
                   </button>
 
-                  <div style={{ width: 1, height: 24, background: "#1e2d50" }} />
+                  <div className="sc-divider" />
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="sc-field">
                     <label style={{ color: "#64748b", fontSize: 12 }}>Magnitude %</label>
                     <input type="number" step={1} min={1} max={50} value={draft.magnitude}
                       onChange={e => setDraft(r.symbol, { magnitude: e.target.value })}
-                      style={numInput} />
+                      className="sc-input" />
                   </div>
-                  <button onClick={() => fireEvent(r.symbol, "CRASH")}
-                    style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "6px 12px", color: "#ef4444", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => fireEvent(r.symbol, "CRASH")} className="sc-btn"
+                    style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}>
                     <TrendingDown size={13} /> CRASH
                   </button>
-                  <button onClick={() => fireEvent(r.symbol, "BOOM")}
-                    style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "6px 12px", color: "#22c55e", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => fireEvent(r.symbol, "BOOM")} className="sc-btn"
+                    style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e" }}>
                     <TrendingUp size={13} /> BOOM
                   </button>
-                  <button onClick={() => fireEvent(r.symbol, "JUMP")}
-                    style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => fireEvent(r.symbol, "JUMP")} className="sc-btn"
+                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff" }}>
                     <Shuffle size={13} /> JUMP
                   </button>
                 </div>
