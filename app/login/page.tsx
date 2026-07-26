@@ -60,7 +60,7 @@ function LoginContent() {
         else                      setError(t("login.error.generic"));
         return;
       }
-      if (data.requires2FA) {
+      if (data.needs2fa) {
         setStep(data.method === "totp" ? "2fa_totp" : "2fa_email");
         return;
       }
