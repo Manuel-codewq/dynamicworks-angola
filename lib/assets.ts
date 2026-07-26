@@ -36,6 +36,14 @@ export const ASSETS: Asset[] = [
   { label: "GBP/USD OTC", syntheticSymbol: "GBPUSD_OTC", category: "Forex", decimals: 5, active: true },
   { label: "USD/JPY OTC", syntheticSymbol: "USDJPY_OTC", category: "Forex", decimals: 3, active: true },
   { label: "AUD/USD OTC", syntheticSymbol: "AUDUSD_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "USD/CAD OTC", syntheticSymbol: "USDCAD_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "EUR/GBP OTC", syntheticSymbol: "EURGBP_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "EUR/JPY OTC", syntheticSymbol: "EURJPY_OTC", category: "Forex", decimals: 3, active: true },
+  { label: "GBP/JPY OTC", syntheticSymbol: "GBPJPY_OTC", category: "Forex", decimals: 3, active: true },
+  { label: "USD/CHF OTC", syntheticSymbol: "USDCHF_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "NZD/USD OTC", syntheticSymbol: "NZDUSD_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "EUR/CHF OTC", syntheticSymbol: "EURCHF_OTC", category: "Forex", decimals: 5, active: true },
+  { label: "AUD/JPY OTC", syntheticSymbol: "AUDJPY_OTC", category: "Forex", decimals: 3, active: true },
 ];
 
 // ── Helpers derivados — cada um substitui uma das listas duplicadas mapeadas na Fase 1 ──
