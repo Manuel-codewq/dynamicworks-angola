@@ -62,6 +62,7 @@ model User {
   trades            Trade[]
   transactions      Transaction[]
   sessions          UserSession[]
+  promoClaims       PromoClaim[]
 }
 
 model NifCache {
@@ -162,6 +163,21 @@ model Transaction {
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([method, status, createdAt])
+}
+
+model PromoClaim {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  amount    Float
+  status    String    @default("pending") // pending | claimed | expired
+  expiresAt DateTime
+  claimedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
 }
 
 model Notification {

@@ -181,7 +181,7 @@ export default function WalletPage() {
   // ── Computed metrics ──────────────────────────────────────────────────────
   const totalDeposited   = transactions.filter(t => t.type === "deposit"    && t.status === "completed").reduce((s, t) => s + t.amount, 0);
   const totalWithdrawn   = transactions.filter(t => t.type === "withdrawal" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
-  const totalBonus       = transactions.filter(t => t.type === "bonus"      && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+  const totalBonus       = transactions.filter(t => (t.type === "bonus" || t.type === "promo") && t.status === "completed").reduce((s, t) => s + t.amount, 0);
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#070d1a", padding: "24px 16px", maxWidth: 600, margin: "0 auto" }}>
@@ -549,7 +549,7 @@ export default function WalletPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {filtered.map(tx => {
-                const isCredit = tx.type === "deposit" || tx.type === "bonus" || tx.type === "tournament_prize" || (tx.type === "adjustment" && tx.amount >= 0);
+                const isCredit = tx.type === "deposit" || tx.type === "bonus" || tx.type === "promo" || tx.type === "tournament_prize" || (tx.type === "adjustment" && tx.amount >= 0);
                 const color    = isCredit ? "#22c55e" : "#ef4444";
                 const bgColor  = isCredit ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)";
                 const borderColor = isCredit ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)";
@@ -558,6 +558,7 @@ export default function WalletPage() {
                                : tx.type === "withdrawal"       ? t("wallet.type.withdrawal")
                                : tx.type === "adjustment"       ? "Ajuste de Saldo"
                                : tx.type === "bonus"            ? "Bónus"
+                               : tx.type === "promo"            ? "Promoção"
                                : tx.type === "tournament_prize" ? "Prémio de Torneio"
                                : tx.type === "tournament_entry" ? "Inscrição em Torneio"
                                : tx.type;

@@ -33,9 +33,15 @@ function LoginContent() {
   const isVerified = params.get("verified") === "1";
   const is2FAStep  = step === "2fa_email" || step === "2fa_totp";
 
+  // Só aceita caminhos internos (começam por "/", nunca "//" — que o browser
+  // trataria como protocol-relative para outro host) — previne open redirect
+  // via callbackUrl manipulado.
+  const rawCallback = params.get("callbackUrl");
+  const dest = rawCallback && /^\/(?!\/)/.test(rawCallback) ? rawCallback : "/trade";
+
   useEffect(() => {
-    if (status === "authenticated") router.replace("/trade");
-  }, [status, router]);
+    if (status === "authenticated") router.replace(dest);
+  }, [status, router, dest]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,7 +71,7 @@ function LoginContent() {
         return;
       }
       const r = await signIn("credentials", { email, password, otp: "", redirect: false });
-      if (r?.ok) router.replace("/trade");
+      if (r?.ok) router.replace(dest);
       else setError(t("login.error.generic"));
       return;
     }
@@ -73,7 +79,7 @@ function LoginContent() {
     // OTP step
     const r = await signIn("credentials", { email, password, otp, redirect: false });
     setLoading(false);
-    if (r?.ok) { router.replace("/trade"); return; }
+    if (r?.ok) { router.replace(dest); return; }
     const n = failedAttempts + 1;
     setFailedAttempts(n);
     const rem = MAX_ATTEMPTS - n;

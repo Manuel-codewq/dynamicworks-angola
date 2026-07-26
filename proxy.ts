@@ -10,7 +10,7 @@ const PROTECTED = [
   "/trade", "/dashboard", "/wallet",
   "/profile", "/kyc", "/support", "/referral",
   "/security", "/history", "/tournaments", "/copy", "/ranking", "/achievements",
-  "/bot",
+  "/bot", "/promo",
 ];
 
 // Caminhos onde o locale routing não se aplica
@@ -120,6 +120,8 @@ export const config = {
     "/ranking/:path*",
     "/achievements/:path*",
     "/bot",
+    "/promo",
+    "/promo/:path*",
     "/login",
     "/register",
     "/forgot-password",
