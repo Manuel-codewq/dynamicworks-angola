@@ -75,6 +75,9 @@ export async function POST(req: NextRequest) {
       if (user.kycStatus !== "approved") {
         throw Object.assign(new Error("KYC_REQUIRED"), { code: "KYC_REQUIRED" });
       }
+      if (!user.twoFactorEnabled && user.twoFactorDeadline && user.twoFactorDeadline < new Date()) {
+        throw Object.assign(new Error("TWOFA_REQUIRED"), { code: "TWOFA_REQUIRED" });
+      }
       // Bloquear levantamento duplicado
       const existing = await dbTx.transaction.findFirst({
         where: { userId, type: "withdrawal", status: "pending" },
@@ -122,6 +125,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     if (err?.code === "USER_NOT_FOUND")       return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
     if (err?.code === "KYC_REQUIRED")         return NextResponse.json({ error: "Verificação KYC obrigatória para levantamentos.", kycRequired: true }, { status: 403 });
+    if (err?.code === "TWOFA_REQUIRED")       return NextResponse.json({ error: "Activa a autenticação de dois factores para continuares a levantar fundos.", twoFactorRequired: true }, { status: 403 });
     if (err?.code === "INSUFFICIENT_BALANCE") return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
     if (err?.code === "PENDING_EXISTS")       return NextResponse.json({ error: "Já tens um levantamento pendente." }, { status: 409 });
     if (err?.code === "OTP_INVALID")          return NextResponse.json({ error: "Código OTP inválido ou expirado" }, { status: 400 });

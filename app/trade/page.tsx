@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
+import { useTwoFactorBanner } from "@/lib/useTwoFactorBanner";
 import {
   TrendingUp, TrendingDown, ChevronDown, ChevronUp, Wallet,
   User, LogOut, BarChart2, AlertCircle, X, Trophy, Check,
@@ -235,6 +236,7 @@ interface RecentWin { asset: string; amount: number; time: number; }
 export default function TradePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { heightPx: twoFactorBannerHeight } = useTwoFactorBanner();
 
   // ── Responsive ──────────────────────────────────────────────────────────
   const [isMobile, setIsMobile]       = useState(false);
@@ -2314,6 +2316,9 @@ export default function TradePage() {
       const data = await res.json();
       if (!res.ok) {
         setNotification({ msg: data.error, type: "info" });
+        if (data.twoFactorRequired) {
+          setTimeout(() => router.push("/security"), 2500);
+        }
       } else {
         playOpen();
         setNotification({
@@ -4241,8 +4246,8 @@ export default function TradePage() {
     const TRADEPANEL_H  = panelCollapsed ? TRADEPANEL_COLLAPSED : TRADEPANEL_EXPANDED;
     const BOTTOMNAV_H   = 52;
     const OPSPANEL_H    = 230;
-    const CONTENT_TOP   = TOPBAR_H + TF_H;
-    const OVERLAY_TOP   = 0;
+    const CONTENT_TOP   = TOPBAR_H + TF_H + twoFactorBannerHeight;
+    const OVERLAY_TOP   = twoFactorBannerHeight;
     const chartTop      = CONTENT_TOP;
     const chartH        = windowHeight > 0 ? windowHeight - CONTENT_TOP - TRADEPANEL_H - BOTTOMNAV_H : 360;
 
@@ -4272,7 +4277,7 @@ export default function TradePage() {
         )}
 
         {/* ── Topbar (chart tab only) ── */}
-        {mobileTab === "chart" && <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#161a26", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
+        {mobileTab === "chart" && <div style={{ position: "fixed", top: twoFactorBannerHeight, left: 0, right: 0, height: TOPBAR_H, zIndex: 110, background: "#161a26", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ width: 24, height: 24, objectFit: "contain", borderRadius: 5, background: "#262d40" }} />
             <span style={{ color: "#fff", fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>Dynamic Works</span>
@@ -4302,7 +4307,7 @@ export default function TradePage() {
         </div>}
 
         {/* ── Timeframe strip ── */}
-        {mobileTab === "chart" && <div style={{ position: "fixed", top: TOPBAR_H, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#161a26", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
+        {mobileTab === "chart" && <div style={{ position: "fixed", top: TOPBAR_H + twoFactorBannerHeight, left: 0, right: 0, height: TF_H, zIndex: 108, background: "#161a26", borderBottom: "1px solid #1a2540", display: "flex", alignItems: "center", padding: "0 10px", gap: 5 }}>
           {["1m", "5m", "15m", "1h", "1D"].map(tf => (
             <button key={tf} className="dw-chip" onClick={() => setTimeframe(tf)} style={{ height: 24, padding: "0 9px", background: timeframe === tf ? "#ffffff" : "transparent", color: timeframe === tf ? "#11141d" : "#64748b", border: `1px solid ${timeframe === tf ? "#ffffff" : "#262d40"}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {tf}
@@ -5188,7 +5193,7 @@ export default function TradePage() {
       {accountToastJSX}
 
       {/* Desktop Topbar */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, zIndex: 100, background: "#161a26", borderBottom: "1px solid #262d40", display: "flex", alignItems: "center", padding: "0 16px", gap: 12 }}>
+      <div style={{ position: "fixed", top: twoFactorBannerHeight, left: 0, right: 0, height: 56, zIndex: 100, background: "#161a26", borderBottom: "1px solid #262d40", display: "flex", alignItems: "center", padding: "0 16px", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 150 }}>
           <img src="/logo-icon.jpeg" alt="Dynamic Works" style={{ height: 30, width: 30, objectFit: "contain", borderRadius: 6, background: "#262d40" }} />
           <span style={{ color: "#fff", fontWeight: 900, fontSize: 14, letterSpacing: 0.3 }}>Dynamic Works</span>
@@ -5264,7 +5269,7 @@ export default function TradePage() {
       </div>
 
       {/* Ticker bar */}
-      <div style={{ position: "fixed", top: 56, left: 0, right: 0, height: 32, zIndex: 99, background: "#161a26", borderBottom: "1px solid #262d40", overflow: "hidden", display: "flex", alignItems: "center" }}>
+      <div style={{ position: "fixed", top: 56 + twoFactorBannerHeight, left: 0, right: 0, height: 32, zIndex: 99, background: "#161a26", borderBottom: "1px solid #262d40", overflow: "hidden", display: "flex", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 28, padding: "0 20px", animation: "ticker 30s linear infinite", whiteSpace: "nowrap" }}>
           {[...pairs, ...pairs].map((p, i) => {
             const price = tickerPrices[p.symbol] ?? 0;
@@ -5291,7 +5296,7 @@ export default function TradePage() {
       </div>
 
       {/* Main content */}
-      <div style={{ paddingTop: 88, height: "100vh", display: "flex" }}>
+      <div style={{ paddingTop: 88 + twoFactorBannerHeight, height: "100vh", display: "flex" }}>
         {/* Chart area — ocupa todo o espaço disponível */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", borderRight: "1px solid #262d40" }}>
           <div style={{ padding: "5px 14px", background: "#161a26", display: "flex", gap: 4, borderBottom: "1px solid #262d40", alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>

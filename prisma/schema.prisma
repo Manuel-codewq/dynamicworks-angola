@@ -38,6 +38,7 @@ model User {
   twoFactorEnabled  Boolean                 @default(false)
   twoFactorMethod   String?
   twoFactorSecret   String?
+  twoFactorDeadline DateTime?
   referralCode      String?                 @unique
   referralEarnings  Float                   @default(0)
   referredBy        String?

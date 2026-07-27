@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { CheckCircle, ChevronRight, X, Mail, User, Wallet, TrendingUp, ArrowRight } from "lucide-react";
+import { useTwoFactorBanner } from "@/lib/useTwoFactorBanner";
 
 const ALLOWED_PATHS = ["/dashboard"];
 const STORAGE_KEY  = "dw_onboarding_dismissed";
@@ -18,6 +19,7 @@ export default function OnboardingBar() {
   const { status } = useSession();
   const pathname   = usePathname();
   const router     = useRouter();
+  const { heightPx: twoFactorBannerHeight } = useTwoFactorBanner();
   const [data,      setData]      = useState<{ steps: Record<string, boolean>; completed: number; total: number } | null>(null);
   const [dismissed, setDismissed] = useState(true);
   const [visible,   setVisible]   = useState(false);
@@ -60,7 +62,7 @@ export default function OnboardingBar() {
       <div style={{
         background: "linear-gradient(135deg, #0a0f1e 0%, #0d1526 100%)",
         borderBottom: "1px solid #1a2540",
-        position: "sticky", top: 0, zIndex: 50,
+        position: "sticky", top: twoFactorBannerHeight, zIndex: 50,
         opacity: visible ? 1 : 0,
         maxHeight: visible ? "160px" : "0px",
         overflow: "hidden",

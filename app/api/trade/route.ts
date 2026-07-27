@@ -183,6 +183,14 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 });
   if (user.status === "blocked") return NextResponse.json({ error: "Conta bloqueada" }, { status: 403 });
 
+  // 2FA obrigatório após o período de graça — só afecta conta real, não demo
+  if (!user.isDemo && !user.twoFactorEnabled && user.twoFactorDeadline && user.twoFactorDeadline < new Date()) {
+    return NextResponse.json({
+      error: "Activa a autenticação de dois factores para continuares a operar em conta real.",
+      twoFactorRequired: true,
+    }, { status: 403 });
+  }
+
   // Conta real exige pelo menos 1 depósito aprovado
   // Torneio real (isDemo=false) bypassa este check — a taxa de inscrição já é a "entrada" real
   const isTournamentReal = !skipTournament && !!clientTournamentId;

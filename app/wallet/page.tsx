@@ -70,7 +70,7 @@ export default function WalletPage() {
   const [reference, setReference] = useState("");
   const [otpSent,   setOtpSent]   = useState(false);
   const [otp,       setOtp]       = useState("");
-  const [formMsg,   setFormMsg]   = useState<{ text: string; ok: boolean } | null>(null);
+  const [formMsg,   setFormMsg]   = useState<{ text: string; ok: boolean; actionHref?: string; actionLabel?: string } | null>(null);
   const [busy,        setBusy]        = useState(false);
   const [copied,      setCopied]      = useState(false);
   const [copiedRef,   setCopiedRef]   = useState(false);
@@ -157,6 +157,8 @@ export default function WalletPage() {
         setAmount(""); setMethod(""); setReference(""); setOtp(""); setOtpSent(false);
         setTab("history"); load();
       }
+    } else if (d.twoFactorRequired) {
+      setFormMsg({ text: d.error ?? "Activa o 2FA para continuares.", ok: false, actionHref: "/security", actionLabel: "Activar 2FA" });
     } else {
       setFormMsg({ text: d.error ?? "Erro ao submeter.", ok: false });
     }
@@ -353,9 +355,15 @@ export default function WalletPage() {
             ) : (
               <>
                 {formMsg && (
-                  <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {formMsg.ok ? <CheckCircle size={14} color="#22c55e" /> : <AlertCircle size={14} color="#ef4444" />}
-                    <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
+                    <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13, flex: 1 }}>{formMsg.text}</span>
+                    {formMsg.actionHref && (
+                      <button onClick={() => router.push(formMsg.actionHref!)}
+                        style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                        {formMsg.actionLabel}
+                      </button>
+                    )}
                   </div>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -424,9 +432,15 @@ export default function WalletPage() {
             </div>
 
             {formMsg && (
-              <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ background: formMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${formMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 {formMsg.ok ? <CheckCircle size={14} color="#22c55e" /> : <AlertCircle size={14} color="#ef4444" />}
-                <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13 }}>{formMsg.text}</span>
+                <span style={{ color: formMsg.ok ? "#22c55e" : "#ef4444", fontSize: 13, flex: 1 }}>{formMsg.text}</span>
+                {formMsg.actionHref && (
+                  <button onClick={() => router.push(formMsg.actionHref!)}
+                    style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    {formMsg.actionLabel}
+                  </button>
+                )}
               </div>
             )}
 

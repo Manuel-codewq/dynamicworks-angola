@@ -4,11 +4,14 @@ import { SessionProvider } from "next-auth/react";
 import Script from "next/script";
 import AiSupportChat from "./components/AiSupportChat";
 import OnboardingBar from "./components/OnboardingBar";
+import TwoFactorBanner from "./components/TwoFactorBanner";
+import TwoFactorBannerSpacer from "./components/TwoFactorBannerSpacer";
 import NotificationToast from "./components/NotificationToast";
 import HeartbeatTracker from "./components/HeartbeatTracker";
 import PushManager from "./components/PushManager";
 import PwaInstallPrompt from "./components/PwaInstallPrompt";
 import { I18nProvider } from "@/lib/i18n";
+import { TwoFactorBannerProvider } from "@/lib/useTwoFactorBanner";
 
 const BASE_URL = "https://dynamicworks.ao";
 const TITLE    = "Dynamics Works — Plataforma de Trading em Angola";
@@ -205,6 +208,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ margin: 0, padding: 0, background: "#0a0f1e" }} suppressHydrationWarning>
         <SessionProvider>
           <I18nProvider>
+          <TwoFactorBannerProvider>
+            <TwoFactorBanner />
+            <TwoFactorBannerSpacer />
             <OnboardingBar />
             {children}
             <HeartbeatTracker />
@@ -212,6 +218,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <NotificationToast />
             <PushManager />
             <PwaInstallPrompt />
+          </TwoFactorBannerProvider>
           </I18nProvider>
         </SessionProvider>
 

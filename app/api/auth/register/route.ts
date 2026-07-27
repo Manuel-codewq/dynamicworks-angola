@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
         balance: 0,
         demoBalance: 10000,
         isDemo: true,
+        twoFactorDeadline: new Date(Date.now() + 7 * 24 * 3600 * 1000),
         ...(referralCode ? { referralCode } : {}),
         ...(referredBy   ? { referredBy }   : {}),
       },
