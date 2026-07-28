@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Save, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
+import CoinIcon from "@/app/components/CoinIcon";
 
 // Pares forex OTC sintéticos (synthetic-engine) — únicos pares da plataforma
 const REAL_PAIR_OPTIONS = ASSETS.map(a => ({ label: a.label, cat: a.category }));
@@ -171,7 +172,10 @@ export default function AdminSettingsPage() {
                   const cur = d.activePairs ?? REAL_PAIR_OPTIONS.map(o => o.label);
                   return { ...d, activePairs: active ? cur.filter(l => l !== opt.label) : [...cur, opt.label] };
                 })} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0f1e", borderRadius: 10, padding: "11px 14px", border: `1px solid ${active ? "rgba(0,192,118,0.3)" : "#1e2d50"}`, cursor: "pointer", transition: "border-color 0.15s" }}>
-                  <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <CoinIcon label={opt.label} size={18} />
+                    <span style={{ color: active ? "#fff" : "#334155", fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
+                  </span>
                   {active
                     ? <ToggleRight size={20} color="#00c076" />
                     : <ToggleLeft  size={20} color="#334155" />

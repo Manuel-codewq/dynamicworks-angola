@@ -16,6 +16,21 @@
 
 export type AssetCategory = "Cripto" | "Forex";
 
+// Bandeiras SVG (public/flags/, extraídas do pacote flag-icons — MIT) para os
+// dois lados de cada par (ex: EUR/USD → bandeira UE + bandeira EUA). Emoji de
+// bandeira Unicode foi tentado antes e falhou em Windows/Chrome (renderizava
+// as letras indicadoras regionais em bruto, ex: "EUS") — por isso SVG.
+export const CURRENCY_FLAGS: Record<string, string> = {
+  EUR: "/flags/eu.svg",
+  USD: "/flags/us.svg",
+  GBP: "/flags/gb.svg",
+  JPY: "/flags/jp.svg",
+  AUD: "/flags/au.svg",
+  CAD: "/flags/ca.svg",
+  CHF: "/flags/ch.svg",
+  NZD: "/flags/nz.svg",
+};
+
 export interface Asset {
   /** Chave estável usada em toda a plataforma (BD, settings, UI). Ex: "EUR/USD OTC" */
   label:           string;

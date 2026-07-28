@@ -25,6 +25,7 @@ import {
   type DerivPair, type DerivCandle,
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
+import CoinIcon from "@/app/components/CoinIcon";
 import TradeResultOverlay from "@/app/components/TradeResultOverlay";
 import OnboardingTutorial from "@/app/components/OnboardingTutorial";
 import TradeShareButton from "@/app/components/TradeShareButton";
@@ -52,44 +53,6 @@ const EXPIRY_OPTIONS = [
 ];
 
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
-
-// Badge por moeda (círculo colorido + sigla) — texto simples em vez de emoji
-// de bandeira porque o emoji de bandeira não renderiza como imagem em todos
-// os sistemas (ex: Windows/Chrome sem o pacote de fontes certo mostra as
-// letras indicadoras regionais em bruto, tipo "EUS" em vez de duas bandeiras).
-const CURRENCY_META: Record<string, { code: string; color: string }> = {
-  EUR: { code: "EU", color: "#3b82f6" },
-  USD: { code: "US", color: "#22c55e" },
-  GBP: { code: "GB", color: "#a78bfa" },
-  JPY: { code: "JP", color: "#ef4444" },
-  AUD: { code: "AU", color: "#fbbf24" },
-  CAD: { code: "CA", color: "#fb7185" },
-  CHF: { code: "CH", color: "#f97316" },
-  NZD: { code: "NZ", color: "#06b6d4" },
-};
-
-function CoinIcon({ label, size = 22 }: { label: string; size?: number }) {
-  const match = label.match(/^([A-Z]{3})\/([A-Z]{3})/);
-  const base  = match ? CURRENCY_META[match[1]] : undefined;
-  const quote = match ? CURRENCY_META[match[2]] : undefined;
-  if (!base || !quote) return null;
-  const small = Math.round(size * 0.62);
-  return (
-    <span style={{ position: "relative", display: "inline-block", width: size, height: size, flexShrink: 0 }}>
-      <span style={{
-        position: "absolute", top: 0, left: 0, width: size, height: size, borderRadius: "50%",
-        background: base.color, color: "#0a0f1e", fontSize: size * 0.38, fontWeight: 800,
-        display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "monospace", lineHeight: 1,
-      }}>{base.code}</span>
-      <span style={{
-        position: "absolute", bottom: -1, right: -1, width: small, height: small, borderRadius: "50%",
-        background: quote.color, color: "#0a0f1e", fontSize: small * 0.4, fontWeight: 800,
-        display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "monospace", lineHeight: 1,
-        border: "1.5px solid #0a0f1e",
-      }}>{quote.code}</span>
-    </span>
-  );
-}
 
 // Preço a que a operação realmente entrou (entryPrice devolvido pela API na
 // criação) — visualmente distinto do ticker no topo (que usa verde/vermelho
