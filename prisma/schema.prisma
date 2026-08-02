@@ -56,6 +56,7 @@ model User {
   copyTrader        CopyTrader?
   kycSubmission     KycSubmission?
   notifications     Notification[]
+  favorites         UserFavorite[]
   priceAlerts       PriceAlert[]
   pushSubscriptions PushSubscription[]
   supportTickets    SupportTicket[]
@@ -192,6 +193,17 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
+}
+
+model UserFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  symbol    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, symbol])
+  @@index([userId])
 }
 
 model Settings {

@@ -1,9 +1,38 @@
 import { prisma } from "./prisma";
-import { ASSET_LABELS } from "./assets";
+import { ASSET_LABELS, PAYOUT_DURATION_KEYS } from "./assets";
 
 export const ALL_REAL_PAIR_LABELS = ASSET_LABELS as string[];
 
-export const DEFAULT_PAYOUT          = Object.fromEntries(ASSET_LABELS.map(p => [p, 0.85]));
+// Payout aninhado por duração (2026-07-30) — cada par tem um mapa
+// duração(segundos, como string)→payout, mais uma chave "default" para
+// durações fora do mapa. Ver PAYOUT_DURATIONS em lib/assets.ts.
+const DEFAULT_PAYOUT_ENTRY: Record<string, number> = Object.fromEntries(PAYOUT_DURATION_KEYS.map(k => [k, 0.85]));
+export const DEFAULT_PAYOUT: Record<string, Record<string, number>> =
+  Object.fromEntries(ASSET_LABELS.map(p => [p, { ...DEFAULT_PAYOUT_ENTRY }]));
+
+/**
+ * Normaliza uma entrada de payout guardada na BD para o formato aninhado
+ * actual. Aceita também o formato antigo (número simples, um payout só por
+ * par) — nesse caso aplica esse valor a todas as durações, para continuar a
+ * funcionar mesmo que o script de migração ainda não tenha corrido nalgum
+ * ambiente. Chaves de duração desconhecidas são ignoradas.
+ */
+function normalizePayoutEntry(raw: unknown): Record<string, number> {
+  if (typeof raw === "number" && isFinite(raw) && raw >= 0.50 && raw <= 0.95) {
+    return Object.fromEntries(PAYOUT_DURATION_KEYS.map(k => [k, raw]));
+  }
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const out = { ...DEFAULT_PAYOUT_ENTRY };
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (!PAYOUT_DURATION_KEYS.includes(k)) continue;
+      const n = Number(v);
+      if (isFinite(n) && n >= 0.50 && n <= 0.95) out[k] = n;
+    }
+    return out;
+  }
+  return { ...DEFAULT_PAYOUT_ENTRY };
+}
+
 export const DEFAULT_WIN_PROBABILITY = Object.fromEntries(ASSET_LABELS.map(p => [p, 0.47]));
 export const DEFAULT_RANKING_RESET: Date | null = null;
 export const DEFAULT_WEEKEND_PAIRS: string[] = [];
@@ -12,7 +41,7 @@ export const DEFAULT_ACTIVE_PAIRS    = ALL_REAL_PAIR_LABELS;
 export const ALL_PAIR_KEYS = ASSET_LABELS as string[];
 
 export interface PlatformSettings {
-  payout:          Record<string, number>;
+  payout:          Record<string, Record<string, number>>;
   winProbability:  Record<string, number>;
   maintenanceMode: boolean;
   forceRealMarket: boolean;
@@ -47,14 +76,23 @@ export async function getSettings(): Promise<PlatformSettings> {
     const savedPairs        = Array.isArray(row.activePairs)  ? row.activePairs  as string[] : null;
     const savedWeekendPairs = Array.isArray(row.weekendPairs) ? row.weekendPairs as string[] : null;
     const validKeys = new Set<string>(ASSET_LABELS);
-    const rawPayout = (row.payout as Record<string, number>) ?? {};
+    const rawPayout = (row.payout as Record<string, unknown>) ?? {};
     const rawWinProb = (row.winProbability as Record<string, number>) ?? {};
     cache = {
       maintenanceMode: row.maintenanceMode,
       forceRealMarket: row.forceRealMarket ?? false,
-      payout:         { ...DEFAULT_PAYOUT,          ...Object.fromEntries(Object.entries(rawPayout).filter(([k]) => validKeys.has(k))) },
+      payout:         Object.fromEntries(ASSET_LABELS.map(label => [label, normalizePayoutEntry(rawPayout[label])])),
       winProbability: { ...DEFAULT_WIN_PROBABILITY, ...Object.fromEntries(Object.entries(rawWinProb).filter(([k]) => validKeys.has(k))) },
-      activePairs:     savedPairs  !== null ? savedPairs  : DEFAULT_ACTIVE_PAIRS,
+      // Pares gravados na BD + qualquer label novo em ASSET_LABELS que ainda
+      // não lá esteja (ex: instrumentos adicionados depois da última vez que
+      // isto foi guardado) — novos pares entram activos por omissão, sem
+      // apagar nenhuma desactivação que o admin já tenha feito nos pares
+      // existentes. Sem isto, um par novo com active:true em lib/assets.ts
+      // continua invisível em /api/pairs até alguém gravar as definições
+      // manualmente no admin.
+      activePairs:     savedPairs !== null
+        ? [...savedPairs, ...ASSET_LABELS.filter(l => !savedPairs!.includes(l))]
+        : DEFAULT_ACTIVE_PAIRS,
       weekendPairs:    savedWeekendPairs !== null ? savedWeekendPairs : DEFAULT_WEEKEND_PAIRS,
       rankingResetAt:  row.rankingResetAt ? new Date(row.rankingResetAt) : null,
       usdtRateAoa:              Number(row.usdtRateAoa ?? 0),
@@ -79,9 +117,13 @@ export async function updateSettings(patch: Partial<PlatformSettings>): Promise<
   const current = await getSettings();
 
   if (patch.payout && typeof patch.payout === "object") {
-    Object.entries(patch.payout).forEach(([k, v]) => {
-      const n = Number(v);
-      if (isFinite(n) && n >= 0.50 && n <= 0.95) current.payout[k] = n;
+    Object.entries(patch.payout).forEach(([label, durMap]) => {
+      if (!current.payout[label] || !durMap || typeof durMap !== "object") return;
+      Object.entries(durMap as Record<string, unknown>).forEach(([durKey, v]) => {
+        if (!PAYOUT_DURATION_KEYS.includes(durKey)) return;
+        const n = Number(v);
+        if (isFinite(n) && n >= 0.50 && n <= 0.95) current.payout[label][durKey] = n;
+      });
     });
   }
   if (patch.winProbability && typeof patch.winProbability === "object") {

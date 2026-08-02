@@ -7,8 +7,17 @@ import CoinIcon from "@/app/components/CoinIcon";
 // Pares forex OTC sintéticos (synthetic-engine) — únicos pares da plataforma
 const REAL_PAIR_OPTIONS = ASSETS.map(a => ({ label: a.label, cat: a.category }));
 
+// Durações (segundos, como string) com payout configurável por par — mesmas
+// de PAYOUT_DURATIONS em lib/assets.ts. "default" cobre durações fora do
+// mapa (personalizado, comutação).
+const DURATION_LABELS: Record<string, string> = {
+  "30": "30s", "60": "1m", "120": "2m", "180": "3m", "300": "5m",
+  "600": "10m", "900": "15m", "1800": "30m", "3600": "1h", "default": "Outras (personalizado/comutação)",
+};
+const DURATION_ORDER = ["30", "60", "120", "180", "300", "600", "900", "1800", "3600", "default"];
+
 interface Settings {
-  payout:                   Record<string, number>;
+  payout:                   Record<string, Record<string, number>>;
   maintenanceMode:          boolean;
   forceRealMarket:          boolean;
   activePairs:              string[];
@@ -30,6 +39,7 @@ export default function AdminSettingsPage() {
   const [resetting,     setResetting]     = useState(false);
   const [resetDone,     setResetDone]     = useState(false);
   const [rankingResetAt, setRankingResetAt] = useState<string | null>(null);
+  const [payoutPair,    setPayoutPair]      = useState("");
 
   async function load() {
     setLoading(true);
@@ -71,8 +81,11 @@ export default function AdminSettingsPage() {
     load();
   }
 
-  function setPayout(pair: string, pct: number) {
-    setDraft(d => d ? { ...d, payout: { ...d.payout, [pair]: toFraction(pct) } } : d);
+  function setPayoutDuration(pair: string, durKey: string, pct: number) {
+    setDraft(d => d ? {
+      ...d,
+      payout: { ...d.payout, [pair]: { ...d.payout[pair], [durKey]: toFraction(pct) } },
+    } : d);
   }
 
   const sectionTitle: React.CSSProperties = { color: "#fff", fontSize: 15, fontWeight: 700, margin: "0 0 14px" };
@@ -234,35 +247,58 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      {/* Payout % */}
+      {/* Payout % por Par × Duração */}
       <div style={card}>
-        <p style={sectionTitle}>Payout por Par (50% – 95%)</p>
+        <p style={sectionTitle}>Payout por Par × Duração (50% – 95%)</p>
         {pairs.length === 0 ? (
           <p style={{ color: "#334155", fontSize: 13, padding: "8px 0" }}>
             Sem activos disponíveis de momento.
           </p>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
-            {pairs.map(pair => {
-              const pct = toPercent(draft.payout[pair]);
-              return (
-                <div key={pair} style={{ background: "#0a0f1e", borderRadius: 10, padding: "12px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ color: "#94a3b8", fontSize: 13 }}>{pair}</span>
-                    <span style={{ color: "#ffffff", fontWeight: 700, fontSize: 14 }}>{pct}%</span>
-                  </div>
-                  <input type="range" min={50} max={95} step={1} value={pct}
-                    onChange={e => setPayout(pair, Number(e.target.value))}
-                    style={{ width: "100%", accentColor: "#ffffff", cursor: "pointer" }} />
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                    <span style={{ color: "#1e2d50", fontSize: 10 }}>50%</span>
-                    <span style={{ color: "#1e2d50", fontSize: 10 }}>95%</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        ) : (() => {
+          const activePayoutPair = payoutPair && draft.payout[payoutPair] ? payoutPair : pairs[0];
+          const durMap = draft.payout[activePayoutPair] ?? {};
+          return (
+            <>
+              <p style={{ color: "#64748b", fontSize: 12, margin: "-8px 0 14px" }}>
+                Escolhe um par para editar o payout de cada duração. "Outras" cobre durações personalizadas e o modo comutação (fecha com a vela).
+              </p>
+
+              {/* Selector de par */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #1e2d50" }}>
+                {pairs.map(pair => (
+                  <button key={pair} onClick={() => setPayoutPair(pair)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      background: activePayoutPair === pair ? "rgba(255,255,255,0.12)" : "#0a0f1e",
+                      border: `1px solid ${activePayoutPair === pair ? "rgba(255,255,255,0.35)" : "#1e2d50"}`,
+                      borderRadius: 8, padding: "6px 10px", cursor: "pointer",
+                    }}>
+                    <CoinIcon label={pair} size={16} />
+                    <span style={{ color: activePayoutPair === pair ? "#fff" : "#94a3b8", fontSize: 12, fontWeight: 600 }}>{pair}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Grelha de durações do par escolhido */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
+                {DURATION_ORDER.map(durKey => {
+                  const pct = toPercent(durMap[durKey] ?? 0.85);
+                  return (
+                    <div key={durKey} style={{ background: "#0a0f1e", borderRadius: 10, padding: "10px 14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ color: "#94a3b8", fontSize: 11 }}>{DURATION_LABELS[durKey]}</span>
+                        <span style={{ color: "#ffffff", fontWeight: 700, fontSize: 13 }}>{pct}%</span>
+                      </div>
+                      <input type="range" min={50} max={95} step={1} value={pct}
+                        onChange={e => setPayoutDuration(activePayoutPair, durKey, Number(e.target.value))}
+                        style={{ width: "100%", accentColor: "#ffffff", cursor: "pointer" }} />
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
     </div>

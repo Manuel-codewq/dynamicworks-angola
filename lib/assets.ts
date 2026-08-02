@@ -14,7 +14,7 @@
 // o histórico de operações já gravado. Só acrescentar ou desactivar (`active:
 // false`), nunca renomear um `label` existente sem migração explícita.
 
-export type AssetCategory = "Cripto" | "Forex";
+export type AssetCategory = "Cripto" | "Forex" | "Matérias-primas" | "Acções";
 
 // Bandeiras SVG (public/flags/, extraídas do pacote flag-icons — MIT) para os
 // dois lados de cada par (ex: EUR/USD → bandeira UE + bandeira EUA). Emoji de
@@ -29,6 +29,16 @@ export const CURRENCY_FLAGS: Record<string, string> = {
   CAD: "/flags/ca.svg",
   CHF: "/flags/ch.svg",
   NZD: "/flags/nz.svg",
+};
+
+// Ícones de cripto (public/crypto/, extraídos do pacote cryptocurrency-icons
+// — CC0) — mesmo padrão do CURRENCY_FLAGS, usados como o lado "base" do par
+// (ex: BTC/USD → ícone BTC + bandeira US).
+export const CRYPTO_ICONS: Record<string, string> = {
+  BTC: "/crypto/btc.svg",
+  ETH: "/crypto/eth.svg",
+  SOL: "/crypto/sol.svg",
+  XRP: "/crypto/xrp.svg",
 };
 
 export interface Asset {
@@ -59,6 +69,24 @@ export const ASSETS: Asset[] = [
   { label: "NZD/USD OTC", syntheticSymbol: "NZDUSD_OTC", category: "Forex", decimals: 5, active: true },
   { label: "EUR/CHF OTC", syntheticSymbol: "EURCHF_OTC", category: "Forex", decimals: 5, active: true },
   { label: "AUD/JPY OTC", syntheticSymbol: "AUDJPY_OTC", category: "Forex", decimals: 3, active: true },
+
+  // Novos instrumentos (2026-07-30) — Cripto, Matérias-primas, Acções.
+  // syntheticSymbol tem de bater certo com prisma/seed.ts do synthetic-engine
+  // (repo separado, sincronizado manualmente — ver comentário no topo do ficheiro).
+  { label: "XAU/USD OTC", syntheticSymbol: "XAUUSD_OTC", category: "Matérias-primas", decimals: 2, active: true },
+  { label: "XAG/USD OTC", syntheticSymbol: "XAGUSD_OTC", category: "Matérias-primas", decimals: 3, active: true },
+  { label: "WTI/USD OTC", syntheticSymbol: "WTIUSD_OTC", category: "Matérias-primas", decimals: 2, active: true },
+
+  { label: "AAPL OTC",  syntheticSymbol: "AAPL_OTC",  category: "Acções", decimals: 2, active: true },
+  { label: "MSFT OTC",  syntheticSymbol: "MSFT_OTC",  category: "Acções", decimals: 2, active: true },
+  { label: "GOOGL OTC", syntheticSymbol: "GOOGL_OTC", category: "Acções", decimals: 2, active: true },
+  { label: "AMZN OTC",  syntheticSymbol: "AMZN_OTC",  category: "Acções", decimals: 2, active: true },
+  { label: "TSLA OTC",  syntheticSymbol: "TSLA_OTC",  category: "Acções", decimals: 2, active: true },
+
+  { label: "BTC/USD OTC", syntheticSymbol: "BTCUSD_OTC", category: "Cripto", decimals: 2, active: true },
+  { label: "ETH/USD OTC", syntheticSymbol: "ETHUSD_OTC", category: "Cripto", decimals: 2, active: true },
+  { label: "SOL/USD OTC", syntheticSymbol: "SOLUSD_OTC", category: "Cripto", decimals: 3, active: true },
+  { label: "XRP/USD OTC", syntheticSymbol: "XRPUSD_OTC", category: "Cripto", decimals: 4, active: true },
 ];
 
 // ── Helpers derivados — cada um substitui uma das listas duplicadas mapeadas na Fase 1 ──
@@ -79,6 +107,32 @@ export const ASSET_LABELS: readonly string[] = ASSETS.map(a => a.label);
 /** Só os activos com `active: true`. Substitui a filtragem hoje implícita em CRYPTO_PAIRS (todos activos). */
 export function getActiveAssets(): Asset[] {
   return ASSETS.filter(a => a.active);
+}
+
+// ── Payout por par × duração (2026-07-30) ───────────────────────────────────
+//
+// Durações (segundos) com payout configurável por par — mesmos presets do
+// selector de tempo no /trade (EXPIRY_OPTIONS em app/trade/page.tsx,
+// mantido em sincronia manualmente por serem módulos diferentes). "default"
+// cobre qualquer duração fora desta lista — personalizado (1-59min) ou
+// comutação (fecha com a vela, duração dinâmica).
+export const PAYOUT_DURATIONS = [30, 60, 120, 180, 300, 600, 900, 1800, 3600] as const;
+export const PAYOUT_DURATION_KEYS: readonly string[] = [...PAYOUT_DURATIONS.map(String), "default"];
+
+/**
+ * Payout de um par para uma duração específica, com fallback para "default"
+ * e depois para 0.85 se o par nem sequer tiver entrada. Pura (sem I/O) —
+ * usada tanto no servidor (app/api/trade/route.ts) como no cliente
+ * (app/trade/page.tsx), por isso não pode importar nada de `lib/prisma`.
+ */
+export function resolvePayout(
+  payoutMap: Record<string, Record<string, number>> | undefined | null,
+  label: string,
+  expirySecs: number,
+): number {
+  const entry = payoutMap?.[label];
+  if (!entry) return 0.85;
+  return entry[String(expirySecs)] ?? entry.default ?? 0.85;
 }
 
 /**

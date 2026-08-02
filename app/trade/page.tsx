@@ -26,6 +26,8 @@ import {
 } from "@/lib/derivWebSocket";
 import NotificationBell from "@/app/components/NotificationBell";
 import CoinIcon from "@/app/components/CoinIcon";
+import AssetPicker from "@/app/components/AssetPicker";
+import { resolvePayout } from "@/lib/assets";
 import TradeResultOverlay from "@/app/components/TradeResultOverlay";
 import OnboardingTutorial from "@/app/components/OnboardingTutorial";
 import TradeShareButton from "@/app/components/TradeShareButton";
@@ -303,7 +305,8 @@ export default function TradePage() {
   const [demoResetError, setDemoResetError] = useState<string | null>(null);
   const [candleTimer,    setCandleTimer]    = useState("");
   const [candleRemSecs,  setCandleRemSecs]  = useState(0);
-  const [payoutMap,      setPayoutMap]      = useState<Record<string, number>>({});
+  const [payoutMap,      setPayoutMap]      = useState<Record<string, Record<string, number>>>({});
+  const [favorites,      setFavorites]      = useState<Set<string>>(new Set());
   const [, setTick]                         = useState(0);
   const [showTradesPanel, setShowTradesPanel] = useState(false);
   const [tradeHistoryTab, setTradeHistoryTab] = useState<"open" | "history">("open");
@@ -1414,6 +1417,40 @@ export default function TradePage() {
     const id = setInterval(fetchPayout, 30_000);
     return () => clearInterval(id);
   }, [status]);
+
+  // ── Favoritos — busca uma vez ao autenticar; toggle é optimista (reverte se a API falhar) ──
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/favorites")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (Array.isArray(d?.symbols)) setFavorites(new Set(d.symbols)); })
+      .catch(() => {});
+  }, [status]);
+
+  const toggleFavorite = useCallback((symbol: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      const wasFav = next.has(symbol);
+      if (wasFav) next.delete(symbol); else next.add(symbol);
+
+      fetch("/api/favorites", {
+        method: wasFav ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol }),
+      }).catch(() => {}).then(async (res) => {
+        if (!res || !("ok" in res) || !res.ok) {
+          // reverte em caso de falha
+          setFavorites(p => {
+            const reverted = new Set(p);
+            if (wasFav) reverted.add(symbol); else reverted.delete(symbol);
+            return reverted;
+          });
+        }
+      });
+
+      return next;
+    });
+  }, []);
 
   // ── Auth guard + balance ─────────────────────────────────────────────────
   const fetchBalance = useCallback(async () => {
@@ -2724,8 +2761,17 @@ export default function TradePage() {
   const displayBalance =
     activeAccount === "tournament" && tournamentBalance !== null ? tournamentBalance :
     activeAccount === "real" ? balance : demoBalance;
-  const currentPayout  = selectedPair ? (payoutMap[selectedPair.label] ?? 0.85) : 0.85;
+  // Duração efectiva agora — igual à usada em openTrade() para gravar o trade,
+  // para o payout mostrado bater sempre certo com o que a operação vai gravar.
+  const effectiveExpirySecs = comutacaoActive ? Math.max(30, candleRemSecs) : expiry.secs;
+  const currentPayout  = selectedPair ? resolvePayout(payoutMap, selectedPair.label, effectiveExpirySecs) : 0.85;
   const profit         = amount * currentPayout;
+  // Mapa achatado (par → payout) para a duração seleccionada agora — passado
+  // ao AssetPicker, que não conhece a estrutura por duração de propósito
+  // (mantém-se agnóstico, só mostra o número já resolvido).
+  const currentPayoutMap: Record<string, number> = Object.fromEntries(
+    pairs.map(p => [p.label, resolvePayout(payoutMap, p.label, effectiveExpirySecs)])
+  );
   const decimals       = selectedPair?.decimals ?? 5;
   const priceStr       = currentPrice > 0 ? currentPrice.toFixed(decimals) : "—";
 
@@ -3150,10 +3196,6 @@ export default function TradePage() {
   // ── Asset dropdown (shared) — render function, NOT a JSX component, so it
   //    never unmounts on re-render (avoids scroll-position reset on price ticks)
   function renderAssetDropdown(mobile = false) {
-    const groups: Record<string, DerivPair[]> = {};
-    pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-    const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
-    const catColors: Record<string, string> = { Forex: "#ffffff", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
     return (
       <div style={{ position: "relative" }}>
         <button onClick={() => setAssetDropdown(!assetDropdown)}
@@ -3163,39 +3205,18 @@ export default function TradePage() {
           <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" style={{ transition: "transform 0.15s ease", transform: assetDropdown ? "rotate(180deg)" : "none" }} />
         </button>
         {assetDropdown && (
-          <div className="dw-dropdown-in" style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, minWidth: mobile ? 200 : 240, zIndex: 300, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: mobile ? "70vh" : "420px", overflowY: "auto" }}>
-            {catOrder.filter(cat => groups[cat]).map(cat => (
-              <div key={cat}>
-                <div style={{ padding: "6px 14px 4px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1, textTransform: "uppercase", borderTop: "1px solid #262d40" }}>
-                  {cat}
-                </div>
-                {groups[cat].map(p => {
-                  const livePrice = tickerPrices[p.symbol];
-                  const openPrice = sessionOpenPrices[p.symbol];
-                  const priceDir = livePrice && openPrice ? (livePrice > openPrice ? 1 : livePrice < openPrice ? -1 : 0) : 0;
-                  const priceColor = priceDir === 1 ? "#00c076" : priceDir === -1 ? "#ff3b5c" : "#94a3b8";
-                  return (
-                  <button key={p.symbol}
-                    onClick={() => { setSelectedPair(p); setAssetDropdown(false); }}
-                    style={{ width: "100%", background: selectedPair?.symbol === p.symbol ? "#262d40" : "transparent", border: "none", padding: mobile ? "10px 14px" : "8px 14px", color: "#fff", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, minHeight: 40 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <CoinIcon label={p.label} size={24} />
-                      <span style={{ fontWeight: 700 }}>{p.label}</span>
-                      <span style={{ color: "#ffffff", fontSize: 10, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
-                        {Math.round((payoutMap[p.label] ?? 0.74) * 100)}%
-                      </span>
-                    </span>
-                    {livePrice ? (
-                      <span style={{ color: priceColor, fontSize: 11, fontWeight: 700, fontVariantNumeric: "tabular-nums", display: "flex", alignItems: "center", gap: 2 }}>
-                        {priceDir === 1 ? "▲" : priceDir === -1 ? "▼" : ""}
-                        {livePrice.toFixed(p.decimals)}
-                      </span>
-                    ) : null}
-                  </button>
-                  );
-                })}
-              </div>
-            ))}
+          <div className="dw-dropdown-in" style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, width: mobile ? 260 : 300, zIndex: 300, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: mobile ? "70vh" : "420px" }}>
+            <AssetPicker
+              pairs={pairs}
+              selectedSymbol={selectedPair?.symbol}
+              tickerPrices={tickerPrices}
+              sessionOpenPrices={sessionOpenPrices}
+              payoutMap={currentPayoutMap}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              onSelect={(p) => { setSelectedPair(p); setAssetDropdown(false); }}
+              compact
+            />
           </div>
         )}
       </div>
@@ -4462,7 +4483,7 @@ export default function TradePage() {
         {/* ── Bottom trade panel (only visible on chart tab) ── */}
         {mobileTab === "chart" && (() => {
           const btnDisabled = loading || currentPrice === 0;
-          const currentPayout = payoutMap[selectedPair?.label ?? ""] ?? 0.74;
+          const currentPayout = selectedPair ? resolvePayout(payoutMap, selectedPair.label, effectiveExpirySecs) : 0.74;
           const payoutAmt = Math.round(amount * currentPayout);
 
           // Cronómetro: countdown ao trade activo, ou duração seleccionada em repouso
@@ -4730,59 +4751,16 @@ export default function TradePage() {
             <div style={{ padding: "12px 14px 8px", flexShrink: 0, borderBottom: "1px solid #1a2540" }}>
               <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>Mercados</span>
             </div>
-            {/* Pairs list */}
-            <div className="dw-stagger" style={{ flex: 1, overflowY: "auto" }}>
-              {(() => {
-                const groups: Record<string, DerivPair[]> = {};
-                pairs.forEach(p => { (groups[p.category] ??= []).push(p); });
-                const catOrder  = ["Forex", "Forex OTC", "Cripto", "Metal"];
-                const catColors: Record<string, string> = { Forex: "#ffffff", "Forex OTC": "#fb923c", Cripto: "#a78bfa", Metal: "#fcd34d" };
-                return catOrder.filter(cat => groups[cat]).map(cat => (
-                  <div key={cat}>
-                    <div style={{ padding: "10px 14px 5px", fontSize: 10, fontWeight: 700, color: catColors[cat] ?? "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", background: "#060c1a" }}>
-                      {cat}
-                    </div>
-                    {groups[cat].map(p => {
-                      const price   = tickerPrices[p.symbol] ?? 0;
-                      const open    = sessionOpenPrices[p.symbol] ?? 0;
-                      const isUp    = price >= open;
-                      const pct     = open > 0 && price > 0 ? ((price - open) / open * 100) : 0;
-                      const isActive = selectedPair?.symbol === p.symbol;
-                      const payout  = Math.round((payoutMap[p.label] ?? 0.74) * 100);
-                      const upColor = "#00c076"; const dnColor = "#ff3b5c";
-                      return (
-                        <button key={p.symbol} onClick={() => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
-                          style={{ width: "100%", background: isActive ? "rgba(255,255,255,0.07)" : "transparent", border: "none", borderBottom: "1px solid #141824", padding: "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", position: "relative" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            {isActive && <div style={{ width: 3, height: 32, background: "#ffffff", borderRadius: 2, position: "absolute", left: 0 }} />}
-                            <CoinIcon label={p.label} size={38} />
-                            <div style={{ textAlign: "left" }}>
-                              <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 14 }}>{p.label}</div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
-                                <span style={{ color: "#334155", fontSize: 11 }}>{p.category}</span>
-                                <span key={payout} className="dw-value-pop" style={{ color: "#ffffff", fontSize: 9, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
-                                  {payout}%
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ color: price > 0 ? (isUp ? upColor : dnColor) : "#334155", fontWeight: 800, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
-                              {price > 0 ? price.toFixed(p.decimals) : "—"}
-                            </div>
-                            {price > 0 && (
-                              <div style={{ color: isUp ? upColor : dnColor, fontSize: 11, fontWeight: 700, marginTop: 2 }}>
-                                {isUp ? "▲" : "▼"} {Math.abs(pct).toFixed(2)}%
-                              </div>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ));
-              })()}
-            </div>
+            <AssetPicker
+              pairs={pairs}
+              selectedSymbol={selectedPair?.symbol}
+              tickerPrices={tickerPrices}
+              sessionOpenPrices={sessionOpenPrices}
+              payoutMap={currentPayoutMap}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              onSelect={(p) => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
+            />
           </div>
         )}
 

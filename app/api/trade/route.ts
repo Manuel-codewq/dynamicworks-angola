@@ -5,7 +5,7 @@ import { getSettings } from "@/lib/settings";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getDerivPriceWithSource, type DerivPriceSource } from "@/lib/syntheticFeed";
 import { sendPushToUser } from "@/lib/webPush";
-import { ALLOWED_ASSET_LABELS } from "@/lib/assets";
+import { ALLOWED_ASSET_LABELS, resolvePayout } from "@/lib/assets";
 
 type ServerEntryPriceSource = DerivPriceSource | "db-candle";
 type ServerEntryPrice = { price: number; source: ServerEntryPriceSource; ageMs: number };
@@ -255,8 +255,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Obter payout das definições (com fallback)
-  const payout = cfg?.payout?.[asset] ?? 0.85;
+  // Obter payout das definições — por par E por duração, com fallback "default"
+  // para durações fora do mapa (personalizado, comutação) e 0.85 se faltar tudo.
+  const payout = resolvePayout(cfg?.payout, asset, expiry);
 
   // Entry price determinado exclusivamente pelo servidor. O preço enviado pelo
   // cliente serve apenas para detectar um ecrã desatualizado — nunca define a
