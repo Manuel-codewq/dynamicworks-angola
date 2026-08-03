@@ -21,7 +21,7 @@ interface HouseRisk {
   loss: number;
   limit: number;
   ratio: number;
-  tier: "normal" | "caution" | "critical" | "blocked";
+  tier: "normal" | "caution" | "critical";
   payoutFactor: number;
   maxStake: number;
   suspendedPairs: string[];
@@ -42,11 +42,14 @@ interface Settings {
 
 // Espelha os escalões de lib/houseRisk.ts — informativo, para o admin ver o
 // que vai acontecer em cada patamar. Se lá mudarem, mudar aqui também.
+// `factor` identifica o escalão univocamente (há três níveis de "crítico"),
+// e é por ele que se destaca a linha activa.
 const RISK_TIERS = [
-  { tier: "normal",   label: "Normal",   range: "< 50%",   payout: "100%", stake: "500.000 Kz", color: "#22c55e" },
-  { tier: "caution",  label: "Atenção",  range: "50-75%",  payout: "85%",  stake: "250.000 Kz", color: "#eab308" },
-  { tier: "critical", label: "Crítico",  range: "75-100%", payout: "70%",  stake: "100.000 Kz", color: "#f97316" },
-  { tier: "blocked",  label: "Bloqueado", range: "≥ 100%", payout: "—",   stake: "operações reais travadas", color: "#ef4444" },
+  { key: "normal",   factor: 1.00, label: "Normal",  range: "< 50%",    payout: "100%", stake: "500.000 Kz", color: "#22c55e" },
+  { key: "caution",  factor: 0.85, label: "Atenção", range: "50-75%",   payout: "85%",  stake: "250.000 Kz", color: "#eab308" },
+  { key: "critical", factor: 0.70, label: "Crítico", range: "75-100%",  payout: "70%",  stake: "100.000 Kz", color: "#f97316" },
+  { key: "critical", factor: 0.55, label: "Crítico", range: "100-150%", payout: "55%",  stake: "50.000 Kz",  color: "#f97316" },
+  { key: "critical", factor: 0.45, label: "Crítico", range: "≥ 150%",   payout: "45%",  stake: "25.000 Kz",  color: "#ef4444" },
 ];
 
 // UI works in whole-number percentages; API uses fractions
@@ -273,18 +276,22 @@ export default function AdminSettingsPage() {
       {(() => {
         const hr = draft.houseRisk;
         const active = (draft.houseDailyLossLimit ?? 0) > 0;
-        const tierMeta = RISK_TIERS.find(t => t.tier === hr?.tier) ?? RISK_TIERS[0];
-        const pct = hr && hr.limit > 0 ? Math.min(100, Math.round(hr.ratio * 100)) : 0;
+        // Identificar pelo factor, não pelo tier: há três escalões "crítico"
+        // com payouts diferentes e o tier sozinho não os distingue.
+        const tierMeta = RISK_TIERS.find(t => t.factor === hr?.payoutFactor) ?? RISK_TIERS[0];
+        const pct = hr && hr.limit > 0 ? Math.round(hr.ratio * 100) : 0;
+        const barPct = Math.min(100, pct); // a barra satura, o número não
         const kz = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} Kz`;
 
         return (
           <div style={card}>
             <p style={sectionTitle}>Protecção da Casa</p>
             <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 16px" }}>
-              Defines só a perda máxima diária. O sistema reduz o payout, baixa o valor
-              máximo por operação, suspende pares problemáticos e — no limite — trava
-              novas operações reais, tudo automaticamente. Nunca altera o resultado de
-              operações já abertas: quem ganhou pelo preço, recebe.
+              Defines só a perda máxima diária. Conforme te aproximas dela, o sistema
+              vai reduzindo o payout e o valor máximo por operação, e suspende pares
+              com perda concentrada — tudo automaticamente. A plataforma nunca fecha
+              operações reais nem altera o resultado de operações já abertas: quem
+              ganhou pelo preço, recebe.
             </p>
 
             <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
@@ -332,7 +339,7 @@ export default function AdminSettingsPage() {
                       </div>
                       <div>
                         <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700 }}>Máx. por operação</div>
-                        <div style={{ color: "#fff", fontSize: 17, fontWeight: 800 }}>{hr.tier === "blocked" ? "—" : kz(hr.maxStake)}</div>
+                        <div style={{ color: "#fff", fontSize: 17, fontWeight: 800 }}>{kz(hr.maxStake)}</div>
                       </div>
                     </>
                   )}
@@ -340,7 +347,7 @@ export default function AdminSettingsPage() {
 
                 {active && (
                   <div style={{ height: 6, background: "#111827", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: tierMeta.color, transition: "width 0.4s ease" }} />
+                    <div style={{ height: "100%", width: `${barPct}%`, background: tierMeta.color, transition: "width 0.4s ease" }} />
                   </div>
                 )}
 
@@ -376,9 +383,9 @@ export default function AdminSettingsPage() {
                   </thead>
                   <tbody>
                     {RISK_TIERS.map(t => {
-                      const isCurrent = active && hr?.tier === t.tier;
+                      const isCurrent = active && hr?.payoutFactor === t.factor;
                       return (
-                        <tr key={t.tier} style={{ background: isCurrent ? "rgba(255,255,255,0.04)" : "transparent" }}>
+                        <tr key={t.range} style={{ background: isCurrent ? "rgba(255,255,255,0.04)" : "transparent" }}>
                           <td style={{ color: "#94a3b8", padding: "5px 8px 5px 0" }}>{t.range}</td>
                           <td style={{ color: t.color, fontWeight: 700, padding: "5px 8px 5px 0" }}>{t.label}</td>
                           <td style={{ color: "#cbd5e1", padding: "5px 8px 5px 0" }}>{t.payout}</td>

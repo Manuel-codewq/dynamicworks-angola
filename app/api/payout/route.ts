@@ -18,6 +18,5 @@ export async function GET() {
     payout: applyPayoutFactor(payout, risk.payoutFactor),
     maxStake: risk.maxStake,
     suspendedPairs: risk.suspendedPairs,
-    tradingBlocked: risk.tier === "blocked",
   });
 }

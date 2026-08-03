@@ -265,12 +265,9 @@ export async function POST(req: NextRequest) {
   const houseRiskApplies = !user.isDemo && !isTournamentTrade;
 
   if (houseRiskApplies) {
-    if (houseRisk.tier === "blocked") {
-      return NextResponse.json({
-        error: "Operações reais temporariamente suspensas. Tenta novamente mais tarde ou usa a conta demo.",
-        houseBlocked: true,
-      }, { status: 403 });
-    }
+    // Nunca se fecha a operação por causa do risco da casa — o travão é o
+    // payout mais baixo e o tecto por operação, ambos visíveis antes de
+    // decidir. Só um par com perda concentrada fica de fora.
     if (houseRisk.suspendedPairs.includes(asset)) {
       return NextResponse.json({
         error: `${asset} está temporariamente indisponível. Escolhe outro par.`,

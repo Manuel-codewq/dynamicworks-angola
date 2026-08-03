@@ -14,7 +14,9 @@ import { getSettings } from "./settings";
  * paga.
  */
 
-export type HouseRiskTier = "normal" | "caution" | "critical" | "blocked";
+// Não há tier "bloqueado": a protecção nunca fecha operações reais, só torna
+// as condições progressivamente menos atractivas (payout e tecto por operação).
+export type HouseRiskTier = "normal" | "caution" | "critical";
 
 export interface HouseRiskState {
   /** P&L da casa hoje, em Kz. Negativo = casa a perder. */
@@ -42,8 +44,14 @@ export const MIN_STAKE = 1_000;
 // automática. Deixar os escalões configuráveis convidaria a afiná-los caso a
 // caso, que é exactamente o que se quer evitar (decisão previsível e igual
 // para todos, não ajuste discricionário quando dá jeito).
+//
+// A plataforma NUNCA fecha operações reais por causa do risco da casa — o
+// travão é sempre o payout (e o tecto por operação), que o cliente vê antes
+// de decidir. Fechar custaria receita e frustraria quem quer operar; baixar o
+// payout reduz a exposição na mesma e deixa a escolha do lado do cliente.
 const TIERS: { minRatio: number; tier: HouseRiskTier; payoutFactor: number; maxStake: number }[] = [
-  { minRatio: 1.00, tier: "blocked",  payoutFactor: 0.70, maxStake: 0 },
+  { minRatio: 1.50, tier: "critical", payoutFactor: 0.45, maxStake: 25_000 },
+  { minRatio: 1.00, tier: "critical", payoutFactor: 0.55, maxStake: 50_000 },
   { minRatio: 0.75, tier: "critical", payoutFactor: 0.70, maxStake: 100_000 },
   { minRatio: 0.50, tier: "caution",  payoutFactor: 0.85, maxStake: 250_000 },
   { minRatio: 0,    tier: "normal",   payoutFactor: 1.00, maxStake: DEFAULT_MAX_STAKE },
