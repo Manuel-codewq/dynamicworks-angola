@@ -314,24 +314,10 @@ export default function AdminUsersPage() {
                               <Shield size={11} /> Admin
                             </button>
                           )}
-                          {!["admin","formador","trader","marketing"].includes(u.role) && (
-                            <button onClick={() => { if (confirm(`Tornar ${u.name} formador?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "formador" }); }} disabled={busy}
-                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(56,189,248,0.1)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
-                              <Shield size={11} /> Formador
-                            </button>
-                          )}
-                          {!["admin","formador","trader","marketing"].includes(u.role) && (
-                            <button onClick={() => { if (confirm(`Tornar ${u.name} trader?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "trader" }); }} disabled={busy}
-                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
-                              <Shield size={11} /> Trader
-                            </button>
-                          )}
-                          {!["admin","formador","trader","marketing"].includes(u.role) && (
-                            <button onClick={() => { if (confirm(`Tornar ${u.name} marketing?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "marketing" }); }} disabled={busy}
-                              style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
-                              <Shield size={11} /> Marketing
-                            </button>
-                          )}
+                          {/* Botões de promover a formador/trader/marketing removidos com o
+                              sistema de relatórios de equipa. O botão de remover role
+                              fica — há utilizadores que ainda têm esses cargos e
+                              precisam de poder voltar a "user". */}
                           {["formador","trader","marketing"].includes(u.role) && (
                             <button onClick={() => { if (confirm(`Remover role de ${u.name}?`)) action(u.id, `/api/admin/users/${u.id}/role`, { role: "user" }); }} disabled={busy}
                               style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
