@@ -253,7 +253,6 @@ export default function TradePage() {
   }, []);
 
   // ── UI state ─────────────────────────────────────────────────────────────
-  const [assetDropdown, setAssetDropdown] = useState(false);
   const [currentPrice,  setCurrentPrice]  = useState(0);
   const [priceUp,       setPriceUp]       = useState(true);
   const [amount,        setAmount]        = useState(1000);
@@ -383,7 +382,7 @@ export default function TradePage() {
   // ── Indicator state + refs ───────────────────────────────────────────────
   const [showIndicators, setShowIndicators] = useState(false);
   // Quotex-style left panel
-  type LeftPanel = "indicators" | "drawings" | null;
+  type LeftPanel = "indicators" | "drawings" | "markets" | null;
   const [leftPanel,    setLeftPanel]    = useState<LeftPanel>(null);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [pendingCfg,   setPendingCfg]   = useState<Record<string, any>>({});
@@ -3195,31 +3194,24 @@ export default function TradePage() {
 
   // ── Asset dropdown (shared) — render function, NOT a JSX component, so it
   //    never unmounts on re-render (avoids scroll-position reset on price ticks)
+  // Botão do par activo — já não abre um dropdown sobre o gráfico; leva à
+  // lista completa de pares ("Mercados"), que tem espaço para as categorias
+  // e favoritos. No mobile é o tab de ecrã cheio que já existia no bottom
+  // nav; no desktop é o painel deslizante da barra lateral esquerda (mesmo
+  // mecanismo dos Indicadores/Ferramentas), para o gráfico continuar
+  // visível ao lado enquanto se escolhe.
   function renderAssetDropdown(mobile = false) {
+    const openMarkets = () => {
+      if (mobile) setMobileTab("markets");
+      else setLeftPanel(p => p === "markets" ? null : "markets");
+    };
     return (
-      <div style={{ position: "relative" }}>
-        <button onClick={() => setAssetDropdown(!assetDropdown)}
-          style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, padding: mobile ? "5px 10px" : "6px 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: mobile ? 4 : 6, fontSize: mobile ? 13 : 14, fontWeight: 700, transition: "border-color 0.15s ease" }}>
-          {selectedPair && <CoinIcon label={selectedPair.label} size={18} />}
-          <span key={selectedPair?.symbol ?? "none"} className="dw-value-pop">{selectedPair?.label ?? "…"}</span>
-          <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" style={{ transition: "transform 0.15s ease", transform: assetDropdown ? "rotate(180deg)" : "none" }} />
-        </button>
-        {assetDropdown && (
-          <div className="dw-dropdown-in" style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1c2130", border: "1px solid #262d40", borderRadius: 10, width: mobile ? 260 : 300, zIndex: 300, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: mobile ? "70vh" : "420px" }}>
-            <AssetPicker
-              pairs={pairs}
-              selectedSymbol={selectedPair?.symbol}
-              tickerPrices={tickerPrices}
-              sessionOpenPrices={sessionOpenPrices}
-              payoutMap={currentPayoutMap}
-              favorites={favorites}
-              onToggleFavorite={toggleFavorite}
-              onSelect={(p) => { setSelectedPair(p); setAssetDropdown(false); }}
-              compact
-            />
-          </div>
-        )}
-      </div>
+      <button onClick={openMarkets}
+        style={{ background: "#11141d", border: "1px solid #262d40", borderRadius: 8, padding: mobile ? "5px 10px" : "6px 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: mobile ? 4 : 6, fontSize: mobile ? 13 : 14, fontWeight: 700, transition: "border-color 0.15s ease" }}>
+        {selectedPair && <CoinIcon label={selectedPair.label} size={18} />}
+        <span key={selectedPair?.symbol ?? "none"} className="dw-value-pop">{selectedPair?.label ?? "…"}</span>
+        <ChevronDown size={mobile ? 12 : 14} color="#94a3b8" style={{ transition: "transform 0.15s ease", transform: !mobile && leftPanel === "markets" ? "rotate(180deg)" : "none" }} />
+      </button>
     );
   }
 
@@ -3443,6 +3435,8 @@ export default function TradePage() {
     return (
       <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 44, zIndex: 30, background: "#070d1c", borderRight: "1px solid #1a2540", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, paddingBottom: 10, gap: 3 }}>
 
+        {sBtn(leftPanel === "markets",     () => setLeftPanel(p => p === "markets"     ? null : "markets"),     <BarChart2 size={15} />, "Mercados")}
+        <div style={{ width: 24, height: 1, background: "#1a2540", margin: "3px 0" }} />
         {sBtn(leftPanel === "drawings",    () => setLeftPanel(p => p === "drawings"    ? null : "drawings"),    <PenLine size={15} />,  "Ferramentas de Desenho", activeDrawings)}
         <div style={{ width: 24, height: 1, background: "#1a2540", margin: "3px 0" }} />
         {sBtn(leftPanel === "indicators",  () => setLeftPanel(p => p === "indicators"  ? null : "indicators"),  <Activity size={15} />, "Indicadores", activeInds)}
@@ -3488,6 +3482,44 @@ export default function TradePage() {
 
   function renderSlideInPanel() {
     if (!leftPanel) return null;
+
+    // Casca partilhada por todos os painéis deslizantes (Indicadores,
+    // Ferramentas, Mercados) — no desktop desliza ao lado da barra lateral
+    // (o gráfico continua visível à direita), no mobile ocupa o ecrã.
+    // Mercados precisa de mais largura que os outros: tem 5 abas de
+    // categoria (★/Moedas/Cripto/Matérias-primas/Acções) que somam 415px de
+    // conteúdo — medido no browser, não estimado — por isso 320px (e mesmo
+    // 380px) cortavam "Acções". 430px deixa as 5 abas visíveis de uma vez com
+    // folga. Indicadores/Ferramentas ficam nos 320px, que lhes chega — não
+    // vale a pena alargar painéis que já funcionam bem.
+    const panelWidth = leftPanel === "markets" ? 430 : 320;
+    const panelShellStyle: React.CSSProperties = isMobile
+      ? { position: "fixed", top: 0, left: 0, right: 0, bottom: 52, zIndex: 200, background: "#11141d", display: "flex", flexDirection: "column", overflow: "hidden" }
+      : { position: "absolute", top: 0, left: 44, width: panelWidth, height: "100%", zIndex: 25, background: "#11141d", borderRight: "1px solid #262d40", display: "flex", flexDirection: "column", boxShadow: "4px 0 24px rgba(0,0,0,0.5)", overflow: "hidden" };
+
+    // Mercados — mesma casca do painel de Indicadores/Ferramentas, mas com a
+    // lista de pares. Sai cedo para não passar por toda a lógica de
+    // indicadores/desenhos abaixo, que não se aplica aqui.
+    if (leftPanel === "markets") {
+      return (
+        <div style={panelShellStyle}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #262d40", flexShrink: 0, background: "#161a26" }}>
+            <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Mercados</div>
+            <button onClick={() => setLeftPanel(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 6, width: 26, height: 26, color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+          </div>
+          <AssetPicker
+            pairs={pairs}
+            selectedSymbol={selectedPair?.symbol}
+            tickerPrices={tickerPrices}
+            sessionOpenPrices={sessionOpenPrices}
+            payoutMap={currentPayoutMap}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+            onSelect={(p) => { setSelectedPair(p); setLeftPanel(null); }}
+          />
+        </div>
+      );
+    }
 
     const IND_ICON = (color: string) => <div style={{ width: 14, height: 2, borderRadius: 2, background: color }} />;
     const OSC_ICON = (color: string) => <BarChart2 size={13} style={{ color }} />;
@@ -3689,9 +3721,7 @@ export default function TradePage() {
     };
 
     return (
-      <div style={isMobile
-        ? { position: "fixed", top: 0, left: 0, right: 0, bottom: 52, zIndex: 200, background: "#11141d", display: "flex", flexDirection: "column", overflow: "hidden" }
-        : { position: "absolute", top: 0, left: 44, width: 320, height: "100%", zIndex: 25, background: "#11141d", borderRight: "1px solid #262d40", display: "flex", flexDirection: "column", boxShadow: "4px 0 24px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+      <div style={panelShellStyle}>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #262d40", flexShrink: 0, background: "#161a26" }}>
@@ -4759,7 +4789,7 @@ export default function TradePage() {
               payoutMap={currentPayoutMap}
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
-              onSelect={(p) => { setSelectedPair(p); setMobileTab("chart"); setAssetDropdown(false); }}
+              onSelect={(p) => { setSelectedPair(p); setMobileTab("chart"); }}
             />
           </div>
         )}
