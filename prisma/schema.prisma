@@ -223,6 +223,10 @@ model Settings {
   dailyLossLimitPct        Float     @default(0)
   largeTradePushThreshold  Float     @default(0)
   largeWithdrawalThreshold Float     @default(0)
+  // Perda máxima diária da casa, em Kz (0 = desligado). Único valor que o
+  // admin define — os travões (payout reduzido, stake máx. menor, bloqueio,
+  // suspensão de pares) derivam daqui automaticamente. Ver lib/houseRisk.ts.
+  houseDailyLossLimit      Float     @default(0)
   depositBonusActive       Boolean   @default(false)
   depositBonusPct          Float     @default(10)
   depositBonusMinAoa       Float     @default(50000)

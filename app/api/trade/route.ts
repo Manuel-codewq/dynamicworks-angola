@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { getDerivPriceWithSource, type DerivPriceSource } from "@/lib/syntheticFeed";
 import { sendPushToUser } from "@/lib/webPush";
 import { ALLOWED_ASSET_LABELS, resolvePayout } from "@/lib/assets";
+import { getHouseRiskState } from "@/lib/houseRisk";
 
 type ServerEntryPriceSource = DerivPriceSource | "db-candle";
 type ServerEntryPrice = { price: number; source: ServerEntryPriceSource; ageMs: number };
@@ -255,9 +256,43 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Protecção da casa (só conta real fora de torneio) ────────────────────
+  // Travões automáticos derivados do limite diário de perda configurado no
+  // admin. Actuam SEMPRE antes de a operação abrir, nunca sobre o resultado —
+  // ver lib/houseRisk.ts. Demo e torneio passam sempre: o primeiro não move
+  // dinheiro real, o segundo sai do prize pool e não do bolso da casa.
+  const houseRisk = await getHouseRiskState();
+  const houseRiskApplies = !user.isDemo && !isTournamentTrade;
+
+  if (houseRiskApplies) {
+    if (houseRisk.tier === "blocked") {
+      return NextResponse.json({
+        error: "Operações reais temporariamente suspensas. Tenta novamente mais tarde ou usa a conta demo.",
+        houseBlocked: true,
+      }, { status: 403 });
+    }
+    if (houseRisk.suspendedPairs.includes(asset)) {
+      return NextResponse.json({
+        error: `${asset} está temporariamente indisponível. Escolhe outro par.`,
+        pairSuspended: true,
+      }, { status: 403 });
+    }
+    if (amountNum > houseRisk.maxStake) {
+      return NextResponse.json({
+        error: `Valor máximo por operação neste momento: ${houseRisk.maxStake.toLocaleString("pt-PT")} Kz`,
+        maxStake: houseRisk.maxStake,
+      }, { status: 400 });
+    }
+  }
+
   // Obter payout das definições — por par E por duração, com fallback "default"
   // para durações fora do mapa (personalizado, comutação) e 0.85 se faltar tudo.
-  const payout = resolvePayout(cfg?.payout, asset, expiry);
+  // O factor de risco é o MESMO que /api/payout aplicou ao valor que o cliente
+  // viu no ecrã — as duas rotas partilham applyPayoutFactor de propósito.
+  const basePayout = resolvePayout(cfg?.payout, asset, expiry);
+  const payout = houseRiskApplies
+    ? Math.round(basePayout * houseRisk.payoutFactor * 100) / 100
+    : basePayout;
 
   // Entry price determinado exclusivamente pelo servidor. O preço enviado pelo
   // cliente serve apenas para detectar um ecrã desatualizado — nunca define a

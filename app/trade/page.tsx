@@ -305,6 +305,11 @@ export default function TradePage() {
   const [candleTimer,    setCandleTimer]    = useState("");
   const [candleRemSecs,  setCandleRemSecs]  = useState(0);
   const [payoutMap,      setPayoutMap]      = useState<Record<string, Record<string, number>>>({});
+  // Protecção da casa (lib/houseRisk.ts) — vêm de /api/payout junto com o
+  // payout já ajustado. maxStake começa no tecto normal para o input não
+  // ficar bloqueado enquanto o primeiro fetch não responde.
+  const [maxStake,       setMaxStake]       = useState(500000);
+  const [suspendedPairs, setSuspendedPairs] = useState<Set<string>>(new Set());
   const [favorites,      setFavorites]      = useState<Set<string>>(new Set());
   const [, setTick]                         = useState(0);
   const [showTradesPanel, setShowTradesPanel] = useState(false);
@@ -1409,7 +1414,15 @@ export default function TradePage() {
     function fetchPayout() {
       fetch("/api/payout")
         .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d?.payout) setPayoutMap(d.payout); })
+        .then(d => {
+          if (!d) return;
+          // O payout já vem com o factor da protecção da casa aplicado — é
+          // exactamente o que o servidor vai gravar na operação (ver
+          // lib/houseRisk.ts). Nunca mostrar o valor base por cima disto.
+          if (d.payout) setPayoutMap(d.payout);
+          if (typeof d.maxStake === "number") setMaxStake(d.maxStake);
+          if (Array.isArray(d.suspendedPairs)) setSuspendedPairs(new Set<string>(d.suspendedPairs));
+        })
         .catch(() => {});
     }
     fetchPayout();
@@ -2831,12 +2844,12 @@ export default function TradePage() {
           <div style={{ position: "relative", flex: 1 }}>
             <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#ffffff", fontWeight: 800, fontSize: 11, pointerEvents: "none" }}>Kz</span>
             <input type="number" value={amount || ""}
-              onChange={e => { const v = parseInt(e.target.value); setAmount(isNaN(v) ? 0 : Math.min(500000, v)); }}
+              onChange={e => { const v = parseInt(e.target.value); setAmount(isNaN(v) ? 0 : Math.min(maxStake, v)); }}
               onBlur={() => setAmount(a => Math.max(1000, a || 1000))}
               placeholder="1.000"
               style={{ width: "100%", height: 42, background: "#141824", border: "1px solid #262d40", borderRadius: 8, padding: "0 10px 0 32px", color: "#fff", fontSize: 17, fontWeight: 800, outline: "none", boxSizing: "border-box", fontVariantNumeric: "tabular-nums", textAlign: "center" }} />
           </div>
-          <button className="dw-btn" onClick={() => setAmount(a => Math.min(500000, (a || 0) + 1000))}
+          <button className="dw-btn" onClick={() => setAmount(a => Math.min(maxStake, (a || 0) + 1000))}
             style={{ width: 40, height: 42, background: "#141824", border: "1px solid #262d40", borderRadius: 8, color: "#94a3b8", fontSize: 18, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>+</button>
         </div>
         <div style={{ display: "flex", gap: 5 }}>
@@ -3515,6 +3528,7 @@ export default function TradePage() {
             payoutMap={currentPayoutMap}
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
+            suspendedPairs={suspendedPairs}
             onSelect={(p) => { setSelectedPair(p); setLeftPanel(null); }}
           />
         </div>
@@ -4579,10 +4593,10 @@ export default function TradePage() {
                       <div style={{ color: "#334155", fontSize: 8, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 1 }}>Investimento</div>
                       {amountEditing ? (
                         <div style={{ display: "flex", alignItems: "center", gap: 2 }} onClick={e => e.stopPropagation()}>
-                          <input autoFocus type="number" min="1000" max="500000" value={amountInput}
+                          <input autoFocus type="number" min="1000" max={maxStake} value={amountInput}
                             onChange={e => setAmountInput(e.target.value)}
-                            onKeyDown={e => { if (e.key === "Enter") { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); } if (e.key === "Escape") setAmountEditing(false); }}
-                            onBlur={() => { const v = Math.max(1000, Math.min(500000, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); }}
+                            onKeyDown={e => { if (e.key === "Enter") { const v = Math.max(1000, Math.min(maxStake, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); } if (e.key === "Escape") setAmountEditing(false); }}
+                            onBlur={() => { const v = Math.max(1000, Math.min(maxStake, parseInt(amountInput)||1000)); setAmount(v); setAmountEditing(false); }}
                             style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#ffffff", fontWeight: 900, fontSize: 15, fontVariantNumeric: "tabular-nums" }} />
                           <span style={{ color: "#4b5563", fontSize: 9, flexShrink: 0 }}>Kz</span>
                         </div>
@@ -4789,6 +4803,7 @@ export default function TradePage() {
               payoutMap={currentPayoutMap}
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
+            suspendedPairs={suspendedPairs}
               onSelect={(p) => { setSelectedPair(p); setMobileTab("chart"); }}
             />
           </div>

@@ -16,6 +16,17 @@ const DURATION_LABELS: Record<string, string> = {
 };
 const DURATION_ORDER = ["30", "60", "120", "180", "300", "600", "900", "1800", "3600", "default"];
 
+interface HouseRisk {
+  pnl: number;
+  loss: number;
+  limit: number;
+  ratio: number;
+  tier: "normal" | "caution" | "critical" | "blocked";
+  payoutFactor: number;
+  maxStake: number;
+  suspendedPairs: string[];
+}
+
 interface Settings {
   payout:                   Record<string, Record<string, number>>;
   maintenanceMode:          boolean;
@@ -25,7 +36,18 @@ interface Settings {
   largeTradePushThreshold:  number;
   largeWithdrawalThreshold: number;
   dailyLossLimitPct:        number;
+  houseDailyLossLimit:      number;
+  houseRisk?:               HouseRisk;
 }
+
+// Espelha os escalões de lib/houseRisk.ts — informativo, para o admin ver o
+// que vai acontecer em cada patamar. Se lá mudarem, mudar aqui também.
+const RISK_TIERS = [
+  { tier: "normal",   label: "Normal",   range: "< 50%",   payout: "100%", stake: "500.000 Kz", color: "#22c55e" },
+  { tier: "caution",  label: "Atenção",  range: "50-75%",  payout: "85%",  stake: "250.000 Kz", color: "#eab308" },
+  { tier: "critical", label: "Crítico",  range: "75-100%", payout: "70%",  stake: "100.000 Kz", color: "#f97316" },
+  { tier: "blocked",  label: "Bloqueado", range: "≥ 100%", payout: "—",   stake: "operações reais travadas", color: "#ef4444" },
+];
 
 // UI works in whole-number percentages; API uses fractions
 function toPercent(v: number)  { return Math.round(v * 100); }
@@ -246,6 +268,135 @@ export default function AdminSettingsPage() {
 
         </div>
       </div>
+
+      {/* Protecção da Casa */}
+      {(() => {
+        const hr = draft.houseRisk;
+        const active = (draft.houseDailyLossLimit ?? 0) > 0;
+        const tierMeta = RISK_TIERS.find(t => t.tier === hr?.tier) ?? RISK_TIERS[0];
+        const pct = hr && hr.limit > 0 ? Math.min(100, Math.round(hr.ratio * 100)) : 0;
+        const kz = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} Kz`;
+
+        return (
+          <div style={card}>
+            <p style={sectionTitle}>Protecção da Casa</p>
+            <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 16px" }}>
+              Defines só a perda máxima diária. O sistema reduz o payout, baixa o valor
+              máximo por operação, suspende pares problemáticos e — no limite — trava
+              novas operações reais, tudo automaticamente. Nunca altera o resultado de
+              operações já abertas: quem ganhou pelo preço, recebe.
+            </p>
+
+            <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
+              <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Perda máxima diária da casa (Kz)</div>
+              <div style={{ color: "#64748b", fontSize: 11, marginBottom: 10 }}>
+                0 = protecção desligada. Conta só operações reais fora de torneio, das 00:00 de hoje.
+              </div>
+              <input type="number" min={0} step={10000}
+                value={draft.houseDailyLossLimit ?? 0}
+                onChange={e => setDraft(d => d ? { ...d, houseDailyLossLimit: Number(e.target.value) } : d)}
+                style={{ width: "100%", background: "#111827", border: "1px solid #1e2d50", borderRadius: 8, padding: "8px 12px", color: "#ffffff", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
+            </div>
+
+            {/* Estado ao vivo */}
+            {hr && (
+              <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+                  <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>Estado hoje</span>
+                  <span style={{
+                    background: active ? `${tierMeta.color}22` : "rgba(255,255,255,0.06)",
+                    color: active ? tierMeta.color : "#64748b",
+                    border: `1px solid ${active ? tierMeta.color + "66" : "#1e2d50"}`,
+                    borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 800,
+                  }}>
+                    {active ? tierMeta.label.toUpperCase() : "DESLIGADO"}
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: active ? 12 : 0 }}>
+                  <div>
+                    <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700 }}>Resultado do dia</div>
+                    <div style={{ color: hr.pnl >= 0 ? "#22c55e" : "#ef4444", fontSize: 17, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                      {hr.pnl >= 0 ? "+" : ""}{kz(hr.pnl)}
+                    </div>
+                  </div>
+                  {active && (
+                    <>
+                      <div>
+                        <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700 }}>Limite consumido</div>
+                        <div style={{ color: tierMeta.color, fontSize: 17, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{pct}%</div>
+                      </div>
+                      <div>
+                        <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700 }}>Payout aplicado</div>
+                        <div style={{ color: "#fff", fontSize: 17, fontWeight: 800 }}>{Math.round(hr.payoutFactor * 100)}%</div>
+                      </div>
+                      <div>
+                        <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700 }}>Máx. por operação</div>
+                        <div style={{ color: "#fff", fontSize: 17, fontWeight: 800 }}>{hr.tier === "blocked" ? "—" : kz(hr.maxStake)}</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {active && (
+                  <div style={{ height: 6, background: "#111827", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: tierMeta.color, transition: "width 0.4s ease" }} />
+                  </div>
+                )}
+
+                {hr.suspendedPairs.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700, marginBottom: 6 }}>
+                      Pares suspensos ({hr.suspendedPairs.length})
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {hr.suspendedPairs.map(p => (
+                        <span key={p} style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", color: "#ef4444", borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 700 }}>{p}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Escalões — informativo */}
+            <div style={{ background: "#0a0f1e", borderRadius: 10, padding: "12px 16px" }}>
+              <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700, marginBottom: 8 }}>
+                Escalões automáticos
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 420 }}>
+                  <thead>
+                    <tr style={{ color: "#475569" }}>
+                      <th style={{ textAlign: "left", padding: "4px 8px 6px 0", fontWeight: 600 }}>Limite consumido</th>
+                      <th style={{ textAlign: "left", padding: "4px 8px 6px 0", fontWeight: 600 }}>Estado</th>
+                      <th style={{ textAlign: "left", padding: "4px 8px 6px 0", fontWeight: 600 }}>Payout</th>
+                      <th style={{ textAlign: "left", padding: "4px 0 6px 0", fontWeight: 600 }}>Máx. operação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {RISK_TIERS.map(t => {
+                      const isCurrent = active && hr?.tier === t.tier;
+                      return (
+                        <tr key={t.tier} style={{ background: isCurrent ? "rgba(255,255,255,0.04)" : "transparent" }}>
+                          <td style={{ color: "#94a3b8", padding: "5px 8px 5px 0" }}>{t.range}</td>
+                          <td style={{ color: t.color, fontWeight: 700, padding: "5px 8px 5px 0" }}>{t.label}</td>
+                          <td style={{ color: "#cbd5e1", padding: "5px 8px 5px 0" }}>{t.payout}</td>
+                          <td style={{ color: "#cbd5e1", padding: "5px 0" }}>{t.stake}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>
+                Um par é suspenso quando sozinho causa ≥ 40% do limite em perdas e tem ≥ 10 operações no dia.
+                Conta demo e torneios nunca são afectados.
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Payout % por Par × Duração */}
       <div style={card}>

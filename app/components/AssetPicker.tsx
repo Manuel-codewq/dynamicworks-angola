@@ -28,6 +28,7 @@ export default function AssetPicker({
   onToggleFavorite,
   onSelect,
   compact = false,
+  suspendedPairs,
 }: {
   pairs: PickerPair[];
   selectedSymbol?: string;
@@ -38,6 +39,8 @@ export default function AssetPicker({
   onToggleFavorite: (symbol: string) => void;
   onSelect: (pair: PickerPair) => void;
   compact?: boolean;
+  /** Labels suspensos pela protecção da casa — mostrados mas não seleccionáveis. */
+  suspendedPairs?: Set<string>;
 }) {
   const [activeTab, setActiveTab] = useState<"favorites" | AssetCategory>("Forex");
 
@@ -80,12 +83,19 @@ export default function AssetPicker({
           const isActive = selectedSymbol === p.symbol;
           const isFav    = favorites.has(p.symbol);
           const payout   = Math.round((payoutMap[p.label] ?? 0.74) * 100);
+          // Par suspenso pela protecção da casa: continua na lista (não
+          // desaparece debaixo de quem está a olhar para o gráfico) mas não é
+          // seleccionável. O bloqueio real é no servidor.
+          const isSuspended = suspendedPairs?.has(p.label) ?? false;
 
           return (
-            <button key={p.symbol} onClick={() => onSelect(p)}
+            <button key={p.symbol} onClick={() => { if (!isSuspended) onSelect(p); }}
+              disabled={isSuspended}
               style={{
                 width: "100%", background: isActive ? "rgba(255,255,255,0.07)" : "transparent",
-                border: "none", borderBottom: "1px solid #141824", cursor: "pointer", position: "relative",
+                border: "none", borderBottom: "1px solid #141824",
+                cursor: isSuspended ? "not-allowed" : "pointer", position: "relative",
+                opacity: isSuspended ? 0.45 : 1,
                 padding: compact ? "8px 14px" : "13px 14px", display: "flex", alignItems: "center", justifyContent: "space-between",
               }}>
               <div style={{ display: "flex", alignItems: "center", gap: compact ? 8 : 12, minWidth: 0 }}>
@@ -96,9 +106,15 @@ export default function AssetPicker({
                   {!compact && (
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
                       <span style={{ color: "#334155", fontSize: 11 }}>{p.category}</span>
-                      <span style={{ color: "#ffffff", fontSize: 9, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
-                        {payout}%
-                      </span>
+                      {isSuspended ? (
+                        <span style={{ color: "#ef4444", fontSize: 9, fontWeight: 800, background: "rgba(239,68,68,0.12)", borderRadius: 5, padding: "1px 5px" }}>
+                          INDISPONÍVEL
+                        </span>
+                      ) : (
+                        <span style={{ color: "#ffffff", fontSize: 9, fontWeight: 800, background: "rgba(255,255,255,0.12)", borderRadius: 5, padding: "1px 5px" }}>
+                          {payout}%
+                        </span>
+                      )}
                     </div>
                   )}
                   {compact && (
