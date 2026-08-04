@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { claimPromo } from "@/lib/promoClaim";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // Estado da promoção da conta autenticada — usado por /promo (link genérico,
 // sem token na URL) para decidir o que mostrar antes do utilizador clicar.
@@ -40,6 +41,12 @@ export async function POST() {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sessão necessária" }, { status: 401 });
+  }
+
+  // O resgate credita saldo e passa por claimPromo() (transacção + escritas);
+  // martelar em paralelo é a forma óbvia de tentar resgatar duas vezes.
+  if (!await checkRateLimit("promo-claim", session.user.id, 10, 60 * 60_000)) {
+    return NextResponse.json({ error: "Demasiadas tentativas. Aguarda um pouco." }, { status: 429 });
   }
 
   const claim = await prisma.promoClaim.findFirst({

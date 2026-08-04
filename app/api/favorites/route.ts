@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ASSET_TO_SYNTHETIC_SYMBOL } from "@/lib/assets";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // "symbol" aqui é, na prática, o mesmo valor usado como `DerivPair.symbol`
 // no frontend (o syntheticSymbol do par, ex: "EURUSD_OTC") — validado contra
@@ -23,6 +24,13 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
+  // Marcar/desmarcar favoritos é barato mas escreve na BD — 60/min por
+  // utilizador é folgado para uso normal (são cliques na estrela) e trava
+  // um script a martelar o endpoint.
+  if (!await checkRateLimit("favorites", session.user.id, 60, 60_000)) {
+    return NextResponse.json({ error: "Demasiados pedidos. Aguarda um momento." }, { status: 429 });
+  }
+
   const { symbol } = await req.json().catch(() => ({}));
   if (typeof symbol !== "string" || !ALLOWED_SYMBOLS.has(symbol)) {
     return NextResponse.json({ error: "Símbolo inválido" }, { status: 400 });
@@ -39,6 +47,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!await checkRateLimit("favorites", session.user.id, 60, 60_000)) {
+    return NextResponse.json({ error: "Demasiados pedidos. Aguarda um momento." }, { status: 429 });
+  }
 
   const { symbol } = await req.json().catch(() => ({}));
   if (typeof symbol !== "string") {

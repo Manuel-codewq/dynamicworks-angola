@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { claimPromo } from "@/lib/promoClaim";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(
   _req: NextRequest,
@@ -10,6 +11,13 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sessão necessária" }, { status: 401 });
+  }
+
+  // Travão contra varrer tokens à força bruta: a resposta distingue
+  // "link inválido" de "não pertence à tua conta", o que confirmaria a
+  // existência de um token a quem estivesse a tentar adivinhá-los.
+  if (!await checkRateLimit("promo-claim-token", session.user.id, 10, 60 * 60_000)) {
+    return NextResponse.json({ error: "Demasiadas tentativas. Aguarda um pouco." }, { status: 429 });
   }
 
   const { token } = await params;

@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const userId = session.user.id;
+
+  // Este endpoint diz ao cliente se um código existe ou não, e um acerto
+  // credita saldo real — sem travão dá para varrer o espaço de códigos à
+  // força bruta. 10 tentativas/hora chega para quem escreveu mal o código.
+  if (!await checkRateLimit("promo-redeem", userId, 10, 60 * 60_000)) {
+    return NextResponse.json(
+      { error: "Demasiadas tentativas. Tenta novamente daqui a uma hora." },
+      { status: 429 },
+    );
+  }
 
   const { code } = await req.json();
   if (!code?.trim()) return NextResponse.json({ error: "Código inválido" }, { status: 400 });

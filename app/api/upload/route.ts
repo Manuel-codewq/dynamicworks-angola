@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createHash } from "crypto";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const ALLOWED_FOLDERS = ["avatars", "kyc", "provas"] as const;
 type UploadFolder = typeof ALLOWED_FOLDERS[number];
@@ -45,6 +46,15 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  // Cada upload consome armazenamento Cloudinary (custo real) — 20/hora por
+  // utilizador cobre folgadamente avatar + documentos KYC e trava abuso.
+  if (!await checkRateLimit("upload", session.user.id, 20, 60 * 60_000)) {
+    return NextResponse.json(
+      { error: "Demasiados uploads. Aguarda um pouco antes de tentar novamente." },
+      { status: 429 },
+    );
   }
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
