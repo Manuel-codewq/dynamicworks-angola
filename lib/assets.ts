@@ -109,6 +109,43 @@ export function getActiveAssets(): Asset[] {
   return ASSETS.filter(a => a.active);
 }
 
+/**
+ * Roda ciclicamente os pares dentro de cada categoria, com deslocamento
+ * derivado do dia.
+ *
+ * Sem isto era sempre o EUR/USD no topo da lista e sempre ele a abrir por
+ * omissão no /trade — todo o volume concentrava-se num par só. Com a rotação,
+ * cada dia é outro par a liderar cada categoria.
+ *
+ * É rotação e não baralhamento de propósito: a ordem relativa mantém-se, por
+ * isso quem procura um par continua a encontrá-lo junto dos mesmos vizinhos.
+ * E o deslocamento é por dia (não por pedido) para a lista não saltar debaixo
+ * dos olhos de quem está a operar — só muda de um dia para o outro.
+ */
+export function rotatePairsByDay<T extends { category: string }>(
+  list: T[],
+  now: Date = new Date(),
+): T[] {
+  const dayIndex = Math.floor(now.getTime() / 86_400_000);
+  const out = [...list];
+
+  // Índices ocupados por cada categoria — a rotação acontece dentro deles,
+  // por isso os blocos de categoria ficam onde estavam.
+  const slots = new Map<string, number[]>();
+  list.forEach((item, i) => {
+    const arr = slots.get(item.category);
+    if (arr) arr.push(i);
+    else slots.set(item.category, [i]);
+  });
+
+  for (const idxs of slots.values()) {
+    if (idxs.length < 2) continue;
+    const shift = dayIndex % idxs.length;
+    idxs.forEach((pos, k) => { out[pos] = list[idxs[(k + shift) % idxs.length]]; });
+  }
+  return out;
+}
+
 // ── Payout por par × duração (2026-07-30) ───────────────────────────────────
 //
 // Durações (segundos) com payout configurável por par — mesmos presets do

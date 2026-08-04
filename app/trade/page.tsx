@@ -56,6 +56,11 @@ const EXPIRY_OPTIONS = [
 
 const QUICK_AMOUNTS = [1000, 5000, 10000, 25000];
 
+// Último par escolhido pelo utilizador, para voltar a abrir nele na sessão
+// seguinte. Só é gravado quando ele escolhe de facto um par — nunca o valor
+// inicial, senão toda a gente ficava presa no primeiro par que viu.
+const LAST_PAIR_KEY = "dw_last_pair";
+
 // Preço a que a operação realmente entrou (entryPrice devolvido pela API na
 // criação) — visualmente distinto do ticker no topo (que usa verde/vermelho
 // consoante o sentido do preço) de propósito, para não ser confundido com
@@ -232,6 +237,12 @@ export default function TradePage() {
   // porque `!selectedPair` nunca deixava de ser verdade.
   const [pairsLoaded, setPairsLoaded] = useState(initialPairs.length > 0);
 
+  // Passa a true assim que o par actual reflecte uma decisão real — o último
+  // par que este utilizador usou, ou um clique dele agora. Enquanto for false,
+  // `selectedPair` é só o valor provisório do primeiro render e pode ser
+  // substituído pelo par rotativo do dia que vem da API.
+  const pairResolvedRef = useRef(false);
+
   useEffect(() => {
     async function refresh() {
       try {
@@ -239,9 +250,23 @@ export default function TradePage() {
         if (!res.ok) return;
         const { pairs: list } = await res.json() as { pairs: DerivPair[]; marketOpen: boolean };
         setPairs(list);
-        setSelectedPair(prev =>
-          prev && list.some(p => p.symbol === prev.symbol) ? prev : (list[0] ?? null)
-        );
+
+        if (!pairResolvedRef.current) {
+          // A decisão fica fora do updater de propósito: o updater tem de ser
+          // puro (o React chama-o duas vezes em StrictMode) e mexer no ref lá
+          // dentro fazia a segunda passagem cair no ramo errado.
+          pairResolvedRef.current = true;
+          let saved: string | null = null;
+          try { saved = localStorage.getItem(LAST_PAIR_KEY); } catch {}
+          const restored = saved ? list.find(p => p.symbol === saved) : undefined;
+          // Sem par guardado, abre no primeiro da lista — que a API roda por
+          // dia, para não ser sempre o mesmo par a receber toda a gente.
+          setSelectedPair(prev => restored ?? list[0] ?? prev);
+        } else {
+          setSelectedPair(prev =>
+            prev && list.some(p => p.symbol === prev.symbol) ? prev : (list[0] ?? null)
+          );
+        }
       } catch {
       } finally {
         setPairsLoaded(true);
@@ -250,6 +275,13 @@ export default function TradePage() {
     refresh();
     const id = setInterval(refresh, 60_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Escolha explícita de par (clique no selector) — guarda para a próxima sessão.
+  const choosePair = useCallback((p: DerivPair) => {
+    pairResolvedRef.current = true;
+    setSelectedPair(p);
+    try { localStorage.setItem(LAST_PAIR_KEY, p.symbol); } catch {}
   }, []);
 
   // ── UI state ─────────────────────────────────────────────────────────────
@@ -3529,7 +3561,7 @@ export default function TradePage() {
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
             suspendedPairs={suspendedPairs}
-            onSelect={(p) => { setSelectedPair(p); setLeftPanel(null); }}
+            onSelect={(p) => { choosePair(p); setLeftPanel(null); }}
           />
         </div>
       );
@@ -4804,7 +4836,7 @@ export default function TradePage() {
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
             suspendedPairs={suspendedPairs}
-              onSelect={(p) => { setSelectedPair(p); setMobileTab("chart"); }}
+              onSelect={(p) => { choosePair(p); setMobileTab("chart"); }}
             />
           </div>
         )}
