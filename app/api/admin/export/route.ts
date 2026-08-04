@@ -14,7 +14,6 @@ const METHOD_LABEL: Record<string, string> = {
   multicaixa_express:    "Multicaixa Express",
   multicaixa_ref:        "Multicaixa Ref.",
   transferencia_bancaria:"Transf. Bancária",
-  usdt_trc20:            "USDT TRC-20",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -95,7 +94,7 @@ export async function GET(req: NextRequest) {
       Math.floor(tx.amount),
       STATUS_LABEL[tx.status] ?? tx.status,
       METHOD_LABEL[tx.method ?? ""] ?? (tx.method ?? ""),
-      tx.usdtTxid ?? tx.reference ?? "",
+      tx.reference ?? "",
       tx.id,
     ];
   });

@@ -162,7 +162,7 @@ const jsonLd = {
           name:             "O que é a Dynamics Works?",
           acceptedAnswer: {
             "@type": "Answer",
-            text:    "A Dynamics Works é a primeira plataforma de opções binárias angolana, que permite negociar Forex, Criptomoedas e Metais Preciosos com pagamentos em Kwanza (AOA) via USDT.",
+            text:    "A Dynamics Works é a primeira plataforma de opções binárias angolana, que permite negociar Forex, Criptomoedas, Matérias-primas e Acções com depósitos e levantamentos em Kwanza (AOA).",
           },
         },
         {
@@ -170,7 +170,7 @@ const jsonLd = {
           name:             "Como faço um depósito?",
           acceptedAnswer: {
             "@type": "Answer",
-            text:    "Os depósitos são feitos em Kwanza angolano (AOA) via USDT (TRC-20). O processo é simples e rápido, diretamente na secção Carteira da plataforma.",
+            text:    "Os depósitos são feitos em Kwanza angolano (AOA) por Multicaixa Express, na secção Carteira da plataforma. O valor mínimo é de 5.000 Kz.",
           },
         },
         {

@@ -50,12 +50,12 @@ _Tens alguma dúvida no processo?_`,
 
   "2": `💰 *Como depositar na Dynamic Works:*
 
-Aceitamos depósitos em *USDT (TRC20)*:
+Aceitamos depósitos por *Multicaixa Express*:
 
 1. Na plataforma clica em "Depositar"
-2. Copia o endereço da carteira
-3. Envia USDT (mínimo $5)
-4. O saldo é creditado automaticamente em AOA
+2. Indica o valor (mínimo 5.000 Kz) e confirma com o código OTP
+3. Paga com a Entidade *10116* e a Referência *946621503*
+4. O saldo é creditado assim que o pagamento for confirmado
 
 _Para mais informações fala com o suporte: +244 921 825 299_`,
 
@@ -108,7 +108,7 @@ Informações sobre a Dynamic Works:
 - Plataforma de trading de opções binárias para Angola
 - Website: https://dynamicworks.ao
 - Registo gratuito com 10.000 AOA de conta demo
-- Depósitos em USDT (mínimo $5)
+- Depósitos e levantamentos em Kwanza (AOA) por Multicaixa Express (depósito mínimo 5.000 Kz)
 - Payout até 85% por operação ganhe
 - Pares disponíveis: consulta a plataforma
 - Grupo de aulas gratuitas: ${GROUP_LINK}

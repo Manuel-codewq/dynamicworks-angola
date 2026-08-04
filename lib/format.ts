@@ -12,8 +12,3 @@ export function formatNum(n: number, decimals = 0): string {
 export function formatKz(n: number): string {
   return formatNum(Math.floor(n)) + " Kz";
 }
-
-// Formata valor em USDT: 12,3500 USDT
-export function formatUsdt(n: number): string {
-  return formatNum(n, 4) + " USDT";
-}
