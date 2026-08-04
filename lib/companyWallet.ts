@@ -64,6 +64,22 @@ export async function onWithdrawalRejected(txId: string, userId: string, amount:
   });
 }
 
+/**
+ * Cancelamento pelo próprio utilizador. O efeito contabilístico é igual ao da
+ * rejeição — o dinheiro nunca saiu e volta ao saldo — mas fica com tipo e
+ * descrição próprios para o histórico distinguir quem desistiu do pedido.
+ */
+export async function onWithdrawalCancelled(txId: string, userId: string, amount: number, dbTx: any) {
+  await ensureWallet(dbTx);
+  await dbTx.companyWallet.update({
+    where: { id: "singleton" },
+    data:  { pendingOut: { decrement: amount } },
+  });
+  await dbTx.companyLedger.create({
+    data: { type: "withdrawal_cancelled", amount, txId, userId, description: `Levantamento cancelado pelo utilizador — devolvido ao saldo` },
+  });
+}
+
 export async function getWallet() {
   const [depAgg, pendAgg, paidAgg] = await Promise.all([
     prisma.transaction.aggregate({ where: { type: "deposit",    status: "completed" }, _sum: { amount: true } }),

@@ -389,6 +389,9 @@ const messages: Record<string, Record<string, string>> = {
     "wallet.tab.history":     "Histórico",
     "wallet.status.pending":  "Pendente",
     "wallet.status.approved": "Aprovado",
+    "wallet.status.cancelled": "Cancelado",
+    "wallet.cancel.action": "Cancelar pedido",
+    "wallet.cancel.confirm": "Cancelar este levantamento? O valor volta ao teu saldo.",
     "wallet.status.rejected": "Rejeitado",
     "wallet.kyc.required":    "Verificação de Identidade Necessária",
     "wallet.kyc.desc":        "Para efectuar depósitos precisas de completar a verificação de identidade (KYC).",
@@ -418,6 +421,7 @@ const messages: Record<string, Record<string, string>> = {
     "wallet.filterStatus.all":      "Todos",
     "wallet.filterStatus.pending":  "Pendentes",
     "wallet.filterStatus.approved": "Aprovados",
+    "wallet.filterStatus.cancelled": "Cancelados",
     "wallet.filterStatus.rejected": "Rejeitados",
 
     // Trade page — strings visíveis
@@ -855,6 +859,9 @@ const messages: Record<string, Record<string, string>> = {
     "wallet.tab.history":     "History",
     "wallet.status.pending":  "Pending",
     "wallet.status.approved": "Approved",
+    "wallet.status.cancelled": "Cancelled",
+    "wallet.cancel.action": "Cancel request",
+    "wallet.cancel.confirm": "Cancel this withdrawal? The amount returns to your balance.",
     "wallet.status.rejected": "Rejected",
     "wallet.kyc.required":    "Identity Verification Required",
     "wallet.kyc.desc":        "To make deposits you need to complete identity verification (KYC).",
@@ -884,6 +891,7 @@ const messages: Record<string, Record<string, string>> = {
     "wallet.filterStatus.all":      "All",
     "wallet.filterStatus.pending":  "Pending",
     "wallet.filterStatus.approved": "Approved",
+    "wallet.filterStatus.cancelled": "Cancelled",
     "wallet.filterStatus.rejected": "Rejected",
 
     // Trade page
@@ -1321,6 +1329,9 @@ const messages: Record<string, Record<string, string>> = {
     "wallet.tab.history":     "Historique",
     "wallet.status.pending":  "En attente",
     "wallet.status.approved": "Approuvé",
+    "wallet.status.cancelled": "Annulé",
+    "wallet.cancel.action": "Annuler la demande",
+    "wallet.cancel.confirm": "Annuler ce retrait ? Le montant revient sur votre solde.",
     "wallet.status.rejected": "Rejeté",
     "wallet.kyc.required":    "Vérification d'identité requise",
     "wallet.kyc.desc":        "Pour effectuer des dépôts, vous devez compléter la vérification d'identité (KYC).",
@@ -1350,6 +1361,7 @@ const messages: Record<string, Record<string, string>> = {
     "wallet.filterStatus.all":      "Tous",
     "wallet.filterStatus.pending":  "En attente",
     "wallet.filterStatus.approved": "Approuvés",
+    "wallet.filterStatus.cancelled": "Annulés",
     "wallet.filterStatus.rejected": "Rejetés",
 
     // Page Trade

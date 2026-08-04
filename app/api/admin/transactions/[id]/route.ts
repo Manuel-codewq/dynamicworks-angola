@@ -20,23 +20,18 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const { status, usdtTxid } = await req.json();
+  const { status } = await req.json();
 
   if (!["completed", "rejected"].includes(status)) {
     return NextResponse.json({ error: "Status inválido" }, { status: 400 });
-  }
-
-  // Para saques USDT exige-se o TXID da transferência enviada manualmente
-  if (status === "completed" && typeof usdtTxid === "string" && usdtTxid.trim()) {
-    if (!/^[A-Fa-f0-9]{64}$/.test(usdtTxid.trim())) {
-      return NextResponse.json({ error: "TXID inválido (esperado hash de 64 chars)" }, { status: 400 });
-    }
   }
 
   const tx = await prisma.transaction.findUnique({ where: { id } });
   if (!tx) {
     return NextResponse.json({ error: "Transação não encontrada" }, { status: 404 });
   }
+  // Verificação preliminar, só para responder depressa ao caso comum. A que
+  // conta é a de dentro da transacção — ver o updateMany condicional abaixo.
   if (tx.status !== "pending") {
     return NextResponse.json({ error: "Transação já processada" }, { status: 409 });
   }
@@ -49,6 +44,20 @@ export async function PATCH(
   let updated;
   try {
     updated = await prisma.$transaction(async (dbTx) => {
+      // Fechadura contra a corrida com o cancelamento pelo utilizador
+      // (app/api/transactions/[id]/cancel/route.ts): quem conseguir mudar o
+      // estado a partir de "pending" ganha. Sem isto, o admin podia aprovar e
+      // o utilizador cancelar ao mesmo tempo — a empresa pagava o levantamento
+      // e devolvia o saldo. O findUnique lá em cima não protege disto porque
+      // corre fora da transacção.
+      const claimed = await dbTx.transaction.updateMany({
+        where: { id, status: "pending" },
+        data:  { status },
+      });
+      if (claimed.count === 0) {
+        throw Object.assign(new Error("ALREADY_PROCESSED"), { code: "ALREADY_PROCESSED" });
+      }
+
       if (status === "completed") {
         if (tx.type === "deposit") {
           await onDepositApproved(tx.id, tx.userId, tx.amount, dbTx);
@@ -129,18 +138,20 @@ export async function PATCH(
         });
       }
 
-      return dbTx.transaction.update({
+      // O estado já foi gravado pelo updateMany acima; aqui só se relê a linha
+      // com o utilizador, para as notificações.
+      return dbTx.transaction.findUniqueOrThrow({
         where:   { id },
-        data:    {
-          status,
-          ...(status === "completed" && typeof usdtTxid === "string" && usdtTxid.trim()
-            ? { usdtTxid: usdtTxid.trim() }
-            : {}),
-        },
         include: { user: { select: { name: true, email: true } } },
       });
     });
   } catch (err: any) {
+    if (err?.code === "ALREADY_PROCESSED") {
+      return NextResponse.json(
+        { error: "Transação já processada — pode ter sido cancelada pelo utilizador." },
+        { status: 409 },
+      );
+    }
     if (err?.code === "INSUFFICIENT_BALANCE") {
       return NextResponse.json({ error: "Saldo insuficiente para processar levantamento" }, { status: 422 });
     }

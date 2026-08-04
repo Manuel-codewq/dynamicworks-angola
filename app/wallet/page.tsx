@@ -26,13 +26,15 @@ type Tx = {
 };
 
 type Filter = "all" | "deposit" | "withdrawal";
-type StatusFilter = "all" | "pending" | "completed" | "rejected";
+type StatusFilter = "all" | "pending" | "completed" | "rejected" | "cancelled";
 
 const STATUS_CFG: Record<string, { tKey: string; color: string; bg: string; Icon: any }> = {
-  pending:   { tKey: "wallet.status.pending",  color: "#ffffff", bg: "rgba(255,255,255,0.1)",  Icon: Clock        },
-  approved:  { tKey: "wallet.status.approved", color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
-  completed: { tKey: "wallet.status.approved", color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle  },
-  rejected:  { tKey: "wallet.status.rejected", color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle      },
+  pending:   { tKey: "wallet.status.pending",   color: "#ffffff", bg: "rgba(255,255,255,0.1)", Icon: Clock       },
+  approved:  { tKey: "wallet.status.approved",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle },
+  completed: { tKey: "wallet.status.approved",  color: "#22c55e", bg: "rgba(34,197,94,0.1)",   Icon: CheckCircle },
+  rejected:  { tKey: "wallet.status.rejected",  color: "#ef4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle     },
+  // Cinzento e não vermelho: cancelar foi decisão do utilizador, não uma recusa nossa.
+  cancelled: { tKey: "wallet.status.cancelled", color: "#94a3b8", bg: "rgba(148,163,184,0.1)", Icon: XCircle     },
 };
 
 function formatDate(s: string) {
@@ -100,6 +102,24 @@ export default function WalletPage() {
   }, []);
 
   useEffect(() => { if (status === "authenticated") load(); }, [status, load]);
+
+  // Cancelamento de um levantamento ainda por aprovar — devolve o valor ao saldo.
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
+  async function cancelWithdrawal(txId: string) {
+    if (!confirm(t("wallet.cancel.confirm"))) return;
+    setCancelling(txId);
+    try {
+      const r = await fetch(`/api/transactions/${txId}/cancel`, { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      // Mesmo em erro recarrega: o 409 normal é o admin ter aprovado entretanto,
+      // e nesse caso o ecrã tem de passar a mostrar o estado verdadeiro.
+      await load();
+      if (!r.ok) setFormMsg({ text: d.error ?? "Não foi possível cancelar.", ok: false });
+    } finally {
+      setCancelling(null);
+    }
+  }
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -548,7 +568,7 @@ export default function WalletPage() {
                 </button>
               ))}
               <div style={{ width: 1, background: "#1e2d50", margin: "0 4px" }} />
-              {(["all","pending","completed","rejected"] as StatusFilter[]).map(sf => (
+              {(["all","pending","completed","rejected","cancelled"] as StatusFilter[]).map(sf => (
                 <button key={sf} onClick={() => setStatusFilter(sf)} style={filterBtn(statusFilter === sf)}>
                   {sf === "all" ? t("wallet.filterStatus.all") : t(STATUS_CFG[sf]?.tKey ?? "wallet.status.pending")}
                 </button>
@@ -580,7 +600,6 @@ export default function WalletPage() {
                   multicaixa_ref:         "Multicaixa Express",
                   multicaixa_express:     t("wallet.method.multicaixa"),
                   transferencia_bancaria: t("wallet.method.transfer"),
-                  usdt_trc20:             "USDT TRC-20",
                 };
                 return (
                   <div key={tx.id} style={{ background: "#111827", border: `1px solid ${borderColor}`, borderRadius: 14, padding: "14px 16px", borderLeft: `3px solid ${color}` }}>
@@ -606,6 +625,24 @@ export default function WalletPage() {
                             </div>
                           </div>
                         </div>
+                        {/* Só levantamentos por aprovar — depois de processado
+                            já não há nada para cancelar, e depósitos pendentes
+                            estão do lado do banco. */}
+                        {tx.type === "withdrawal" && tx.status === "pending" && (
+                          <button
+                            onClick={() => cancelWithdrawal(tx.id)}
+                            disabled={cancelling === tx.id}
+                            style={{
+                              marginTop: 10, width: "100%", padding: "8px 12px",
+                              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
+                              borderRadius: 8, color: "#ef4444", fontSize: 12, fontWeight: 700,
+                              cursor: cancelling === tx.id ? "default" : "pointer",
+                              opacity: cancelling === tx.id ? 0.6 : 1,
+                            }}
+                          >
+                            {cancelling === tx.id ? t("common.loading") : t("wallet.cancel.action")}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

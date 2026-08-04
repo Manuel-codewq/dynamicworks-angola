@@ -11,23 +11,21 @@ function formatDate(s: string) {
 interface AdminTransaction {
   id: string; type: string; amount: number; method: string | null;
   reference: string | null; status: string; createdAt: string;
-  usdtTxid?: string | null;
-  usdtAmount?: number | null;
-  usdtAddress?: string | null;
   user: { name: string; email: string };
 }
 
 const TYPE_LABEL:   Record<string, string> = { deposit: "Depósito", withdrawal: "Levantamento" };
-const METHOD_LABEL: Record<string, string> = { multicaixa: "Multicaixa Express", multicaixa_express: "Multicaixa Express", multicaixa_ref: "Multicaixa Ref.", transferencia_bancaria: "Transf. Bancária", usdt_trc20: "USDT TRC-20" };
+const METHOD_LABEL: Record<string, string> = { multicaixa: "Multicaixa Express", multicaixa_express: "Multicaixa Express", multicaixa_ref: "Multicaixa Ref.", transferencia_bancaria: "Transf. Bancária" };
 const TYPE_COLOR: Record<string, string>  = { deposit: "#22c55e",     withdrawal: "#ffffff" };
 const TYPE_BG:    Record<string, string>  = { deposit: "rgba(34,197,94,0.12)", withdrawal: "rgba(255,255,255,0.12)" };
 
-const STATUS_LABEL: Record<string, string> = { pending: "Pendente", completed: "Aprovado", rejected: "Rejeitado" };
-const STATUS_COLOR: Record<string, string> = { pending: "#ffffff",  completed: "#22c55e",  rejected: "#ef4444" };
+const STATUS_LABEL: Record<string, string> = { pending: "Pendente", completed: "Aprovado", rejected: "Rejeitado", cancelled: "Cancelado" };
+const STATUS_COLOR: Record<string, string> = { pending: "#ffffff",  completed: "#22c55e",  rejected: "#ef4444", cancelled: "#94a3b8" };
 const STATUS_BG:    Record<string, string> = {
   pending:   "rgba(255,255,255,0.12)",
   completed: "rgba(34,197,94,0.12)",
   rejected:  "rgba(239,68,68,0.12)",
+  cancelled: "rgba(148,163,184,0.12)",
 };
 
 export default function AdminTransactionsPage() {
@@ -60,28 +58,10 @@ export default function AdminTransactionsPage() {
 
   async function act(tx: AdminTransaction, newStatus: "completed" | "rejected") {
     setBusyId(tx.id);
-    let usdtTxid: string | undefined;
-    if (
-      newStatus === "completed" &&
-      tx.type === "withdrawal" &&
-      tx.method === "usdt_trc20"
-    ) {
-      const input = window.prompt(
-        `Cola o TXID Tron do envio de ${tx.usdtAmount?.toFixed(4) ?? "?"} USDT para ${tx.usdtAddress ?? "?"}:`
-      );
-      if (!input) { setBusyId(null); return; }
-      const trimmed = input.trim();
-      if (!/^[A-Fa-f0-9]{64}$/.test(trimmed)) {
-        alert("TXID inválido — esperado hash hexadecimal de 64 caracteres.");
-        setBusyId(null);
-        return;
-      }
-      usdtTxid = trimmed;
-    }
     await fetch(`/api/admin/transactions/${tx.id}`, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ status: newStatus, ...(usdtTxid ? { usdtTxid } : {}) }),
+      body:    JSON.stringify({ status: newStatus }),
     });
     setBusyId(null);
     load();
@@ -201,6 +181,7 @@ export default function AdminTransactionsPage() {
           <option value="pending">Pendente</option>
           <option value="completed">Aprovado</option>
           <option value="rejected">Rejeitado</option>
+          <option value="cancelled">Cancelado</option>
         </select>
 
         {/* Type filter */}
