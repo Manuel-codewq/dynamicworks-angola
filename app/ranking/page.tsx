@@ -63,10 +63,9 @@ const RARITY_COLOR: Record<string, string> = {
   legendary: "#fbbf24",
 };
 
-const PERIOD_OPTIONS = [
-  { key: "today" }, { key: "week" }, { key: "month" }, { key: "all" },
-] as const;
-type PeriodKey = typeof PERIOD_OPTIONS[number]["key"];
+// O ranking público mostra só o dia de hoje. Semana, mês e geral existem
+// apenas no painel do admin — ver app/ao/admin/ranking.
+type PeriodKey = "today";
 
 // ── Avatar com borda e glow ───────────────────────────────────────────────────
 function Avatar({ entry, size = 40, borderColor = "#1e2d50", glow }: {
@@ -164,7 +163,7 @@ export default function RankingPage() {
   const [achUnlocked,  setAchUnlocked]  = useState(0);
   const [achTotal,     setAchTotal]     = useState(0);
   const [loading,      setLoading]      = useState(true);
-  const [period,       setPeriod]       = useState<PeriodKey>("all");
+  const [period]                        = useState<PeriodKey>("today");
   const [lastRefresh,  setLastRefresh]  = useState(Date.now());
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
@@ -258,14 +257,13 @@ export default function RankingPage() {
         {/* ── RANKING TAB ── */}
         {tab === "ranking" && (
           <div>
-            {/* Period selector */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: 4 }}>
-              {PERIOD_OPTIONS.map(p => (
-                <button key={p.key} onClick={() => setPeriod(p.key)}
-                  style={{ flex: 1, padding: "7px 0", background: period === p.key ? "#00c076" : "transparent", color: period === p.key ? "#0a0f1e" : "#64748b", border: "none", borderRadius: 7, fontWeight: 800, fontSize: 12, cursor: "pointer", transition: "all 0.15s" }}>
-                  {t(`ranking.period.${p.key}`)}
-                </button>
-              ))}
+            {/* Só o dia de hoje. O período é fixado no servidor. */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 24, background: "#111827", border: "1px solid #1e2d50", borderRadius: 10, padding: "10px 12px" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#00c076" }} />
+              <span style={{ color: "#e2e8f0", fontWeight: 800, fontSize: 12 }}>{t("ranking.period.today")}</span>
+              <span style={{ color: "#64748b", fontSize: 11 }}>
+                {new Date().toLocaleDateString("pt-AO", { day: "2-digit", month: "long" })}
+              </span>
             </div>
 
             {/* Pódio */}

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
@@ -22,11 +22,17 @@ function getPeriodStart(period: string): Date | null {
   return null; // "all"
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  const period = new URL(req.url).searchParams.get("period") ?? "all";
+  // O ranking público é sempre e só do dia de hoje. Semana, mês e geral
+  // ficam reservados ao painel do admin (/api/admin/ranking).
+  //
+  // O período é fixado aqui no servidor e o parâmetro da query é ignorado de
+  // propósito: tirar os separadores da página só esconderia a opção, e
+  // qualquer pessoa continuaria a conseguir pedir ?period=month à mão.
+  const period = "today";
 
   const eligibleUserIds = await prisma.transaction.findMany({
     where:  { type: "deposit", status: "completed" },
