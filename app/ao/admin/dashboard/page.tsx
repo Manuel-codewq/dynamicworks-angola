@@ -23,6 +23,13 @@ interface Stats {
   todayWithdrawalsAmount: number;
   todayWithdrawalsCount: number;
   pnlLast7Days: { date: string; profit: number }[];
+  realAccounts: number;
+  realTraders: number;
+  withRealBalance: number;
+  kycApproved: number;
+  kycWithoutDeposit: number;
+  demoOnly: number;
+  conversionRate: number;
 }
 
 interface OnlineUser {
@@ -213,6 +220,57 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+
+          {/* Contas reais vs demo — o funil de quem se regista até depositar */}
+          {s && (
+          <div style={{ ...card, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Users size={18} color="#22c55e" />
+                <span style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 700 }}>Contas na corretora</span>
+              </div>
+              <span style={{ color: "#94a3b8", fontSize: 12 }}>
+                Conta real = já fez pelo menos um depósito aprovado
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 14 }}>
+              {[
+                { l: "Registados",        v: s.totalUsers,        c: "#94a3b8" },
+                { l: "Contas reais",      v: s.realAccounts,      c: "#22c55e" },
+                { l: "Já operaram real",  v: s.realTraders,       c: "#22c55e" },
+                { l: "Com saldo real",    v: s.withRealBalance,   c: "#38bdf8" },
+                { l: "KYC aprovado",      v: s.kycApproved,       c: "#38bdf8" },
+                { l: "Só demo",           v: s.demoOnly,          c: "#64748b" },
+              ].map((x, i) => (
+                <div key={i} style={{ background: "#0b1120", border: "1px solid #1e2d50", borderRadius: 10, padding: "13px 14px" }}>
+                  <div style={{ color: x.c, fontSize: 21, fontWeight: 800 }}>{x.v.toLocaleString("pt-PT")}</div>
+                  <div style={{ color: "#64748b", fontSize: 11.5, marginTop: 2 }}>{x.l}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
+              <div style={{ flex: "1 1 240px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ color: "#22c55e", fontSize: 18, fontWeight: 800 }}>{s.conversionRate}%</div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+                  dos registados chegaram a depositar
+                </div>
+              </div>
+
+              {/* Quem passou o KYC (o passo chato) e mesmo assim não depositou —
+                  é onde há mais a ganhar com um empurrão. */}
+              {s.kycWithoutDeposit > 0 && (
+                <div style={{ flex: "1 1 240px", background: "rgba(255,255,255,0.04)", border: "1px solid #1e2d50", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ color: "#fff", fontSize: 18, fontWeight: 800 }}>{s.kycWithoutDeposit}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+                    fizeram KYC mas nunca depositaram
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          )}
 
           {/* Métricas de hoje */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16, marginBottom: 20 }}>

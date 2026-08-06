@@ -28,6 +28,10 @@ export async function GET() {
     todayDepositsAgg,
     todayWithdrawalsAgg,
     last7DaysTrades,
+    depositors,
+    realTraders,
+    kycApproved,
+    withRealBalance,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.aggregate({ _sum: { balance: true } }),
@@ -61,6 +65,22 @@ export async function GET() {
       where: { status: "closed", isDemo: false, closedAt: { gte: sevenDaysAgo } },
       select: { result: true, amount: true, closedAt: true },
     }),
+
+    // ── Contas reais ────────────────────────────────────────────────────
+    // "Conta real" = já financiou a conta com dinheiro próprio. Usa-se o
+    // depósito aprovado como critério (e não saldo>0, que baixa assim que a
+    // pessoa perde tudo, nem KYC aprovado, que muita gente faz sem nunca
+    // depositar). `distinct` porque interessa a pessoa, não o nº de depósitos.
+    prisma.transaction.findMany({
+      where: { type: "deposit", status: "completed" },
+      select: { userId: true }, distinct: ["userId"],
+    }),
+    prisma.trade.findMany({
+      where: { isDemo: false },
+      select: { userId: true }, distinct: ["userId"],
+    }),
+    prisma.user.count({ where: { kycStatus: "approved" } }),
+    prisma.user.count({ where: { balance: { gt: 0 } } }),
   ]);
 
   function extractStats(
@@ -126,5 +146,17 @@ export async function GET() {
     todayWithdrawalsAmount:   Math.round(todayWithdrawalsAgg._sum.amount   ?? 0),
     todayWithdrawalsCount:    todayWithdrawalsAgg._count.id,
     pnlLast7Days,
+
+    // Contas reais. `demoOnly` conta quem se registou e nunca financiou —
+    // inclui quem nem chegou a operar em demo. `kycWithoutDeposit` é o buraco
+    // do funil que interessa ver: gente que passou a verificação de identidade
+    // (o passo chato) e mesmo assim parou antes de depositar.
+    realAccounts:     depositors.length,
+    realTraders:      realTraders.length,
+    withRealBalance,
+    kycApproved,
+    kycWithoutDeposit: Math.max(0, kycApproved - depositors.length),
+    demoOnly:          Math.max(0, totalUsers - depositors.length),
+    conversionRate:    totalUsers > 0 ? Math.round((depositors.length / totalUsers) * 1000) / 10 : 0,
   });
 }
