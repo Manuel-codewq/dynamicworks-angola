@@ -24,8 +24,8 @@ interface Stats {
   todayWithdrawalsCount: number;
   pnlLast7Days: { date: string; profit: number }[];
   realAccounts: number;
+  everDeposited: number;
   realTraders: number;
-  withRealBalance: number;
   kycApproved: number;
   kycWithoutDeposit: number;
   demoOnly: number;
@@ -230,18 +230,18 @@ export default function AdminDashboard() {
                 <span style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 700 }}>Contas na corretora</span>
               </div>
               <span style={{ color: "#94a3b8", fontSize: 12 }}>
-                Conta real = já fez pelo menos um depósito aprovado
+                Conta real = tem saldo real neste momento
               </span>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 14 }}>
               {[
-                { l: "Registados",        v: s.totalUsers,        c: "#94a3b8" },
-                { l: "Contas reais",      v: s.realAccounts,      c: "#22c55e" },
-                { l: "Já operaram real",  v: s.realTraders,       c: "#22c55e" },
-                { l: "Com saldo real",    v: s.withRealBalance,   c: "#38bdf8" },
-                { l: "KYC aprovado",      v: s.kycApproved,       c: "#38bdf8" },
-                { l: "Só demo",           v: s.demoOnly,          c: "#64748b" },
+                { l: "Registados",        v: s.totalUsers,     c: "#94a3b8" },
+                { l: "Contas reais",      v: s.realAccounts,   c: "#22c55e" },
+                { l: "Já depositaram",    v: s.everDeposited,  c: "#38bdf8" },
+                { l: "Já operaram real",  v: s.realTraders,    c: "#38bdf8" },
+                { l: "KYC aprovado",      v: s.kycApproved,    c: "#38bdf8" },
+                { l: "Sem saldo real",    v: s.demoOnly,       c: "#64748b" },
               ].map((x, i) => (
                 <div key={i} style={{ background: "#0b1120", border: "1px solid #1e2d50", borderRadius: 10, padding: "13px 14px" }}>
                   <div style={{ color: x.c, fontSize: 21, fontWeight: 800 }}>{x.v.toLocaleString("pt-PT")}</div>
@@ -254,7 +254,7 @@ export default function AdminDashboard() {
               <div style={{ flex: "1 1 240px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 10, padding: "12px 14px" }}>
                 <div style={{ color: "#22c55e", fontSize: 18, fontWeight: 800 }}>{s.conversionRate}%</div>
                 <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
-                  dos registados chegaram a depositar
+                  dos registados têm saldo real
                 </div>
               </div>
 

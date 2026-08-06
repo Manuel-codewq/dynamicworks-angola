@@ -29,7 +29,7 @@ const KYC_STYLE: Record<string, { label: string; color: string; bg: string }> = 
   rejected:    { label: "Rejeitado",  color: "#ef4444", bg: "rgba(239,68,68,0.12)"   },
 };
 
-type StatusFilter = "all" | "active" | "blocked" | "suspicious";
+type StatusFilter = "all" | "active" | "blocked" | "suspicious" | "real";
 
 export default function AdminUsersPage() {
   const [users,     setUsers]     = useState<AdminUser[]>([]);
@@ -118,7 +118,11 @@ export default function AdminUsersPage() {
 
   const filtered = useMemo(() => {
     let list = users;
-    if (statusFilter === "suspicious") list = list.filter(u => u.suspicious);
+    // "real" = tem saldo real agora. Nao e o mesmo que "ja depositou": quem
+    // depositou e perdeu tudo deixa de ter conta real, e quem recebeu bonus ou
+    // premio de torneio tem saldo real sem nunca ter depositado.
+    if (statusFilter === "real") list = list.filter(u => u.balance > 0);
+    else if (statusFilter === "suspicious") list = list.filter(u => u.suspicious);
     else if (statusFilter !== "all") list = list.filter(u => u.status === statusFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -132,6 +136,7 @@ export default function AdminUsersPage() {
     active:       users.filter(u => u.status === "active").length,
     blocked:      users.filter(u => u.status === "blocked").length,
     kycSubmitted: users.filter(u => u.kycSubmission !== null && u.kycStatus === "pending").length,
+    real:         users.filter(u => u.balance > 0).length,
     suspicious:   users.filter(u => u.suspicious).length,
   }), [users]);
 
@@ -167,6 +172,7 @@ export default function AdminUsersPage() {
         {[
           { label: "Total",       value: counts.total,        Icon: Users,       color: "#94a3b8", filter: "all"        as StatusFilter },
           { label: "Ativos",      value: counts.active,       Icon: UserCheck,   color: "#22c55e", filter: "active"     as StatusFilter },
+          { label: "Contas reais", value: counts.real,        Icon: Wallet,      color: "#22c55e", filter: "real"       as StatusFilter },
           { label: "Bloqueados",  value: counts.blocked,      Icon: UserX,       color: "#ef4444", filter: "blocked"    as StatusFilter },
           { label: "KYC a rever", value: counts.kycSubmitted, Icon: Clock,       color: "#ffffff", filter: null },
           { label: "Suspeitos",    value: counts.suspicious,   Icon: AlertCircle, color: "#ef4444", filter: "suspicious" as StatusFilter },
